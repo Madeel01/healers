@@ -1,4 +1,4 @@
-export const therapistSpecialities = [
+export const specialities = [
   {
     id: "speech_therapy_department",
     label: "Speech Therapy Department",

@@ -2,7 +2,7 @@ import axios from 'axios';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const YOUR_COMPUTER_IP = '192.168.88.38';
+const YOUR_COMPUTER_IP = '192.168.88.76';
 
 const BASE_URL = `http://${YOUR_COMPUTER_IP}:5000/api`;
 
