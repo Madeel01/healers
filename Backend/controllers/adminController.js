@@ -1,4 +1,3 @@
-const TherapistAssignment = require("../models/TherapistAssignment");
 const User = require("../models/User");
 
 exports.getAdminOverview = async (req, res) => {
@@ -9,7 +8,7 @@ exports.getAdminOverview = async (req, res) => {
       User.countDocuments(),
     ]);
 
-    const sessionCount = 5;
+    const sessionCount = 5; 
 
     return res.status(200).json({
       success: true,

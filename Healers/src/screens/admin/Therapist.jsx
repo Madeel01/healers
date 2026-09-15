@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState } from 'react';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -119,10 +119,8 @@ const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function TherapistsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  // const [therapists, setTherapists] = useState(initialTherapists);
-  const [therapists, setTherapists] = useState([]);
+  const [therapists, setTherapists] = useState(initialTherapists);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSpecilites, setSelectedSpecilites] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [activeBottomTab, setActiveBottomTab] = useState("Therapists");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -366,26 +364,26 @@ export default function TherapistsScreen({ navigation }) {
             const specility = therapistSpecialities.find((item)=> item.id === cat);
             return (
               <View
-                key={specility.id}
+                key={cat.id}
                 style={[
                   styles.tabChip,
-                  { backgroundColor: specility.bg },
+                  { backgroundColor: cat.bg },
                 ]}
               >
                 <Text
                   style={[
                     styles.tabChipText,
-                    { color: specility.color },
+                    { color: cat.color },
                   ]}
                 >
-                  {specility.label}
+                  {cat.label}
                 </Text>
               </View>
             );
           })}
         </View>
 
-        {therapists.map((therapist) => {
+        {filteredTherapists.map((therapist) => {
           const loadPercentage = `${(therapist.currentLoad / therapist.maxLoad) * 100}%`;
           const isMenuOpen = activeMenuId === therapist.id;
 
@@ -398,26 +396,20 @@ export default function TherapistsScreen({ navigation }) {
                 />
                 <View style={styles.therapistInfo}>
                   <Text style={styles.therapistName}>{therapist.name}</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                    {therapist.specialties && therapist.specialties.length > 0 ? (
-                      therapist.specialties.map((spec) => (
-                        <View
-                          key={spec.id}
-                          style={[
-                            styles.specialtyBadge,
-                            { backgroundColor: spec.bg },
-                          ]}
-                        >
-                          <Text style={[styles.specialtyText, { color: spec.color }]}>
-                            {spec.label}
-                          </Text>
-                        </View>
-                      ))
-                    ) : (
-                      <View style={[styles.specialtyBadge, { backgroundColor: '#F1F5F9' }]}>
-                        <Text style={[styles.specialtyText, { color: '#64748B' }]}>N/A</Text>
-                      </View>
-                    )}
+                  <View
+                    style={[
+                      styles.specialtyBadge,
+                      { backgroundColor: therapist.specialtyBg },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.specialtyText,
+                        { color: therapist.specialtyColor },
+                      ]}
+                    >
+                      {therapist.specialty}
+                    </Text>
                   </View>
                 </View>
 
