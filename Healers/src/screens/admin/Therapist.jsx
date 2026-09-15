@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -23,6 +23,8 @@ import {
   colors,
   fonts,
 } from '../../styles/theme';
+import { therapistUsers } from '../../api/admin/api';
+import { specialities } from '../../utils/specialities';
 
 const initialCategories = [
   { id: "Speech", label: "Speech", color: "#C2410C", bg: "#FFEDD5" },
@@ -117,8 +119,10 @@ const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function TherapistsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const [therapists, setTherapists] = useState(initialTherapists);
+  // const [therapists, setTherapists] = useState(initialTherapists);
+  const [therapists, setTherapists] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSpecilites, setSelectedSpecilites] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [activeBottomTab, setActiveBottomTab] = useState("Therapists");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -207,6 +211,47 @@ export default function TherapistsScreen({ navigation }) {
 
     return matchesCategory && matchesSearch;
   });
+  const fetchTherapistData = async () => {
+    try {
+      const response = await therapistUsers();
+      const therapistsData = response?.data || [];
+      setSelectedSpecilites(response?.specialties || []);
+
+      const formattedTherapists = therapistsData.map((therapist) => {
+        const therapistSpecialties = (therapist.specialties || []).map((specId) => {
+          const matched = specialities.find((item) => item.id === specId);
+          return {
+            id: specId,
+            label: matched?.label || specId,
+            bg: matched?.bg || "#E6F4EA",
+            color: matched?.color || "#059669",
+          };
+        });
+
+        return {
+          id: therapist._id,
+          name: therapist.fullName,
+          specialties: therapistSpecialties,
+          avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 50)}`,
+          currentLoad: therapist.assignedChildren || 0,
+          maxLoad: therapist.maxChildren || 0,
+          email: therapist.email || "",
+          phone: therapist.phone || "",
+          address: "",
+          schedule: "",
+        };
+      });
+
+      setTherapists(formattedTherapists);
+    } catch (error) {
+      console.log("Failed to fetch therapists:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchTherapistData();
+  }, []);
+  
 
   return (
     <SafeAreaView style={[styles.mainContainer, { paddingTop: insets.top }]}>
@@ -249,30 +294,31 @@ export default function TherapistsScreen({ navigation }) {
         </View>
 
         <View style={styles.tabWrap}>
-          {initialCategories.map((cat) => {
-            const isActive = selectedFilter === cat.id;
+          {selectedSpecilites.map((cat) => {
+            const isActive = selectedFilter === cat;
+            const specility = specialities.find((item)=> item.id === cat);
             return (
               <View
-                key={cat.id}
+                key={specility.id}
                 style={[
                   styles.tabChip,
-                  { backgroundColor: cat.bg },
+                  { backgroundColor: specility.bg },
                 ]}
               >
                 <Text
                   style={[
                     styles.tabChipText,
-                    { color: cat.color },
+                    { color: specility.color },
                   ]}
                 >
-                  {cat.label}
+                  {specility.label}
                 </Text>
               </View>
             );
           })}
         </View>
 
-        {filteredTherapists.map((therapist) => {
+        {therapists.map((therapist) => {
           const loadPercentage = `${(therapist.currentLoad / therapist.maxLoad) * 100}%`;
           const isMenuOpen = activeMenuId === therapist.id;
 
@@ -285,20 +331,26 @@ export default function TherapistsScreen({ navigation }) {
                 />
                 <View style={styles.therapistInfo}>
                   <Text style={styles.therapistName}>{therapist.name}</Text>
-                  <View
-                    style={[
-                      styles.specialtyBadge,
-                      { backgroundColor: therapist.specialtyBg },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.specialtyText,
-                        { color: therapist.specialtyColor },
-                      ]}
-                    >
-                      {therapist.specialty}
-                    </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                    {therapist.specialties && therapist.specialties.length > 0 ? (
+                      therapist.specialties.map((spec) => (
+                        <View
+                          key={spec.id}
+                          style={[
+                            styles.specialtyBadge,
+                            { backgroundColor: spec.bg },
+                          ]}
+                        >
+                          <Text style={[styles.specialtyText, { color: spec.color }]}>
+                            {spec.label}
+                          </Text>
+                        </View>
+                      ))
+                    ) : (
+                      <View style={[styles.specialtyBadge, { backgroundColor: '#F1F5F9' }]}>
+                        <Text style={[styles.specialtyText, { color: '#64748B' }]}>N/A</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
 
@@ -407,7 +459,7 @@ export default function TherapistsScreen({ navigation }) {
               </TouchableOpacity>
 
               {/* Other Specialty Categories */}
-              {initialCategories.map((cat) => (
+              {specialities.map((cat) => (
                 <TouchableOpacity
                   key={cat.id}
                   style={[

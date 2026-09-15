@@ -1,3 +1,4 @@
+const TherapistAssignment = require("../models/TherapistAssignment");
 const User = require("../models/User");
 
 exports.getAdminOverview = async (req, res) => {
@@ -8,7 +9,7 @@ exports.getAdminOverview = async (req, res) => {
       User.countDocuments(),
     ]);
 
-    const sessionCount = 5; 
+    const sessionCount = 5;
 
     return res.status(200).json({
       success: true,
@@ -25,6 +26,71 @@ exports.getAdminOverview = async (req, res) => {
       success: false,
       message: "Failed to fetch dashboard metrics.",
       error: error.message,
+    });
+  }
+};
+exports.getTherapistsUsers = async (req, res) => {
+  try {
+    const therapists = await User.aggregate([
+      {
+        $match: { role: "Therapist" }
+      },
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $lookup: {
+          from: "therapistassignments",
+          let: { userId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: [{ $toObjectId: "$therapistId" }, "$$userId"]
+                }
+              }
+            }
+          ],
+          as: "assignments"
+        }
+      },
+      {
+        $project: {
+          fullName: 1,
+          email: 1,
+          phone: 1,
+          role: 1,
+          isLogin: 1,
+          createdAt: 1,
+          specialties: "$assignments.specialty",
+          maxChildren: { $max: "$assignments.maxChildren" },
+          assignedChildren: {
+            $sum: {
+              $map: {
+                input: "$assignments",
+                as: "a",
+                in: { $size: { $ifNull: ["$$a.childIds", []] } }
+              }
+            }
+          }
+        }
+      }
+    ]);
+
+    const specialties = await TherapistAssignment.distinct("specialty");
+
+    return res.status(200).json({
+      success: true,
+      count: therapists.length,
+      data: therapists,
+      specialties: specialties
+    });
+  } catch (error) {
+    console.log("Get Therapists Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get therapists",
+      error: error.message
     });
   }
 };
