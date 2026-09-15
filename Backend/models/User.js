@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ["Admin", "Therapist", "Parent", "Child"],
-      default: "Parent",
+      default: "Child",
     },
     permissions: [{
       type: String,

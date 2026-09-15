@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, {
+  useEffect,
+  useState,
+} from 'react';
 
 import {
+  ActivityIndicator,
   Modal,
   ScrollView,
   StyleSheet,
@@ -15,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { GetUsers } from '../../api/authApi';
 import TherapistBottomBar from '../../components/TherapistBottomBar';
 import TopBar from '../../components/TopBar';
 import {
@@ -22,58 +27,53 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
-
-const ALL_CHILDREN = [
-  { id: "1", name: "Ali Raza" },
-  { id: "2", name: "Fatima Noor" },
-  { id: "3", name: "Hassan Khan" },
-  { id: "4", name: "Zainab Ali" },
-  { id: "5", name: "Bilal Ahmed" },
-  { id: "6", name: "Ayesha Omer" },
-];
-
-const INITIAL_PROGRAMS = [
-  {
-    id: "p1",
-    title: "A4",
-    description: "describe behavior, engagement,",
-    therapistTitle: "Therapist",
-    therapistDescription: "describe behavior, engagement,",
-    goals: [{ id: "g1", title: "Therapy" }],
-  },
-  {
-    id: "p2",
-    title: "A4",
-    description: "describe behavior, engagement,",
-    therapistTitle: "Therapist",
-    therapistDescription: "describe behavior, engagement,",
-    goals: [{ id: "g2", title: "Therapy" }],
-  },
-  {
-    id: "p3",
-    title: "A4",
-    description: "describe behavior, engagement,",
-    therapistTitle: "Therapist",
-    therapistDescription: "describe behavior, engagement,",
-    goals: [{ id: "g3", title: "Therapy" }],
-  },
-];
+import { therapistSpecialities } from '../../utils/specialities';
 
 export default function ProgramBuilderScreen({ navigation }) {
+  const [children, setChildren] = useState([]);
+  const [loadingChildren, setLoadingChildren] = useState(true);
+  const [selectedChildId, setSelectedChildId] = useState(null);
 
-  const [selectedChildId, setSelectedChildId] = useState("1");
   const [searchQuery, setSearchQuery] = useState("");
-  const [programs, setPrograms] = useState(INITIAL_PROGRAMS);
+  // Start with empty array so default programs do not show
+  const [programs, setPrograms] = useState([]);
 
+  // Modal States
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSearch, setModalSearch] = useState("");
+  const [programModalVisible, setProgramModalVisible] = useState(false);
 
-  const visibleChildrenChips = ALL_CHILDREN.slice(0, 4);
+  const [goalInputText, setGoalInputText] = useState({});
+  const [activeGoalInputProgramId, setActiveGoalInputProgramId] = useState(null);
 
-  const filteredModalChildren = ALL_CHILDREN.filter((child) =>
-    child.name.toLowerCase().includes(modalSearch.toLowerCase())
-  );
+  // Fetch children from API
+  useEffect(() => {
+    fetchChildren();
+  }, []);
 
+  const fetchChildren = async () => {
+    try {
+      setLoadingChildren(true);
+      const responseData = await GetUsers({ filter: "Child" });
+      const fetchedUsers = responseData || [];
+
+      setChildren(fetchedUsers);
+
+      if (fetchedUsers.length > 0) {
+        setSelectedChildId(fetchedUsers[0]._id || fetchedUsers[0].id);
+      }
+    } catch (error) {
+      console.error("Error fetching children:", error);
+    } finally {
+      setLoadingChildren(false);
+    }
+  };
+
+  const filteredModalChildren = children.filter((child) => {
+    const childName = child?.fullName || child?.name || "";
+    return childName.toLowerCase().includes(modalSearch.toLowerCase());
+  });
+  
   const handleDeleteGoal = (programId, goalId) => {
     setPrograms((prev) =>
       prev.map((prog) => {
@@ -86,27 +86,47 @@ export default function ProgramBuilderScreen({ navigation }) {
     );
   };
 
-  const handleAddGoal = (programId) => {
+  const handleGoalInputChange = (programId, text) => {
+    setGoalInputText((prev) => ({ ...prev, [programId]: text }));
+  };
+
+  const handleSaveGoal = (programId) => {
+    const text = goalInputText[programId]?.trim();
+    if (!text) return;
+
     setPrograms((prev) =>
       prev.map((prog) => {
         if (prog.id !== programId) return prog;
         const newGoalId = `g_${Date.now()}`;
         return {
           ...prog,
-          goals: [...prog.goals, { id: newGoalId, title: "Therapy" }],
+          goals: [...prog.goals, { id: newGoalId, title: text }],
         };
       })
     );
+
+    setGoalInputText((prev) => ({ ...prev, [programId]: "" }));
+    setActiveGoalInputProgramId(null);
   };
 
+  const handleAddProgram = (departmentTitle) => {
+    const newProgram = {
+      id: `p_${Date.now()}`,
+      title: departmentTitle,
+      description: "describe behavior, engagement,",
+      therapistTitle: "Therapist",
+      therapistDescription: "describe behavior, engagement,",
+      goals: [{ id: `g_${Date.now()}`, title: "Initial Goal" }],
+    };
+
+    setPrograms((prev) => [newProgram, ...prev]);
+    setProgramModalVisible(false);
+  };
+
+  const filteredPrograms = programs.filter((prog) => prog.title.toLowerCase().includes(searchQuery.toLowerCase()));
+
   return (
-    <SafeAreaView
-      style={[
-        styles.mainContainer,
-        commonStyles.container,
-        
-      ]}
-    >
+    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <TopBar navigation={navigation} headerTitle="Program Builder" />
 
       <ScrollView
@@ -131,39 +151,50 @@ export default function ProgramBuilderScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.childChipsRow}
-        >
-          {visibleChildrenChips.map((child) => {
-            const isSelected = child.id === selectedChildId;
-            return (
-              <TouchableOpacity
-                key={child.id}
-                style={[
-                  styles.childChip,
-                  isSelected
-                    ? styles.childChipSelected
-                    : styles.childChipUnselected,
-                ]}
-                activeOpacity={0.8}
-                onPress={() => setSelectedChildId(child.id)}
-              >
-                <Text
-                  style={[
-                    styles.childChipText,
-                    isSelected
-                      ? styles.childChipTextSelected
-                      : styles.childChipTextUnselected,
-                  ]}
-                >
-                  {child.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        {loadingChildren
+          ? <ActivityIndicator size="small" color="#004E9F" style={{ marginBottom: 20 }} />
+          : children.length > 0
+          ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.childChipsRow}
+            >
+              {children.map((child) => {
+                const childId = child._id || child.id;
+                const isSelected = childId === selectedChildId;
+                return (
+                  <TouchableOpacity
+                    key={childId}
+                    style={[
+                      styles.childChip,
+                      isSelected
+                        ? styles.childChipSelected
+                        : styles.childChipUnselected,
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={() => setSelectedChildId(childId)}
+                  >
+                    <Text
+                      style={[
+                        styles.childChipText,
+                        isSelected
+                          ? styles.childChipTextSelected
+                          : styles.childChipTextUnselected,
+                      ]}
+                    >
+                      {child.fullName || child.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )
+          : (
+            <View style={styles.noUserContainer}>
+              <Text style={styles.noUserText}>No user found</Text>
+            </View>
+          )}
 
         <View style={styles.searchCard}>
           <View style={styles.searchInputContainer}>
@@ -192,7 +223,11 @@ export default function ProgramBuilderScreen({ navigation }) {
               <Text style={styles.allLabelsText}>All Labels</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.addProgramBtn} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.addProgramBtn}
+              activeOpacity={0.8}
+              onPress={() => setProgramModalVisible(true)}
+            >
               <Text style={styles.addProgramText}>Add program</Text>
             </TouchableOpacity>
           </View>
@@ -201,46 +236,68 @@ export default function ProgramBuilderScreen({ navigation }) {
         <Text style={styles.allProgramTitle}>All Program</Text>
 
         <View style={styles.programList}>
-          {programs.map((program) => (
-            <View key={program.id} style={styles.programCard}>
-              <Text style={styles.cardTitle}>{program.title}</Text>
-              <Text style={styles.cardDescription}>{program.description}</Text>
+          {filteredPrograms.length === 0
+            ? <Text style={styles.emptyText}>No programs added yet. Click "Add program" above.</Text>
+            : (
+              filteredPrograms.map((program) => (
+                <View key={program.id} style={styles.programCard}>
+                  <Text style={styles.cardTitle}>{program.title}</Text>
+                  <Text style={styles.cardDescription}>{program.description}</Text>
 
-              <Text style={styles.cardTitle}>
-                {program.therapistTitle}
-              </Text>
-              <Text style={styles.cardDescription}>
-                {program.therapistDescription}
-              </Text>
+                  <Text style={styles.cardTitle}>{program.therapistTitle}</Text>
+                  <Text style={styles.cardDescription}>
+                    {program.therapistDescription}
+                  </Text>
 
-              {program.goals.map((goal) => (
-                <View key={goal.id} style={styles.goalBox}>
-                  <View style={styles.goalLeftRow}>
-                    <View style={styles.radioCircle} />
-                    <Text style={styles.goalTitle}>{goal.title}</Text>
-                  </View>
+                  {program.goals.map((goal) => (
+                    <View key={goal.id} style={styles.goalBox}>
+                      <View style={styles.goalLeftRow}>
+                        <View style={styles.radioCircle} />
+                        <Text style={styles.goalTitle}>{goal.title}</Text>
+                      </View>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => handleDeleteGoal(program.id, goal.id)}
+                      >
+                        <Feather name="trash-2" size={18} color="#BA1A1A" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+
+                  {activeGoalInputProgramId === program.id && (
+                    <View style={styles.goalInputRow}>
+                      <TextInput
+                        style={styles.goalTextInput}
+                        placeholder="Enter goal title..."
+                        placeholderTextColor="#94A3B8"
+                        value={goalInputText[program.id] || ""}
+                        onChangeText={(text) => handleGoalInputChange(program.id, text)}
+                        autoFocus
+                      />
+                      <TouchableOpacity
+                        style={styles.saveGoalBtn}
+                        onPress={() => handleSaveGoal(program.id)}
+                      >
+                        <Text style={styles.saveGoalBtnText}>Add</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
                   <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => handleDeleteGoal(program.id, goal.id)}
+                    style={styles.addGoalBtn}
+                    activeOpacity={0.8}
+                    onPress={() => setActiveGoalInputProgramId(program.id)}
                   >
-                    <Feather name="trash-2" size={18} color="#BA1A1A" />
+                    <Feather name="plus-circle" size={18} color="#8BF6D9" />
+                    <Text style={styles.addGoalBtnText}>Add Another Goal</Text>
                   </TouchableOpacity>
                 </View>
-              ))}
-
-              <TouchableOpacity
-                style={styles.addGoalBtn}
-                activeOpacity={0.8}
-                onPress={() => handleAddGoal(program.id)}
-              >
-                <Feather name="plus-circle" size={18} color="#8BF6D9" />
-                <Text style={styles.addGoalBtnText}>Add Another Goal</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+              ))
+            )}
         </View>
       </ScrollView>
 
+      {/* Select Child Modal */}
       <Modal
         visible={modalVisible}
         transparent={true}
@@ -258,7 +315,6 @@ export default function ProgramBuilderScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
 
-                {/* Modal Search Bar */}
                 <View style={styles.modalSearchContainer}>
                   <Feather
                     name="search"
@@ -275,22 +331,19 @@ export default function ProgramBuilderScreen({ navigation }) {
                   />
                 </View>
 
-                {/* Children Selection List */}
-                <ScrollView
-                  style={{ maxHeight: 260 }}
-                  showsVerticalScrollIndicator={true}
-                >
+                <ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={true}>
                   {filteredModalChildren.map((child) => {
-                    const isSelected = child.id === selectedChildId;
+                    const childId = child._id || child.id;
+                    const isSelected = childId === selectedChildId;
                     return (
                       <TouchableOpacity
-                        key={child.id}
+                        key={childId}
                         style={[
                           styles.modalOption,
                           isSelected && styles.modalOptionSelected,
                         ]}
                         onPress={() => {
-                          setSelectedChildId(child.id);
+                          setSelectedChildId(childId);
                           setModalVisible(false);
                         }}
                       >
@@ -300,12 +353,47 @@ export default function ProgramBuilderScreen({ navigation }) {
                             isSelected && styles.modalOptionTextSelected,
                           ]}
                         >
-                          {child.name}
+                          {child.fullName}
                         </Text>
                         {isSelected && <Feather name="check" size={18} color="#0B598F" />}
                       </TouchableOpacity>
                     );
                   })}
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      <Modal
+        visible={programModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setProgramModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setProgramModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select Department</Text>
+                  <TouchableOpacity onPress={() => setProgramModalVisible(false)}>
+                    <Feather name="x" size={20} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={true}>
+                  {therapistSpecialities.map((dept) => (
+                    <TouchableOpacity
+                      key={dept.id}
+                      style={styles.modalOption}
+                      onPress={() => handleAddProgram(dept.title)}
+                    >
+                      <Text style={styles.modalOptionText}>{dept.title}</Text>
+                      <Feather name="plus" size={18} color="#00725E" />
+                    </TouchableOpacity>
+                  ))}
                 </ScrollView>
               </View>
             </TouchableWithoutFeedback>
@@ -328,7 +416,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-
   headerBanner: {
     backgroundColor: colors.primary,
     paddingHorizontal: 20,
@@ -347,7 +434,6 @@ const styles = StyleSheet.create({
     color: colors.white,
     lineHeight: 22,
   },
-
   childHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -367,7 +453,6 @@ const styles = StyleSheet.create({
     color: "#004E9F",
     lineHeight: 24,
   },
-
   childChipsRow: {
     paddingHorizontal: 20,
     gap: 10,
@@ -392,9 +477,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fonts.medium,
     lineHeight: 24,
-    color:'#004E9F',
+    color: "#004E9F",
   },
-  
+  childChipTextSelected: {
+    color: "#004E9F",
+  },
+  childChipTextUnselected: {
+    color: "#004E9F",
+  },
   searchCard: {
     backgroundColor: "#FFFFFF",
     marginHorizontal: 20,
@@ -461,7 +551,6 @@ const styles = StyleSheet.create({
     color: "#8BF6D9",
     lineHeight: 20,
   },
-
   allProgramTitle: {
     fontSize: 20,
     fontFamily: fonts.bold,
@@ -470,7 +559,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 18,
   },
-
+  emptyText: {
+    textAlign: "center",
+    color: "#64748B",
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    marginTop: 10,
+  },
   programList: {
     paddingHorizontal: 20,
     gap: 16,
@@ -495,8 +590,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 5,
   },
-
-
   goalBox: {
     backgroundColor: "rgba(139,246,217,.2)",
     borderRadius: 10,
@@ -525,7 +618,35 @@ const styles = StyleSheet.create({
     color: "#006B58",
     lineHeight: 18,
   },
-
+  goalInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+  },
+  goalTextInput: {
+    flex: 1,
+    height: 42,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    fontFamily: fonts.regular,
+    color: "#0F172A",
+  },
+  saveGoalBtn: {
+    backgroundColor: "#006B58",
+    height: 42,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  saveGoalBtnText: {
+    color: "#FFFFFF",
+    fontFamily: fonts.bold,
+    fontSize: 13,
+  },
   addGoalBtn: {
     backgroundColor: "#006B58",
     height: 44,
@@ -541,8 +662,6 @@ const styles = StyleSheet.create({
     color: "#8BF6D9",
     lineHeight: 24,
   },
-
-  /* Modal Styles */
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",

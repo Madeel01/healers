@@ -4,15 +4,16 @@ const {
   register, 
   login, 
   loginBiometric, 
-  registerBiometric 
+  registerBiometric, 
+  getUsers
 } = require('../controllers/authController');
 const { protect, checkRole, checkPermission } = require('../middleware/authMiddleware');
 
 router.post('/register', register);
 router.post('/login', login);
 router.post('/login-biometric', loginBiometric);
-
 router.post('/register-biometric', protect, registerBiometric);
+router.post('/get_user', protect, getUsers);
 
 // router.get('/profile', protect, (req, res) => {
 //   res.json({ message: 'Protected Profile Data', user: req.user });
