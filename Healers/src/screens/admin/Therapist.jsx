@@ -527,7 +527,7 @@ export default function TherapistsScreen({ navigation }) {
               <View style={styles.colorPaletteGrid}>
                 {PALETTE_COLORS.map((colorHex) => {
                   const isSelected = newTherapist.specialtyBg === colorHex;
-                  return (
+                  return ( 
                     <TouchableOpacity
                       key={`bg-${colorHex}`}
                       style={[
