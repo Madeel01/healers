@@ -192,7 +192,7 @@ export default function ProgramBuilderScreen({ navigation }) {
           )
           : (
             <View style={styles.noUserContainer}>
-              <Text style={styles.noUserText}>No user found</Text>
+              <Text style={styles.noUserText}>No user found </Text>
             </View>
           )}
 
