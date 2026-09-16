@@ -148,58 +148,7 @@ exports.loginBiometric = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-exports.loginBiometric2 = async (req, res) => {
-  try {
-    const { biometricKey } = req.body;
-
-    if (!biometricKey) {
-      return res.status(400).json({ message: "Biometric signature required." });
-    }
-
-    const user = await User.findOne({ biometricKey });
-    if (!user) {
-      return res.status(401).json({ message: "Biometric verification failed or user not registered." });
-    }
-
-    const token = generateToken(user);
-
-    res.json({
-      message: "Biometric login successful",
-      token,
-      user: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        permissions: user.permissions,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
 exports.getUsers = async (req, res) => {
-  try {
-    let { filter = "Parent" } = req.body;
-
-    const user = await User.find(
-      { role: filter },
-      { fullName: 1 }, 
-    );
-    if (!user) {
-      return res.status(401).json({ message: "Invalid Role." });
-    }
-    res.json({
-      message: "successfully",
-      data: user,
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-exports.getUsers2 = async (req, res) => {
   try {
     let { filter = "Child" } = req.body;
 

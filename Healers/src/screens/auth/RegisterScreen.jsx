@@ -93,7 +93,7 @@ export default function RegisterScreen() {
         role: "Child",
         biometricKey,
       };
-
+      console.log(payload,"paylaoad");
       const result = await registerUser(payload);
 
       if (biometricKey) {

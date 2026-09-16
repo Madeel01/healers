@@ -1,3 +1,4 @@
+const TherapistAssignment = require("../models/TherapistAssignment");
 const User = require("../models/User");
 
 exports.getAdminOverview = async (req, res) => {
