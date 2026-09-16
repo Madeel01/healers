@@ -1,4 +1,3 @@
-const TherapistAssignment = require("../models/TherapistAssignment");
 const User = require("../models/User");
 
 exports.getAdminOverview = async (req, res) => {
@@ -9,7 +8,7 @@ exports.getAdminOverview = async (req, res) => {
       User.countDocuments(),
     ]);
 
-    const sessionCount = 5;
+    const sessionCount = 5; 
 
     return res.status(200).json({
       success: true,
@@ -31,13 +30,23 @@ exports.getAdminOverview = async (req, res) => {
 };
 exports.getTherapistsUsers = async (req, res) => {
   try {
-    const therapists = await User.aggregate([
-      {
-        $match: { role: "Therapist" }
-      },
-      {
-        $sort: { createdAt: -1 }
-      },
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 3;
+    const skip = (page - 1) * limit;
+    const { search, specialty } = req.query;
+
+    const matchStage = { role: "Therapist" };
+
+    if (search) {
+      matchStage.$or = [
+        { fullName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const pipeline = [
+      { $match: matchStage },
+      { $sort: { createdAt: -1 } },
       {
         $lookup: {
           from: "therapistassignments",
@@ -45,9 +54,7 @@ exports.getTherapistsUsers = async (req, res) => {
           pipeline: [
             {
               $match: {
-                $expr: {
-                  $eq: [{ $toObjectId: "$therapistId" }, "$$userId"]
-                }
+                $expr: { $eq: [{ $toObjectId: "$therapistId" }, "$$userId"] }
               }
             }
           ],
@@ -75,13 +82,24 @@ exports.getTherapistsUsers = async (req, res) => {
           }
         }
       }
-    ]);
+    ];
 
+    if (specialty && specialty !== "All") {
+      pipeline.push({
+        $match: { specialties: specialty }
+      });
+    }
+
+    pipeline.push({ $skip: skip }, { $limit: limit });
+
+    const therapists = await User.aggregate(pipeline);
     const specialties = await TherapistAssignment.distinct("specialty");
 
     return res.status(200).json({
       success: true,
+      page,
       count: therapists.length,
+      hasMore: therapists.length === limit,
       data: therapists,
       specialties: specialties
     });
