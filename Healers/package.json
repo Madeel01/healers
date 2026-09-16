@@ -26,6 +26,7 @@
     "react-native": "0.86.3",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
+    "react-native-sweet-alert": "^4.2.0",
     "react-native-web": "^0.21.0",
     "react-native-webview": "13.16.1",
     "react-native-youtube-iframe": "^2.4.1"

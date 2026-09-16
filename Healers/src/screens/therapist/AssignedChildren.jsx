@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 
 import {
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -31,12 +30,11 @@ const CHILDREN_LIST = [
 ];
 
 export default function AssignedChildrenScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
   const [selectedChildId, setSelectedChildId] = useState("1");
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <TopBar
         navigation={navigation}
         headerTitle={"Assigned Children"}

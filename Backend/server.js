@@ -5,6 +5,7 @@ require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const therapistRoutes = require("./routes/therapistRoutes");
 
 const app = express();
 app.use(cors());
@@ -33,6 +34,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/therapist", therapistRoutes);
 app.use((req, res, next) => {
   res.status(404).json({ message: `Cannot find ${req.originalUrl} on this server` });
 });

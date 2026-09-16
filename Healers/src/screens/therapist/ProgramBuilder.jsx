@@ -1,11 +1,15 @@
 import React, {
+  useCallback,
+  useContext,
   useEffect,
   useState,
 } from 'react';
 
 import {
   ActivityIndicator,
+  Alert,
   Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,9 +23,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { GetUsers } from '../../api/authApi';
+import {
+  addGoalToProgramApi,
+  AddPrograms,
+  deleteGoalApi,
+  deleteProgramApi,
+  getChildPrograms,
+  therapistUsers,
+} from '../../api/therapist/api';
 import TherapistBottomBar from '../../components/TherapistBottomBar';
 import TopBar from '../../components/TopBar';
+import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
@@ -30,15 +42,17 @@ import {
 import { therapistSpecialities } from '../../utils/specialities';
 
 export default function ProgramBuilderScreen({ navigation }) {
+  const { user, logout } = useContext(AuthContext);
   const [children, setChildren] = useState([]);
   const [loadingChildren, setLoadingChildren] = useState(true);
   const [selectedChildId, setSelectedChildId] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState("");
-  // Start with empty array so default programs do not show
   const [programs, setPrograms] = useState([]);
+  const [loadingPrograms, setLoadingPrograms] = useState(false);
 
-  // Modal States
+  const [refreshing, setRefreshing] = useState(false);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSearch, setModalSearch] = useState("");
   const [programModalVisible, setProgramModalVisible] = useState(false);
@@ -46,21 +60,27 @@ export default function ProgramBuilderScreen({ navigation }) {
   const [goalInputText, setGoalInputText] = useState({});
   const [activeGoalInputProgramId, setActiveGoalInputProgramId] = useState(null);
 
-  // Fetch children from API
   useEffect(() => {
     fetchChildren();
   }, []);
 
+  useEffect(() => {
+    if (selectedChildId) {
+      fetchProgramsForChild(selectedChildId);
+    }
+  }, [selectedChildId]);
+
   const fetchChildren = async () => {
     try {
       setLoadingChildren(true);
-      const responseData = await GetUsers({ filter: "Child" });
-      const fetchedUsers = responseData || [];
-
+      const ID = user?.id;
+      const responseData = await therapistUsers({ filter: ID });
+      const fetchedUsers = responseData?.data || [];
       setChildren(fetchedUsers);
 
-      if (fetchedUsers.length > 0) {
-        setSelectedChildId(fetchedUsers[0]._id || fetchedUsers[0].id);
+      if (fetchedUsers.length > 0 && !selectedChildId) {
+        const initialChildId = fetchedUsers[0]._id || fetchedUsers[0].id;
+        setSelectedChildId(initialChildId);
       }
     } catch (error) {
       console.error("Error fetching children:", error);
@@ -69,61 +89,146 @@ export default function ProgramBuilderScreen({ navigation }) {
     }
   };
 
-  const filteredModalChildren = children.filter((child) => {
-    const childName = child?.fullName || child?.name || "";
-    return childName.toLowerCase().includes(modalSearch.toLowerCase());
-  });
-  
-  const handleDeleteGoal = (programId, goalId) => {
-    setPrograms((prev) =>
-      prev.map((prog) => {
-        if (prog.id !== programId) return prog;
-        return {
-          ...prog,
-          goals: prog.goals.filter((g) => g.id !== goalId),
-        };
-      })
+  const fetchProgramsForChild = async (childId) => {
+    try {
+      setLoadingPrograms(true);
+      const response = await getChildPrograms(childId, user?.id);
+      if (response?.success) {
+        setPrograms(response.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching child programs:", error);
+    } finally {
+      setLoadingPrograms(false);
+    }
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchChildren();
+      if (selectedChildId) {
+        await fetchProgramsForChild(selectedChildId);
+      }
+    } catch (error) {
+      console.error("Error on refreshing:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [selectedChildId]);
+
+  const handleAddProgram = async (department) => {
+    if (!selectedChildId) {
+      alert("Please select a child first.");
+      return;
+    }
+
+    try {
+      const payload = {
+        therapistId: user?.id,
+        childId: selectedChildId,
+        programName: department.title || department.label || "Untitled Program",
+        description: "describe behavior, engagement,",
+        goals: [],
+      };
+
+      const response = await AddPrograms(payload);
+
+      if (response?.success) {
+        setPrograms((prev) => [response.program, ...prev]);
+        setProgramModalVisible(false);
+      }
+    } catch (error) {
+      console.error("Failed to add program:", error);
+    }
+  };
+
+  const handleDeleteProgram = (program) => {
+    const programId = program._id || program.id;
+    const programName = program.programName || program.title || "this program";
+
+    Alert.alert(
+      "Are you sure?",
+      `Do you really want to delete "${programName}"? This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes, Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const res = await deleteProgramApi(programId);
+              if (res.success) {
+                setPrograms((prev) => prev.filter((prog) => (prog._id || prog.id) !== programId));
+              }
+            } catch (error) {
+              console.error("Failed to delete program:", error?.response?.data || error.message);
+            }
+          },
+        },
+      ],
     );
   };
+ const handleDeleteGoal = async (programId, goalId) => {
+  try {
+    const response = await deleteGoalApi(programId, goalId);
+
+    if (response?.success) {
+      setPrograms((prev) =>
+        prev.map((prog) => {
+          const currentProgId = prog._id || prog.id;
+          if (currentProgId === programId) {
+            return {
+              ...prog,
+              programGoals: (prog.programGoals || prog.goals || []).filter(
+                (g) => (g._id || g.id) !== goalId
+              ),
+            };
+          }
+          return prog;
+        })
+      );
+    }
+  } catch (error) {
+    console.error("Failed to delete goal:", error?.response?.data || error.message);
+  }
+};
 
   const handleGoalInputChange = (programId, text) => {
     setGoalInputText((prev) => ({ ...prev, [programId]: text }));
   };
 
-  const handleSaveGoal = (programId) => {
+  const handleSaveGoal = async (programId) => {
     const text = goalInputText[programId]?.trim();
     if (!text) return;
 
-    setPrograms((prev) =>
-      prev.map((prog) => {
-        if (prog.id !== programId) return prog;
-        const newGoalId = `g_${Date.now()}`;
-        return {
-          ...prog,
-          goals: [...prog.goals, { id: newGoalId, title: text }],
-        };
-      })
-    );
+    try {
+      const response = await addGoalToProgramApi(programId, text);
 
-    setGoalInputText((prev) => ({ ...prev, [programId]: "" }));
-    setActiveGoalInputProgramId(null);
+      if (response?.success && response?.program) {
+        setPrograms((prev) =>
+          prev.map((prog) => {
+            const currentProgId = prog._id || prog.id;
+            return currentProgId === programId ? response.program : prog;
+          })
+        );
+        setGoalInputText((prev) => ({ ...prev, [programId]: "" }));
+        setActiveGoalInputProgramId(null);
+      }
+    } catch (error) {
+      console.error("Failed to save goal to database:", error?.response?.data || error.message);
+    }
   };
 
-  const handleAddProgram = (departmentTitle) => {
-    const newProgram = {
-      id: `p_${Date.now()}`,
-      title: departmentTitle,
-      description: "describe behavior, engagement,",
-      therapistTitle: "Therapist",
-      therapistDescription: "describe behavior, engagement,",
-      goals: [{ id: `g_${Date.now()}`, title: "Initial Goal" }],
-    };
+  const filteredModalChildren = children?.filter((child) => {
+    const childName = child?.fullName ?? child?.name ?? "";
+    return childName.toLowerCase().includes(modalSearch.toLowerCase().trim());
+  });
 
-    setPrograms((prev) => [newProgram, ...prev]);
-    setProgramModalVisible(false);
-  };
-
-  const filteredPrograms = programs.filter((prog) => prog.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredPrograms = programs.filter((prog) => {
+    const title = prog?.programName ?? prog?.title ?? "";
+    return title.toLowerCase().includes((searchQuery ?? "").toLowerCase().trim());
+  });
 
   return (
     <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
@@ -133,6 +238,14 @@ export default function ProgramBuilderScreen({ navigation }) {
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#004E9F"]}
+            tintColor="#004E9F"
+          />
+        }
       >
         <View style={styles.headerBanner}>
           <Text style={styles.bannerTitle}>Program Builder</Text>
@@ -142,7 +255,7 @@ export default function ProgramBuilderScreen({ navigation }) {
         </View>
 
         <View style={styles.childHeaderRow}>
-          <Text style={styles.sectionHeaderTitle}>Enter Child</Text>
+          <Text style={styles.sectionHeaderTitle}>Select Child</Text>
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => setModalVisible(true)}
@@ -192,7 +305,7 @@ export default function ProgramBuilderScreen({ navigation }) {
           )
           : (
             <View style={styles.noUserContainer}>
-              <Text style={styles.noUserText}>No user found </Text>
+              <Text style={styles.noUserText}>No user found</Text>
             </View>
           )}
 
@@ -233,66 +346,89 @@ export default function ProgramBuilderScreen({ navigation }) {
           </View>
         </View>
 
-        <Text style={styles.allProgramTitle}>All Program</Text>
+        <Text style={styles.allProgramTitle}>All Programs</Text>
 
         <View style={styles.programList}>
-          {filteredPrograms.length === 0
-            ? <Text style={styles.emptyText}>No programs added yet. Click "Add program" above.</Text>
+          {loadingPrograms
+            ? <ActivityIndicator size="small" color="#004E9F" style={{ marginTop: 20 }} />
+            : filteredPrograms.length === 0
+            ? (
+              <Text style={styles.emptyText}>
+                No programs added yet. Click "Add program" above.
+              </Text>
+            )
             : (
-              filteredPrograms.map((program) => (
-                <View key={program.id} style={styles.programCard}>
-                  <Text style={styles.cardTitle}>{program.title}</Text>
-                  <Text style={styles.cardDescription}>{program.description}</Text>
+              filteredPrograms.map((program) => {
+                const programId = program._id || program.id;
+                const programGoalsList = program.programGoals || program.goals || [];
 
-                  <Text style={styles.cardTitle}>{program.therapistTitle}</Text>
-                  <Text style={styles.cardDescription}>
-                    {program.therapistDescription}
-                  </Text>
-
-                  {program.goals.map((goal) => (
-                    <View key={goal.id} style={styles.goalBox}>
-                      <View style={styles.goalLeftRow}>
-                        <View style={styles.radioCircle} />
-                        <Text style={styles.goalTitle}>{goal.title}</Text>
-                      </View>
+                return (
+                  <View key={programId} style={styles.programCard}>
+                    <View style={styles.programHeaderRow}>
+                      <Text style={styles.cardTitle}>{program.programName || program.title}</Text>
                       <TouchableOpacity
                         activeOpacity={0.7}
-                        onPress={() => handleDeleteGoal(program.id, goal.id)}
+                        onPress={() => handleDeleteProgram(program)}
                       >
-                        <Feather name="trash-2" size={18} color="#BA1A1A" />
+                        <Feather name="trash-2" size={20} color="#BA1A1A" />
                       </TouchableOpacity>
                     </View>
-                  ))}
 
-                  {activeGoalInputProgramId === program.id && (
-                    <View style={styles.goalInputRow}>
-                      <TextInput
-                        style={styles.goalTextInput}
-                        placeholder="Enter goal title..."
-                        placeholderTextColor="#94A3B8"
-                        value={goalInputText[program.id] || ""}
-                        onChangeText={(text) => handleGoalInputChange(program.id, text)}
-                        autoFocus
-                      />
-                      <TouchableOpacity
-                        style={styles.saveGoalBtn}
-                        onPress={() => handleSaveGoal(program.id)}
-                      >
-                        <Text style={styles.saveGoalBtnText}>Add</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                    <Text style={styles.cardDescription}>{program.description}</Text>
 
-                  <TouchableOpacity
-                    style={styles.addGoalBtn}
-                    activeOpacity={0.8}
-                    onPress={() => setActiveGoalInputProgramId(program.id)}
-                  >
-                    <Feather name="plus-circle" size={18} color="#8BF6D9" />
-                    <Text style={styles.addGoalBtnText}>Add Another Goal</Text>
-                  </TouchableOpacity>
-                </View>
-              ))
+                    <Text style={styles.cardTitle}>{program.therapistTitle || "Therapist"}</Text>
+                    <Text style={styles.cardDescription}>
+                      {program.therapistDescription || "describe behavior, engagement,"}
+                    </Text>
+
+                    {programGoalsList.map((goal) => {
+                      const goalId = goal._id || goal.id;
+                      return (
+                        <View key={goalId} style={styles.goalBox}>
+                          <View style={styles.goalLeftRow}>
+                            <View style={styles.radioCircle} />
+                            <Text style={styles.goalTitle}>{goal.title}</Text>
+                          </View>
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={() => handleDeleteGoal(programId, goalId)}
+                          >
+                            <Feather name="trash-2" size={18} color="#BA1A1A" />
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    })}
+
+                    {activeGoalInputProgramId === programId && (
+                      <View style={styles.goalInputRow}>
+                        <TextInput
+                          style={styles.goalTextInput}
+                          placeholder="Enter goal title..."
+                          placeholderTextColor="#94A3B8"
+                          value={goalInputText[programId] || ""}
+                          onChangeText={(text) => handleGoalInputChange(programId, text)}
+                          autoFocus
+                        />
+                        <TouchableOpacity
+                          style={styles.saveGoalBtn}
+                          onPress={() => handleSaveGoal(programId)}
+                        >
+                          <Text style={styles.saveGoalBtnText}>Add</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
+                    <TouchableOpacity
+                      style={styles.addGoalBtn}
+                      activeOpacity={0.8}
+                      onPress={() => setActiveGoalInputProgramId(programId)}
+                    >
+                      <Feather name="plus-circle" size={18} color="#8BF6D9" />
+                      <Text style={styles.addGoalBtnText}>Add Another Goal</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })
             )}
         </View>
       </ScrollView>
@@ -316,12 +452,7 @@ export default function ProgramBuilderScreen({ navigation }) {
                 </View>
 
                 <View style={styles.modalSearchContainer}>
-                  <Feather
-                    name="search"
-                    size={16}
-                    color="#94A3B8"
-                    style={{ marginRight: 8 }}
-                  />
+                  <Feather name="search" size={16} color="#94A3B8" style={{ marginRight: 8 }} />
                   <TextInput
                     style={styles.modalSearchInput}
                     placeholder="Search child..."
@@ -353,7 +484,7 @@ export default function ProgramBuilderScreen({ navigation }) {
                             isSelected && styles.modalOptionTextSelected,
                           ]}
                         >
-                          {child.fullName}
+                          {child.fullName || child.name}
                         </Text>
                         {isSelected && <Feather name="check" size={18} color="#0B598F" />}
                       </TouchableOpacity>
@@ -366,6 +497,7 @@ export default function ProgramBuilderScreen({ navigation }) {
         </TouchableWithoutFeedback>
       </Modal>
 
+      {/* Add Program Modal */}
       <Modal
         visible={programModalVisible}
         transparent={true}
@@ -388,9 +520,9 @@ export default function ProgramBuilderScreen({ navigation }) {
                     <TouchableOpacity
                       key={dept.id}
                       style={styles.modalOption}
-                      onPress={() => handleAddProgram(dept.title)}
+                      onPress={() => handleAddProgram(dept)}
                     >
-                      <Text style={styles.modalOptionText}>{dept.title}</Text>
+                      <Text style={styles.modalOptionText}>{dept.label}</Text>
                       <Feather name="plus" size={18} color="#00725E" />
                     </TouchableOpacity>
                   ))}
@@ -576,6 +708,12 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: "#94A2B6",
+  },
+  programHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
   },
   cardTitle: {
     fontSize: 16,
