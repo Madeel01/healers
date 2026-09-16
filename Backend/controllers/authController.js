@@ -186,7 +186,7 @@ exports.getUsers2 = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-exports.getUsers3 = async (req, res) => {
+exports.getUsers4 = async (req, res) => {
   try {
     let { filter = "Child" } = req.body;
 
