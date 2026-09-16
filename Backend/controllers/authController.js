@@ -181,7 +181,7 @@ exports.loginBiometric2 = async (req, res) => {
 };
 exports.getUsers = async (req, res) => {
   try {
-    let { filter = "Child" } = req.body;
+    let { filter = "Parent" } = req.body;
 
     const user = await User.find(
       { role: filter },
