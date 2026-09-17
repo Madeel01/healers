@@ -1915,9 +1915,98 @@
 {"_e":"metro:config","_t":1789553396141,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
 {"_e":"expo:dev-tools-plugin:load","_t":1789553402376,"plugins":[]}
 {"_e":"metro:instantiate","_t":1789553477951,"atlas":false,"workers":3,"host":"::","port":8081}
-{"_e":"root:init","_t":1789565099078,"format":"v0-jsonl","version":"57.0.24"}
-{"_e":"env:mode","_t":1789565099080,"nodeEnv":"development","babelEnv":"development","mode":"development"}
-{"_e":"env:load","_t":1789565099085,"mode":"development","files":[],"env":{}}
-{"_e":"devserver:start","_t":1789565100138,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
-{"_e":"metro:config","_t":1789565101295,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
-{"_e":"expo:dev-tools-plugin:load","_t":1789565102265,"plugins":[]}
+{"_e":"root:init","_t":1789561625743,"format":"v0-jsonl","version":"57.0.24"}
+{"_e":"env:mode","_t":1789561625788,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1789561625843,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1789561635963,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1789561646693,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1789561652781,"plugins":[]}
+{"_e":"metro:instantiate","_t":1789561676711,"atlas":false,"workers":3,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1789561700825,"id":"1","platform":"web","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:progress","_t":1789561700827,"id":"1","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1789561700843,"id":"1","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1789561700957,"id":"1","progress":0.051652892561983466,"total":22,"current":5}
+{"_e":"metro:bundling:progress","_t":1789561701056,"id":"1","progress":0.051652892561983466,"total":71,"current":11}
+{"_e":"metro:bundling:progress","_t":1789561701157,"id":"1","progress":0.051652892561983466,"total":126,"current":26}
+{"_e":"metro:bundling:progress","_t":1789561701257,"id":"1","progress":0.1517962556923596,"total":154,"current":60}
+{"_e":"metro:bundling:progress","_t":1789561701358,"id":"1","progress":0.1517962556923596,"total":176,"current":64}
+{"_e":"metro:bundling:progress","_t":1789561701506,"id":"1","progress":0.17572186511580448,"total":198,"current":83}
+{"_e":"metro:bundling:progress","_t":1789561701607,"id":"1","progress":0.2857567584786256,"total":217,"current":116}
+{"_e":"metro:bundling:progress","_t":1789561701707,"id":"1","progress":0.3534162068324137,"total":254,"current":151}
+{"_e":"metro:bundling:progress","_t":1789561701812,"id":"1","progress":0.3534162068324137,"total":307,"current":172}
+{"_e":"metro:bundling:progress","_t":1789561701924,"id":"1","progress":0.35491172476233585,"total":329,"current":196}
+{"_e":"metro:bundling:progress","_t":1789561702030,"id":"1","progress":0.3620083643050566,"total":359,"current":216}
+{"_e":"metro:bundling:progress","_t":1789561702242,"id":"1","progress":0.3653680526997773,"total":359,"current":217}
+{"_e":"metro:bundling:progress","_t":1789561702343,"id":"1","progress":0.38949629844679934,"total":415,"current":259}
+{"_e":"metro:bundling:progress","_t":1789561702443,"id":"1","progress":0.42180136431957443,"total":465,"current":302}
+{"_e":"metro:bundling:progress","_t":1789561702543,"id":"1","progress":0.4489542526512482,"total":494,"current":331}
+{"_e":"metro:bundling:progress","_t":1789561702644,"id":"1","progress":0.4489542526512482,"total":554,"current":348}
+{"_e":"metro:bundling:progress","_t":1789561702744,"id":"1","progress":0.4489542526512482,"total":590,"current":391}
+{"_e":"metro:bundling:progress","_t":1789561702844,"id":"1","progress":0.6290130796670631,"total":609,"current":483}
+{"_e":"metro:bundling:progress","_t":1789561702977,"id":"1","progress":0.6758737056213017,"total":624,"current":513}
+{"_e":"metro:bundling:progress","_t":1789561703077,"id":"1","progress":0.7642669071409283,"total":644,"current":563}
+{"_e":"metro:bundling:progress","_t":1789561703178,"id":"1","progress":0.7793169791052136,"total":674,"current":595}
+{"_e":"metro:bundling:progress","_t":1789561703278,"id":"1","progress":0.7962907976149395,"total":706,"current":630}
+{"_e":"metro:bundling:progress","_t":1789561703378,"id":"1","progress":0.7962907976149395,"total":740,"current":655}
+{"_e":"metro:bundling:progress","_t":1789561703488,"id":"1","progress":0.8090478989949889,"total":756,"current":680}
+{"_e":"metro:bundling:progress","_t":1789561703586,"id":"1","progress":0.9341956407593474,"total":777,"current":751}
+{"_e":"metro:bundling:progress","_t":1789561703712,"id":"1","progress":0.9378650775431079,"total":792,"current":767}
+{"_e":"metro:bundling:progress","_t":1789561703825,"id":"1","progress":0.999,"total":805,"current":805}
+{"_e":"metro:bundling:done","_t":1789561703990,"id":"1","total":805,"ms":3164.7211}
+{"_e":"metro:bundling:started","_t":1789561704565,"id":"3","platform":"web","environment":null,"entry":"index.js"}
+{"_e":"metro:client_log","_t":1789561705060,"level":"info","data":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"]}
+{"_e":"metro:client_log","_t":1789561705062,"level":"warn","data":["\"shadow*\" style props are deprecated. Use \"boxShadow\"."]}
+{"_e":"metro:client_log","_t":1789561705072,"level":"log","data":["Running application \"main\" with appParams:\n","{\"hydrate\": undefined, \"rootTag\": \"#root\"}","\nDevelopment-level warnings: ON.\nPerformance optimizations: OFF."]}
+{"_e":"metro:bundling:started","_t":1789561710610,"id":"6","platform":"web","environment":null,"entry":"index.js"}
+{"_e":"metro:client_log","_t":1789561715143,"level":"log","data":["Failed to fetch therapists:","[AxiosError: Request failed with status code 404]"]}
+{"_e":"metro:client_log","_t":1789561780338,"level":"log","data":["Failed to fetch therapists:","[AxiosError: Request failed with status code 404]"]}
+{"_e":"metro:client_log","_t":1789562583931,"level":"warn","data":["props.pointerEvents is deprecated. Use style.pointerEvents"]}
+{"_e":"metro:client_log","_t":1789562592191,"level":"log","data":["Failed to fetch therapists:","[AxiosError: Request failed with status code 404]"]}
+{"_e":"root:init","_t":1789562821942,"format":"v0-jsonl","version":"57.0.24"}
+{"_e":"env:mode","_t":1789562821980,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1789562822014,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1789562828441,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1789562830941,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1789562834678,"plugins":[]}
+{"_e":"root:init","_t":1789639680610,"format":"v0-jsonl","version":"57.0.24"}
+{"_e":"env:mode","_t":1789639680644,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1789639680653,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1789639685790,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1789639688875,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1789639691634,"plugins":[]}
+{"_e":"metro:instantiate","_t":1789639753925,"atlas":false,"workers":3,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1789647390287,"id":"3","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:progress","_t":1789647390288,"id":"3","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1789647390295,"id":"3","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1789647390409,"id":"3","progress":0.03484444444444445,"total":75,"current":14}
+{"_e":"metro:bundling:progress","_t":1789647390509,"id":"3","progress":0.03484444444444445,"total":217,"current":36}
+{"_e":"metro:bundling:progress","_t":1789647390611,"id":"3","progress":0.1322314049586777,"total":264,"current":96}
+{"_e":"metro:bundling:progress","_t":1789647390711,"id":"3","progress":0.1882761923635883,"total":348,"current":151}
+{"_e":"metro:bundling:progress","_t":1789647390813,"id":"3","progress":0.2232004464008928,"total":381,"current":180}
+{"_e":"metro:bundling:progress","_t":1789647390913,"id":"3","progress":0.26867366885659455,"total":409,"current":212}
+{"_e":"metro:bundling:progress","_t":1789647391014,"id":"3","progress":0.2856374991764025,"total":537,"current":287}
+{"_e":"metro:bundling:progress","_t":1789647391118,"id":"3","progress":0.31147403788930766,"total":568,"current":317}
+{"_e":"metro:bundling:progress","_t":1789647391217,"id":"3","progress":0.3827686563838943,"total":653,"current":404}
+{"_e":"metro:bundling:progress","_t":1789647391317,"id":"3","progress":0.41387211215794806,"total":757,"current":487}
+{"_e":"metro:bundling:progress","_t":1789647391418,"id":"3","progress":0.41387211215794806,"total":841,"current":535}
+{"_e":"metro:bundling:progress","_t":1789647391518,"id":"3","progress":0.5171064259563186,"total":890,"current":640}
+{"_e":"metro:bundling:progress","_t":1789647391619,"id":"3","progress":0.6694214876033059,"total":935,"current":765}
+{"_e":"metro:bundling:progress","_t":1789647391719,"id":"3","progress":0.7508774476777412,"total":989,"current":857}
+{"_e":"metro:bundling:progress","_t":1789647391847,"id":"3","progress":0.8237151584429742,"total":1028,"current":933}
+{"_e":"metro:bundling:progress","_t":1789647391947,"id":"3","progress":0.8237151584429742,"total":1062,"current":953}
+{"_e":"metro:bundling:progress","_t":1789647392047,"id":"3","progress":0.859679330629234,"total":1085,"current":1006}
+{"_e":"metro:bundling:progress","_t":1789647392171,"id":"3","progress":0.9157545898771342,"total":1115,"current":1067}
+{"_e":"metro:bundling:progress","_t":1789647392271,"id":"3","progress":0.9658728348357779,"total":1162,"current":1142}
+{"_e":"metro:bundling:done","_t":1789647392415,"id":"3","total":1162,"ms":2128.2993}
+{"_e":"metro:client_log","_t":1789647490777,"level":"warn","data":["SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/AppAndFlow/react-native-safe-area-context"]}
+{"_e":"metro:client_log","_t":1789647694995,"level":"error","data":["The action 'NAVIGATE' with payload {\"name\":\"Alert\"} was not handled by any navigator.\n\nDo you have a screen named 'Alert'?\n\nIf you're trying to navigate to a screen in a nested navigator, see https://reactnavigation.org/docs/nesting-navigators#navigating-to-a-screen-in-a-nested-navigator.\n\nIf you're using conditional rendering, navigation will happen automatically and you shouldn't navigate manually, see.\n\nThis is a development-only warning and won't be shown in production."]}
+{"_e":"metro:client_log","_t":1789647707625,"level":"error","data":["The action 'NAVIGATE' with payload {\"name\":\"WeeklyVideo\"} was not handled by any navigator.\n\nDo you have a screen named 'WeeklyVideo'?\n\nIf you're trying to navigate to a screen in a nested navigator, see https://reactnavigation.org/docs/nesting-navigators#navigating-to-a-screen-in-a-nested-navigator.\n\nIf you're using conditional rendering, navigation will happen automatically and you shouldn't navigate manually, see.\n\nThis is a development-only warning and won't be shown in production."]}
+{"_e":"metro:bundling:started","_t":1789650404736,"id":"b","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:progress","_t":1789650404736,"id":"b","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1789650404744,"id":"b","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:done","_t":1789650405129,"id":"b","total":1,"ms":393.5468}
+{"_e":"metro:bundling:started","_t":1789650853371,"id":"d","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:progress","_t":1789650853371,"id":"d","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:done","_t":1789650853577,"id":"d","total":1,"ms":206.0493}
+{"_e":"metro:server_log","_t":1789650887499,"level":"info","data":["Launching DevTools..."]}
+{"_e":"metro:server_log","_t":1789650893324,"level":"error","data":["Connection failed to be established with DevTools for app='%s' on device='%s' and device id='%s' with error:","unknown","unknown","a3b8f4126eb050f407db8430147cd7b920220ce3",{}]}
