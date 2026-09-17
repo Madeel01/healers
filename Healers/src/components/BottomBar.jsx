@@ -19,7 +19,7 @@ export default function BottomBar({ activeTab = "AdminDashboard" }) {
     { id: "AdminDashboard", label: "Home", iconType: "MaterialIcons", iconName: "home", iconSize: 22 },
     { id: "Therapist", label: "Therapists", iconType: "FontAwesome5", iconName: "user-md", iconSize: 18 },
     { id: "Children", label: "Children", iconType: "FontAwesome5", iconName: "child", iconSize: 18 },
-    { id: "Scheduling", label: "Scheduling", iconType: "MaterialIcons", iconName: "event", iconSize: 22 },
+    { id: "Schedule", label: "Scheduling", iconType: "MaterialIcons", iconName: "event", iconSize: 22 },
     { id: "Notifications", label: "Notifications", iconType: "MaterialIcons", iconName: "notifications", iconSize: 22 },
   ];
 

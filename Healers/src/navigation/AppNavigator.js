@@ -34,6 +34,7 @@ import ProgramBuilderScreen from '../screens/therapist/ProgramBuilder';
 import ProgressTrackingScreen from '../screens/therapist/ProgressTracking';
 import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
+import ScheduleScreen from '../screens/admin/Schedule';
 
 const Stack = createNativeStackNavigator();
 
@@ -57,6 +58,7 @@ function AdminStack() {
       <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
       <Stack.Screen name="LeaveRequest" component={LeaveRequestsScreen} />
       <Stack.Screen name="Therapist" component={TherapistsScreen} />
+      <Stack.Screen name="Schedule" component={ScheduleScreen} />
       <Stack.Screen name="Feedback" component={FeedbackScreen} />
       <Stack.Screen name="BroadcastManagement" component={BroadcastManagementScreen} />
       <Stack.Screen name="ComplainManagement" component={ComplainManagementScreen} />
