@@ -9,6 +9,7 @@ const {
   deleteProgram,
   deleteGoal,
   addGoalToProgram,
+  updateGoalProgress,
 } = require("../controllers/therapistController");
 
 router.get("/get_therapist_user", protect, getTherapistUser);
@@ -17,5 +18,5 @@ router.post("/delete_program/:programId/add_goal", protect, addGoalToProgram);
 router.post("/add_programs", protect, AddPrograms);
 router.delete("/delete_program/:programId", protect, deleteProgram);
 router.delete("/delete_program/:programId/goal/:goalId", protect, deleteGoal);
-
+router.patch("/program/:programId/goal/:goalId/progress", protect, updateGoalProgress );
 module.exports = router;

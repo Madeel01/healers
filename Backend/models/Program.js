@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 
 const goalSchema = new mongoose.Schema({
+  _id: {
+    type: mongoose.Schema.Types.ObjectId,
+    auto: true,
+  },
   title: {
     type: String,
     required: true,
@@ -9,6 +13,12 @@ const goalSchema = new mongoose.Schema({
     type: String,
     enum: ["pending", "in_progress", "completed"],
     default: "pending",
+  },
+  progress: {
+    type: Number,
+    default: 0,
+    min: [0, "Progress cannot be less than 0"],
+    max: [100, "Progress cannot exceed 100"],
   },
 });
 
@@ -43,7 +53,7 @@ const programSchema = new mongoose.Schema(
     },
     programGoals: [goalSchema],
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Program", programSchema);

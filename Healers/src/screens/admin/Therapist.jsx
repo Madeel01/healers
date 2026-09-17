@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, {
+  useEffect,
+  useState,
+} from 'react';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import {
+  ActivityIndicator,
   Image,
   Modal,
-  SafeAreaView,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,18 +16,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { therapistUsers } from '../../api/admin/api';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
 import {
   colors,
   fonts,
 } from '../../styles/theme';
-import { therapistUsers } from '../../api/admin/api';
 import { therapistSpecialities } from '../../utils/specialities';
 
 const initialCategories = [
@@ -118,16 +122,17 @@ const initialTherapists = [
 const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function TherapistsScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
-  const [therapists, setTherapists] = useState(initialTherapists);
+  const [therapists, setTherapists] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [activeBottomTab, setActiveBottomTab] = useState("Therapists");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState(null);
+  const [selectedSpecilites, setSelectedSpecilites] = useState([]);
 
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
@@ -149,10 +154,6 @@ export default function TherapistsScreen({ navigation }) {
     phone: "",
     address: "",
   });
-
-  const handleFilterClick = (catId) => {
-    setSelectedFilter(catId);
-  };
 
   const handleDeleteTherapist = (id) => {
     setTherapists((prev) => prev.filter((item) => item.id !== id));
@@ -207,30 +208,29 @@ export default function TherapistsScreen({ navigation }) {
     });
   };
 
-  const filteredTherapists = therapists.filter((item) => {
-    const matchesCategory = selectedFilter === "All" || item.category === selectedFilter;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase())
-      || item.specialty.toLowerCase().includes(searchQuery.toLowerCase());
+  
+  const fetchTherapistData = async (pageNum = 1, resetList = false, isRefresh = false) => {
+    if (loading || (loadingMore && !resetList && !isRefresh)) return;
 
-    return matchesCategory && matchesSearch;
-  });
-  const fetchTherapistData = async (pageNum = 1, isNewQuery = false) => {
-    if (loading || (loadingMore && !isNewQuery)) return;
-
-    if (pageNum === 1) setLoading(true);
-    else setLoadingMore(true);
+    if (isRefresh) {
+      setRefreshing(true);
+    } else if (pageNum === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
 
     try {
       const response = await therapistUsers({
         page: pageNum,
         limit: 3,
         search: searchQuery,
-        specialty: selectedFilter,
+        specialty: selectedFilter === "All" ? "" : selectedFilter,
       });
 
       const therapistsData = response?.data || [];
       setSelectedSpecilites(response?.specialties || []);
-      setHasMore(response?.hasMore ?? false);
+      setHasMore(response?.hasMore ?? therapistsData.length === 3);
 
       const formattedTherapists = therapistsData.map((therapist) => {
         const therapistSpecialties = (therapist.specialties || []).map((specId) => {
@@ -244,25 +244,30 @@ export default function TherapistsScreen({ navigation }) {
         });
 
         return {
-          id: therapist._id,
-          name: therapist.fullName,
+          id: therapist._id || therapist.id,
+          name: therapist.fullName || therapist.name,
           specialties: therapistSpecialties,
-          avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 50)}`,
-          currentLoad: therapist.assignedChildren || 0,
-          maxLoad: therapist.maxChildren || 0,
+          avatar: therapist.avatar || `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 50)}`,
+          currentLoad: therapist.assignedChildren || therapist.currentLoad || 0,
+          maxLoad: therapist.maxChildren || therapist.maxLoad || 15,
           email: therapist.email || '',
           phone: therapist.phone || '',
         };
       });
 
-      setTherapists((prev) => (pageNum === 1 ? formattedTherapists : [...prev, ...formattedTherapists]));
+      setTherapists((prev) => (resetList || isRefresh ? formattedTherapists : [...prev, ...formattedTherapists]));
       setPage(pageNum);
     } catch (error) {
       console.log('Failed to fetch therapists:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
       setLoadingMore(false);
     }
+  };
+
+  const onRefresh = () => {
+    fetchTherapistData(1, true, true);
   };
 
   useEffect(() => {
@@ -273,53 +278,19 @@ export default function TherapistsScreen({ navigation }) {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, selectedFilter]);
 
-  const handleLoadMore = () => {
-    if (hasMore && !loadingMore && !loading) {
-      fetchTherapistData(page + 1);
+  const handleScroll = ({ nativeEvent }) => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    const isCloseToBottom =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - 40;
+
+    if (isCloseToBottom && hasMore && !loadingMore && !loading && !refreshing) {
+      fetchTherapistData(page + 1, false);
     }
-  };
-  const renderTherapistCard = ({ item: therapist }) => {
-    const loadPercentage = `${(therapist.currentLoad / (therapist.maxLoad || 1)) * 100}%`;
-    const isMenuOpen = activeMenuId === therapist.id;
-
-    return (
-      <View style={styles.therapistCard}>
-        <View style={styles.cardHeaderRow}>
-          <Image source={{ uri: therapist.avatar }} style={styles.therapistAvatar} />
-          <View style={styles.therapistInfo}>
-            <Text style={styles.therapistName}>{therapist.name}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-              {therapist.specialties.map((spec) => (
-                <View key={spec.id} style={[styles.specialtyBadge, { backgroundColor: spec.bg }]}>
-                  <Text style={[styles.specialtyText, { color: spec.color }]}>{spec.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.loadRow}>
-          <Text style={styles.loadLabel}>Current Load</Text>
-          <Text style={styles.loadValue}>
-            {therapist.currentLoad}/{therapist.maxLoad} <Text style={styles.loadSubText}>Childs</Text>
-          </Text>
-        </View>
-
-        <View style={styles.progressTrack}>
-          <LinearGradient
-            colors={[colors.primary, '#87CEEB']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.progressBar, { width: loadPercentage }]}
-          />
-        </View>
-      </View>
-    );
   };
   
 
   return (
-    <SafeAreaView style={[styles.mainContainer, { paddingTop: insets.top }]}>
+    <SafeAreaView style={[styles.mainContainer]}>
       <TopBar
         navigation={navigation}
         isNotificationOpen={isNotificationOpen}
@@ -331,6 +302,16 @@ export default function TherapistsScreen({ navigation }) {
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
         <View style={styles.headerTitleContainer}>
           <Text style={styles.pageTitle}>Manage Therapists</Text>
@@ -360,31 +341,48 @@ export default function TherapistsScreen({ navigation }) {
 
         <View style={styles.tabWrap}>
           {selectedSpecilites.map((cat) => {
-            const isActive = selectedFilter === cat;
-            const specility = therapistSpecialities.find((item)=> item.id === cat);
+            const specility = therapistSpecialities.find((item) => item.id === cat) || {
+              id: cat,
+              label: cat,
+              bg: '#E6F4EA',
+              color: '#059669',
+            };
             return (
-              <View
-                key={cat.id}
+              <TouchableOpacity
+                key={specility.id}
+                onPress={() => setSelectedFilter(specility.id)}
                 style={[
                   styles.tabChip,
-                  { backgroundColor: cat.bg },
+                  { backgroundColor: specility.bg },
+                  selectedFilter === specility.id && styles.activeChipShadow,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.tabChipText,
-                    { color: cat.color },
-                  ]}
-                >
-                  {cat.label}
+                <Text style={[styles.tabChipText, { color: specility.color }]}>
+                  {specility.label}
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
 
-        {filteredTherapists.map((therapist) => {
-          const loadPercentage = `${(therapist.currentLoad / therapist.maxLoad) * 100}%`;
+        {loading && (
+          <ActivityIndicator size="large" color={colors.primary} style={styles.centerLoader} />
+        )}
+
+        {!loading && therapists.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Feather name="user-x" size={48} color="#94A3B8" />
+            <Text style={styles.emptyTitle}>No Therapists Found</Text>
+            <Text style={styles.emptySubtitle}>
+              {searchQuery || selectedFilter !== "All"
+                ? "No therapist matches your active search or filter criteria."
+                : "There are currently no therapists available."}
+            </Text>
+          </View>
+        )}
+
+        {!loading && therapists.map((therapist) => {
+          const loadPercentage = `${(therapist.currentLoad / (therapist.maxLoad || 1)) * 100}%`;
           const isMenuOpen = activeMenuId === therapist.id;
 
           return (
@@ -396,20 +394,12 @@ export default function TherapistsScreen({ navigation }) {
                 />
                 <View style={styles.therapistInfo}>
                   <Text style={styles.therapistName}>{therapist.name}</Text>
-                  <View
-                    style={[
-                      styles.specialtyBadge,
-                      { backgroundColor: therapist.specialtyBg },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.specialtyText,
-                        { color: therapist.specialtyColor },
-                      ]}
-                    >
-                      {therapist.specialty}
-                    </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                    {(therapist.specialties || []).map((spec) => (
+                      <View key={spec.id} style={[styles.specialtyBadge, { backgroundColor: spec.bg }]}>
+                        <Text style={[styles.specialtyText, { color: spec.color }]}>{spec.label}</Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
 
@@ -473,6 +463,10 @@ export default function TherapistsScreen({ navigation }) {
           );
         })}
 
+        {loadingMore && (
+          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
+        )}
+
         <TouchableOpacity
           style={styles.addTherapistButton}
           onPress={() => setIsAddModalOpen(true)}
@@ -502,7 +496,6 @@ export default function TherapistsScreen({ navigation }) {
             </View>
 
             <View style={styles.filterModalWrap}>
-              {/* "All" Option */}
               <TouchableOpacity
                 style={[
                   styles.filterModalChip,
@@ -517,7 +510,6 @@ export default function TherapistsScreen({ navigation }) {
                 <Text style={styles.filterModalChipTextAll}>All Types</Text>
               </TouchableOpacity>
 
-              {/* Other Specialty Categories */}
               {therapistSpecialities.map((cat) => (
                 <TouchableOpacity
                   key={cat.id}
@@ -1177,5 +1169,27 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "700",
     fontSize: 14,
+  },
+  centerLoader: {
+    marginVertical: 30,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#334155',
+    marginTop: 12,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 6,
+    lineHeight: 20,
   },
 });

@@ -33,3 +33,11 @@ export const deleteGoalApi = async (programId, goalId) => {
   const response = await apiClient.delete(`/therapist/delete_program/${programId}/goal/${goalId}`);
   return response.data;
 };
+
+export const updateGoalProgressApi = async (programId, goalId, progress) => {
+  const response = await apiClient.patch(
+    `/therapist/program/${programId}/goal/${goalId}/progress`,
+    { progress }
+  );
+  return response.data;
+};

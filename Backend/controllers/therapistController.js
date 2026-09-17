@@ -133,7 +133,44 @@ exports.addGoalToProgram = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+exports.updateGoalProgress = async (req, res) => {
+  try {
+    const { programId, goalId } = req.params;
+    const { progress } = req.body;
 
+    const numericProgress = Number(progress);
+    if (isNaN(numericProgress) || numericProgress < 0 || numericProgress > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Progress must be a number between 0 and 100",
+      });
+    }
+
+    const updatedProgram = await Program.findOneAndUpdate(
+      { _id: programId, "programGoals._id": goalId },
+      { $set: { "programGoals.$.progress": numericProgress } },
+      { new: true }
+    );
+
+    if (!updatedProgram) {
+      return res.status(404).json({
+        success: false,
+        message: "Program or Goal not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Goal progress updated successfully",
+      program: updatedProgram,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 exports.deleteProgram = async (req, res) => {
   try {
     const { programId } = req.params;

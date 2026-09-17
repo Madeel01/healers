@@ -433,7 +433,6 @@ export default function ProgramBuilderScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      {/* Select Child Modal */}
       <Modal
         visible={modalVisible}
         transparent={true}
@@ -497,7 +496,6 @@ export default function ProgramBuilderScreen({ navigation }) {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Add Program Modal */}
       <Modal
         visible={programModalVisible}
         transparent={true}
@@ -829,7 +827,7 @@ const styles = StyleSheet.create({
   modalSearchContainer: {
     backgroundColor: "#F1F5F9",
     borderRadius: 8,
-    height: 38,
+    height: 43,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 10,
