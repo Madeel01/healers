@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Feather from '@expo/vector-icons/Feather';
@@ -69,7 +69,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <View style={[styles.mainContainer, commonStyles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -198,7 +198,7 @@ export default function AdminDashboard() {
       </ScrollView>
 
       <BottomBar />
-    </View>
+    </SafeAreaView>
   );
 }
 

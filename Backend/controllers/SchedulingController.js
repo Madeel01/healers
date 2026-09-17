@@ -176,7 +176,6 @@ exports.addAppointment = async (req, res) => {
       });
     }
 
-    // Check for overlapping appointments
     const requestedStart = new Date(`${date}T${startTime}:00`);
     const requestedEnd = new Date(`${date}T${endTime}:00`);
 
