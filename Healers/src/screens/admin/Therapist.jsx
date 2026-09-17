@@ -6,7 +6,6 @@ import {
   Image,
   Modal,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -120,7 +119,6 @@ const initialTherapists = [
 const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function TherapistsScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
   const [therapists, setTherapists] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
@@ -289,7 +287,7 @@ export default function TherapistsScreen({ navigation }) {
   
 
   return (
-    <SafeAreaView style={[styles.mainContainer, { paddingTop: insets.top }]}>
+    <SafeAreaView style={[styles.mainContainer]}>
       <TopBar
         navigation={navigation}
         isNotificationOpen={isNotificationOpen}

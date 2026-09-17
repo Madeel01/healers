@@ -13,7 +13,6 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
 export default function BottomBar({ activeTab = "AdminDashboard" }) {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const [currentTab, setCurrentTab] = useState(activeTab);
 
@@ -21,7 +20,7 @@ export default function BottomBar({ activeTab = "AdminDashboard" }) {
     { id: "AdminDashboard", label: "Home", iconType: "MaterialIcons", iconName: "home", iconSize: 22 },
     { id: "Therapist", label: "Therapists", iconType: "FontAwesome5", iconName: "user-md", iconSize: 18 },
     { id: "Children", label: "Children", iconType: "FontAwesome5", iconName: "child", iconSize: 18 },
-    { id: "Scheduling", label: "Scheduling", iconType: "MaterialIcons", iconName: "event", iconSize: 22 },
+    { id: "Schedule", label: "Scheduling", iconType: "MaterialIcons", iconName: "event", iconSize: 22 },
     { id: "Notifications", label: "Notifications", iconType: "MaterialIcons", iconName: "notifications", iconSize: 22 },
   ];
 
@@ -31,7 +30,7 @@ export default function BottomBar({ activeTab = "AdminDashboard" }) {
   // };
 
   return (
-    <View style={[styles.bottomBar, { paddingBottom: insets.bottom || 10 }]}>
+    <View style={[styles.bottomBar]}>
       {tabs.map((tab) => {
         const isActive = currentTab === tab.id;
         const IconComponent = tab.iconType === "MaterialIcons" ? MaterialIcons : FontAwesome5;
