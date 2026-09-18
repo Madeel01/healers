@@ -34,7 +34,6 @@ import Administration from './components/Administration';
 import Fee from './components/Fee';
 
 export default function AdminDashboard() {
-  const insets = useSafeAreaInsets();
   const { user, logout } = useContext(AuthContext);
   const navigation = useNavigation();
   const [stats, setStats] = useState({

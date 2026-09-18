@@ -18,8 +18,9 @@ const therapistAssignmentSchema = new mongoose.Schema(
 
     specialty: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
+      default:"",
     },
 
     maxChildren: {

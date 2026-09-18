@@ -44,6 +44,14 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
      default: false,
     },
+    fatherName: {
+      type: Boolean,
+     default: false,
+    },
+    age: {
+      type: Number,
+     default: false,
+    },
   },
   { timestamps: true },
 );
