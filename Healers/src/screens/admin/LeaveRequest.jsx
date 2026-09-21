@@ -210,9 +210,33 @@ const formatDateRange = (start, end) =>
             </Text>
 
             <View style={styles.trendContainer}>
-              <MaterialIcons name="trending-up" size={16} color="#006B58" />
+              {stats.pendingCount >= stats.pendingSinceYesterday ? (
+                <MaterialIcons
+                  name="trending-up"
+                  size={16}
+                  color="#006B58"
+                />
+              ) : (
+                <MaterialIcons
+                  name="trending-down"
+                  size={16}
+                  color="#6b0005"
+                />
+              )}
 
-              <Text style={styles.trendText}>{stats.pendingSinceYesterday} since yesterday</Text>
+              <Text
+                style={[
+                  styles.trendText,
+                  {
+                    color:
+                      stats.pendingCount >= stats.pendingSinceYesterday
+                        ? "#006B58"
+                        : "#6b0005",
+                  },
+                ]}
+              >
+                {stats.pendingSinceYesterday} since yesterday
+              </Text>
             </View>
           </View>
 

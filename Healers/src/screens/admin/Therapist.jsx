@@ -1,6 +1,7 @@
 import React, {
   useEffect,
   useState,
+  useRef
 } from 'react';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -94,7 +95,7 @@ export default function TherapistsScreen({ navigation }) {
   const [originalAssignedIds, setOriginalAssignedIds] = useState([]);
 
   const isEditMode = editingTherapistId !== null;
-
+  const menuTouchRef = useRef(false);
   const resetTherapistForm = () => {
     setNewTherapist({});
     setEditingTherapistId(null);
@@ -125,6 +126,7 @@ export default function TherapistsScreen({ navigation }) {
   };
 
   const handleDeleteTherapist = (therapist) => {
+    // console.log("Calleeeeddd");
     setActiveMenuId(null);
     Alert.alert(
       "Delete Therapist",
@@ -464,7 +466,14 @@ export default function TherapistsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.mainContainer]}>
+    <SafeAreaView style={[styles.mainContainer]} onTouchStart={() => {
+      if (menuTouchRef.current) {
+        menuTouchRef.current = false; 
+        return;
+      }
+      if (activeMenuId) setActiveMenuId(null);
+    }}
+    >
       <TopBar
         navigation={navigation}
         isNotificationOpen={isNotificationOpen}
@@ -474,9 +483,8 @@ export default function TherapistsScreen({ navigation }) {
 
       <ScrollView
         style={styles.scrollArea}
-        onTouchStart={() => {
-          if (activeMenuId) setActiveMenuId(null);
-        }}
+        onScrollBeginDrag={() => setActiveMenuId(null)}
+        // onTouchStart={(e) => {if(activeMenuId) setActiveMenuId(null); e.stopPropagation();}}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
@@ -566,7 +574,15 @@ export default function TherapistsScreen({ navigation }) {
           const isMenuOpen = activeMenuId === therapist.id;
           const avatarColor = getAvatarColor(therapist.id || therapist.name);
           return (
-            <View  style={styles.therapistCard} key={therapist.id}>
+            <View key={therapist.id}
+              style={[
+                styles.therapistCard,
+                {
+                  zIndex: isMenuOpen ? 1000 : 1,
+                  elevation: isMenuOpen ? 10 : 3,
+                },
+              ]}
+            >
               <View style={styles.cardHeaderRow}>
                 {/* <Image
                   source={{ uri: therapist.avatar }}
@@ -589,9 +605,19 @@ export default function TherapistsScreen({ navigation }) {
                   </View>
                 </View>
 
-                <View style={{ position: "relative" }}>
+                <View
+                  onTouchStart={() => {
+                    menuTouchRef.current = true;
+                  }}
+                  style={{
+                    position: "relative",
+                    zIndex: isMenuOpen ? 1000 : 1,
+                    elevation: isMenuOpen ? 20 : 1,
+                  }}
+                >
                   <TouchableOpacity
                     style={styles.moreOptionsButton}
+                    activeOpacity={0.7}
                     onPress={() => setActiveMenuId(isMenuOpen ? null : therapist.id)}
                   >
                     <Feather name="more-vertical" size={20} color="#94A3B8" />
@@ -601,19 +627,20 @@ export default function TherapistsScreen({ navigation }) {
                     <View style={styles.dropdownMenu}>
                       <TouchableOpacity
                         style={styles.menuItem}
+                        activeOpacity={0.7}
                         onPress={() => openEditModal(therapist)}
                       >
                         <Feather name="edit-2" size={15} color="#334155" />
                         <Text style={styles.menuItemText}>Edit</Text>
                       </TouchableOpacity>
+
                       <TouchableOpacity
                         style={[styles.menuItem, styles.deleteMenuItem]}
+                        activeOpacity={0.7}
                         onPress={() => handleDeleteTherapist(therapist)}
                       >
                         <Feather name="trash-2" size={15} color="#EF4444" />
-                        <Text style={[styles.menuItemText, styles.deleteText]}>
-                          Delete
-                        </Text>
+                        <Text style={[styles.menuItemText, styles.deleteText]}>Delete</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -767,7 +794,7 @@ export default function TherapistsScreen({ navigation }) {
                     const isSelected = newTherapist.specialty === item.id;
                     return (
                       <TouchableOpacity
-                        key={index}
+                        // key={index}
                         style={[
                           styles.tabChip,
                           { backgroundColor: item.bg },
@@ -1211,17 +1238,17 @@ const styles = StyleSheet.create({
   dropdownMenu: {
     position: "absolute",
     right: 0,
-    top: 32,
+    top: 34,
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingVertical: 6,
-    width: 110,
-    elevation: 5,
+    width: 120,
+    elevation: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    zIndex: 999,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    zIndex: 9999,
   },
   menuItem: {
     flexDirection: "row",
