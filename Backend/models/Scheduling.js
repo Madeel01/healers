@@ -14,7 +14,7 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       required: true, 
     },
-    status_attendance: {
+    attendance_status: {
         type: String,
         enum: ["Complete", "Absent", "Pending"],
         default: "Pending"

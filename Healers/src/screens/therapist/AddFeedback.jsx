@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, {
+  useEffect,
+  useState,
+} from 'react';
 
 import {
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
@@ -11,10 +13,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { createFeedback } from '../../api/therapist/api';
 import TherapistBottomBar from '../../components/TherapistBottomBar';
 import TopBar from '../../components/TopBar';
 import {
@@ -24,43 +27,76 @@ import {
 } from '../../styles/theme';
 
 const MOOD_OPTIONS = [
-  { id: "frustrated", label: "Frustrated", emoji: "😔" },
-  { id: "neutral", label: "Neutral", emoji: "😐" },
-  { id: "happy", label: "Happy", emoji: "😊" },
-  { id: "excited", label: "Excited", emoji: "🤩" },
+  { id: "Frustrated", label: "Frustrated", emoji: "😔" },
+  { id: "Neutral", label: "Neutral", emoji: "😐" },
+  { id: "Happy", label: "Happy", emoji: "😊" },
+  { id: "Excited", label: "Excited", emoji: "🤩" },
 ];
 
 export default function AddFeedbackScreen({ navigation, route }) {
-  const insets = useSafeAreaInsets();
+  const { session, childId = "48291", childName = "Ali Raza", isViewOnly = false } = route?.params || {};
 
-  const { childName = "Ali Raza", childId = "48291", date = "July 03, 2024", therapyType = "Behavior" } = route?.params
-    || {};
+  const resolvedChildName = session?.childId?.name || session?.childName || session?.name || childName;
+  const resolvedChildId = String(childId || session?.childId?._id || session?.childId || session?.id || "");
+  const resolvedTherapyType = session?.category || session?.therapyType || "Behavior";
 
-  const [selectedMood, setSelectedMood] = useState("frustrated");
-  const [behaviorNote, setBehaviorNote] = useState("");
-  const [speechNote, setSpeechNote] = useState("");
-  const [occupationalNote, setOccupationalNote] = useState("");
-  const [isVisibleToParents, setIsVisibleToParents] = useState(true);
+  const resolvedDate = session?.createdAt
+    ? new Date(session.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+    : session?.date || "July 03, 2024";
 
-  const handleSaveFeedback = () => {
-    const feedbackPayload = {
-      childId,
-      childName,
-      date,
-      therapyType,
-      selectedMood,
-      behaviorNote,
-      speechNote,
-      occupationalNote,
-      isVisibleToParents,
-    };
-    console.log("Saving feedback payload:", feedbackPayload);
-    navigation.goBack();
+  const formattedChildId = resolvedChildId.length > 5
+    ? `${resolvedChildId.substring(0, 5)}...`
+    : resolvedChildId;
+
+  const feedbackData = session?.feedbackDetails || session || {};
+
+  const [selectedMood, setSelectedMood] = useState(
+    feedbackData?.mood || "Frustrated"
+  );
+  const [behaviorNote, setBehaviorNote] = useState(
+    feedbackData?.notes || feedbackData?.behaviorNote || ""
+  );
+  console.log(
+    "session",session
+  )
+  const [isVisibleToParents, setIsVisibleToParents] = useState(
+    feedbackData?.isVisibleToParent !== undefined ? feedbackData.isVisibleToParent : true
+  );
+
+  useEffect(() => {
+    const details = session?.feedbackDetails || session;
+    if (details) {
+      if (details.mood) setSelectedMood(details.mood);
+      if (details.notes || details.behaviorNote) setBehaviorNote(details.notes || details.behaviorNote);
+      if (details.isVisibleToParent !== undefined) setIsVisibleToParents(details.isVisibleToParent);
+    }
+  }, [session]);
+
+  const handleSaveFeedback = async () => {
+    try {
+      const feedbackPayload = {
+        childId: resolvedChildId,
+        appointmentId: session?.id || session?._id,
+        category: resolvedTherapyType,
+        notes: behaviorNote,
+        mood: selectedMood,
+        isVisibleToParent: isVisibleToParents,
+        rating: 5,
+      };
+
+      const res = await createFeedback(feedbackPayload);
+
+      if (res?.success) {
+        navigation.goBack();
+      }
+    } catch (error) {
+      console.error("Error creating feedback:", error?.response?.data || error.message);
+    }
   };
 
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container, { paddingTop: insets.top }]}>
-      <TopBar navigation={navigation} headerTitle="Add Feedback " />
+    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
+      <TopBar navigation={navigation} headerTitle={isViewOnly ? "View Feedback" : "Add Feedback"} />
 
       <ScrollView
         style={styles.scrollArea}
@@ -68,7 +104,9 @@ export default function AddFeedbackScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <Text style={styles.cardHeaderTitle}>Add Feedback</Text>
+          <Text style={styles.cardHeaderTitle}>
+            {isViewOnly ? "Feedback Details" : "Add Feedback"}
+          </Text>
 
           <Text style={styles.inputLabel}>Child Name</Text>
           <View style={styles.childInfoBox}>
@@ -76,22 +114,25 @@ export default function AddFeedbackScreen({ navigation, route }) {
               source={{ uri: "https://images.unsplash.com/photo-1543332164-6e82f355badc?w=150" }}
               style={styles.avatarImage}
             />
-            <Text style={styles.childNameText}>{childName}</Text>
-            <Text style={styles.childIdText}>ID: #{childId}</Text>
+            <Text style={styles.childNameText}>{resolvedChildName}</Text>
+
+            <Text style={styles.childIdText} numberOfLines={1} ellipsizeMode="tail">
+              ID: #{formattedChildId}
+            </Text>
           </View>
 
           <View style={styles.rowTwoColumns}>
             <View style={styles.columnField}>
               <Text style={styles.inputLabel}>Date</Text>
               <View style={styles.readOnlyInputBox}>
-                <Text style={styles.readOnlyInputText}>{date}</Text>
+                <Text style={styles.readOnlyInputText}>{resolvedDate}</Text>
               </View>
             </View>
 
             <View style={styles.columnField}>
               <Text style={styles.inputLabel}>Therapy Type</Text>
               <View style={styles.readOnlyInputBox}>
-                <Text style={styles.readOnlyInputText}>{therapyType}</Text>
+                <Text style={styles.readOnlyInputText}>{resolvedTherapyType}</Text>
               </View>
             </View>
           </View>
@@ -103,10 +144,11 @@ export default function AddFeedbackScreen({ navigation, route }) {
 
           <View style={styles.moodSelectorContainer}>
             {MOOD_OPTIONS.map((mood) => {
-              const isSelected = selectedMood === mood.id;
+              const isSelected = selectedMood.toLowerCase() === mood.id.toLowerCase();
               return (
                 <TouchableOpacity
                   key={mood.id}
+                  disabled={isViewOnly}
                   style={[styles.moodItem, isSelected && styles.moodItemSelected]}
                   activeOpacity={0.7}
                   onPress={() => setSelectedMood(mood.id)}
@@ -127,39 +169,12 @@ export default function AddFeedbackScreen({ navigation, route }) {
             style={styles.textAreaInput}
             multiline
             numberOfLines={4}
+            editable={!isViewOnly}
             placeholder="Describe behavior, engagement, and skill execution..."
             placeholderTextColor="#A0AEC0"
             textAlignVertical="top"
             value={behaviorNote}
             onChangeText={setBehaviorNote}
-          />
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardHeaderTitle}>Speech & Language</Text>
-          <TextInput
-            style={styles.textAreaInput}
-            multiline
-            numberOfLines={4}
-            placeholder="Describe behavior, engagement, and skill execution..."
-            placeholderTextColor="#A0AEC0"
-            textAlignVertical="top"
-            value={speechNote}
-            onChangeText={setSpeechNote}
-          />
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardHeaderTitle}>Occupational Therapy</Text>
-          <TextInput
-            style={styles.textAreaInput}
-            multiline
-            numberOfLines={4}
-            placeholder="Describe behavior, engagement, and skill execution..."
-            placeholderTextColor="#A0AEC0"
-            textAlignVertical="top"
-            value={occupationalNote}
-            onChangeText={setOccupationalNote}
           />
         </View>
 
@@ -170,12 +185,13 @@ export default function AddFeedbackScreen({ navigation, route }) {
             </View>
             <View style={styles.toggleTextContainer}>
               <Text style={styles.toggleTitle}>Visible to Parents</Text>
-              <Text style={styles.toggleSubTitle}>Share this report with {childName} Family</Text>
+              <Text style={styles.toggleSubTitle}>Share this report with {resolvedChildName} Family</Text>
             </View>
           </View>
 
           <Switch
-            trackColor={{ false: "#CBD5E1", true: colors.primary}}
+            disabled={isViewOnly}
+            trackColor={{ false: "#CBD5E1", true: colors.primary }}
             thumbColor="#FFFFFF"
             ios_backgroundColor="#CBD5E1"
             onValueChange={setIsVisibleToParents}
@@ -183,23 +199,25 @@ export default function AddFeedbackScreen({ navigation, route }) {
           />
         </View>
 
-        <View style={styles.actionButtonsRow}>
-          <TouchableOpacity
-            style={styles.saveBtn}
-            activeOpacity={0.8}
-            onPress={handleSaveFeedback}
-          >
-            <Text style={styles.saveBtnText}>Save Feedback</Text>
-          </TouchableOpacity>
+        {!isViewOnly && (
+          <View style={styles.actionButtonsRow}>
+            <TouchableOpacity
+              style={styles.saveBtn}
+              activeOpacity={0.8}
+              onPress={handleSaveFeedback}
+            >
+              <Text style={styles.saveBtnText}>Save Feedback</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.cancelBtn}
-            activeOpacity={0.8}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.cancelBtnText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              activeOpacity={0.8}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
       <TherapistBottomBar activeTab="Feedback" />
@@ -219,7 +237,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 20,
   },
-
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
@@ -247,7 +264,6 @@ const styles = StyleSheet.create({
     marginBottom: 3,
     lineHeight: 18,
   },
-
   childInfoBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -277,8 +293,8 @@ const styles = StyleSheet.create({
     color: "#717781",
     marginLeft: "auto",
     lineHeight: 18,
+    maxWidth: 160,
   },
-
   rowTwoColumns: {
     flexDirection: "row",
     gap: 12,
@@ -301,7 +317,6 @@ const styles = StyleSheet.create({
     color: "#181C1E",
     lineHeight: 20,
   },
-
   moodSelectorContainer: {
     flexDirection: "row",
     backgroundColor: "#F1F4F7",
@@ -337,7 +352,6 @@ const styles = StyleSheet.create({
   moodLabelSelected: {
     color: "#181C1E",
   },
-
   textAreaInput: {
     backgroundColor: "#F1F4F7",
     borderRadius: 8,
@@ -349,7 +363,6 @@ const styles = StyleSheet.create({
     color: "#1E293B",
     minHeight: 80,
   },
-
   toggleCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 8,
@@ -391,7 +404,6 @@ const styles = StyleSheet.create({
     color: "#717781",
     lineHeight: 15,
   },
-
   actionButtonsRow: {
     flexDirection: "row",
     gap: 12,

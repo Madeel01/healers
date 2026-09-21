@@ -24,6 +24,7 @@ import Slider from '@react-native-community/slider';
 
 import {
   getChildPrograms,
+  getChildStatsApi,
   therapistUsers,
   updateGoalProgressApi,
 } from '../../api/therapist/api';
@@ -44,13 +45,13 @@ export default function AssignedChildrenScreen({ navigation }) {
   const [selectedChildId, setSelectedChildId] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSearch, setModalSearch] = useState("");
-
   const [programs, setPrograms] = useState([]);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
-
   const [activeSliderGoalId, setActiveSliderGoalId] = useState(null);
   const [sliderValues, setSliderValues] = useState({});
   const [savingGoalId, setSavingGoalId] = useState(null);
+  const [sessionStats, setSessionStats] = useState({ nextSession: null, attendancePercentage: 0 });
+  const [loadingStats, setLoadingStats] = useState(false);
 
   useEffect(() => {
     fetchChildren();
@@ -150,6 +151,51 @@ export default function AssignedChildrenScreen({ navigation }) {
     return childName.toLowerCase().includes(modalSearch.toLowerCase().trim());
   });
 
+  useEffect(() => {
+    if (selectedChildId) {
+      fetchProgramsForSelectedChild(selectedChildId);
+      fetchChildStats(selectedChildId);
+    }
+  }, [selectedChildId]);
+
+  const fetchChildStats = async (childId) => {
+    try {
+      setLoadingStats(true);
+      const response = await getChildStatsApi(childId);
+      if (response?.success) {
+        setSessionStats(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching child stats:", error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const formatNextSession = (session) => {
+    if (!session) return "No upcoming session";
+
+    const dateObj = new Date(session.date);
+    const formattedDate = dateObj.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+
+    let timeString = session.startTime;
+    if (timeString && timeString.includes(":")) {
+      const [hours, minutes] = timeString.split(":");
+      const dateForTime = new Date();
+      dateForTime.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+
+      timeString = dateForTime.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
+
+    return `${formattedDate}, ${timeString}`;
+  };
   return (
     <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <TopBar navigation={navigation} headerTitle={"Assigned Children"} />
@@ -244,14 +290,22 @@ export default function AssignedChildrenScreen({ navigation }) {
           </View>
 
           <View style={styles.sessionBox}>
-            <View>
-              <Text style={styles.sessionLabel}>Next Session</Text>
-              <Text style={styles.sessionValue}>Today, 09:00 AM</Text>
-            </View>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text style={styles.sessionLabel}>Attendance</Text>
-              <Text style={styles.attendanceValue}>90%</Text>
-            </View>
+            {loadingStats ? <ActivityIndicator size="small" color="#004E9F" style={{ flex: 1 }} /> : (
+              <>
+                <View>
+                  <Text style={styles.sessionLabel}>Next Session</Text>
+                  <Text style={styles.sessionValue}>
+                    {formatNextSession(sessionStats.nextSession)}
+                  </Text>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={styles.sessionLabel}>Attendance</Text>
+                  <Text style={styles.attendanceValue}>
+                    {sessionStats.attendancePercentage}%
+                  </Text>
+                </View>
+              </>
+            )}
           </View>
         </View>
 

@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 
 import {
+  ActivityIndicator,
   Modal,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,19 +15,26 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useFocusEffect } from '@react-navigation/native';
 
+import {
+  feedbackManagement,
+  therapistUsers,
+} from '../../api/therapist/api';
 import TherapistBottomBar from '../../components/TherapistBottomBar';
 import TopBar from '../../components/TopBar';
+import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import { formatTo12Hour } from '../../utils/hoursformat';
 
 const MONTH_NAMES = [
   "January",
@@ -53,204 +65,106 @@ const MONTH_RANGES = [
 const getCurrentMonthRangeLabel = () => {
   const currentMonthIndex = new Date().getMonth();
   const currentMonth = MONTH_NAMES[currentMonthIndex];
-  const matchedRange = MONTH_RANGES.find((item) => item.months && item.months[0] === currentMonth);
-  return matchedRange ? matchedRange.label : "January - February";
+  const matchedRange = MONTH_RANGES.find(
+    (item) => item.months && item.months[0] === currentMonth,
+  );
+  return matchedRange ? matchedRange.label : "All Months";
 };
 
-const CHILDREN_DATA = [
-  {
-    id: "1",
-    name: "Ali Raza",
-    parent: "Nawaz",
-    sessions: [
-      {
-        id: "101",
-        name: "Ali Raza",
-        time: "2:10 AM",
-        date: "JULY 01",
-        month: "July",
-        category: "SPEECH & LANGUAGE",
-        status: "Feedback Done",
-        isDone: true,
-      },
-      {
-        id: "102",
-        name: "Ali Raza",
-        time: "2:10 AM",
-
-        date: "JULY 02",
-        month: "July",
-        category: "INTEGRATION",
-        status: "Pending",
-        isDone: false,
-      },
-      {
-        id: "103",
-        name: "Ali Raza",
-        time: "2:10 AM",
-
-        date: "AUGUST 03",
-        month: "August",
-        category: "INTEGRATION",
-        status: "Feedback Done",
-        isDone: true,
-      },
-      {
-        id: "104",
-        name: "Ali Raza",
-        time: "2:10 AM",
-
-        date: "AUGUST 14",
-        month: "August",
-        category: "INTEGRATION",
-        status: "Pending",
-        isDone: false,
-      },
-      {
-        id: "105",
-        name: "Ali Raza",
-        time: "2:10 AM",
-
-        date: "SEPTEMBER 05",
-        month: "September",
-        category: "INTEGRATION",
-        status: "Pending",
-        isDone: false,
-      },
-    ],
-  },
-  {
-    id: "2",
-    name: "Fatima Noor",
-    parent: "Tariq",
-    sessions: [
-      {
-        id: "201",
-        name: "Fatima Noor",
-        time: "11:30 AM",
-        date: "JULY 01",
-        month: "July",
-        category: "BEHAVIORAL",
-        status: "Feedback Done",
-        isDone: true,
-      },
-      {
-        id: "202",
-        name: "Fatima Noor",
-        time: "",
-        date: "AUGUST 12",
-        month: "August",
-        category: "SPEECH & LANGUAGE",
-        status: "Pending",
-        isDone: false,
-      },
-      {
-        id: "203",
-        name: "Fatima Noor",
-        time: "2:10 AM",
-
-        date: "SEPTEMBER 03",
-        month: "September",
-        category: "BEHAVIORAL",
-        status: "Feedback Done",
-        isDone: true,
-      },
-    ],
-  },
-  {
-    id: "3",
-    name: "Hassan Khan",
-    parent: "Aslam",
-    sessions: [
-      {
-        id: "301",
-        name: "Hassan Khan",
-        time: "02:00 PM",
-        date: "JULY 02",
-        month: "July",
-        category: "OCCUPATIONAL",
-        status: "Feedback Done",
-        isDone: true,
-      },
-      {
-        id: "302",
-        name: "Hassan Khan",
-        time: "04:30 PM",
-        date: "AUGUST 04",
-        month: "August",
-        category: "OCCUPATIONAL",
-        status: "Feedback Done",
-        isDone: true,
-      },
-      {
-        id: "303",
-        name: "Hassan Khan",
-        time: "2:10 AM",
-
-        date: "SEPTEMBER 06",
-        month: "September",
-        category: "INTEGRATION",
-        status: "Pending",
-        isDone: false,
-      },
-    ],
-  },
-  {
-    id: "4",
-    name: "Zainab Ali",
-    parent: "Usman",
-    sessions: [
-      {
-        id: "401",
-        name: "Zainab Ali",
-        time: "2:10 AM",
-
-        date: "JULY 05",
-        month: "July",
-        category: "ARTICULATION",
-        status: "Pending",
-        isDone: false,
-      },
-      {
-        id: "402",
-        name: "Zainab Ali",
-        time: "05:00 PM",
-        date: "OCTOBER 10",
-        month: "October",
-        category: "ARTICULATION",
-        status: "Feedback Done",
-        isDone: true,
-      },
-    ],
-  },
-];
-
 export default function FeedbackManagementScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
+  const { user } = useContext(AuthContext);
 
-  const [selectedChildId, setSelectedChildId] = useState("1");
   const [selectedRange, setSelectedRange] = useState(getCurrentMonthRangeLabel);
-
   const [childDropdownVisible, setChildDropdownVisible] = useState(false);
   const [monthDropdownVisible, setMonthDropdownVisible] = useState(false);
-
-  const activeChild = CHILDREN_DATA.find((item) => item.id === selectedChildId) || CHILDREN_DATA[0];
-
-  const activeRangeConfig = MONTH_RANGES.find((r) => r.label === selectedRange) || MONTH_RANGES[0];
-
-  const filteredSessions = activeChild.sessions.filter((session) => {
-    if (activeRangeConfig.label === "All Months") return true;
-    return activeRangeConfig.months.some(
-      (m) => m.toLowerCase() === session.month.toLowerCase(),
-    );
+  const [children, setChildren] = useState([]);
+  const [feedbackData, setFeedbackData] = useState([]);
+  const [loadingChildrenFeedback, setLoadingFeedback] = useState(true);
+  const [selectedChildId, setSelectedChildId] = useState(null);
+  const [stats, setStats] = useState({
+    totalChildren: 0,
+    totalSessions: 0,
+    totalFeedbackDone: 0,
   });
+  useEffect(() => {
+    fetchChildren();
+  }, []);
 
-  const totalSessionsCount = filteredSessions.length;
-  const feedbackDoneCount = filteredSessions.filter((s) => s.isDone).length;
-  const formattedFeedbackCount = feedbackDoneCount < 10 ? `0${feedbackDoneCount}` : `${feedbackDoneCount}`;
+  useEffect(() => {
+    if (selectedChildId) {
+      fetchFeedbackData();
+    }
+  }, [selectedChildId, selectedRange]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (children.length === 0) {
+        fetchChildren();
+      }
+    }, [children.length]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (selectedChildId) {
+        fetchFeedbackData();
+      }
+    }, [selectedChildId, selectedRange]),
+  );
+
+  const fetchChildren = async () => {
+    try {
+      const ID = user?.id;
+      const responseData = await therapistUsers({ filter: ID });
+      const fetchedUsers = responseData?.data || [];
+      setChildren(fetchedUsers);
+
+      if (fetchedUsers.length > 0 && !selectedChildId) {
+        const initialChildId = fetchedUsers[0]._id || fetchedUsers[0].id;
+        setSelectedChildId(initialChildId);
+      }
+    } catch (error) {
+      console.error("Error fetching children:", error);
+    }
+  };
+
+  const fetchFeedbackData = async () => {
+    try {
+      setLoadingFeedback(true);
+      const ID = user?.id;
+
+      const response = await feedbackManagement(ID, selectedChildId, selectedRange);
+      if (response?.success) {
+        const { data, stats } = response;
+        if (stats) {
+          setStats({
+            totalChildren: stats.totalChildren || 0,
+            totalSessions: stats.totalSessions || 0,
+            totalFeedbackDone: stats.totalFeedbackDone || 0,
+          });
+        }
+
+        if (data && data.length > 0) {
+          setFeedbackData(data);
+
+          if (!selectedChildId || !data.some((c) => c.id === selectedChildId)) {
+            setSelectedChildId(data[0].id);
+          }
+        } else {
+          setFeedbackData([]);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching feedback data:", error);
+    } finally {
+      setLoadingFeedback(false);
+    }
+  };
+
+  const activeChild = children.find((item) => item._id === selectedChildId);
 
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <TopBar navigation={navigation} headerTitle="Feedback Management" />
 
       <ScrollView
@@ -265,7 +179,7 @@ export default function FeedbackManagementScreen({ navigation }) {
             onPress={() => setChildDropdownVisible(true)}
           >
             <Feather name="search" size={20} color="#717781" style={styles.searchIcon} />
-            <Text style={styles.selectedChildText}>{activeChild.name}</Text>
+            <Text style={styles.selectedChildText}>{activeChild?.name || activeChild?.fullName}</Text>
             <Feather name="chevron-down" size={18} color="#717781" style={{ marginLeft: "auto" }} />
           </TouchableOpacity>
 
@@ -284,14 +198,14 @@ export default function FeedbackManagementScreen({ navigation }) {
             <View style={styles.fieldBox}>
               <Text style={styles.fieldLabel}>Name</Text>
               <View style={styles.fieldValueContainer}>
-                <Text style={styles.fieldValueText}>{activeChild.name}</Text>
+                <Text style={styles.fieldValueText}>{activeChild?.name || activeChild?.fullName}</Text>
               </View>
             </View>
 
             <View style={styles.fieldBox}>
               <Text style={styles.fieldLabel}>Parents</Text>
               <View style={styles.fieldValueContainer}>
-                <Text style={styles.fieldValueText}>{activeChild.parent}</Text>
+                <Text style={styles.fieldValueText}>N/A</Text>
               </View>
             </View>
           </View>
@@ -299,16 +213,20 @@ export default function FeedbackManagementScreen({ navigation }) {
 
         <View style={styles.statsCard}>
           <View style={styles.statBox}>
-            <Text style={styles.statNumber}>1</Text>
-            <Text style={styles.statLabel}>TOTAL{"\n"}CHILD</Text>
+            <Text style={styles.statNumber}>{stats.totalChildren}</Text>
+            <Text style={styles.statLabel}>TOTAL{"\n"}CHILDREN</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{formattedFeedbackCount}</Text>
+            <Text style={styles.statNumber}>
+              {stats.totalFeedbackDone < 10
+                ? `0${stats.totalFeedbackDone}`
+                : stats.totalFeedbackDone}
+            </Text>
             <Text style={styles.statLabel}>GIVE{"\n"}FEEDBACK</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{totalSessionsCount}</Text>
-            <Text style={styles.statLabel}>TOTAL{"\n"}SESSION</Text>
+            <Text style={styles.statNumber}>{stats.totalSessions}</Text>
+            <Text style={styles.statLabel}>TOTAL{"\n"}SESSIONS</Text>
           </View>
         </View>
 
@@ -321,74 +239,143 @@ export default function FeedbackManagementScreen({ navigation }) {
             <Text style={styles.dateDropdownText}>{selectedRange}</Text>
             <Feather name="chevron-down" size={20} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.feedbackPillBtn} activeOpacity={0.8}
-          onPress={()=>navigation.navigate('AddFeedback')}>
+          <View
+            style={styles.feedbackPillBtn}
+          >
             <Text style={styles.feedbackPillText}>Feedback</Text>
-          </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={styles.sessionList}>
-          {filteredSessions.length > 0
-            ? (
-              filteredSessions.map((item) => (
-                <View key={item.id} style={styles.sessionCard}>
-                  <View style={styles.sessionLeft}>
-                    {item.isDone
-                      ? (
-                        <View style={styles.iconCircleDone}>
-                          <Ionicons name="checkmark-circle-outline" size={22} color="#006B58" />
-                        </View>
-                      )
-                      : (
-                        <View style={styles.iconCirclePending}>
-                          <MaterialCommunityIcons name="dots-horizontal-circle-outline" size={22} color="#717781" />
-                        </View>
-                      )}
+        {loadingChildrenFeedback
+          ? (
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size="large" color={colors.primary || "#006B5D"} />
+              <Text style={styles.loadingText}>Loading sessions...</Text>
+            </View>
+          )
+          : (
+            (() => {
+              const activeChild = feedbackData.find((item) => item.id === selectedChildId) || feedbackData[0];
+              const sessions = activeChild?.sessions || [];
 
-                    <View style={styles.sessionDetails}>
-                      <View style={styles.nameTimeRow}>
-                        <Text style={styles.childItemName}>{item.name}</Text>
-                        {item.time !== ""
-                          && <Text style={styles.timeText}>{item.time}</Text>}
+              const isFutureDate = (dateVal, timeStr) => {
+                if (!dateVal) return false;
+
+                const now = new Date();
+
+                const sessionDate = new Date(dateVal);
+
+                if (timeStr && typeof timeStr === "string") {
+                  const startTimePart = timeStr.includes("-")
+                    ? timeStr.split("-")[0].trim()
+                    : timeStr.trim();
+
+                  const [hours, minutes] = startTimePart.split(":").map(Number);
+
+                  if (!isNaN(hours) && !isNaN(minutes)) {
+                    sessionDate.setHours(hours, minutes, 0, 0);
+                    return sessionDate > now;
+                  }
+                }
+
+                sessionDate.setHours(23, 59, 59, 999);
+                return sessionDate > now;
+              };
+
+              return (
+                <View style={styles.sessionList}>
+                  {sessions.length > 0
+                    ? (
+                      sessions.map((item) => {
+                        const isUpcoming = isFutureDate(item.rawDate, item.time || item.date);
+                        return (
+                          <View key={item.id} style={styles.sessionCard}>
+                            <View style={styles.sessionLeft}>
+                              {item.isDone
+                                ? (
+                                  <View style={styles.iconCircleDone}>
+                                    <Ionicons name="checkmark-circle-outline" size={22} color="#006B58" />
+                                  </View>
+                                )
+                                : (
+                                  <View style={styles.iconCirclePending}>
+                                    <MaterialCommunityIcons
+                                      name="dots-horizontal-circle-outline"
+                                      size={22}
+                                      color="#717781"
+                                    />
+                                  </View>
+                                )}
+
+                              <View style={styles.sessionDetails}>
+                                <View style={styles.nameTimeRow}>
+                                  <Text style={styles.childItemName}>{item.name}</Text>
+                                  {item.time !== "" && <Text style={styles.timeText}>{formatTo12Hour(item.time)}</Text>}
+                                </View>
+                                <Text style={styles.categoryText}>
+                                  <Text style={styles.dateHighlight}>{item.date}</Text> • {item.category}
+                                </Text>
+                              </View>
+                            </View>
+
+                            <View style={styles.sessionRight}>
+                              {item.isDone
+                                ? (
+                                  <>
+                                    <View style={styles.badgeDone}>
+                                      <Text style={styles.badgeDoneText}>Feedback Done</Text>
+                                    </View>
+                                    <TouchableOpacity
+                                      style={styles.viewBtn}
+                                      activeOpacity={0.8}
+                                      onPress={() =>
+                                        navigation.navigate("AddFeedback", {
+                                          session: item,
+                                          childId: selectedChildId,
+                                          isViewOnly: true,
+                                        })}
+                                    >
+                                      <Text style={styles.viewBtnText}>View</Text>
+                                    </TouchableOpacity>
+                                  </>
+                                )
+                                : (
+                                  <>
+                                    <View style={styles.badgePending}>
+                                      <Text style={styles.badgePendingText}>Pending</Text>
+                                    </View>
+
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.addFeedbackBtn,
+                                        isUpcoming && styles.disabledBtn,
+                                      ]}
+                                      disabled={isUpcoming}
+                                      activeOpacity={0.8}
+                                      onPress={() =>
+                                        navigation.navigate("AddFeedback", {
+                                          session: item,
+                                          childId: selectedChildId,
+                                        })}
+                                    >
+                                      <Text style={styles.addFeedbackBtnText}>Add Feedback</Text>
+                                    </TouchableOpacity>
+                                  </>
+                                )}
+                            </View>
+                          </View>
+                        );
+                      })
+                    )
+                    : (
+                      <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>No sessions found for {selectedRange}</Text>
                       </View>
-                      <Text style={styles.categoryText}>
-                        <Text style={styles.dateHighlight}>{item.date}</Text> • {item.category}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.sessionRight}>
-                    {item.isDone
-                      ? (
-                        <>
-                          <View style={styles.badgeDone}>
-                            <Text style={styles.badgeDoneText}>Feedback Done</Text>
-                          </View>
-                          <TouchableOpacity style={styles.viewBtn} activeOpacity={0.8}>
-                            <Text style={styles.viewBtnText}>View</Text>
-                          </TouchableOpacity>
-                        </>
-                      )
-                      : (
-                        <>
-                          <View style={styles.badgePending}>
-                            <Text style={styles.badgePendingText}>Pending</Text>
-                          </View>
-                          <TouchableOpacity style={styles.addFeedbackBtn} activeOpacity={0.8}>
-                            <Text style={styles.addFeedbackBtnText}>Add Feedback</Text>
-                          </TouchableOpacity>
-                        </>
-                      )}
-                  </View>
+                    )}
                 </View>
-              ))
-            )
-            : (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No sessions found for {selectedRange}</Text>
-              </View>
-            )}
-        </View>
+              );
+            })()
+          )}
       </ScrollView>
 
       <Modal
@@ -402,17 +389,17 @@ export default function FeedbackManagementScreen({ navigation }) {
             <TouchableWithoutFeedback>
               <View style={styles.dropdownMenu}>
                 <Text style={styles.dropdownMenuTitle}>Select Child</Text>
-                {CHILDREN_DATA.map((child) => {
-                  const isSelected = child.id === selectedChildId;
+                {children.map((child) => {
+                  const isSelected = child._id === selectedChildId;
                   return (
                     <TouchableOpacity
-                      key={child.id}
+                      key={child._id}
                       style={[
                         styles.dropdownOption,
                         isSelected && styles.dropdownOptionSelected,
                       ]}
                       onPress={() => {
-                        setSelectedChildId(child.id);
+                        setSelectedChildId(child._id);
                         setChildDropdownVisible(false);
                       }}
                     >
@@ -422,7 +409,7 @@ export default function FeedbackManagementScreen({ navigation }) {
                           isSelected && styles.dropdownOptionTextSelected,
                         ]}
                       >
-                        {child.name}
+                        {child?.name || child?.fullName}
                       </Text>
                       {isSelected && <Feather name="check" size={18} color="#1669A9" />}
                     </TouchableOpacity>
@@ -830,5 +817,9 @@ const styles = StyleSheet.create({
   dropdownOptionTextSelected: {
     fontFamily: fonts.bold,
     color: "#1669A9",
+  },
+  disabledBtn: {
+    backgroundColor: "#A0AEC0",
+    opacity: 0.6,
   },
 });

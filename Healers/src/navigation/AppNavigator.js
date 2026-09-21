@@ -19,6 +19,7 @@ import FeeManagementScreen from '../screens/admin/FeeManagement';
 import InvoiceDetailScreen from '../screens/admin/InvoiceDetailScreen';
 import InvoiceManagementScreen from '../screens/admin/InvoiceManagement';
 import LeaveRequestsScreen from '../screens/admin/LeaveRequest';
+import ScheduleScreen from '../screens/admin/Schedule';
 import TherapistsScreen from '../screens/admin/Therapist';
 import LoginScreen from '../screens/auth/LoginScreen';
 import OnboardingScreen from '../screens/auth/OnboardingScreen';
@@ -34,7 +35,7 @@ import ProgramBuilderScreen from '../screens/therapist/ProgramBuilder';
 import ProgressTrackingScreen from '../screens/therapist/ProgressTracking';
 import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
-import ScheduleScreen from '../screens/admin/Schedule';
+import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
 
 const Stack = createNativeStackNavigator();
 
@@ -80,7 +81,7 @@ function TherapistStack() {
       <Stack.Screen name="AddFeedback" component={AddFeedbackScreen} />
       <Stack.Screen name="AttendanceTracking" component={AttendanceTrackingScreen} />
       <Stack.Screen name="ProgramBuilder" component={ProgramBuilderScreen} />
-      {/* <Stack.Screen name="WeeklyVideo" component={WeeklyVideoScreen} /> */}
+      <Stack.Screen name="WeeklyVideo" component={WeeklyVideoScreen} />
       <Stack.Screen name="LeaveRequest" component={LeaveRequestScreen} />
       <Stack.Screen name="QuarterlyReports" component={QuarterlyReportsScreen} />
       <Stack.Screen name="ProgressTracking" component={ProgressTrackingScreen} />
