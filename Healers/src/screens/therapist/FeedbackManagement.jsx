@@ -205,7 +205,7 @@ export default function FeedbackManagementScreen({ navigation }) {
             <View style={styles.fieldBox}>
               <Text style={styles.fieldLabel}>Parents</Text>
               <View style={styles.fieldValueContainer}>
-                <Text style={styles.fieldValueText}>N/A</Text>
+                <Text style={styles.fieldValueText}>{activeChild?.fatherName || "-"}</Text>
               </View>
             </View>
           </View>

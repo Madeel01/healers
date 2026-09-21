@@ -69,6 +69,20 @@ export default function TherapistDashboardScreen({ navigation }) {
     await fetchDashboardStats();
     setRefreshing(false);
   };
+
+  const formatSessionDate = (dateVal) => {
+  if (!dateVal) return "";
+  const rawDate = dateVal?.$date || dateVal;
+  const d = new Date(rawDate);
+
+  if (isNaN(d.getTime())) return "";
+
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }); // Output: "Sep 19, 2026"
+};
   return (
     <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <View style={styles.headerRow}>
@@ -137,7 +151,7 @@ export default function TherapistDashboardScreen({ navigation }) {
 
           <TouchableOpacity
             style={[styles.gridCard, { backgroundColor: "#8CF0D8" }]}
-            onPress={() => navigation.navigate("AttendanceTracking")}
+           onPress={() => navigation.navigate("AttendanceTracking", { filterType: "today" })}
             activeOpacity={0.85}
           >
             <View style={styles.cardIconBox}>
@@ -224,7 +238,8 @@ export default function TherapistDashboardScreen({ navigation }) {
             <Text style={styles.actionLabel}>Request Leave</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
+          {
+            /* <TouchableOpacity
             style={styles.actionItem}
             onPress={() => navigation.navigate("ProgressTracking")}
           >
@@ -232,7 +247,8 @@ export default function TherapistDashboardScreen({ navigation }) {
               <Feather name="map-pin" size={22} color="#1669A9" />
             </View>
             <Text style={styles.actionLabel}>Tracking</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */
+          }
         </View>
 
         {/* Dynamic Next Scheduled Session Banner */}
@@ -245,8 +261,8 @@ export default function TherapistDashboardScreen({ navigation }) {
                   {stats.nextSession.childName} • {formatTo12Hour(stats.nextSession.startTime)}
                 </Text>
                 <Text style={styles.bannerDescription}>
-                  Session Time: {formatTo12Hour(stats.nextSession.startTime)} -{" "}
-                  {formatTo12Hour(stats.nextSession.endTime)}
+                  Session Date: {formatSessionDate(stats.nextSession.date)}{" "}
+                  ({formatTo12Hour(stats.nextSession.startTime)} - {formatTo12Hour(stats.nextSession.endTime)})
                 </Text>
               </>
             )

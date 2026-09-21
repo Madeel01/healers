@@ -25,22 +25,25 @@ exports.getDashboardStats = async (req, res) => {
     const assignment = await TherapistAssignment.findOne({ therapistId }).lean();
     const assignedChildrenList = assignment?.childIds || [];
     const assignedChildrenCount = assignedChildrenList.length;
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
 
-    const schedules = await Scheduling.find({ therapistId }).populate(
+    const schedules = await Scheduling.find({ therapistId, month: currentMonth, year: currentYear }).populate(
       "childId",
       "name fullName",
     );
 
     let todaySessionsCount = 0;
     let completedCount = 0;
+    let totalFeebBackCount = 0;
     let totalPastOrCurrentSessions = 0;
     let closestUpcomingSession = null;
     let closestTimeDiff = Infinity;
     schedules.forEach((schedule) => {
       (schedule.appointments || []).forEach((appt) => {
         const apptDate = new Date(appt.date?.$date || appt.date);
-
         const fullApptDateTime = new Date(apptDate);
+        totalFeebBackCount++;
         if (appt.startTime) {
           const [hours, minutes] = appt.startTime.split(":").map(Number);
           if (!isNaN(hours) && !isNaN(minutes)) {
@@ -86,13 +89,14 @@ exports.getDashboardStats = async (req, res) => {
       ? Math.round((completedCount / totalPastOrCurrentSessions) * 100)
       : 0;
 
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
-
+    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const startOfNextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
     const totalSubmittedFeedback = await Feedback.countDocuments({
       therapistId,
-      month: currentMonth,
-      year: currentYear,
+      createdAt: {
+        $gte: startOfMonth,
+        $lt: startOfNextMonth,
+      },
     });
 
     return res.status(200).json({
@@ -100,7 +104,7 @@ exports.getDashboardStats = async (req, res) => {
       data: {
         assignedChildren: assignedChildrenCount,
         todaySessions: todaySessionsCount,
-        monthlyFeedback: `${totalSubmittedFeedback}/${assignedChildrenCount}`,
+        monthlyFeedback: `${totalSubmittedFeedback}/${totalFeebBackCount}`,
         overallAttendance: `${overallAttendance}%`,
         nextSession: closestUpcomingSession,
       },
@@ -494,7 +498,7 @@ exports.getFeedbackManagementData = async (req, res) => {
 
       appointments.forEach((appt) => {
         const apptIdStr = appt._id.toString();
-        const dateObj = new Date(appt.date);
+        const dateObj = new Date(appt.date?.$date || appt.date);
         const formattedDate = dateObj
           .toLocaleString("en-US", { month: "short", day: "2-digit" })
           .toUpperCase();
@@ -531,19 +535,178 @@ exports.getFeedbackManagementData = async (req, res) => {
       });
     });
 
+    const resultData = Object.values(childrenMap).map((childData) => {
+      childData.sessions.sort((a, b) => {
+        const dateA = new Date(a.rawDate?.$date || a.rawDate);
+        const dateB = new Date(b.rawDate?.$date || b.rawDate);
+
+        if (a.time) {
+          const [hA, mA] = a.time.split(":").map(Number);
+          dateA.setHours(hA || 0, mA || 0, 0, 0);
+        }
+        if (b.time) {
+          const [hB, mB] = b.time.split(":").map(Number);
+          dateB.setHours(hB || 0, mB || 0, 0, 0);
+        }
+
+        return dateA - dateB;
+      });
+      return childData;
+    });
+
     return res.status(200).json({
       success: true,
       stats: {
-        totalChildren: Object.keys(childrenMap).length,
+        totalChildren: resultData.length,
         totalSessions,
         totalFeedbackDone,
       },
-      data: Object.values(childrenMap),
+      data: resultData,
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// exports.getFeedbackManagementData = async (req, res) => {
+//   try {
+//     const rawTherapistId = req.user._id || req.user.id;
+//     const therapistId = new mongoose.Types.ObjectId(rawTherapistId);
+//     const { childId } = req.params;
+//     const { monthRange } = req.query;
+
+//     const monthMap = {
+//       january: 1,
+//       february: 2,
+//       march: 3,
+//       april: 4,
+//       may: 5,
+//       june: 6,
+//       july: 7,
+//       august: 8,
+//       september: 9,
+//       october: 10,
+//       november: 11,
+//       december: 12,
+//     };
+
+//     let targetMonthNum = null;
+//     if (monthRange && monthRange !== "All Months") {
+//       const firstMonthName = monthRange.split("-")[0].trim().toLowerCase();
+//       targetMonthNum = monthMap[firstMonthName] || null;
+//     }
+
+//     const currentYear = new Date().getFullYear();
+
+//     const query = {
+//       therapistId,
+//       year: currentYear,
+//     };
+
+//     if (childId) {
+//       query.childId = new mongoose.Types.ObjectId(childId);
+//     }
+//     if (targetMonthNum) {
+//       query.month = targetMonthNum;
+//     }
+
+//     const schedules = await Scheduling.find(query)
+//       .populate("childId", "fullName email phone")
+//       .lean();
+
+//     const feedbacks = await Feedback.find({ therapistId }).lean();
+//     const feedbackMap = {};
+//     feedbacks.forEach((f) => {
+//       if (f.appointmentId) {
+//         feedbackMap[f.appointmentId.toString()] = f;
+//       }
+//     });
+
+//     const assignedChildIds = schedules.map((s) => s.childId?._id).filter(Boolean);
+//     const programs = await Program.find({
+//       userId: { $in: assignedChildIds },
+//       therapistId,
+//     }).lean();
+
+//     const programMap = {};
+//     programs.forEach((p) => {
+//       programMap[p.userId.toString()] = p.programName;
+//     });
+
+//     const childrenMap = {};
+//     let totalSessions = 0;
+//     let totalFeedbackDone = 0;
+
+//     schedules.forEach((schedule) => {
+//       const child = schedule.childId;
+//       if (!child) return;
+
+//       const childIdStr = child._id.toString();
+
+//       if (!childrenMap[childIdStr]) {
+//         childrenMap[childIdStr] = {
+//           id: childIdStr,
+//           name: child.fullName || "N/A",
+//           email: child.email || "N/A",
+//           phone: child.phone || "N/A",
+//           sessions: [],
+//         };
+//       }
+
+//       const appointments = schedule.appointments || [];
+
+//       appointments.forEach((appt) => {
+//         const apptIdStr = appt._id.toString();
+//         const dateObj = new Date(appt.date);
+//         const formattedDate = dateObj
+//           .toLocaleString("en-US", { month: "short", day: "2-digit" })
+//           .toUpperCase();
+
+//         const existingFeedback = feedbackMap[apptIdStr];
+//         const isDone = !!existingFeedback;
+
+//         totalSessions++;
+//         if (isDone) totalFeedbackDone++;
+
+//         const resolvedCategory = programMap[childIdStr] || appt.category || "GENERAL";
+
+//         childrenMap[childIdStr].sessions.push({
+//           id: apptIdStr,
+//           name: child.fullName || "N/A",
+//           time: appt.startTime || "",
+//           endTime: appt.endTime || "",
+//           rawDate: appt.date,
+//           date: formattedDate,
+//           attendanceStatus: appt.attendance_status || "Pending",
+//           category: resolvedCategory,
+//           isDone,
+//           feedbackDetails: isDone
+//             ? {
+//               id: existingFeedback._id,
+//               notes: existingFeedback.notes,
+//               rating: existingFeedback.rating,
+//               category: existingFeedback.category,
+//               mood: existingFeedback.mood,
+//               isVisibleToParent: existingFeedback.isVisibleToParent,
+//             }
+//             : null,
+//         });
+//       });
+//     });
+
+//     return res.status(200).json({
+//       success: true,
+//       stats: {
+//         totalChildren: Object.keys(childrenMap).length,
+//         totalSessions,
+//         totalFeedbackDone,
+//       },
+//       data: Object.values(childrenMap),
+//     });
+//   } catch (error) {
+//     return res.status(500).json({ success: false, message: error.message });
+//   }
+// };
 
 exports.createFeedback = async (req, res) => {
   try {
@@ -582,16 +745,44 @@ exports.createFeedback = async (req, res) => {
 exports.getAttendance = async (req, res) => {
   try {
     const therapistId = req.user._id || req.user.id;
-    const { childId, year, month } = req.query;
+    const { childId, year, month, filter } = req.query;
 
     const query = { therapistId };
-    if (childId) query.childId = childId;
+    const isTodayFilter = filter === "true" || filter === true;
+
+    if (!isTodayFilter && childId) {
+      query.childId = childId;
+    }
     if (year) query.year = Number(year);
     if (month) query.month = Number(month);
 
-    const records = await Scheduling.find(query).populate("childId", "name parentName fullName");
+    const records = await Scheduling.find(query)
+      .populate("childId", "name parentName fullName")
+      .lean();
 
-    return res.status(200).json({ success: true, data: records });
+    const sortedRecords = records.map((doc) => {
+      if (Array.isArray(doc.appointments)) {
+        doc.appointments.sort((a, b) => {
+          const dateA = new Date(a.date?.$date || a.date);
+          const dateB = new Date(b.date?.$date || b.date);
+
+          // Parse startTime ("HH:mm") into hours and minutes
+          if (a.startTime) {
+            const [hA, mA] = a.startTime.split(":").map(Number);
+            dateA.setHours(hA || 0, mA || 0, 0, 0);
+          }
+          if (b.startTime) {
+            const [hB, mB] = b.startTime.split(":").map(Number);
+            dateB.setHours(hB || 0, mB || 0, 0, 0);
+          }
+
+          return dateA - dateB;
+        });
+      }
+      return doc;
+    });
+
+    return res.status(200).json({ success: true, data: sortedRecords });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -702,6 +893,7 @@ exports.getLeaveRequests = async (req, res) => {
     const totalRequests = await LeaveRequest.countDocuments({ applicantId });
 
     const requests = await LeaveRequest.find({ applicantId })
+      .populate("approved_by", "name fullName email")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

@@ -61,9 +61,11 @@ const MONTH_RANGES = [
   }),
 ];
 
-export default function AttendanceTrackingScreen({ navigation }) {
+export default function AttendanceTrackingScreen({ navigation, route }) {
   const { user } = useContext(AuthContext);
+  const filterType = route?.params?.filterType;
 
+  console.log("filterType", filterType);
   const currentMonthIdx = new Date().getMonth();
   const defaultRangeLabel = MONTH_RANGES[currentMonthIdx]?.label || "All Months";
 
@@ -91,7 +93,14 @@ export default function AttendanceTrackingScreen({ navigation }) {
       }
     }, [selectedChildId, selectedRange]),
   );
-
+  useFocusEffect(
+    useCallback(() => {
+      if (route?.params?.filterType === "today") {
+        setSelectedRange("Today");
+        setSelectedChildId(null);
+      }
+    }, [route?.params]),
+  );
   const fetchChildren = async () => {
     try {
       const response = await therapistUsers({ filter: user?.id });
@@ -110,12 +119,25 @@ export default function AttendanceTrackingScreen({ navigation }) {
   const fetchAttendanceData = async () => {
     try {
       setLoading(true);
-      const activeConfig = MONTH_RANGES.find((r) => r.label === selectedRange);
 
-      const params = { childId: selectedChildId };
-      if (activeConfig?.monthIndex) {
-        params.month = activeConfig.monthIndex;
-        params.year = new Date().getFullYear();
+      const params = {};
+
+      if (selectedChildId) {
+        params.childId = selectedChildId;
+      }
+
+      if (selectedRange === "Today") {
+        const now = new Date();
+        params.month = now.getMonth() + 1;
+        params.year = now.getFullYear();
+        params.filter = true;
+      } else {
+        const activeConfig = MONTH_RANGES.find((r) => r.label === selectedRange);
+        if (activeConfig?.monthIndex) {
+          params.month = activeConfig.monthIndex;
+          params.year = new Date().getFullYear();
+          params.filter = false;
+        }
       }
 
       const res = await getAttendanceApi(params);
@@ -128,13 +150,36 @@ export default function AttendanceTrackingScreen({ navigation }) {
       setLoading(false);
     }
   };
+  // const fetchAttendanceData = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const activeConfig = MONTH_RANGES.find((r) => r.label === selectedRange);
+
+  //     const params = { childId: selectedChildId };
+  //     if (activeConfig?.monthIndex) {
+  //       params.month = activeConfig.monthIndex;
+  //       params.year = new Date().getFullYear();
+  //     }
+
+  //     const res = await getAttendanceApi(params);
+  //     if (res?.success) {
+  //       setAttendanceRecords(res.data || []);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching scheduling data:", error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const activeChild = children.find((c) => (c._id || c.id) === selectedChildId) || {};
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
   const formattedAppointments = attendanceRecords.flatMap((record) => {
+    const childObj = record.childId || {};
+    const childName = childObj.fullName || childObj.name || "Unknown Child";
+
     return (record.appointments || []).map((appt) => {
       const rawDateVal = appt.date?.$date || appt.date;
       const dateObj = new Date(rawDateVal);
@@ -156,9 +201,16 @@ export default function AttendanceTrackingScreen({ navigation }) {
       const rawStatus = appt.attendance_status || "Pending";
       const displayStatus = rawStatus === "Complete" ? "Present" : rawStatus;
 
+      const isTodayAppointment = dateObj.getDate() === now.getDate()
+        && dateObj.getMonth() === now.getMonth()
+        && dateObj.getFullYear() === now.getFullYear();
+
       return {
         id: appt._id?.$oid || appt._id,
         attendanceDocId: record._id?.$oid || record._id,
+        childName,
+        dateObj,
+        isTodayAppointment,
         date: formattedDate,
         time: appt.startTime ? `${appt.startTime} - ${appt.endTime}` : (appt.time || "-"),
         month: monthName,
@@ -166,7 +218,46 @@ export default function AttendanceTrackingScreen({ navigation }) {
         isFutureDate,
       };
     });
+  }).filter((item) => {
+    // If "Today" filter is active, only retain today's appointments
+    if (selectedRange === "Today") {
+      return item.isTodayAppointment;
+    }
+    return true;
   });
+  // const formattedAppointments = attendanceRecords.flatMap((record) => {
+  //   return (record.appointments || []).map((appt) => {
+  //     const rawDateVal = appt.date?.$date || appt.date;
+  //     const dateObj = new Date(rawDateVal);
+
+  //     const monthName = MONTH_NAMES[dateObj.getMonth()];
+  //     const formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+
+  //     const apptDateTime = new Date(dateObj);
+  //     if (appt.startTime) {
+  //       const [hours, minutes] = appt.startTime.split(":").map(Number);
+  //       if (!isNaN(hours) && !isNaN(minutes)) {
+  //         apptDateTime.setHours(hours, minutes, 0, 0);
+  //       }
+  //     }
+
+  //     const now = new Date();
+  //     const isFutureDate = apptDateTime > now;
+
+  //     const rawStatus = appt.attendance_status || "Pending";
+  //     const displayStatus = rawStatus === "Complete" ? "Present" : rawStatus;
+
+  //     return {
+  //       id: appt._id?.$oid || appt._id,
+  //       attendanceDocId: record._id?.$oid || record._id,
+  //       date: formattedDate,
+  //       time: appt.startTime ? `${appt.startTime} - ${appt.endTime}` : (appt.time || "-"),
+  //       month: monthName,
+  //       status: displayStatus,
+  //       isFutureDate,
+  //     };
+  //   });
+  // });
 
   const visibleAppointments = showFullHistory
     ? formattedAppointments
@@ -215,49 +306,55 @@ export default function AttendanceTrackingScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.searchRow}>
-          <TouchableOpacity
-            style={styles.searchBarContainer}
-            activeOpacity={0.8}
-            onPress={() => setChildDropdownVisible(true)}
-          >
-            <Feather name="search" size={18} color="#717781" style={styles.searchIcon} />
-            <Text style={styles.selectedChildText}>{activeChild?.fullName || activeChild?.name || "Select Child"}</Text>
-          </TouchableOpacity>
+        {selectedRange !== "Today" && (
+          <>
+            <View style={styles.searchRow}>
+              <TouchableOpacity
+                style={styles.searchBarContainer}
+                activeOpacity={0.8}
+                onPress={() => setChildDropdownVisible(true)}
+              >
+                <Feather name="search" size={18} color="#717781" style={styles.searchIcon} />
+                <Text style={styles.selectedChildText}>
+                  {activeChild?.fullName || activeChild?.name || "Select Child"}
+                </Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.filterBtn}
-            activeOpacity={0.8}
-            onPress={() => setChildDropdownVisible(true)}
-          >
-            <Ionicons name="options-outline" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity
+                style={styles.filterBtn}
+                activeOpacity={0.8}
+                onPress={() => setChildDropdownVisible(true)}
+              >
+                <Ionicons name="options-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.childInfoCard}>
+              <Text style={styles.childSectionTitle}>Child Information</Text>
+              <View style={styles.inputRow}>
+                <View style={styles.fieldBox}>
+                  <Text style={styles.fieldLabel}>Name</Text>
+                  <View style={styles.fieldValueContainer}>
+                    <Text style={styles.fieldValueText}>{activeChild?.fullName || activeChild?.name || "-"}</Text>
+                  </View>
+                </View>
 
-        <View style={styles.childInfoCard}>
-          <Text style={styles.childSectionTitle}>Child Information</Text>
-          <View style={styles.inputRow}>
-            <View style={styles.fieldBox}>
-              <Text style={styles.fieldLabel}>Name</Text>
-              <View style={styles.fieldValueContainer}>
-                <Text style={styles.fieldValueText}>{activeChild?.fullName || activeChild?.name || "-"}</Text>
+                <View style={styles.fieldBox}>
+                  <Text style={styles.fieldLabel}>Parents</Text>
+                  <View style={styles.fieldValueContainer}>
+                    <Text style={styles.fieldValueText}>
+                      {activeChild?.fatherName || activeChild?.parentName || "-"}
+                    </Text>
+                  </View>
+                </View>
               </View>
             </View>
-
-            <View style={styles.fieldBox}>
-              <Text style={styles.fieldLabel}>Parents</Text>
-              <View style={styles.fieldValueContainer}>
-                <Text style={styles.fieldValueText}>{activeChild?.parent || activeChild?.parentName || "-"}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
+          </>
+        )}
         <View style={styles.dateHeaderBanner}>
           <TouchableOpacity
             style={styles.dateDropdownBtn}
             activeOpacity={0.7}
-            onPress={() => setMonthDropdownVisible(true)}
+            onPress={() => selectedRange === "Today" ? "" : setMonthDropdownVisible(true)}
           >
             <Text style={styles.dateDropdownText}>{selectedRange}</Text>
             <Feather name="chevron-down" size={18} color="#FFFFFF" />
@@ -295,6 +392,11 @@ export default function AttendanceTrackingScreen({ navigation }) {
                       ]}
                     >
                       <View style={styles.dateColumn}>
+                        {selectedRange === "Today" && (
+                          <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: "#1E293B", marginBottom: 2 }}>
+                            {item.childName}
+                          </Text>
+                        )}
                         <Text style={[styles.dateText, isDisabled && styles.disabledText]}>{item.date}</Text>
                         <Text style={[styles.timeText, isDisabled && styles.disabledText]}>
                           {formatTo12Hour(item.time)}
@@ -362,7 +464,7 @@ export default function AttendanceTrackingScreen({ navigation }) {
                             <Text style={[styles.pendingBadgeText, styles.statusBadgeText]}>Pending</Text>
                           </View>
                         )}
-                        {isDisabled  && (
+                        {isDisabled && (
                           <View style={styles.pendingBadge}>
                             <Text style={[styles.pendingBadgeText, styles.statusBadgeText]}>Not Yet</Text>
                           </View>

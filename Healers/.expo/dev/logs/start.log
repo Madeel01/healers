@@ -6097,3 +6097,376 @@
 {"_e":"metro:server_log","_t":1790007801828,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.exponent","V2043_21 - 11 - API 30","60"]}
 {"_e":"metro:server_log","_t":1790007801829,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.exponent","V2043_21 - 11 - API 30","60"]}
 >>>>>>> origin/Adeel
+{"_e":"root:init","_t":1790012208621,"format":"v0-jsonl","version":"57.0.24"}
+{"_e":"env:mode","_t":1790012208623,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1790012208629,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1790012209996,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1790012211330,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1790012212571,"plugins":[]}
+{"_e":"metro:instantiate","_t":1790012234182,"atlas":false,"workers":3,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1790012270036,"id":"3","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:progress","_t":1790012270037,"id":"3","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1790012270044,"id":"3","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1790012270183,"id":"3","progress":0.0484,"total":50,"current":11}
+{"_e":"metro:bundling:progress","_t":1790012270282,"id":"3","progress":0.0484,"total":210,"current":22}
+{"_e":"metro:bundling:progress","_t":1790012270385,"id":"3","progress":0.0749716553287982,"total":252,"current":69}
+{"_e":"metro:bundling:progress","_t":1790012270485,"id":"3","progress":0.12737929236245735,"total":297,"current":106}
+{"_e":"metro:bundling:progress","_t":1790012270586,"id":"3","progress":0.24115114795918366,"total":336,"current":165}
+{"_e":"metro:bundling:progress","_t":1790012270688,"id":"3","progress":0.24115114795918366,"total":386,"current":189}
+{"_e":"metro:bundling:progress","_t":1790012270794,"id":"3","progress":0.26664086441764107,"total":397,"current":205}
+{"_e":"metro:bundling:progress","_t":1790012270897,"id":"3","progress":0.3130082089697064,"total":454,"current":254}
+{"_e":"metro:bundling:progress","_t":1790012271011,"id":"3","progress":0.3482567538859823,"total":527,"current":311}
+{"_e":"metro:bundling:progress","_t":1790012271113,"id":"3","progress":0.35511105177801516,"total":636,"current":379}
+{"_e":"metro:bundling:progress","_t":1790012271217,"id":"3","progress":0.35511105177801516,"total":671,"current":397}
+{"_e":"metro:bundling:progress","_t":1790012271319,"id":"3","progress":0.4085265783167882,"total":715,"current":457}
+{"_e":"metro:bundling:progress","_t":1790012271420,"id":"3","progress":0.5355399190648136,"total":742,"current":543}
+{"_e":"metro:bundling:progress","_t":1790012271525,"id":"3","progress":0.5355399190648136,"total":831,"current":604}
+{"_e":"metro:bundling:progress","_t":1790012271632,"id":"3","progress":0.5355399190648136,"total":916,"current":670}
+{"_e":"metro:bundling:progress","_t":1790012271733,"id":"3","progress":0.5837283390722544,"total":945,"current":722}
+{"_e":"metro:bundling:progress","_t":1790012271833,"id":"3","progress":0.6689624295076969,"total":972,"current":795}
+{"_e":"metro:bundling:progress","_t":1790012271933,"id":"3","progress":0.7662794269236161,"total":1003,"current":878}
+{"_e":"metro:bundling:progress","_t":1790012272050,"id":"3","progress":0.7843917132383872,"total":1032,"current":914}
+{"_e":"metro:bundling:progress","_t":1790012272162,"id":"3","progress":0.7861090454299622,"total":1032,"current":915}
+{"_e":"metro:bundling:progress","_t":1790012272262,"id":"3","progress":0.7886375643933594,"total":1063,"current":944}
+{"_e":"metro:bundling:progress","_t":1790012272362,"id":"3","progress":0.8551638200933908,"total":1103,"current":1020}
+{"_e":"metro:bundling:progress","_t":1790012272468,"id":"3","progress":0.8551638200933908,"total":1120,"current":1031}
+{"_e":"metro:bundling:progress","_t":1790012272579,"id":"3","progress":0.8551638200933908,"total":1120,"current":1032}
+{"_e":"metro:bundling:progress","_t":1790012272703,"id":"3","progress":0.867568662682406,"total":1123,"current":1046}
+{"_e":"metro:bundling:progress","_t":1790012272803,"id":"3","progress":0.8988241730311446,"total":1136,"current":1077}
+{"_e":"metro:bundling:progress","_t":1790012272903,"id":"3","progress":0.8988241730311446,"total":1150,"current":1090}
+{"_e":"metro:bundling:progress","_t":1790012273004,"id":"3","progress":0.9162161052730343,"total":1168,"current":1118}
+{"_e":"metro:bundling:progress","_t":1790012273165,"id":"3","progress":0.9194970913867516,"total":1168,"current":1120}
+{"_e":"metro:bundling:progress","_t":1790012273265,"id":"3","progress":0.9650173010380622,"total":1190,"current":1169}
+{"_e":"metro:bundling:progress","_t":1790012273379,"id":"3","progress":0.9983367986245886,"total":1202,"current":1201}
+{"_e":"metro:bundling:progress","_t":1790012274168,"id":"3","progress":0.999,"total":1202,"current":1202}
+{"_e":"metro:bundling:done","_t":1790012274456,"id":"3","total":1202,"ms":4419.6515}
+{"_e":"metro:bundling:started","_t":1790012291923,"id":"6","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:progress","_t":1790012291923,"id":"6","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1790012291926,"id":"6","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:done","_t":1790012292075,"id":"6","total":1,"ms":151.7878}
+{"_e":"root:init","_t":1790013632097,"format":"v0-jsonl","version":"57.0.24"}
+{"_e":"env:mode","_t":1790013632099,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1790013632105,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1790013633368,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1790013634657,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1790013635703,"plugins":[]}
+{"_e":"metro:instantiate","_t":1790013655002,"atlas":false,"workers":3,"host":"::","port":8081}
+{"_e":"root:init","_t":1790014157362,"format":"v0-jsonl","version":"57.0.24"}
+{"_e":"env:mode","_t":1790014157369,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1790014157376,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1790014163592,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1790014165070,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1790014166357,"plugins":[]}
+{"_e":"metro:instantiate","_t":1790014187864,"atlas":false,"workers":3,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1790014215665,"id":"4","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:progress","_t":1790014215666,"id":"4","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1790014215674,"id":"4","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1790014215799,"id":"4","progress":0.04000000000000001,"total":4,"current":2}
+{"_e":"metro:bundling:progress","_t":1790014215907,"id":"4","progress":0.04000000000000001,"total":9,"current":2}
+{"_e":"metro:bundling:progress","_t":1790014216101,"id":"4","progress":0.09,"total":9,"current":3}
+{"_e":"metro:bundling:progress","_t":1790014216202,"id":"4","progress":0.09,"total":47,"current":9}
+{"_e":"metro:bundling:progress","_t":1790014216339,"id":"4","progress":0.09,"total":50,"current":11}
+{"_e":"metro:bundling:progress","_t":1790014216442,"id":"4","progress":0.09,"total":174,"current":15}
+{"_e":"metro:bundling:progress","_t":1790014216549,"id":"4","progress":0.09,"total":174,"current":16}
+{"_e":"metro:bundling:progress","_t":1790014216649,"id":"4","progress":0.09,"total":222,"current":51}
+{"_e":"metro:bundling:progress","_t":1790014216757,"id":"4","progress":0.09,"total":252,"current":69}
+{"_e":"metro:bundling:progress","_t":1790014216856,"id":"4","progress":0.09088451557093424,"total":272,"current":82}
+{"_e":"metro:bundling:progress","_t":1790014216958,"id":"4","progress":0.1141973840665874,"total":290,"current":98}
+{"_e":"metro:bundling:progress","_t":1790014217059,"id":"4","progress":0.1481157141577685,"total":317,"current":122}
+{"_e":"metro:bundling:progress","_t":1790014217159,"id":"4","progress":0.1999251558492529,"total":331,"current":148}
+{"_e":"metro:bundling:progress","_t":1790014217343,"id":"4","progress":0.2650117292811876,"total":338,"current":174}
+{"_e":"metro:bundling:progress","_t":1790014217442,"id":"4","progress":0.268066594306922,"total":338,"current":175}
+{"_e":"metro:bundling:progress","_t":1790014217542,"id":"4","progress":0.268066594306922,"total":383,"current":193}
+{"_e":"metro:bundling:progress","_t":1790014217646,"id":"4","progress":0.268066594306922,"total":401,"current":202}
+{"_e":"metro:bundling:progress","_t":1790014217746,"id":"4","progress":0.268066594306922,"total":415,"current":212}
+{"_e":"metro:bundling:progress","_t":1790014217846,"id":"4","progress":0.2897542813083354,"total":444,"current":239}
+{"_e":"metro:bundling:progress","_t":1790014217950,"id":"4","progress":0.2993948024207903,"total":477,"current":261}
+{"_e":"metro:bundling:progress","_t":1790014218050,"id":"4","progress":0.32429793084432124,"total":511,"current":291}
+{"_e":"metro:bundling:progress","_t":1790014218150,"id":"4","progress":0.34702809917355376,"total":550,"current":324}
+{"_e":"metro:bundling:progress","_t":1790014218267,"id":"4","progress":0.35613943808532783,"total":558,"current":333}
+{"_e":"metro:bundling:progress","_t":1790014218403,"id":"4","progress":0.38570637119113577,"total":570,"current":354}
+{"_e":"metro:bundling:progress","_t":1790014218506,"id":"4","progress":0.38570637119113577,"total":614,"current":380}
+{"_e":"metro:bundling:progress","_t":1790014218606,"id":"4","progress":0.3857875853555032,"total":644,"current":400}
+{"_e":"metro:bundling:progress","_t":1790014218707,"id":"4","progress":0.3920339258177097,"total":666,"current":417}
+{"_e":"metro:bundling:progress","_t":1790014218808,"id":"4","progress":0.3920339258177097,"total":706,"current":442}
+{"_e":"metro:bundling:progress","_t":1790014218908,"id":"4","progress":0.4586558858501783,"total":725,"current":491}
+{"_e":"metro:bundling:progress","_t":1790014219008,"id":"4","progress":0.4903815456347586,"total":734,"current":514}
+{"_e":"metro:bundling:progress","_t":1790014219109,"id":"4","progress":0.5162976702965094,"total":739,"current":531}
+{"_e":"metro:bundling:progress","_t":1790014219214,"id":"4","progress":0.5481125033466253,"total":751,"current":556}
+{"_e":"metro:bundling:progress","_t":1790014219293,"id":"4","progress":0.5500859041030068,"total":751,"current":557}
+{"_e":"metro:bundling:progress","_t":1790014219393,"id":"4","progress":0.5500859041030068,"total":782,"current":578}
+{"_e":"metro:bundling:progress","_t":1790014219495,"id":"4","progress":0.5500859041030068,"total":829,"current":613}
+{"_e":"metro:bundling:progress","_t":1790014219595,"id":"4","progress":0.5500859041030068,"total":895,"current":627}
+{"_e":"metro:bundling:progress","_t":1790014219728,"id":"4","progress":0.5500859041030068,"total":926,"current":660}
+{"_e":"metro:bundling:progress","_t":1790014219914,"id":"4","progress":0.5500859041030068,"total":927,"current":661}
+{"_e":"metro:bundling:progress","_t":1790014220123,"id":"4","progress":0.5500859041030068,"total":928,"current":662}
+{"_e":"metro:bundling:progress","_t":1790014220238,"id":"4","progress":0.5500859041030068,"total":930,"current":663}
+{"_e":"metro:bundling:progress","_t":1790014220391,"id":"4","progress":0.5500859041030068,"total":930,"current":664}
+{"_e":"metro:bundling:progress","_t":1790014220492,"id":"4","progress":0.5500859041030068,"total":946,"current":700}
+{"_e":"metro:bundling:progress","_t":1790014220592,"id":"4","progress":0.5675214343280918,"total":973,"current":733}
+{"_e":"metro:bundling:progress","_t":1790014220697,"id":"4","progress":0.5853265876564129,"total":979,"current":749}
+{"_e":"metro:bundling:progress","_t":1790014220893,"id":"4","progress":0.5868905858576585,"total":979,"current":750}
+{"_e":"metro:bundling:progress","_t":1790014220995,"id":"4","progress":0.5868905858576585,"total":987,"current":754}
+{"_e":"metro:bundling:progress","_t":1790014221095,"id":"4","progress":0.5868905858576585,"total":1008,"current":762}
+{"_e":"metro:bundling:progress","_t":1790014221245,"id":"4","progress":0.5868905858576585,"total":1008,"current":763}
+{"_e":"metro:bundling:progress","_t":1790014221395,"id":"4","progress":0.5868905858576585,"total":1009,"current":764}
+{"_e":"metro:bundling:progress","_t":1790014221513,"id":"4","progress":0.5868905858576585,"total":1009,"current":765}
+{"_e":"metro:bundling:progress","_t":1790014221680,"id":"4","progress":0.5868905858576585,"total":1011,"current":766}
+{"_e":"metro:bundling:progress","_t":1790014221836,"id":"4","progress":0.5868905858576585,"total":1012,"current":767}
+{"_e":"metro:bundling:progress","_t":1790014222033,"id":"4","progress":0.5868905858576585,"total":1013,"current":767}
+{"_e":"metro:bundling:progress","_t":1790014222301,"id":"4","progress":0.5868905858576585,"total":1014,"current":768}
+{"_e":"metro:bundling:progress","_t":1790014222482,"id":"4","progress":0.5868905858576585,"total":1031,"current":779}
+{"_e":"metro:bundling:progress","_t":1790014222586,"id":"4","progress":0.5868905858576585,"total":1031,"current":780}
+{"_e":"metro:bundling:progress","_t":1790014222847,"id":"4","progress":0.5868905858576585,"total":1031,"current":781}
+{"_e":"metro:bundling:progress","_t":1790014222947,"id":"4","progress":0.6037710007304601,"total":1036,"current":805}
+{"_e":"metro:bundling:progress","_t":1790014223074,"id":"4","progress":0.6461390535930953,"total":1045,"current":840}
+{"_e":"metro:bundling:progress","_t":1790014223147,"id":"4","progress":0.6702734397762368,"total":1048,"current":858}
+{"_e":"metro:bundling:progress","_t":1790014223248,"id":"4","progress":0.6702734397762368,"total":1073,"current":874}
+{"_e":"metro:bundling:progress","_t":1790014223357,"id":"4","progress":0.7116194875316002,"total":1074,"current":906}
+{"_e":"metro:bundling:progress","_t":1790014223457,"id":"4","progress":0.7389966143428748,"total":1083,"current":931}
+{"_e":"metro:bundling:progress","_t":1790014223569,"id":"4","progress":0.7654252413419237,"total":1095,"current":958}
+{"_e":"metro:bundling:progress","_t":1790014223701,"id":"4","progress":0.78476488657845,"total":1104,"current":978}
+{"_e":"metro:bundling:progress","_t":1790014223791,"id":"4","progress":0.786370543215711,"total":1104,"current":979}
+{"_e":"metro:bundling:progress","_t":1790014223891,"id":"4","progress":0.7899463089947515,"total":1115,"current":991}
+{"_e":"metro:bundling:progress","_t":1790014224011,"id":"4","progress":0.8204915009422734,"total":1136,"current":1029}
+{"_e":"metro:bundling:progress","_t":1790014224114,"id":"4","progress":0.8786003040446114,"total":1149,"current":1077}
+{"_e":"metro:bundling:progress","_t":1790014224218,"id":"4","progress":0.9009459753205122,"total":1161,"current":1102}
+{"_e":"metro:bundling:progress","_t":1790014224336,"id":"4","progress":0.904219164179503,"total":1161,"current":1104}
+{"_e":"metro:bundling:progress","_t":1790014224449,"id":"4","progress":0.9268141338695778,"total":1180,"current":1136}
+{"_e":"metro:bundling:progress","_t":1790014224629,"id":"4","progress":0.9566718643206487,"total":1187,"current":1161}
+{"_e":"metro:bundling:progress","_t":1790014224781,"id":"4","progress":0.9566718643206487,"total":1188,"current":1161}
+{"_e":"metro:bundling:progress","_t":1790014224825,"id":"4","progress":0.956707932297158,"total":1188,"current":1162}
+{"_e":"metro:bundling:progress","_t":1790014224924,"id":"4","progress":0.99163533577048,"total":1193,"current":1188}
+{"_e":"metro:bundling:progress","_t":1790014225039,"id":"4","progress":0.999,"total":1207,"current":1207}
+{"_e":"metro:bundling:done","_t":1790014225302,"id":"4","total":1207,"ms":9636.8418}
+{"_e":"metro:bundling:started","_t":1790014250518,"id":"5","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:progress","_t":1790014250518,"id":"5","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:done","_t":1790014250644,"id":"5","total":1,"ms":125.829}
+{"_e":"metro:client_log","_t":1790014412846,"level":"error","data":["Error fetching dashboard stats:","{\"message\": \"console.log(...) is not a function\", \"success\": false}"]}
+{"_e":"metro:client_log","_t":1790014413093,"level":"error","data":["Error fetching dashboard stats:","[AxiosError: Request failed with status code 500]"]}
+{"_e":"metro:client_log","_t":1790014429146,"level":"error","data":["Error fetching dashboard stats:","{\"message\": \"console.log(...) is not a function\", \"success\": false}"]}
+{"_e":"metro:client_log","_t":1790014429231,"level":"error","data":["Error fetching dashboard stats:","[AxiosError: Request failed with status code 500]"]}
+{"_e":"metro:client_log","_t":1790014452733,"level":"error","data":["The action 'NAVIGATE' with payload {\"name\":\"Alert\"} was not handled by any navigator.\n\nDo you have a screen named 'Alert'?\n\nIf you're trying to navigate to a screen in a nested navigator, see https://reactnavigation.org/docs/nesting-navigators#navigating-to-a-screen-in-a-nested-navigator.\n\nIf you're using conditional rendering, navigation will happen automatically and you shouldn't navigate manually, see.\n\nThis is a development-only warning and won't be shown in production."]}
+{"_e":"metro:client_log","_t":1790014627189,"level":"log","data":["session","{\"attendanceStatus\": \"Pending\", \"category\": \"ABA Therapy\", \"date\": \"SEP 18\", \"endTime\": \"23:02\", \"feedbackDetails\": null, \"id\": \"6aad4490bc614d60ae3a32b4\", \"isDone\": false, \"name\": \"CHILD\", \"rawDate\": \"2026-09-18T00:00:00.000Z\", \"time\": \"21:12\"}"]}
+{"_e":"metro:client_log","_t":1790014630091,"level":"log","data":["session","{\"attendanceStatus\": \"Pending\", \"category\": \"ABA Therapy\", \"date\": \"SEP 18\", \"endTime\": \"23:02\", \"feedbackDetails\": null, \"id\": \"6aad4490bc614d60ae3a32b4\", \"isDone\": false, \"name\": \"CHILD\", \"rawDate\": \"2026-09-18T00:00:00.000Z\", \"time\": \"21:12\"}"]}
+{"_e":"metro:client_log","_t":1790014630288,"level":"log","data":["session","{\"attendanceStatus\": \"Pending\", \"category\": \"ABA Therapy\", \"date\": \"SEP 18\", \"endTime\": \"23:02\", \"feedbackDetails\": null, \"id\": \"6aad4490bc614d60ae3a32b4\", \"isDone\": false, \"name\": \"CHILD\", \"rawDate\": \"2026-09-18T00:00:00.000Z\", \"time\": \"21:12\"}"]}
+{"_e":"metro:client_log","_t":1790014630564,"level":"log","data":["session","{\"attendanceStatus\": \"Pending\", \"category\": \"ABA Therapy\", \"date\": \"SEP 18\", \"endTime\": \"23:02\", \"feedbackDetails\": null, \"id\": \"6aad4490bc614d60ae3a32b4\", \"isDone\": false, \"name\": \"CHILD\", \"rawDate\": \"2026-09-18T00:00:00.000Z\", \"time\": \"21:12\"}"]}
+{"_e":"metro:client_log","_t":1790014630877,"level":"log","data":["session","{\"attendanceStatus\": \"Pending\", \"category\": \"ABA Therapy\", \"date\": \"SEP 18\", \"endTime\": \"23:02\", \"feedbackDetails\": null, \"id\": \"6aad4490bc614d60ae3a32b4\", \"isDone\": false, \"name\": \"CHILD\", \"rawDate\": \"2026-09-18T00:00:00.000Z\", \"time\": \"21:12\"}"]}
+{"_e":"metro:client_log","_t":1790014713675,"level":"log","data":["session","{\"attendanceStatus\": \"Complete\", \"category\": \"ABA Therapy\", \"date\": \"SEP 18\", \"endTime\": \"20:02\", \"feedbackDetails\": null, \"id\": \"6aad4473bc614d60ae3a32ad\", \"isDone\": false, \"name\": \"CHILD\", \"rawDate\": \"2026-09-18T00:00:00.000Z\", \"time\": \"19:02\"}"]}
+{"_e":"metro:client_log","_t":1790014715965,"level":"log","data":["session","{\"attendanceStatus\": \"Complete\", \"category\": \"ABA Therapy\", \"date\": \"SEP 18\", \"endTime\": \"20:02\", \"feedbackDetails\": null, \"id\": \"6aad4473bc614d60ae3a32ad\", \"isDone\": false, \"name\": \"CHILD\", \"rawDate\": \"2026-09-18T00:00:00.000Z\", \"time\": \"19:02\"}"]}
+{"_e":"metro:client_log","_t":1790014832447,"level":"error","data":["Error fetching dashboard stats:","{\"message\": \"startOfNextMonth is not defined\", \"success\": false}"]}
+{"_e":"metro:client_log","_t":1790014832526,"level":"error","data":["Error fetching dashboard stats:","[AxiosError: Request failed with status code 500]"]}
+{"_e":"metro:client_log","_t":1790014843779,"level":"error","data":["Error fetching dashboard stats:","{\"message\": \"startOfNextMonth is not defined\", \"success\": false}"]}
+{"_e":"metro:client_log","_t":1790014843919,"level":"error","data":["Error fetching dashboard stats:","[AxiosError: Request failed with status code 500]"]}
+{"_e":"metro:client_log","_t":1790015372659,"level":"error","data":["[ReferenceError: Property 'B' doesn't exist]"]}
+{"_e":"metro:bundling:failed","_t":1790015424877,"id":null,"message":"SyntaxError: D:\\HEALERS\\Healers\\src\\screens\\therapist\\LeaveRequest.jsx: Unexpected token, expected \"...\" (274:31)\n\n  272 |             <Feather name=\"alert-circle\" size={14} color=\"#B91C1C\" />\n  273 |             <Text style={styles.rejectionText}>\n> 274 |               {\" \"}<Text style{{fontFamily:fonts.semiBold}}>Rejection Reason:</Text>{\" \"}\n      |                                ^\n  275 |               <Text style={styles.rejectionReasonText}>\n  276 |                 {item.rejectionReasons || \"No specific reason provided. No specific reason provided. No specific reason provided. No specific reason provided.\"}\n  277 |               </Text>","importStack":null,"filename":"src\\screens\\therapist\\LeaveRequest.jsx","targetModuleName":null,"originModulePath":null}
+{"_e":"metro:bundling:failed","_t":1790015425131,"id":null,"message":"SyntaxError: D:\\HEALERS\\Healers\\src\\screens\\therapist\\LeaveRequest.jsx: Unexpected token, expected \"...\" (274:31)\n\n  272 |             <Feather name=\"alert-circle\" size={14} color=\"#B91C1C\" />\n  273 |             <Text style={styles.rejectionText}>\n> 274 |               {\" \"}<Text style{{fontFamily:fonts.semiBold}}>Rejection Reason:</Text>{\" \"}\n      |                                ^\n  275 |               <Text style={styles.rejectionReasonText}>\n  276 |                 {item.rejectionReasons || \"No specific reason provided. No specific reason provided. No specific reason provided. No specific reason provided.\"}\n  277 |               </Text>","importStack":null,"filename":"src\\screens\\therapist\\LeaveRequest.jsx","targetModuleName":null,"originModulePath":null}
+{"_e":"metro:bundling:failed","_t":1790015430066,"id":null,"message":"SyntaxError: D:\\HEALERS\\Healers\\src\\screens\\therapist\\LeaveRequest.jsx: Unexpected token, expected \"...\" (274:31)\n\n  272 |             <Feather name=\"alert-circle\" size={14} color=\"#B91C1C\" />\n  273 |             <Text style={styles.rejectionText}>\n> 274 |               {\" \"}<Text style{{fontFamily:fonts.semiBold}}>Rejection Reason:</Text>{\" \"}\n      |                                ^\n  275 |               <Text style={styles.rejectionReasonText}>\n  276 |                 {item.rejectionReasons || \"No specific reason provided. No specific reason provided. No specific reason provided. No specific reason provided.\"}\n  277 |               </Text>","importStack":null,"filename":"src\\screens\\therapist\\LeaveRequest.jsx","targetModuleName":null,"originModulePath":null}
+{"_e":"metro:client_log","_t":1790015472460,"level":"error","data":["[ReferenceError: Property 'SafeAreaView' doesn't exist]"]}
+{"_e":"metro:client_log","_t":1790015736849,"level":"error","data":["[TypeError: Cannot read property 'slice' of undefined]"]}
+{"_e":"metro:client_log","_t":1790016104479,"level":"error","data":["[ReferenceError: Property 'route' doesn't exist]"]}
+{"_e":"metro:client_log","_t":1790016154814,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016155881,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016155985,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016156591,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016161117,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016162026,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016162217,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016162741,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016185033,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016185169,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016185531,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016186066,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016186265,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016186914,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016188423,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016188619,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016188723,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016189365,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016191837,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016224215,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016224323,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016224537,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016225088,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016225328,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016225949,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016248497,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016249984,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016282314,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016282486,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016282620,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016283253,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016283433,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016289829,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016289998,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016290215,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016290593,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016290710,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016291358,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016336575,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016336632,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016336829,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016337386,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016337523,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016338554,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016338753,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016338840,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016339384,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016339553,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016340205,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016410434,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016411341,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016411536,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016412079,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016449760,"level":"warn","data":["DateTimePicker: `onChange` is deprecated. Use `onValueChange`, `onDismiss`, and `onNeutralButtonPress` instead."]}
+{"_e":"metro:client_log","_t":1790016648050,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016648384,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016648917,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016649028,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016649644,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016704307,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016704515,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016705139,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016709003,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016709128,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016709758,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016709917,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016710593,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016737063,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016737188,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016738026,"level":"log","data":["res.data","[{\"__v\": 6, \"_id\": \"6aad4472bc614d60ae3a32ac\", \"appointments\": [[Object], [Object], [Object], [Object], [Object], [Object]], \"childId\": {\"_id\": \"6a8c835b64c34f75bd4da2f7\", \"fullName\": \"CHILD\"}, \"createdAt\": \"2026-09-18T14:02:26.562Z\", \"month\": 9, \"therapistId\": \"6a8d91091e01197ac29509b7\", \"updatedAt\": \"2026-09-21T18:48:47.402Z\", \"year\": 2026}]"]}
+{"_e":"metro:client_log","_t":1790016738226,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016754667,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016756155,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016757230,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016757455,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016758084,"level":"log","data":["res.data","[{\"__v\": 6, \"_id\": \"6aad4472bc614d60ae3a32ac\", \"appointments\": [[Object], [Object], [Object], [Object], [Object], [Object]], \"childId\": {\"_id\": \"6a8c835b64c34f75bd4da2f7\", \"fullName\": \"CHILD\"}, \"createdAt\": \"2026-09-18T14:02:26.562Z\", \"month\": 9, \"therapistId\": \"6a8d91091e01197ac29509b7\", \"updatedAt\": \"2026-09-21T18:48:47.402Z\", \"year\": 2026}]"]}
+{"_e":"metro:client_log","_t":1790016758229,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016759590,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016760690,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016760916,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016761468,"level":"log","data":["res.data","[{\"__v\": 4, \"_id\": \"6aad4d1fdc65160a983ec690\", \"appointments\": [[Object], [Object], [Object], [Object]], \"childId\": {\"_id\": \"6aa93f6b835cf772aefbb65f\", \"fullName\": \"CHILD2\"}, \"createdAt\": \"2026-09-18T14:39:27.573Z\", \"month\": 9, \"therapistId\": \"6a8d91091e01197ac29509b7\", \"updatedAt\": \"2026-09-21T18:50:25.061Z\", \"year\": 2026}]"]}
+{"_e":"metro:client_log","_t":1790016761617,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016772062,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016772333,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016772794,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016773023,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016773394,"level":"log","data":["res.data","[{\"__v\": 6, \"_id\": \"6aad4472bc614d60ae3a32ac\", \"appointments\": [[Object], [Object], [Object], [Object], [Object], [Object]], \"childId\": {\"_id\": \"6a8c835b64c34f75bd4da2f7\", \"fullName\": \"CHILD\"}, \"createdAt\": \"2026-09-18T14:02:26.562Z\", \"month\": 9, \"therapistId\": \"6a8d91091e01197ac29509b7\", \"updatedAt\": \"2026-09-21T18:48:47.402Z\", \"year\": 2026}]"]}
+{"_e":"metro:client_log","_t":1790016773531,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016805741,"level":"log","data":["filterType","undefined","6aa93f6b835cf772aefbb65f"]}
+{"_e":"metro:client_log","_t":1790016805843,"level":"log","data":["filterType","today","6a8c835b64c34f75bd4da2f7"]}
+{"_e":"metro:client_log","_t":1790016805996,"level":"log","data":["filterType","today","null"]}
+{"_e":"metro:client_log","_t":1790016806614,"level":"log","data":["filterType","today","null"]}
+{"_e":"metro:client_log","_t":1790016806824,"level":"log","data":["res.data","[{\"__v\": 6, \"_id\": \"6aad4472bc614d60ae3a32ac\", \"appointments\": [[Object], [Object], [Object], [Object], [Object], [Object]], \"childId\": {\"_id\": \"6a8c835b64c34f75bd4da2f7\", \"fullName\": \"CHILD\"}, \"createdAt\": \"2026-09-18T14:02:26.562Z\", \"month\": 9, \"therapistId\": \"6a8d91091e01197ac29509b7\", \"updatedAt\": \"2026-09-21T18:48:47.402Z\", \"year\": 2026}]"]}
+{"_e":"metro:client_log","_t":1790016806824,"level":"log","data":["filterType","today","null"]}
+{"_e":"metro:client_log","_t":1790016823936,"level":"log","data":["filterType","today","{\"childId\": \"6a8c835b64c34f75bd4da2f7\", \"month\": 9, \"year\": 2026}"]}
+{"_e":"metro:client_log","_t":1790016824588,"level":"log","data":["res.data","[{\"__v\": 6, \"_id\": \"6aad4472bc614d60ae3a32ac\", \"appointments\": [[Object], [Object], [Object], [Object], [Object], [Object]], \"childId\": {\"_id\": \"6a8c835b64c34f75bd4da2f7\", \"fullName\": \"CHILD\"}, \"createdAt\": \"2026-09-18T14:02:26.562Z\", \"month\": 9, \"therapistId\": \"6a8d91091e01197ac29509b7\", \"updatedAt\": \"2026-09-21T18:48:47.402Z\", \"year\": 2026}]"]}
+{"_e":"metro:client_log","_t":1790016866622,"level":"log","data":["filterType","today","{\"childId\": \"6aa93f6b835cf772aefbb65f\", \"month\": 9, \"year\": 2026}"]}
+{"_e":"metro:client_log","_t":1790016867239,"level":"log","data":["res.data","[{\"__v\": 4, \"_id\": \"6aad4d1fdc65160a983ec690\", \"appointments\": [[Object], [Object], [Object], [Object]], \"childId\": {\"_id\": \"6aa93f6b835cf772aefbb65f\", \"fullName\": \"CHILD2\"}, \"createdAt\": \"2026-09-18T14:39:27.573Z\", \"month\": 9, \"therapistId\": \"6a8d91091e01197ac29509b7\", \"updatedAt\": \"2026-09-21T18:50:25.061Z\", \"year\": 2026}]"]}
+{"_e":"metro:client_log","_t":1790016870262,"level":"log","data":["filterType","today","{\"childId\": \"6a8c835b64c34f75bd4da2f7\", \"month\": 9, \"year\": 2026}"]}
+{"_e":"metro:client_log","_t":1790016870867,"level":"log","data":["res.data","[{\"__v\": 6, \"_id\": \"6aad4472bc614d60ae3a32ac\", \"appointments\": [[Object], [Object], [Object], [Object], [Object], [Object]], \"childId\": {\"_id\": \"6a8c835b64c34f75bd4da2f7\", \"fullName\": \"CHILD\"}, \"createdAt\": \"2026-09-18T14:02:26.562Z\", \"month\": 9, \"therapistId\": \"6a8d91091e01197ac29509b7\", \"updatedAt\": \"2026-09-21T18:48:47.402Z\", \"year\": 2026}]"]}
+{"_e":"metro:client_log","_t":1790016886055,"level":"log","data":["filterType","{\"childId\": \"6a8c835b64c34f75bd4da2f7\", \"month\": 9, \"year\": 2026}"]}
+{"_e":"metro:client_log","_t":1790016943851,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790016944040,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016944215,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790016944765,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017016646,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017017000,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017017464,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017017588,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017018091,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017073621,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017073720,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017073877,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017074508,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017074664,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017191916,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017192254,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017192839,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017193022,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017193501,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017265804,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017266024,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017266024,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017266260,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017266893,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017267022,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017268900,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017270392,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017307169,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017307329,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017307329,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017307517,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017308084,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017308303,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017308939,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017316489,"level":"error","data":["The action 'NAVIGATE' with payload {\"name\":\"Alert\"} was not handled by any navigator.\n\nDo you have a screen named 'Alert'?\n\nIf you're trying to navigate to a screen in a nested navigator, see https://reactnavigation.org/docs/nesting-navigators#navigating-to-a-screen-in-a-nested-navigator.\n\nIf you're using conditional rendering, navigation will happen automatically and you shouldn't navigate manually, see.\n\nThis is a development-only warning and won't be shown in production."]}
+{"_e":"metro:client_log","_t":1790017322427,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017323319,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017323515,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017323954,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017340664,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017341473,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017341616,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017342129,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017344072,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017406536,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017407445,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017407578,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017408127,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017412895,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017448141,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017448739,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017449198,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017449310,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017449814,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017452850,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017454295,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017455103,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017456091,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017456245,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017456852,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017461055,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017462110,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017462316,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017462850,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017496899,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017497139,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017497139,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017497338,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017497474,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017497753,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017498063,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017498622,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017499189,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017505983,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017506944,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017507116,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017507663,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017605605,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017607122,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017607322,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017607829,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017621243,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017621820,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017622298,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017622429,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017622971,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017625991,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017629888,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017630817,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017631020,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017631457,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017638184,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017638611,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017639099,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017639319,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017639698,"level":"log","data":["filterType","today"]}
+{"_e":"metro:client_log","_t":1790017644769,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017646875,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017646997,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:client_log","_t":1790017647501,"level":"log","data":["filterType","undefined"]}
+{"_e":"metro:bundling:started","_t":1790017666694,"id":"t","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:progress","_t":1790017666694,"id":"t","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1790017666755,"id":"t","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:done","_t":1790017667068,"id":"t","total":1,"ms":373.78}

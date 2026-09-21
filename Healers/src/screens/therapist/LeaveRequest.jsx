@@ -112,7 +112,7 @@ export default function LeaveRequestScreen({ navigation }) {
     useCallback(() => {
       setHasMore(true);
       fetchLeaveRequests(1);
-    }, [])
+    }, []),
   );
 
   const onRefresh = () => {
@@ -225,7 +225,9 @@ export default function LeaveRequestScreen({ navigation }) {
 
   const renderLeaveCard = ({ item }) => {
     const badgeStyle = getStatusBadgeStyle(item.status);
-    const isApproved = item.status?.toLowerCase() === "approved";
+    const statusKey = item.status?.toLowerCase();
+    const isApproved = statusKey === "approved";
+    const isRejected = statusKey === "rejected";
 
     return (
       <View style={styles.cardContainer}>
@@ -247,16 +249,32 @@ export default function LeaveRequestScreen({ navigation }) {
           </View>
 
           <Text style={styles.reasonText} numberOfLines={2}>
+            <Text style={{ fontWeight: "600" }}>Reason:</Text>
             {item.reason}
           </Text>
 
-          {isApproved && item.approvedBy && (
+          {/* Display Approver Name if Approved */}
+          {isApproved && item.approved_by && (
             <View style={styles.approvedByContainer}>
               <Feather name="check-circle" size={14} color="#15803D" />
               <Text style={styles.approvedByText}>
-                Approved by:{" "}
+                {" "}Approved by:{" "}
                 <Text style={styles.adminNameText}>
-                  {item.approvedBy.name || item.approvedBy}
+                  {item.approved_by.fullName || item.approved_by.name || "Admin"}
+                </Text>
+              </Text>
+            </View>
+          )}
+
+          {/* Display Rejection Reason if Rejected */}
+          {isRejected && (
+            <View style={[styles.rejectionContainer, { display: "flex",flexDirection:"row",gap:5 }]}>
+              <Feather name="alert-circle" size={14} style={{marginTop:3}} color="#B91C1C" />
+              <Text style={styles.rejectionText}>
+                {" "}
+                <Text style={{ fontFamily: fonts.semiBold }}>Rejection Reason:</Text>{" "}
+                <Text style={styles.rejectionReasonText}>
+                  {item.rejectionReason || "No specific reason provided."}
                 </Text>
               </Text>
             </View>
@@ -282,44 +300,46 @@ export default function LeaveRequestScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {fetchingList ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={leaveRequests}
-          keyExtractor={(item, index) => item._id || item.id || index.toString()}
-          renderItem={renderLeaveCard}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[colors.primary]}
-            />
-          }
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={
-            loadingMore ? (
-              <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color={colors.primary} />
+      {fetchingList
+        ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        )
+        : (
+          <FlatList
+            data={leaveRequests}
+            keyExtractor={(item, index) => item._id || item.id || index.toString()}
+            renderItem={renderLeaveCard}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[colors.primary]}
+              />
+            }
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={loadingMore
+              ? (
+                <View style={styles.footerLoader}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              )
+              : null}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Feather name="file-text" size={48} color="#94A3B8" />
+                <Text style={styles.emptyTitle}>No Leave Requests Found</Text>
+                <Text style={styles.emptySubText}>
+                  Click "Apply Leave" above to create your first leave request.
+                </Text>
               </View>
-            ) : null
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Feather name="file-text" size={48} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>No Leave Requests Found</Text>
-              <Text style={styles.emptySubText}>
-                Click "Apply Leave" above to create your first leave request.
-              </Text>
-            </View>
-          }
-        />
-      )}
+            }
+          />
+        )}
 
       {/* Apply Leave Form Modal */}
       <Modal
@@ -433,11 +453,9 @@ export default function LeaveRequestScreen({ navigation }) {
                   onPress={handleSubmit}
                   disabled={loading}
                 >
-                  {loading ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <Text style={styles.submitBtnText}>Submit Request</Text>
-                  )}
+                  {loading
+                    ? <ActivityIndicator color="#FFFFFF" size="small" />
+                    : <Text style={styles.submitBtnText}>Submit Request</Text>}
                 </TouchableOpacity>
               </View>
             </View>
@@ -512,9 +530,7 @@ export default function LeaveRequestScreen({ navigation }) {
                             >
                               {type}
                             </Text>
-                            {isSelected && (
-                              <Feather name="check" size={18} color="#005B41" />
-                            )}
+                            {isSelected && <Feather name="check" size={18} color="#005B41" />}
                           </TouchableOpacity>
                         );
                       })}
