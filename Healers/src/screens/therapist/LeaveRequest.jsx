@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useState,
+} from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
   Modal,
   Platform,
-  SafeAreaView,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,13 +19,19 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
 
+import {
+  createLeaveRequestApi,
+  getLeaveRequestsApi,
+} from '../../api/therapist/api';
 import TherapistBottomBar from '../../components/TherapistBottomBar';
 import TopBar from '../../components/TopBar';
+import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
@@ -35,24 +48,100 @@ const LEAVE_TYPES = [
 ];
 
 export default function LeaveRequestScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
+  const { user } = useContext(AuthContext);
 
+  // Leave records list state
+  const [leaveRequests, setLeaveRequests] = useState([]);
+  const [fetchingList, setFetchingList] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // Modal display state
+  const [isApplyModalVisible, setIsApplyModalVisible] = useState(false);
+
+  // Form input state
   const [leaveType, setLeaveType] = useState("");
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [startDateSelected, setStartDateSelected] = useState(false);
   const [endDateSelected, setEndDateSelected] = useState(false);
   const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // Pickers & Sub-modals
   const [typeModalVisible, setTypeModalVisible] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState("start");
 
+  const fetchLeaveRequests = async (pageNumber = 1, isRefreshing = false) => {
+    if (loadingMore || (!hasMore && pageNumber !== 1)) return;
+
+    try {
+      if (pageNumber === 1 && !isRefreshing) {
+        setFetchingList(true);
+      } else if (pageNumber > 1) {
+        setLoadingMore(true);
+      }
+
+      const response = await getLeaveRequestsApi({ page: pageNumber, limit: 5 });
+      const newData = response?.data || [];
+
+      if (pageNumber === 1) {
+        setLeaveRequests(newData);
+      } else {
+        setLeaveRequests((prevData) => [...prevData, ...newData]);
+      }
+
+      // If retrieved items are fewer than limit (5), end of data is reached
+      setHasMore(newData.length === 5);
+      setPage(pageNumber);
+    } catch (error) {
+      Alert.alert("Error", error?.message || "Failed to load leave requests.");
+    } finally {
+      setFetchingList(false);
+      setRefreshing(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setHasMore(true);
+      fetchLeaveRequests(1);
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setHasMore(true);
+    fetchLeaveRequests(1, true);
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !fetchingList && !refreshing) {
+      fetchLeaveRequests(page + 1);
+    }
+  };
+
   const formatDate = (date) => {
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
     return `${day}/${month}/${year}`;
+  };
+
+  const resetForm = () => {
+    setLeaveType("");
+    setStartDate(new Date());
+    setEndDate(new Date());
+    setStartDateSelected(false);
+    setEndDateSelected(false);
+    setReason("");
   };
 
   const handleOpenDatePicker = (mode) => {
@@ -76,211 +165,366 @@ export default function LeaveRequestScreen({ navigation }) {
     }
   };
 
-  const handleSubmit = () => {
-    if (navigation && navigation.goBack) {
-      navigation.goBack();
+  const handleSubmit = async () => {
+    if (!leaveType) {
+      Alert.alert("Validation Error", "Please select a leave type.");
+      return;
+    }
+    if (!startDateSelected || !endDateSelected) {
+      Alert.alert("Validation Error", "Please select both start and end dates.");
+      return;
+    }
+    if (!reason.trim()) {
+      Alert.alert("Validation Error", "Please enter a reason for the leave request.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const payload = {
+        role: "Therapist",
+        leaveType,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        reason: reason.trim(),
+        applicantId: user?.ID,
+      };
+
+      const response = await createLeaveRequestApi(payload);
+
+      if (response?.success) {
+        Alert.alert("Success", "Leave request submitted successfully!", [
+          {
+            text: "OK",
+            onPress: () => {
+              setIsApplyModalVisible(false);
+              resetForm();
+              setHasMore(true);
+              fetchLeaveRequests(1);
+            },
+          },
+        ]);
+      }
+    } catch (error) {
+      Alert.alert("Error", error?.message || "Failed to submit leave request.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    if (navigation && navigation.goBack) {
-      navigation.goBack();
+  const getStatusBadgeStyle = (status) => {
+    switch (status?.toLowerCase()) {
+      case "approved":
+        return { bg: "#DCFCE7", text: "#15803D" };
+      case "rejected":
+        return { bg: "#FEE2E2", text: "#B91C1C" };
+      default:
+        return { bg: "#FEF3C7", text: "#B45309" };
     }
+  };
+
+  const renderLeaveCard = ({ item }) => {
+    const badgeStyle = getStatusBadgeStyle(item.status);
+    const isApproved = item.status?.toLowerCase() === "approved";
+
+    return (
+      <View style={styles.cardContainer}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardType}>{item.leaveType}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: badgeStyle.bg }]}>
+            <Text style={[styles.statusText, { color: badgeStyle.text }]}>
+              {item.status ? item.status.toUpperCase() : "PENDING"}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.cardBody}>
+          <View style={styles.dateRow}>
+            <Feather name="calendar" size={14} color="#64748B" />
+            <Text style={styles.dateText}>
+              {formatDate(item.startDate)} - {formatDate(item.endDate)}
+            </Text>
+          </View>
+
+          <Text style={styles.reasonText} numberOfLines={2}>
+            {item.reason}
+          </Text>
+
+          {isApproved && item.approvedBy && (
+            <View style={styles.approvedByContainer}>
+              <Feather name="check-circle" size={14} color="#15803D" />
+              <Text style={styles.approvedByText}>
+                Approved by:{" "}
+                <Text style={styles.adminNameText}>
+                  {item.approvedBy.name || item.approvedBy}
+                </Text>
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
   };
 
   return (
-    <SafeAreaView
-      style={[
-        styles.mainContainer,
-        commonStyles.container,
-        { paddingTop: insets.top },
-      ]}
-    >
-      <TopBar navigation={navigation} headerTitle="Leave Request" />
+    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
+      <TopBar navigation={navigation} headerTitle="Leave Requests" />
 
-      <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.headerBanner}>
-          <Text style={styles.bannerTitle}>Leave Request</Text>
+      <View style={styles.headerBanner}>
+        <Text style={styles.bannerTitle}>Leave Requests</Text>
+        <TouchableOpacity
+          style={styles.applyBtn}
+          activeOpacity={0.85}
+          onPress={() => setIsApplyModalVisible(true)}
+        >
+          <Feather name="plus" size={18} color={colors.primary} />
+          <Text style={styles.applyBtnText}>Apply Leave</Text>
+        </TouchableOpacity>
+      </View>
+
+      {fetchingList ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
-
-        <View style={styles.formContainer}>
-          <Text style={styles.sectionTitle}>Submit The Request</Text>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Enter Type</Text>
-            <TouchableOpacity
-              style={styles.dropdownInput}
-              activeOpacity={0.8}
-              onPress={() => setTypeModalVisible(true)}
-            >
-              <Text
-                style={[
-                  styles.dropdownText,
-                  !leaveType && styles.placeholderText,
-                ]}
-              >
-                {leaveType || "Select Category"}
+      ) : (
+        <FlatList
+          data={leaveRequests}
+          keyExtractor={(item, index) => item._id || item.id || index.toString()}
+          renderItem={renderLeaveCard}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+            />
+          }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : null
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Feather name="file-text" size={48} color="#94A3B8" />
+              <Text style={styles.emptyTitle}>No Leave Requests Found</Text>
+              <Text style={styles.emptySubText}>
+                Click "Apply Leave" above to create your first leave request.
               </Text>
-              <Feather name="chevron-down" size={20} color="#64748B" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Start Date</Text>
-            <TouchableOpacity
-              style={styles.dropdownInput}
-              activeOpacity={0.8}
-              onPress={() => handleOpenDatePicker("start")}
-            >
-              <Text
-                style={[
-                  styles.dropdownText,
-                  !startDateSelected && styles.placeholderText,
-                ]}
-              >
-                {startDateSelected ? formatDate(startDate) : "Enter Date"}
-              </Text>
-              <Feather name="calendar" size={18} color="#64748B" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>End Date</Text>
-            <TouchableOpacity
-              style={styles.dropdownInput}
-              activeOpacity={0.8}
-              onPress={() => handleOpenDatePicker("end")}
-            >
-              <Text
-                style={[
-                  styles.dropdownText,
-                  !endDateSelected && styles.placeholderText,
-                ]}
-              >
-                {endDateSelected ? formatDate(endDate) : "Enter Date"}
-              </Text>
-              <Feather name="calendar" size={18} color="#64748B" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Reason*</Text>
-            <View style={styles.textAreaWrapper}>
-              <TextInput
-                style={styles.textAreaInput}
-                placeholder="Describe your reason..."
-                placeholderTextColor="#94A3B8"
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                value={reason}
-                onChangeText={setReason}
-              />
             </View>
-          </View>
-
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              activeOpacity={0.8}
-              onPress={handleCancel}
-            >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.submitBtn}
-              activeOpacity={0.85}
-              onPress={handleSubmit}
-            >
-              <Text style={styles.submitBtnText}>Submit Request</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-
-      {showPicker && (
-        <DateTimePicker
-          value={pickerMode === "start" ? startDate : endDate}
-          mode="date"
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={handleDateChange}
+          }
         />
       )}
 
-      {showPicker && Platform.OS === "ios" && (
-        <Modal transparent={true} animationType="slide">
-          <View style={styles.iosPickerOverlay}>
-            <View style={styles.iosPickerContainer}>
-              <View style={styles.iosPickerHeader}>
-                <TouchableOpacity onPress={() => setShowPicker(false)}>
-                  <Text style={styles.iosDoneText}>Done</Text>
+      {/* Apply Leave Form Modal */}
+      <Modal
+        visible={isApplyModalVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setIsApplyModalVisible(false)}
+      >
+        <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
+          <View style={styles.modalHeaderBar}>
+            <Text style={styles.modalHeaderTitle}>Apply Leave</Text>
+            <TouchableOpacity onPress={() => setIsApplyModalVisible(false)}>
+              <Feather name="x" size={24} color="#181C1E" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            style={styles.scrollArea}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.formContainer}>
+              <Text style={styles.sectionTitle}>Submit The Request</Text>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Enter Type</Text>
+                <TouchableOpacity
+                  style={styles.dropdownInput}
+                  activeOpacity={0.8}
+                  onPress={() => setTypeModalVisible(true)}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownText,
+                      !leaveType && styles.placeholderText,
+                    ]}
+                  >
+                    {leaveType || "Select Category"}
+                  </Text>
+                  <Feather name="chevron-down" size={20} color="#64748B" />
                 </TouchableOpacity>
               </View>
-              <DateTimePicker
-                value={pickerMode === "start" ? startDate : endDate}
-                mode="date"
-                display="spinner"
-                onChange={handleDateChange}
-              />
-            </View>
-          </View>
-        </Modal>
-      )}
 
-      <Modal
-        visible={typeModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setTypeModalVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setTypeModalVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Select Leave Type</Text>
-                  <TouchableOpacity onPress={() => setTypeModalVisible(false)}>
-                    <Feather name="x" size={20} color="#64748B" />
-                  </TouchableOpacity>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Start Date</Text>
+                <TouchableOpacity
+                  style={styles.dropdownInput}
+                  activeOpacity={0.8}
+                  onPress={() => handleOpenDatePicker("start")}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownText,
+                      !startDateSelected && styles.placeholderText,
+                    ]}
+                  >
+                    {startDateSelected ? formatDate(startDate) : "Enter Date"}
+                  </Text>
+                  <Feather name="calendar" size={18} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>End Date</Text>
+                <TouchableOpacity
+                  style={styles.dropdownInput}
+                  activeOpacity={0.8}
+                  onPress={() => handleOpenDatePicker("end")}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownText,
+                      !endDateSelected && styles.placeholderText,
+                    ]}
+                  >
+                    {endDateSelected ? formatDate(endDate) : "Enter Date"}
+                  </Text>
+                  <Feather name="calendar" size={18} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Reason*</Text>
+                <View style={styles.textAreaWrapper}>
+                  <TextInput
+                    style={styles.textAreaInput}
+                    placeholder="Describe your reason..."
+                    placeholderTextColor="#94A3B8"
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                    value={reason}
+                    onChangeText={setReason}
+                  />
                 </View>
+              </View>
 
-                <ScrollView style={{ maxHeight: 280 }}>
-                  {LEAVE_TYPES.map((type, index) => {
-                    const isSelected = leaveType === type;
-                    return (
-                      <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.modalOption,
-                          isSelected && styles.modalOptionSelected,
-                        ]}
-                        onPress={() => {
-                          setLeaveType(type);
-                          setTypeModalVisible(false);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.modalOptionText,
-                            isSelected && styles.modalOptionTextSelected,
-                          ]}
-                        >
-                          {type}
-                        </Text>
-                        {isSelected && <Feather name="check" size={18} color="#005B41" />}
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  activeOpacity={0.8}
+                  onPress={() => setIsApplyModalVisible(false)}
+                  disabled={loading}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.submitBtn}
+                  activeOpacity={0.85}
+                  onPress={handleSubmit}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.submitBtnText}>Submit Request</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+
+          {showPicker && (
+            <DateTimePicker
+              value={pickerMode === "start" ? startDate : endDate}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onValueChange={handleDateChange}
+            />
+          )}
+
+          {showPicker && Platform.OS === "ios" && (
+            <Modal transparent={true} animationType="slide">
+              <View style={styles.iosPickerOverlay}>
+                <View style={styles.iosPickerContainer}>
+                  <View style={styles.iosPickerHeader}>
+                    <TouchableOpacity onPress={() => setShowPicker(false)}>
+                      <Text style={styles.iosDoneText}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={pickerMode === "start" ? startDate : endDate}
+                    mode="date"
+                    display="spinner"
+                    onValueChange={handleDateChange}
+                  />
+                </View>
+              </View>
+            </Modal>
+          )}
+
+          <Modal
+            visible={typeModalVisible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setTypeModalVisible(false)}
+          >
+            <TouchableWithoutFeedback onPress={() => setTypeModalVisible(false)}>
+              <View style={styles.modalOverlay}>
+                <TouchableWithoutFeedback>
+                  <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle}>Select Leave Type</Text>
+                      <TouchableOpacity onPress={() => setTypeModalVisible(false)}>
+                        <Feather name="x" size={20} color="#64748B" />
                       </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
+                    </View>
+
+                    <ScrollView style={{ maxHeight: 280 }}>
+                      {LEAVE_TYPES.map((type, index) => {
+                        const isSelected = leaveType === type;
+                        return (
+                          <TouchableOpacity
+                            key={index}
+                            style={[
+                              styles.modalOption,
+                              isSelected && styles.modalOptionSelected,
+                            ]}
+                            onPress={() => {
+                              setLeaveType(type);
+                              setTypeModalVisible(false);
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.modalOptionText,
+                                isSelected && styles.modalOptionTextSelected,
+                              ]}
+                            >
+                              {type}
+                            </Text>
+                            {isSelected && (
+                              <Feather name="check" size={18} color="#005B41" />
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                </TouchableWithoutFeedback>
               </View>
             </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
+          </Modal>
+        </SafeAreaView>
       </Modal>
 
       <TherapistBottomBar activeTab="Children" />
@@ -291,6 +535,7 @@ export default function LeaveRequestScreen({ navigation }) {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
+    backgroundColor: "#F8FAFC",
   },
   scrollArea: {
     flex: 1,
@@ -302,16 +547,149 @@ const styles = StyleSheet.create({
     backgroundColor: "#006B58",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    marginBottom: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   bannerTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 28,
   },
+  applyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  applyBtnText: {
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
+    color: colors.primary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  listContent: {
+    padding: 20,
+    paddingBottom: 30,
+  },
+  cardContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  cardType: {
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    color: "#0F172A",
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusText: {
+    fontSize: 12,
+    fontFamily: fonts.bold,
+  },
+  cardBody: {
+    gap: 8,
+  },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  dateText: {
+    fontSize: 13,
+    fontFamily: fonts.regular,
+    color: "#64748B",
+  },
+  reasonText: {
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    color: "#334155",
+    lineHeight: 20,
+  },
+  approvedByContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+  },
+  approvedByText: {
+    fontSize: 13,
+    fontFamily: fonts.regular,
+    color: "#15803D",
+  },
+  adminNameText: {
+    fontFamily: fonts.bold,
+  },
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    color: "#334155",
+    marginTop: 12,
+  },
+  emptySubText: {
+    fontSize: 13,
+    fontFamily: fonts.regular,
+    color: "#94A3B8",
+    textAlign: "center",
+    marginTop: 4,
+    paddingHorizontal: 30,
+  },
+  modalHeaderBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+    backgroundColor: "#FFFFFF",
+  },
+  modalHeaderTitle: {
+    fontSize: 18,
+    fontFamily: fonts.bold,
+    color: "#181C1E",
+  },
   formContainer: {
     paddingHorizontal: 20,
+    paddingTop: 20,
   },
   sectionTitle: {
     fontSize: 20,

@@ -1,34 +1,74 @@
-import React, { useContext } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useState,
+} from 'react';
 
 import {
   Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useFocusEffect } from '@react-navigation/native';
 
+import { getDashboardStatsApi } from '../../api/therapist/api';
 import TherapistBottomBar from '../../components/TherapistBottomBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import { formatTo12Hour } from '../../utils/hoursformat';
 
 export default function TherapistDashboardScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
   const { user, logout } = useContext(AuthContext);
 
   const userName = user?.fullName || user?.name || "";
 
+  const [stats, setStats] = useState({
+    assignedChildren: 0,
+    todaySessions: 0,
+    monthlyFeedback: "0/0",
+    overallAttendance: "0%",
+    nextSession: null,
+  });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      fetchDashboardStats();
+    }, []),
+  );
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      const ID = user?.id;
+
+      const res = await getDashboardStatsApi({ filter: ID });
+      if (res?.success && res?.data) {
+        setStats(res.data);
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchDashboardStats();
+    setRefreshing(false);
+  };
   return (
     <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <View style={styles.headerRow}>
@@ -63,16 +103,23 @@ export default function TherapistDashboardScreen({ navigation }) {
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#004E9F"]}
+            tintColor="#004E9F"
+          />
+        }
       >
         <View style={styles.welcomeSection}>
-          <Text style={styles.greetingText}>
-            Good Morning, {userName} 👋
-          </Text>
+          <Text style={styles.greetingText}>Good Morning, {userName} 👋</Text>
           <Text style={styles.greetingSubtext}>
-            You have 3 sessions scheduled for today. Ready to make a difference?
+            You have {stats.todaySessions} sessions scheduled for today. Ready to make a difference?
           </Text>
         </View>
 
+        {/* Dashboard Grid Cards */}
         <View style={styles.gridContainer}>
           <TouchableOpacity
             style={[styles.gridCard, { backgroundColor: "#D6E7FE" }]}
@@ -82,18 +129,22 @@ export default function TherapistDashboardScreen({ navigation }) {
               <Feather name="users" size={16} color="#1E3A8A" />
             </View>
             <View style={styles.cardValueRow}>
-              <Text style={styles.cardValue}>4</Text>
+              <Text style={styles.cardValue}>{stats.assignedChildren}</Text>
               <Feather name="chevron-right" size={16} color="#9CA3AF" />
             </View>
             <Text style={styles.cardLabel}>Assigned Children</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.gridCard, { backgroundColor: "#8CF0D8" }]} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={[styles.gridCard, { backgroundColor: "#8CF0D8" }]}
+            onPress={() => navigation.navigate("AttendanceTracking")}
+            activeOpacity={0.85}
+          >
             <View style={styles.cardIconBox}>
               <Feather name="calendar" size={16} color="#065F46" />
             </View>
             <View style={styles.cardValueRow}>
-              <Text style={styles.cardValue}>8</Text>
+              <Text style={styles.cardValue}>{stats.todaySessions}</Text>
               <Feather name="chevron-right" size={16} color="#9CA3AF" />
             </View>
             <Text style={styles.cardLabel}>Today's Sessions</Text>
@@ -108,21 +159,25 @@ export default function TherapistDashboardScreen({ navigation }) {
               <Feather name="star" size={16} color="#D97706" />
             </View>
             <View style={styles.cardValueRow}>
-              <Text style={styles.cardValue}>4.8</Text>
+              <Text style={styles.cardValue}>{stats.monthlyFeedback}</Text>
               <Feather name="chevron-right" size={16} color="#9CA3AF" />
             </View>
             <Text style={styles.cardLabel}>Monthly Feedback</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.gridCard, { backgroundColor: "#A6FFD5" }]} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={[styles.gridCard, { backgroundColor: "#A6FFD5" }]}
+            onPress={() => navigation.navigate("AttendanceTracking")}
+            activeOpacity={0.85}
+          >
             <View style={styles.cardIconBox}>
               <Feather name="bar-chart-2" size={16} color="#047857" />
             </View>
             <View style={styles.cardValueRow}>
-              <Text style={styles.cardValue}>82%</Text>
+              <Text style={styles.cardValue}>{stats.overallAttendance}</Text>
               <Feather name="chevron-right" size={16} color="#9CA3AF" />
             </View>
-            <Text style={styles.cardLabel}>Overall Progress</Text>
+            <Text style={styles.cardLabel}>Overall Attendance</Text>
           </TouchableOpacity>
         </View>
 
@@ -174,18 +229,28 @@ export default function TherapistDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("ProgressTracking")}
           >
             <View style={[styles.actionIconBox, { backgroundColor: "#DBEAFE" }]}>
-              <Feather name="map-pin" size={22} color="1669A9" />
+              <Feather name="map-pin" size={22} color="#1669A9" />
             </View>
             <Text style={styles.actionLabel}>Tracking</Text>
           </TouchableOpacity>
         </View>
 
+        {/* Dynamic Next Scheduled Session Banner */}
         <View style={styles.sessionBanner}>
           <Text style={styles.bannerTag}>NEXT SCHEDULED SESSION</Text>
-          <Text style={styles.bannerTitle}>Ali Raza • 09:00 AM</Text>
-          <Text style={styles.bannerDescription}>
-            Focus: Speech Therapy & Articulation exercises. Remember to bring the tactile alphabet board.
-          </Text>
+          {stats.nextSession
+            ? (
+              <>
+                <Text style={styles.bannerTitle}>
+                  {stats.nextSession.childName} • {formatTo12Hour(stats.nextSession.startTime)}
+                </Text>
+                <Text style={styles.bannerDescription}>
+                  Session Time: {formatTo12Hour(stats.nextSession.startTime)} -{" "}
+                  {formatTo12Hour(stats.nextSession.endTime)}
+                </Text>
+              </>
+            )
+            : <Text style={styles.bannerTitle}>No upcoming sessions scheduled</Text>}
 
           <TouchableOpacity
             style={styles.scheduleNextBtn}
@@ -198,7 +263,7 @@ export default function TherapistDashboardScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      <TherapistBottomBar activeTab={'TherapistDashboard'} />
+      <TherapistBottomBar activeTab={"TherapistDashboard"} />
     </SafeAreaView>
   );
 }

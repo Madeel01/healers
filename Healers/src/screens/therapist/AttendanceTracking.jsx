@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useState,
+} from 'react';
 
 import {
+  ActivityIndicator,
   Modal,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,18 +14,26 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useFocusEffect } from '@react-navigation/native';
 
+import {
+  getAttendanceApi,
+  therapistUsers,
+  updateAttendanceStatusApi,
+} from '../../api/therapist/api';
 import TherapistBottomBar from '../../components/TherapistBottomBar';
 import TopBar from '../../components/TopBar';
+import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import { formatTo12Hour } from '../../utils/hoursformat';
 
 const MONTH_NAMES = [
   "January",
@@ -39,102 +51,163 @@ const MONTH_NAMES = [
 ];
 
 const MONTH_RANGES = [
-  { label: "All Months", months: [] },
   ...MONTH_NAMES.map((month, index) => {
     const nextMonth = MONTH_NAMES[(index + 1) % 12];
     return {
       label: `${month} - ${nextMonth}`,
       months: [month, nextMonth],
+      monthIndex: index + 1,
     };
   }),
 ];
 
-const getCurrentMonthRangeLabel = () => {
-  const currentMonthIndex = new Date().getMonth();
-  const currentMonth = MONTH_NAMES[currentMonthIndex];
-  const matchedRange = MONTH_RANGES.find(
-    (item) => item.months && item.months[0] === currentMonth,
-  );
-  return matchedRange ? matchedRange.label : "July - August";
-};
-
-const INITIAL_CHILDREN_DATA = [
-  {
-    id: "1",
-    name: "Ali Raza",
-    parent: "Nawaz",
-    attendance: [
-      { id: "101", date: "Jul 01", time: "09:00 AM", month: "July", status: "Present" },
-      { id: "102", date: "Jul 03", time: "09:00 AM", month: "July", status: "Absent" },
-      { id: "103", date: "Jul 05", time: "09:00 AM", month: "July", status: "Present" },
-      { id: "104", date: "Jul 08", time: "09:00 AM", month: "July", status: "Pending" },
-      { id: "105", date: "Jul 10", time: "09:00 AM", month: "July", status: "Present" },
-      { id: "106", date: "Aug 02", time: "09:00 AM", month: "August", status: "Present" },
-    ],
-  },
-  {
-    id: "2",
-    name: "Fatima Noor",
-    parent: "Tariq",
-    attendance: [
-      { id: "201", date: "Jul 02", time: "10:30 AM", month: "July", status: "Present" },
-      { id: "202", date: "Jul 04", time: "10:30 AM", month: "July", status: "Present" },
-      { id: "203", date: "Aug 12", time: "11:00 AM", month: "August", status: "Absent" },
-    ],
-  },
-  {
-    id: "3",
-    name: "Hassan Khan",
-    parent: "Aslam",
-    attendance: [
-      { id: "301", date: "Jul 01", time: "02:00 PM", month: "July", status: "Present" },
-      { id: "302", date: "Aug 04", time: "02:00 PM", month: "August", status: "Present" },
-      { id: "303", date: "Sep 06", time: "02:00 PM", month: "September", status: "Pending" },
-    ],
-  },
-];
-
 export default function AttendanceTrackingScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
+  const { user } = useContext(AuthContext);
 
-  const [childrenData, setChildrenData] = useState(INITIAL_CHILDREN_DATA);
-  const [selectedChildId, setSelectedChildId] = useState("1");
-  const [selectedRange, setSelectedRange] = useState(getCurrentMonthRangeLabel);
+  const currentMonthIdx = new Date().getMonth();
+  const defaultRangeLabel = MONTH_RANGES[currentMonthIdx]?.label || "All Months";
+
+  const [children, setChildren] = useState([]);
+  const [selectedChildId, setSelectedChildId] = useState(null);
+  const [selectedRange, setSelectedRange] = useState(defaultRangeLabel);
+  const [showFullHistory, setShowFullHistory] = useState(false);
+
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [childDropdownVisible, setChildDropdownVisible] = useState(false);
   const [monthDropdownVisible, setMonthDropdownVisible] = useState(false);
 
-  const activeChild = childrenData.find((item) => item.id === selectedChildId) || childrenData[0];
+  useFocusEffect(
+    useCallback(() => {
+      fetchChildren();
+    }, []),
+  );
 
-  const activeRangeConfig = MONTH_RANGES.find((r) => r.label === selectedRange) || MONTH_RANGES[0];
+  useFocusEffect(
+    useCallback(() => {
+      if (selectedChildId) {
+        fetchAttendanceData();
+      }
+    }, [selectedChildId, selectedRange]),
+  );
 
-  const filteredAttendance = activeChild.attendance.filter((record) => {
-    if (activeRangeConfig.label === "All Months") return true;
-    return activeRangeConfig.months.some(
-      (m) => m.toLowerCase() === record.month.toLowerCase(),
-    );
+  const fetchChildren = async () => {
+    try {
+      const response = await therapistUsers({ filter: user?.id });
+      const fetchedUsers = response?.data || [];
+      setChildren(fetchedUsers);
+
+      if (fetchedUsers.length > 0 && !selectedChildId) {
+        const initialId = fetchedUsers[0]._id || fetchedUsers[0].id;
+        setSelectedChildId(initialId);
+      }
+    } catch (error) {
+      console.error("Error fetching children:", error);
+    }
+  };
+
+  const fetchAttendanceData = async () => {
+    try {
+      setLoading(true);
+      const activeConfig = MONTH_RANGES.find((r) => r.label === selectedRange);
+
+      const params = { childId: selectedChildId };
+      if (activeConfig?.monthIndex) {
+        params.month = activeConfig.monthIndex;
+        params.year = new Date().getFullYear();
+      }
+
+      const res = await getAttendanceApi(params);
+      if (res?.success) {
+        setAttendanceRecords(res.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching scheduling data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const activeChild = children.find((c) => (c._id || c.id) === selectedChildId) || {};
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const formattedAppointments = attendanceRecords.flatMap((record) => {
+    return (record.appointments || []).map((appt) => {
+      const rawDateVal = appt.date?.$date || appt.date;
+      const dateObj = new Date(rawDateVal);
+
+      const monthName = MONTH_NAMES[dateObj.getMonth()];
+      const formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+
+      const apptDateTime = new Date(dateObj);
+      if (appt.startTime) {
+        const [hours, minutes] = appt.startTime.split(":").map(Number);
+        if (!isNaN(hours) && !isNaN(minutes)) {
+          apptDateTime.setHours(hours, minutes, 0, 0);
+        }
+      }
+
+      const now = new Date();
+      const isFutureDate = apptDateTime > now;
+
+      const rawStatus = appt.attendance_status || "Pending";
+      const displayStatus = rawStatus === "Complete" ? "Present" : rawStatus;
+
+      return {
+        id: appt._id?.$oid || appt._id,
+        attendanceDocId: record._id?.$oid || record._id,
+        date: formattedDate,
+        time: appt.startTime ? `${appt.startTime} - ${appt.endTime}` : (appt.time || "-"),
+        month: monthName,
+        status: displayStatus,
+        isFutureDate,
+      };
+    });
   });
 
-  const handleToggleStatus = (recordId, newStatus) => {
-    setChildrenData((prevData) =>
-      prevData.map((child) => {
-        if (child.id !== activeChild.id) return child;
+  const visibleAppointments = showFullHistory
+    ? formattedAppointments
+    : formattedAppointments.slice(0, 5);
+
+  const handleToggleStatus = async (attendanceDocId, appointmentId, targetStatus, currentStatus, isFutureDate) => {
+    if (isFutureDate) return;
+
+    const nextStatus = currentStatus === targetStatus ? "Pending" : targetStatus;
+    const dbStatus = nextStatus === "Present" ? "Complete" : nextStatus;
+
+    setAttendanceRecords((prevRecords) =>
+      prevRecords.map((doc) => {
+        const docId = doc._id?.$oid || doc._id;
+        if (docId !== attendanceDocId) return doc;
         return {
-          ...child,
-          attendance: child.attendance.map((rec) => rec.id === recordId ? { ...rec, status: newStatus } : rec),
+          ...doc,
+          appointments: doc.appointments.map((appt) => {
+            const apptId = appt._id?.$oid || appt._id;
+            return apptId === appointmentId
+              ? { ...appt, attendance_status: dbStatus }
+              : appt;
+          }),
         };
       })
     );
+
+    try {
+      await updateAttendanceStatusApi({
+        attendanceId: attendanceDocId,
+        appointmentId,
+        status: dbStatus,
+      });
+    } catch (error) {
+      console.error("Failed to update attendance_status:", error);
+      fetchAttendanceData();
+    }
   };
 
   return (
-    <SafeAreaView
-      style={[
-        styles.mainContainer,
-        commonStyles.container,
-        { paddingTop: insets.top },
-      ]}
-    >
+    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <TopBar navigation={navigation} headerTitle="Attendance Tracking" />
 
       <ScrollView
@@ -148,13 +221,8 @@ export default function AttendanceTrackingScreen({ navigation }) {
             activeOpacity={0.8}
             onPress={() => setChildDropdownVisible(true)}
           >
-            <Feather
-              name="search"
-              size={18}
-              color="#717781"
-              style={styles.searchIcon}
-            />
-            <Text style={styles.selectedChildText}>{activeChild.name}</Text>
+            <Feather name="search" size={18} color="#717781" style={styles.searchIcon} />
+            <Text style={styles.selectedChildText}>{activeChild?.fullName || activeChild?.name || "Select Child"}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -167,19 +235,19 @@ export default function AttendanceTrackingScreen({ navigation }) {
         </View>
 
         <View style={styles.childInfoCard}>
-          <Text style={styles.childSectionTitle}>child</Text>
+          <Text style={styles.childSectionTitle}>Child Information</Text>
           <View style={styles.inputRow}>
             <View style={styles.fieldBox}>
               <Text style={styles.fieldLabel}>Name</Text>
               <View style={styles.fieldValueContainer}>
-                <Text style={styles.fieldValueText}>{activeChild.name}</Text>
+                <Text style={styles.fieldValueText}>{activeChild?.fullName || activeChild?.name || "-"}</Text>
               </View>
             </View>
 
             <View style={styles.fieldBox}>
               <Text style={styles.fieldLabel}>Parents</Text>
               <View style={styles.fieldValueContainer}>
-                <Text style={styles.fieldValueText}>{activeChild.parent}</Text>
+                <Text style={styles.fieldValueText}>{activeChild?.parent || activeChild?.parentName || "-"}</Text>
               </View>
             </View>
           </View>
@@ -201,95 +269,131 @@ export default function AttendanceTrackingScreen({ navigation }) {
         </View>
 
         <View style={styles.attendanceContainer}>
-          {filteredAttendance.length > 0
+          {loading
+            ? <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
+            : visibleAppointments.length > 0
             ? (
-              filteredAttendance.map((item, index) => {
-                const isPresent = item.status === "Present";
-                const isAbsent = item.status === "Absent";
-                const isPending = item.status === "Pending";
+              <>
+                {visibleAppointments.map((item, index) => {
+                  const isPresent = item.status === "Present";
+                  const isAbsent = item.status === "Absent";
+                  const isPending = item.status === "Pending";
+                  const isDisabled = item.isFutureDate;
 
-                return (
-                  <View
-                    key={item.id}
-                    style={[
-                      styles.attendanceRow,
-                      index < filteredAttendance.length - 1 && styles.borderBottom,
-                    ]}
+                  let toggleGroupBg = "hsl(60, 26%, 93%)";
+                  if (isPresent) toggleGroupBg = "#E0F7F1";
+                  if (isAbsent) toggleGroupBg = "rgba(186,26,26,0.10)";
+                  if (isDisabled) toggleGroupBg = "rgba(0,0,0,.20)";
+
+                  return (
+                    <View
+                      key={item.id}
+                      style={[
+                        styles.attendanceRow,
+                        index < visibleAppointments.length - 1 && styles.borderBottom,
+                        isDisabled && styles.disabledRow,
+                      ]}
+                    >
+                      <View style={styles.dateColumn}>
+                        <Text style={[styles.dateText, isDisabled && styles.disabledText]}>{item.date}</Text>
+                        <Text style={[styles.timeText, isDisabled && styles.disabledText]}>
+                          {formatTo12Hour(item.time)}
+                        </Text>
+                      </View>
+
+                      {/* Toggle Switch Pill */}
+                      <View style={[styles.toggleGroup, { backgroundColor: toggleGroupBg }]}>
+                        <TouchableOpacity
+                          style={[
+                            styles.toggleIconBtn,
+                            isPresent && styles.presentActiveBg,
+                            !isPresent && styles.inactiveToggleBg,
+                          ]}
+                          activeOpacity={isDisabled ? 1 : 0.7}
+                          disabled={isDisabled}
+                          onPress={() =>
+                            handleToggleStatus(
+                              item.attendanceDocId,
+                              item.id,
+                              "Present",
+                              item.status,
+                              item.isFutureDate,
+                            )}
+                        >
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color={isPresent ? "#006B58" : "#8A9099"}
+                          />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.toggleIconBtn,
+                            isAbsent && styles.absentActiveBg,
+                            !isAbsent && styles.inactiveToggleBg,
+                          ]}
+                          activeOpacity={isDisabled ? 1 : 0.7}
+                          disabled={isDisabled}
+                          onPress={() =>
+                            handleToggleStatus(item.attendanceDocId, item.id, "Absent", item.status, item.isFutureDate)}
+                        >
+                          <Ionicons
+                            name="close-circle"
+                            size={20}
+                            color={isAbsent ? "#BA1A1A" : "#8A9099"}
+                          />
+                        </TouchableOpacity>
+                      </View>
+
+                      <View style={styles.statusBadgeColumn}>
+                        {isPresent && (
+                          <View style={styles.presentBadge}>
+                            <Text style={[styles.presentBadgeText, styles.statusBadgeText]}>Present</Text>
+                          </View>
+                        )}
+                        {isAbsent && (
+                          <View style={styles.absentBadge}>
+                            <Text style={[styles.absentBadgeText, styles.statusBadgeText]}>Absent</Text>
+                          </View>
+                        )}
+                        {(isPending && !isDisabled) && (
+                          <View style={styles.pendingBadge}>
+                            <Text style={[styles.pendingBadgeText, styles.statusBadgeText]}>Pending</Text>
+                          </View>
+                        )}
+                        {isDisabled  && (
+                          <View style={styles.pendingBadge}>
+                            <Text style={[styles.pendingBadgeText, styles.statusBadgeText]}>Not Yet</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+
+                {formattedAppointments.length > 5 && (
+                  <TouchableOpacity
+                    style={styles.fullHistoryBtn}
+                    activeOpacity={0.7}
+                    onPress={() => setShowFullHistory(!showFullHistory)}
                   >
-                    <View style={styles.dateColumn}>
-                      <Text style={styles.dateText}>{item.date}</Text>
-                      <Text style={styles.timeText}>{item.time}</Text>
-                    </View>
-
-                    <View style={styles.toggleGroup}>
-                      <TouchableOpacity
-                        style={[
-                          styles.toggleIconBtn,
-                          isPresent && styles.presentActiveBg,
-                          !isPresent && styles.inactiveToggleBg,
-                        ]}
-                        activeOpacity={0.7}
-                        onPress={() => handleToggleStatus(item.id, "Present")}
-                      >
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={18}
-                          color={isPresent ? "#006B58" : "#717781"}
-                        />
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[
-                          styles.toggleIconBtn,
-                          isAbsent && styles.absentActiveBg,
-                          !isAbsent && styles.inactiveToggleBg,
-                        ]}
-                        activeOpacity={0.7}
-                        onPress={() => handleToggleStatus(item.id, "Absent")}
-                      >
-                        <Ionicons
-                          name="close-circle"
-                          size={18}
-                          color={isAbsent ? "#BA1A1A" : "#717781"}
-                        />
-                      </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.statusBadgeColumn}>
-                      {isPresent && (
-                        <View style={styles.presentBadge}>
-                          <Text style={[styles.presentBadgeText, styles.statusBadgeText]}>Present</Text>
-                        </View>
-                      )}
-                      {isAbsent && (
-                        <View style={styles.absentBadge}>
-                          <Text style={[styles.absentBadgeText, styles.statusBadgeText]}>Absent</Text>
-                        </View>
-                      )}
-                      {isPending && (
-                        <View style={styles.pendingBadge}>
-                          <Text style={[styles.pendingBadgeText, styles.statusBadgeText]}>Pending</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                );
-              })
+                    <Text style={styles.fullHistoryText}>
+                      {showFullHistory ? "HIDE HISTORY" : "VIEW FULL HISTORY"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
             )
             : (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>
-                  No attendance records for {selectedRange}
-                </Text>
+                <Text style={styles.emptyText}>No attendance records found</Text>
               </View>
             )}
-
-          <TouchableOpacity style={styles.fullHistoryBtn} activeOpacity={0.7}>
-            <Text style={styles.fullHistoryText}>VIEW FULL HISTORY</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
 
+      {/* Modals */}
       <Modal
         visible={childDropdownVisible}
         transparent={true}
@@ -301,27 +405,20 @@ export default function AttendanceTrackingScreen({ navigation }) {
             <TouchableWithoutFeedback>
               <View style={styles.dropdownMenu}>
                 <Text style={styles.dropdownMenuTitle}>Select Child</Text>
-                {childrenData.map((child) => {
-                  const isSelected = child.id === selectedChildId;
+                {children.map((child) => {
+                  const id = child._id || child.id;
+                  const isSelected = id === selectedChildId;
                   return (
                     <TouchableOpacity
-                      key={child.id}
-                      style={[
-                        styles.dropdownOption,
-                        isSelected && styles.dropdownOptionSelected,
-                      ]}
+                      key={id}
+                      style={[styles.dropdownOption, isSelected && styles.dropdownOptionSelected]}
                       onPress={() => {
-                        setSelectedChildId(child.id);
+                        setSelectedChildId(id);
                         setChildDropdownVisible(false);
                       }}
                     >
-                      <Text
-                        style={[
-                          styles.dropdownOptionText,
-                          isSelected && styles.dropdownOptionTextSelected,
-                        ]}
-                      >
-                        {child.name}
+                      <Text style={[styles.dropdownOptionText, isSelected && styles.dropdownOptionTextSelected]}>
+                        {child.fullName || child.name}
                       </Text>
                       {isSelected && <Feather name="check" size={18} color="#0B598F" />}
                     </TouchableOpacity>
@@ -344,30 +441,19 @@ export default function AttendanceTrackingScreen({ navigation }) {
             <TouchableWithoutFeedback>
               <View style={styles.dropdownMenu}>
                 <Text style={styles.dropdownMenuTitle}>Select Month Range</Text>
-                <ScrollView
-                  style={{ maxHeight: 300 }}
-                  showsVerticalScrollIndicator={true}
-                >
+                <ScrollView style={{ maxHeight: 300 }}>
                   {MONTH_RANGES.map((rangeObj) => {
                     const isSelected = rangeObj.label === selectedRange;
                     return (
                       <TouchableOpacity
                         key={rangeObj.label}
-                        style={[
-                          styles.dropdownOption,
-                          isSelected && styles.dropdownOptionSelected,
-                        ]}
+                        style={[styles.dropdownOption, isSelected && styles.dropdownOptionSelected]}
                         onPress={() => {
                           setSelectedRange(rangeObj.label);
                           setMonthDropdownVisible(false);
                         }}
                       >
-                        <Text
-                          style={[
-                            styles.dropdownOptionText,
-                            isSelected && styles.dropdownOptionTextSelected,
-                          ]}
-                        >
+                        <Text style={[styles.dropdownOptionText, isSelected && styles.dropdownOptionTextSelected]}>
                           {rangeObj.label}
                         </Text>
                         {isSelected && <Feather name="check" size={18} color="#0B598F" />}
@@ -535,7 +621,7 @@ const styles = StyleSheet.create({
   },
 
   dateColumn: {
-    width: 80,
+    width: 100,
   },
   dateText: {
     fontSize: 12,
