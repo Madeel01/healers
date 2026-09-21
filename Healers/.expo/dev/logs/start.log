@@ -4956,3 +4956,1225 @@
 {"_e":"devserver:start","_t":1789751741418,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
 {"_e":"metro:config","_t":1789751742905,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
 {"_e":"expo:dev-tools-plugin:load","_t":1789751743972,"plugins":[]}
+{"_e":"metro:instantiate","_t":1789751767014,"atlas":false,"workers":3,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1789751774689,"id":"1","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:progress","_t":1789751774690,"id":"1","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1789751774701,"id":"1","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1789751774803,"id":"1","progress":0.0032191539660982845,"total":141,"current":8}
+{"_e":"metro:bundling:progress","_t":1789751774903,"id":"1","progress":0.053422036311854756,"total":212,"current":49}
+{"_e":"metro:bundling:progress","_t":1789751775003,"id":"1","progress":0.09809896760412957,"total":265,"current":83}
+{"_e":"metro:bundling:progress","_t":1789751775105,"id":"1","progress":0.172213040553447,"total":347,"current":144}
+{"_e":"metro:bundling:progress","_t":1789751775205,"id":"1","progress":0.2232004464008928,"total":381,"current":180}
+{"_e":"metro:bundling:progress","_t":1789751775306,"id":"1","progress":0.33921024030914143,"total":455,"current":265}
+{"_e":"metro:bundling:progress","_t":1789751775406,"id":"1","progress":0.3996296308950701,"total":541,"current":342}
+{"_e":"metro:bundling:progress","_t":1789751775511,"id":"1","progress":0.3996296308950701,"total":624,"current":373}
+{"_e":"metro:bundling:progress","_t":1789751775611,"id":"1","progress":0.4521737681910841,"total":693,"current":466}
+{"_e":"metro:bundling:progress","_t":1789751775712,"id":"1","progress":0.4854492120024371,"total":798,"current":556}
+{"_e":"metro:bundling:progress","_t":1789751775812,"id":"1","progress":0.5319627977442976,"total":872,"current":636}
+{"_e":"metro:bundling:progress","_t":1789751775928,"id":"1","progress":0.5821379981554046,"total":886,"current":676}
+{"_e":"metro:bundling:progress","_t":1789751776029,"id":"1","progress":0.591715976331361,"total":897,"current":690}
+{"_e":"metro:bundling:progress","_t":1789751776129,"id":"1","progress":0.6440829242565622,"total":942,"current":756}
+{"_e":"metro:bundling:progress","_t":1789751776229,"id":"1","progress":0.7968648325116805,"total":969,"current":865}
+{"_e":"metro:bundling:progress","_t":1789751776333,"id":"1","progress":0.871231235372162,"total":1036,"current":967}
+{"_e":"metro:bundling:progress","_t":1789751776434,"id":"1","progress":0.871231235372162,"total":1101,"current":1026}
+{"_e":"metro:bundling:progress","_t":1789751776543,"id":"1","progress":0.94435890497031,"total":1134,"current":1102}
+{"_e":"metro:bundling:done","_t":1789751776732,"id":"1","total":1134,"ms":2042.4127}
+{"_e":"metro:client_log","_t":1789751781821,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751781902,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751781903,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751781903,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751781903,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751781903,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751781903,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751781903,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751782636,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751782693,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751782694,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751782694,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751782695,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751782695,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751782696,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751782696,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751783084,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751783138,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751783139,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751783139,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751783139,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751783139,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751783140,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751783140,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751783495,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751783547,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751783548,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751783548,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751783549,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751783549,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751783549,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751783550,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751783550,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751783550,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751783551,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751783551,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751783551,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751785877,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751785926,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751785926,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751785926,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751785926,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751785926,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751785926,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751785926,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751786364,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751786451,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751786452,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751786452,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751786452,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751786452,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751786452,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751786452,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751786987,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751787035,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751787035,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751787035,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751787035,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751787036,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751787036,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751787036,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751787036,"level":"log","data":["6a8c835b64c34f75bd4da2f7","child id"]}
+{"_e":"metro:client_log","_t":1789751787036,"level":"log","data":["6aa93f6b835cf772aefbb65f","child id"]}
+{"_e":"metro:client_log","_t":1789751787036,"level":"log","data":["6aaacfd4a5cf2f2d8b6c0698","child id"]}
+{"_e":"metro:client_log","_t":1789751787036,"level":"log","data":["6aaacff6a5cf2f2d8b6c0699","child id"]}
+{"_e":"metro:client_log","_t":1789751787037,"level":"log","data":["6aaad00ea5cf2f2d8b6c069a","child id"]}
+{"_e":"metro:client_log","_t":1789751788562,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751788623,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751788624,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751788625,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751788625,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751788626,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751788626,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751788626,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751788627,"level":"log","data":["6a8c835b64c34f75bd4da2f7","child id"]}
+{"_e":"metro:client_log","_t":1789751788627,"level":"log","data":["6aa93f6b835cf772aefbb65f","child id"]}
+{"_e":"metro:client_log","_t":1789751788627,"level":"log","data":["6aaacfd4a5cf2f2d8b6c0698","child id"]}
+{"_e":"metro:client_log","_t":1789751788628,"level":"log","data":["6aaacff6a5cf2f2d8b6c0699","child id"]}
+{"_e":"metro:client_log","_t":1789751788628,"level":"log","data":["6aaad00ea5cf2f2d8b6c069a","child id"]}
+{"_e":"metro:client_log","_t":1789751788911,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751788962,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751788962,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751788962,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751788963,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751788963,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751788963,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751788963,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751788963,"level":"log","data":["6a8c835b64c34f75bd4da2f7","child id"]}
+{"_e":"metro:client_log","_t":1789751788963,"level":"log","data":["6aa93f6b835cf772aefbb65f","child id"]}
+{"_e":"metro:client_log","_t":1789751788963,"level":"log","data":["6aaacfd4a5cf2f2d8b6c0698","child id"]}
+{"_e":"metro:client_log","_t":1789751788964,"level":"log","data":["6aaacff6a5cf2f2d8b6c0699","child id"]}
+{"_e":"metro:client_log","_t":1789751788964,"level":"log","data":["6aaad00ea5cf2f2d8b6c069a","child id"]}
+{"_e":"metro:client_log","_t":1789751789721,"level":"log","data":["[\"6aa93f6b835cf772aefbb65f\"]","[\"6aaacfd4a5cf2f2d8b6c0698\"]","[\"6aaacfd4a5cf2f2d8b6c0698\", \"6aaacff6a5cf2f2d8b6c0699\"]","[\"6aaacff6a5cf2f2d8b6c0699\", \"6aa93f6b835cf772aefbb65f\"]"]}
+{"_e":"metro:client_log","_t":1789751789775,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751789776,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751789776,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751789776,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751789776,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751789776,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751789776,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751789776,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751789777,"level":"log","data":["6a8c835b64c34f75bd4da2f7","child id"]}
+{"_e":"metro:client_log","_t":1789751789777,"level":"log","data":["6aa93f6b835cf772aefbb65f","child id"]}
+{"_e":"metro:client_log","_t":1789751789777,"level":"log","data":["6aaacfd4a5cf2f2d8b6c0698","child id"]}
+{"_e":"metro:client_log","_t":1789751789777,"level":"log","data":["6aaacff6a5cf2f2d8b6c0699","child id"]}
+{"_e":"metro:client_log","_t":1789751789777,"level":"log","data":["6aaad00ea5cf2f2d8b6c069a","child id"]}
+{"_e":"metro:client_log","_t":1789751790681,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751790731,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751790732,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751790732,"level":"log","data":["6a8c835b64c34f75bd4da2f7","child id"]}
+{"_e":"metro:client_log","_t":1789751790732,"level":"log","data":["6aa93f6b835cf772aefbb65f","child id"]}
+{"_e":"metro:client_log","_t":1789751790732,"level":"log","data":["6aaacfd4a5cf2f2d8b6c0698","child id"]}
+{"_e":"metro:client_log","_t":1789751790732,"level":"log","data":["6aaacff6a5cf2f2d8b6c0699","child id"]}
+{"_e":"metro:client_log","_t":1789751790732,"level":"log","data":["6aaad00ea5cf2f2d8b6c069a","child id"]}
+{"_e":"metro:client_log","_t":1789751791283,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751791329,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751791330,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751791330,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751791331,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751791331,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751791331,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751791331,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751791331,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751791331,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751791332,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751791332,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751791332,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751791334,"level":"log","data":["6a8c835b64c34f75bd4da2f7","child id"]}
+{"_e":"metro:client_log","_t":1789751791334,"level":"log","data":["6aa93f6b835cf772aefbb65f","child id"]}
+{"_e":"metro:client_log","_t":1789751791335,"level":"log","data":["6aaacfd4a5cf2f2d8b6c0698","child id"]}
+{"_e":"metro:client_log","_t":1789751791335,"level":"log","data":["6aaacff6a5cf2f2d8b6c0699","child id"]}
+{"_e":"metro:client_log","_t":1789751791335,"level":"log","data":["6aaad00ea5cf2f2d8b6c069a","child id"]}
+{"_e":"metro:client_log","_t":1789751791346,"level":"error","data":["Encountered two children with the same key, `.5:$6aad692584cb7ff9fba763ca`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751791398,"level":"error","data":["Encountered two children with the same key, `.5:$6aad3f40bc614d60ae3a32ab`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751791399,"level":"error","data":["Encountered two children with the same key, `.5:$6aaaa5143f1bc08a885024bd`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751842477,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751842477,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751842477,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751842477,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751842478,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751842478,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751842478,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751842478,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751842478,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751842478,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751842478,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751842478,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751842478,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751842478,"level":"log","data":["6a8c835b64c34f75bd4da2f7","child id"]}
+{"_e":"metro:client_log","_t":1789751842479,"level":"log","data":["6aa93f6b835cf772aefbb65f","child id"]}
+{"_e":"metro:client_log","_t":1789751842479,"level":"log","data":["6aaacfd4a5cf2f2d8b6c0698","child id"]}
+{"_e":"metro:client_log","_t":1789751842479,"level":"log","data":["6aaacff6a5cf2f2d8b6c0699","child id"]}
+{"_e":"metro:client_log","_t":1789751842479,"level":"log","data":["6aaad00ea5cf2f2d8b6c069a","child id"]}
+{"_e":"metro:client_log","_t":1789751842479,"level":"error","data":["Encountered two children with the same key, `.5:$6aad692584cb7ff9fba763ca`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751842479,"level":"error","data":["Encountered two children with the same key, `.5:$6aad3f40bc614d60ae3a32ab`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751842479,"level":"error","data":["Encountered two children with the same key, `.5:$6aaaa5143f1bc08a885024bd`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751842901,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751843118,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751843118,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751843118,"level":"log","data":["6a8c835b64c34f75bd4da2f7","child id"]}
+{"_e":"metro:client_log","_t":1789751843118,"level":"log","data":["6aa93f6b835cf772aefbb65f","child id"]}
+{"_e":"metro:client_log","_t":1789751843119,"level":"log","data":["6aaacfd4a5cf2f2d8b6c0698","child id"]}
+{"_e":"metro:client_log","_t":1789751843119,"level":"log","data":["6aaacff6a5cf2f2d8b6c0699","child id"]}
+{"_e":"metro:client_log","_t":1789751843119,"level":"log","data":["6aaad00ea5cf2f2d8b6c069a","child id"]}
+{"_e":"metro:client_log","_t":1789751843526,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751843601,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751843601,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751843601,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751843601,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751843601,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751843601,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751843601,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751843601,"level":"log","data":["6a8c835b64c34f75bd4da2f7","child id"]}
+{"_e":"metro:client_log","_t":1789751843602,"level":"log","data":["6aa93f6b835cf772aefbb65f","child id"]}
+{"_e":"metro:client_log","_t":1789751843602,"level":"log","data":["6aaacfd4a5cf2f2d8b6c0698","child id"]}
+{"_e":"metro:client_log","_t":1789751843602,"level":"log","data":["6aaacff6a5cf2f2d8b6c0699","child id"]}
+{"_e":"metro:client_log","_t":1789751843602,"level":"log","data":["6aaad00ea5cf2f2d8b6c069a","child id"]}
+{"_e":"metro:client_log","_t":1789751846125,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751846360,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751846360,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751846360,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751846361,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751846361,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751846361,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751846361,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751846361,"level":"log","data":["6a8c835b64c34f75bd4da2f7","child id"]}
+{"_e":"metro:client_log","_t":1789751846361,"level":"log","data":["6aa93f6b835cf772aefbb65f","child id"]}
+{"_e":"metro:client_log","_t":1789751846361,"level":"log","data":["6aaacfd4a5cf2f2d8b6c0698","child id"]}
+{"_e":"metro:client_log","_t":1789751846361,"level":"log","data":["6aaacff6a5cf2f2d8b6c0699","child id"]}
+{"_e":"metro:client_log","_t":1789751846361,"level":"log","data":["6aaad00ea5cf2f2d8b6c069a","child id"]}
+{"_e":"metro:client_log","_t":1789751846661,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751846781,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751846781,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751846781,"level":"log","data":["6a8c835b64c34f75bd4da2f7","child id"]}
+{"_e":"metro:client_log","_t":1789751846781,"level":"log","data":["6aa93f6b835cf772aefbb65f","child id"]}
+{"_e":"metro:client_log","_t":1789751846781,"level":"log","data":["6aaacfd4a5cf2f2d8b6c0698","child id"]}
+{"_e":"metro:client_log","_t":1789751846781,"level":"log","data":["6aaacff6a5cf2f2d8b6c0699","child id"]}
+{"_e":"metro:client_log","_t":1789751846782,"level":"log","data":["6aaad00ea5cf2f2d8b6c069a","child id"]}
+{"_e":"metro:client_log","_t":1789751847259,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751847395,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751847395,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751847395,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751847395,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751847395,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751847395,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751847395,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751847396,"level":"log","data":["6a8c835b64c34f75bd4da2f7","child id"]}
+{"_e":"metro:client_log","_t":1789751847396,"level":"log","data":["6aa93f6b835cf772aefbb65f","child id"]}
+{"_e":"metro:client_log","_t":1789751847396,"level":"log","data":["6aaacfd4a5cf2f2d8b6c0698","child id"]}
+{"_e":"metro:client_log","_t":1789751847396,"level":"log","data":["6aaacff6a5cf2f2d8b6c0699","child id"]}
+{"_e":"metro:client_log","_t":1789751847396,"level":"log","data":["6aaad00ea5cf2f2d8b6c069a","child id"]}
+{"_e":"metro:client_log","_t":1789751857235,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751857285,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751857285,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751857285,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751857286,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751857286,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751857286,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751857286,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751857786,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751857858,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751857858,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751858453,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751858511,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751858511,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751858511,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751858511,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751858511,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751858511,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751858511,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751860389,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751860389,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751860389,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751860389,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751860389,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751860389,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751860390,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751860390,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751860893,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751861025,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751861026,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751861582,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751861896,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751861896,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751861896,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751861896,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751861896,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751861897,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751861897,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751861897,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751861897,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751861897,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751861897,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751861897,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751861897,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751861897,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751861897,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751862276,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751862428,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751862428,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751862923,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751863077,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751863077,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751863077,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751863078,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751863078,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751863078,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751863078,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751864701,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751864919,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751864919,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751864919,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751864919,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751864919,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751864920,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751864920,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751865237,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751865347,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751865347,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751865347,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751865347,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751865347,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751865347,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751865347,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751865728,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751865795,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751865795,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751865795,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751865795,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751865795,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751865796,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751865796,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751865796,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751865796,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751865796,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751865796,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751865796,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751867205,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751867253,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751867253,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751867253,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751867253,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751867253,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751867253,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751867253,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751867702,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751867755,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751867755,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751867755,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751867757,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751867758,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751867758,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751867758,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751868490,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751868543,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751868543,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751868543,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751868543,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751868543,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751868543,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751868544,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751869872,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751869926,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751869926,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751869926,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751869926,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751869926,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751869927,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751869927,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751870131,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751870213,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751870214,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751870214,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751870214,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751870214,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751870214,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751870214,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751870754,"level":"log","data":["[\"6aaacfd4a5cf2f2d8b6c0698\"]","[\"6aa93f6b835cf772aefbb65f\"]","[\"6aa93f6b835cf772aefbb65f\", \"6aaacff6a5cf2f2d8b6c0699\"]","[\"6aaacff6a5cf2f2d8b6c0699\", \"6aaacfd4a5cf2f2d8b6c0698\"]"]}
+{"_e":"metro:client_log","_t":1789751870807,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751870807,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751870807,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751870808,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751870808,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751870808,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751870809,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751870809,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751871765,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751871817,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751871817,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751872382,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751872431,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751872431,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751872431,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751872432,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751872432,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751872432,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751872432,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751872432,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751872432,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751872432,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751872432,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751872432,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751872438,"level":"error","data":["Encountered two children with the same key, `.5:$6aad692584cb7ff9fba763ca`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751872487,"level":"error","data":["Encountered two children with the same key, `.5:$6aad3f40bc614d60ae3a32ab`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751872488,"level":"error","data":["Encountered two children with the same key, `.5:$6aaaa5143f1bc08a885024bd`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751900957,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751901003,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751901004,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751901004,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751901004,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751901004,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751901004,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751901004,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751901004,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751901004,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751901004,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751901004,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751901004,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751901008,"level":"error","data":["Encountered two children with the same key, `.5:$6aad692584cb7ff9fba763ca`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751901074,"level":"error","data":["Encountered two children with the same key, `.5:$6aad3f40bc614d60ae3a32ab`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751901075,"level":"error","data":["Encountered two children with the same key, `.5:$6aaaa5143f1bc08a885024bd`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751901075,"level":"error","data":["Each child in a list should have a unique \"key\" prop.\n\nCheck the render method of `View`. It was passed a child from TherapistsScreen. See https://react.dev/link/warning-keys for more information."]}
+{"_e":"metro:client_log","_t":1789751901722,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751901822,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751901822,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751902415,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751902467,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751902467,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751902467,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751902467,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751902467,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751902467,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789751902467,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751904309,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751904359,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751904359,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751904359,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751904359,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751904359,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751904864,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751904969,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751904969,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751905571,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751905618,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751905618,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751905618,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751905618,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751905618,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751907691,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751907737,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751907738,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751907738,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751907739,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751907739,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751908204,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751908266,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751908267,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751908268,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751908268,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751908269,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751908751,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751908803,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751908803,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751908803,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751908803,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751908803,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751908803,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751908803,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751908803,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751908803,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751908803,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751940021,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751940076,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751940076,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751940077,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751940077,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751940077,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751940077,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751940077,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751940077,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751940077,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751940077,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751940646,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751940705,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751940706,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751940706,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751940706,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751940706,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751940797,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751940846,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751940846,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751941106,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751941141,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751941141,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751941141,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751941142,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751941142,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751941142,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751941142,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751941333,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751941382,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751941382,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751941382,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751941382,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751941383,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751941383,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751941383,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751941383,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751941383,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751941383,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751942856,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751942919,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751942919,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751942919,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751942919,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751942919,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751943387,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751943499,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751943500,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751943500,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751943500,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751943500,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751944167,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751944289,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751944289,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751944289,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751944289,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751944289,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751944315,"level":"error","data":["Each child in a list should have a unique \"key\" prop.\n\nCheck the render method of `ScrollView`. It was passed a child from TherapistsScreen. See https://react.dev/link/warning-keys for more information."]}
+{"_e":"metro:client_log","_t":1789751946642,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751946690,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751946691,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751946691,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751946691,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751946691,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751947428,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751947473,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751947473,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751947474,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751947474,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751947474,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751948199,"level":"log","data":["[\"6aa93f6b835cf772aefbb65f\"]","[\"6aaacfd4a5cf2f2d8b6c0698\"]","[\"6aaacfd4a5cf2f2d8b6c0698\", \"6aaacff6a5cf2f2d8b6c0699\"]","[\"6aaacff6a5cf2f2d8b6c0699\", \"6aa93f6b835cf772aefbb65f\"]"]}
+{"_e":"metro:client_log","_t":1789751948308,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751948308,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751948308,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751948308,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751948308,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751948308,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751949181,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751949231,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751949232,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751949770,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751949822,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751949822,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751949822,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751949823,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751949823,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751949823,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751949823,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751949824,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751949829,"level":"error","data":["Encountered two children with the same key, `.5:$6aad692584cb7ff9fba763ca`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751949830,"level":"error","data":["Encountered two children with the same key, `.5:$6aad3f40bc614d60ae3a32ab`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751949881,"level":"error","data":["Encountered two children with the same key, `.5:$6aaaa5143f1bc08a885024bd`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751959297,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751959347,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751959347,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751959347,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751959347,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751959347,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751959347,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751959348,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751959348,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751959348,"level":"error","data":["Encountered two children with the same key, `.5:$6aad692584cb7ff9fba763ca`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751959348,"level":"error","data":["Encountered two children with the same key, `.5:$6aad3f40bc614d60ae3a32ab`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751959351,"level":"error","data":["Encountered two children with the same key, `.5:$6aaaa5143f1bc08a885024bd`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751959909,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751959982,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751959982,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751960631,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751960686,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751960686,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751960686,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751960686,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751960686,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751969631,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751969691,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751969692,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751969692,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751969692,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751969692,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751970267,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751970312,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751970312,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751970856,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751970979,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751970979,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751970979,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751970979,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751970979,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751972282,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751972388,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751972388,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751972388,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751972388,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751972388,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751972789,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751972863,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751972863,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751972863,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751972863,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751972863,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751973245,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751973297,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751973297,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751973297,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751973297,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751973297,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751973297,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751973297,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751973297,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751973297,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751973297,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751974219,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751974335,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751974335,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751974335,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751974335,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751974335,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751974734,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751974782,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751974782,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751974782,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751974782,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751974782,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751975360,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751975417,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751975417,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751975417,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751975417,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751975417,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751976753,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751976816,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751976816,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751976816,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751976816,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751976816,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751980424,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751980530,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751980531,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751980531,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751980531,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751980531,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751980531,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751980531,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751980531,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751980531,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751980531,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751980866,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751980918,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751980918,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751980918,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751980919,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751980919,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751981331,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751981379,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751981380,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751981380,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751981380,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751981381,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751981381,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751981381,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751981382,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751981382,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751981382,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751983275,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751983328,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751983328,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751983329,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751983329,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751983329,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751985333,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751985380,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751985380,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751985380,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751985380,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751985380,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751985841,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751985923,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751985924,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751985925,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751985925,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751985925,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751986375,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751986469,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751986469,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751986469,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751986469,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751986469,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751986469,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751986470,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751986470,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751986470,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751986470,"level":"log","data":["undefined","t id"]}
+{"_e":"metro:client_log","_t":1789751987861,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751987924,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751987924,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751987924,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751987924,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751987924,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751988397,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751988449,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751988449,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751988450,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751988450,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751988450,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751989058,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751989167,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751989168,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751989168,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751989168,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751989168,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751990101,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751990214,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751990214,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751990214,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751990214,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751990214,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751990669,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751990725,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751990725,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751990726,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751990726,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751990726,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751991406,"level":"log","data":["[\"6aaacfd4a5cf2f2d8b6c0698\"]","[\"6aa93f6b835cf772aefbb65f\"]","[\"6aa93f6b835cf772aefbb65f\", \"6aaacff6a5cf2f2d8b6c0699\"]","[\"6aaacff6a5cf2f2d8b6c0699\", \"6aaacfd4a5cf2f2d8b6c0698\"]"]}
+{"_e":"metro:client_log","_t":1789751991519,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751991520,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751991520,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751991520,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751991520,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751991520,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751992280,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751992364,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751992364,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751992873,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751992925,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751992926,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751992926,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751992926,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751992926,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751992926,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751992926,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751992926,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751998886,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751998947,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751998948,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789751998948,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751998948,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751998948,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751998948,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789751998948,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789751998948,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789751998955,"level":"error","data":["Encountered two children with the same key, `.5:$6aad692584cb7ff9fba763ca`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751998955,"level":"error","data":["Encountered two children with the same key, `.5:$6aad3f40bc614d60ae3a32ab`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751998955,"level":"error","data":["Encountered two children with the same key, `.5:$6aaaa5143f1bc08a885024bd`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version."]}
+{"_e":"metro:client_log","_t":1789751999681,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751999733,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789751999734,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752000383,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752000434,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752000434,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752000434,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752000434,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752000434,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752003632,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752003686,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752003686,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752003686,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752003686,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752003686,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752004258,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752004323,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752004324,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752004883,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752004949,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752004950,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752004950,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752004950,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752004950,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752010710,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752010774,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752010774,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752011312,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752011368,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752011368,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752011953,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752012003,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752012003,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752030916,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752030961,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752030961,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752031608,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752031664,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752031664,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752035393,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752035468,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752035468,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752036274,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752036325,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752036325,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752120704,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752120748,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752120748,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752168209,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752168308,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752168309,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752168912,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752169034,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752169035,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752169651,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752169762,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752169762,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752172433,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752172541,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752172542,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752173038,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752173104,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752173104,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752174085,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752174233,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752174233,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752175909,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752176034,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752176034,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752177666,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752177940,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752177940,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752178878,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752178981,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752178981,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752179941,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752179992,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752179992,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752181392,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752181491,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752181492,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752183341,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752183446,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752183447,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752259235,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752259382,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752259382,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752259827,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752259967,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752259968,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752260591,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752260647,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752260647,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752261976,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752262120,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752262120,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752262502,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752262739,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752262739,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752263122,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752263213,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752263213,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752264132,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752264239,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752264239,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752278090,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752278140,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752278141,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752278640,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752278694,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752278694,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752279271,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752279331,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752279331,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752287755,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752287804,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752287804,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752288370,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752288420,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752288420,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752289043,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752289107,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752289107,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752293010,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752293057,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752293057,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752293646,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752293690,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752293690,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752294253,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752294302,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752294302,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752297385,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752297437,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752297437,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752297968,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752298079,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752298079,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752298585,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752298697,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752298697,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752300892,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752300957,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752300957,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752301500,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752301574,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752301574,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752302088,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752302164,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752302165,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752312958,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752313020,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752313020,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752313552,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752313616,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752313616,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752314236,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752314284,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752314284,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752317832,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752317894,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752317894,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752318425,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752318487,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752318487,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752319152,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752319214,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752319214,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752337386,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752337432,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752337432,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752337955,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752338016,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752338016,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752338594,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752338685,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752338686,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752342300,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752342346,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752342346,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752342917,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752343112,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752343112,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752343624,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752343812,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752343812,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752344468,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752344518,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752344518,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752345095,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752345241,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752345241,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752345651,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752345748,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752345748,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752446485,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752446548,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752446548,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752447131,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752447241,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752447241,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752447814,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752447926,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752447926,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752452530,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752452575,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752452575,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752453178,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752453236,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752453236,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752453738,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752453799,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752453799,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752458249,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752458398,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752458398,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752458762,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752458817,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752458817,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752459429,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752459481,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752459481,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752462884,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752462985,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752462985,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752463468,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752463532,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752463532,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752464039,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752464133,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752464133,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752495088,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752495135,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752495135,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752554097,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752554156,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752554157,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752554677,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752554731,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752554731,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752555452,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752555512,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752555512,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752563661,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752563713,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752563714,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752564295,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752564375,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752564375,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752565006,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752565099,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752565099,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752567622,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752567679,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752567680,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752568274,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752568369,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752568369,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752568846,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752568894,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752568894,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752570935,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752571018,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752571018,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752592880,"level":"log","data":["speech_therapy_department","cad id"]}
+{"_e":"metro:client_log","_t":1789752592932,"level":"log","data":["aba_therapy","cad id"]}
+{"_e":"metro:client_log","_t":1789752592932,"level":"log","data":["occupational_therapy","cad id"]}
+{"_e":"metro:client_log","_t":1789752592932,"level":"log","data":["physiotherapy","cad id"]}
+{"_e":"metro:client_log","_t":1789752592933,"level":"log","data":["inclusive_education","cad id"]}
+{"_e":"metro:client_log","_t":1789752593433,"level":"log","data":["speech_therapy_department","cad id"]}
+{"_e":"metro:client_log","_t":1789752593447,"level":"log","data":["aba_therapy","cad id"]}
+{"_e":"metro:client_log","_t":1789752593447,"level":"log","data":["occupational_therapy","cad id"]}
+{"_e":"metro:client_log","_t":1789752593447,"level":"log","data":["physiotherapy","cad id"]}
+{"_e":"metro:client_log","_t":1789752593447,"level":"log","data":["inclusive_education","cad id"]}
+{"_e":"metro:client_log","_t":1789752594147,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752594193,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752594193,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752594193,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752594193,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789752594193,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752594193,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789752594193,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752594193,"level":"log","data":["speech_therapy_department","cad id"]}
+{"_e":"metro:client_log","_t":1789752594193,"level":"log","data":["aba_therapy","cad id"]}
+{"_e":"metro:client_log","_t":1789752594194,"level":"log","data":["occupational_therapy","cad id"]}
+{"_e":"metro:client_log","_t":1789752594194,"level":"log","data":["physiotherapy","cad id"]}
+{"_e":"metro:client_log","_t":1789752594194,"level":"log","data":["inclusive_education","cad id"]}
+{"_e":"metro:client_log","_t":1789752594321,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752594374,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752594375,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752594375,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752594375,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789752594375,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752594375,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789752594375,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752594835,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752594900,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752594900,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752595515,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752595581,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752595581,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752595581,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752595581,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789752595582,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752595582,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789752595582,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752598253,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752598305,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752598305,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752598305,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752598305,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789752598305,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752598305,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789752598305,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752598759,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752598917,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752598917,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752599421,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752599514,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752599514,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752599514,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752599514,"level":"log","data":["aba_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789752599514,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752599514,"level":"log","data":["occupational_therapy","spec id"]}
+{"_e":"metro:client_log","_t":1789752599514,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752600691,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752600804,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752600804,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752600804,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752600805,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752600805,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752601309,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752601509,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752601509,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752601910,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752602107,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752602107,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752602107,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752602107,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752602107,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752604064,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752604168,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752604169,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752604169,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752604169,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752604169,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752604621,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752604676,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752604676,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752605364,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752605502,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752605502,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752605502,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752605502,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752605502,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752605691,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752605691,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752605691,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752605691,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752605691,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752605691,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752606189,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752606386,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752606386,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752606804,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752607077,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752607077,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752607077,"level":"log","data":["6aad692584cb7ff9fba763ca","id2"]}
+{"_e":"metro:client_log","_t":1789752607077,"level":"log","data":["6aad3f40bc614d60ae3a32ab","id2"]}
+{"_e":"metro:client_log","_t":1789752607078,"level":"log","data":["6aaaa5143f1bc08a885024bd","id2"]}
+{"_e":"metro:client_log","_t":1789752607251,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752607398,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752607398,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752607862,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752608136,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752608136,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752608715,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752608944,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752608944,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752612918,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752613008,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752613008,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752614348,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752614429,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752614429,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752615159,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752615214,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752615214,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752617578,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752617712,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752617712,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752619672,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752619672,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752619672,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752622144,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752622225,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752622225,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752745724,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752745777,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752745777,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752746328,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752746429,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752746429,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752746950,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752747216,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752747217,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752757786,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752757839,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752757839,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752758411,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752758552,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752758552,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752759133,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752759244,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752759245,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752759900,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752760055,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752760055,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752760513,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752760640,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752760640,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752761166,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752761326,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752761326,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752765332,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752765379,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752765379,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752766248,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752766358,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752766358,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752766812,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752766868,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752766868,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752768218,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752768325,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752768325,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:client_log","_t":1789752769364,"level":"log","data":["aba_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752769417,"level":"log","data":["occupational_therapy","id"]}
+{"_e":"metro:client_log","_t":1789752769417,"level":"log","data":["speech_therapy_department","id"]}
+{"_e":"metro:bundling:started","_t":1789753137698,"id":"j","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:progress","_t":1789753137698,"id":"j","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:done","_t":1789753137795,"id":"j","total":1,"ms":97.1854}
+{"_e":"metro:bundling:started","_t":1789757216959,"id":"l","platform":"web","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:progress","_t":1789757216959,"id":"l","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1789757216965,"id":"l","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1789757217066,"id":"l","progress":0.02040816326530612,"total":112,"current":16}
+{"_e":"metro:bundling:progress","_t":1789757217166,"id":"l","progress":0.15888307496699106,"total":143,"current":57}
+{"_e":"metro:bundling:progress","_t":1789757217281,"id":"l","progress":0.22145328719723184,"total":187,"current":88}
+{"_e":"metro:bundling:progress","_t":1789757217390,"id":"l","progress":0.2248451585884635,"total":213,"current":101}
+{"_e":"metro:bundling:progress","_t":1789757217524,"id":"l","progress":0.26395084588839324,"total":218,"current":112}
+{"_e":"metro:bundling:progress","_t":1789757217625,"id":"l","progress":0.3443070828495322,"total":242,"current":142}
+{"_e":"metro:bundling:progress","_t":1789757217726,"id":"l","progress":0.39914969052340604,"total":258,"current":163}
+{"_e":"metro:bundling:progress","_t":1789757217826,"id":"l","progress":0.39914969052340604,"total":312,"current":178}
+{"_e":"metro:bundling:progress","_t":1789757217927,"id":"l","progress":0.39914969052340604,"total":340,"current":202}
+{"_e":"metro:bundling:progress","_t":1789757218032,"id":"l","progress":0.39914969052340604,"total":369,"current":222}
+{"_e":"metro:bundling:progress","_t":1789757218132,"id":"l","progress":0.46113574905354243,"total":430,"current":292}
+{"_e":"metro:bundling:progress","_t":1789757218232,"id":"l","progress":0.46113574905354243,"total":517,"current":335}
+{"_e":"metro:bundling:progress","_t":1789757218332,"id":"l","progress":0.46113574905354243,"total":563,"current":355}
+{"_e":"metro:bundling:progress","_t":1789757218434,"id":"l","progress":0.46113574905354243,"total":571,"current":370}
+{"_e":"metro:bundling:progress","_t":1789757218536,"id":"l","progress":0.5895591143233527,"total":603,"current":463}
+{"_e":"metro:bundling:progress","_t":1789757218636,"id":"l","progress":0.7392785396104463,"total":642,"current":552}
+{"_e":"metro:bundling:progress","_t":1789757218736,"id":"l","progress":0.8145262464299662,"total":677,"current":611}
+{"_e":"metro:bundling:progress","_t":1789757218841,"id":"l","progress":0.8158962498793516,"total":734,"current":663}
+{"_e":"metro:bundling:progress","_t":1789757218946,"id":"l","progress":0.8546617296006944,"total":768,"current":710}
+{"_e":"metro:bundling:progress","_t":1789757219046,"id":"l","progress":0.9238865393980878,"total":773,"current":743}
+{"_e":"metro:bundling:done","_t":1789757219187,"id":"l","total":773,"ms":2227.8443}
+{"_e":"metro:client_log","_t":1789757219749,"level":"info","data":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"]}
+{"_e":"metro:client_log","_t":1789757219749,"level":"warn","data":["\"shadow*\" style props are deprecated. Use \"boxShadow\"."]}
+{"_e":"metro:client_log","_t":1789757219749,"level":"log","data":["Running application \"main\" with appParams:\n","{\"hydrate\": undefined, \"rootTag\": \"#root\"}","\nDevelopment-level warnings: ON.\nPerformance optimizations: OFF."]}
+{"_e":"root:init","_t":1789988519791,"format":"v0-jsonl","version":"57.0.24"}
+{"_e":"env:mode","_t":1789988519816,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1789988519842,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1789988529952,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1789988543852,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1789988549802,"plugins":[]}

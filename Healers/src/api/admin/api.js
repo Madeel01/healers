@@ -58,3 +58,10 @@ export const deleteAppointment = (body) =>
 
 export const getTherapistSchedules = (params) =>
   apiClient.get('/scheduling/therapist', { params }).then((r) => r.data);
+
+
+///////////////////// Children API's /////////////////////////////
+export const childUsers = (params) => apiClient.get("/admin/children", { params });
+export const createChild = (data) => apiClient.post("/admin/children", data);
+export const updateChild = (id, data) => apiClient.put(`/admin/children/${id}`, data);
+export const deleteChild = (id) => apiClient.delete(`/admin/children/${id}`);

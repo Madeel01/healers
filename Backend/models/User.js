@@ -45,12 +45,14 @@ const userSchema = new mongoose.Schema(
      default: false,
     },
     fatherName: {
-      type: Boolean,
-     default: false,
+      type: String,
+      default: "",
+      trim: true,
     },
     age: {
       type: Number,
-     default: false,
+      default: null,
+      min: 0,
     },
   },
   { timestamps: true },

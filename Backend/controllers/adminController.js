@@ -405,3 +405,169 @@ exports.assignChildrenToTherapist = async (req, res) => {
   }
 };
 
+exports.childUsers = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search = "" } = req.query;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+
+    const filter = { role: "Child" };
+    if (search.trim()) {
+      filter.fullName = { $regex: search.trim(), $options: "i" };
+    }
+
+    const totalCount = await User.countDocuments(filter);
+
+    const children = await User.find(filter, {
+      fullName: 1,
+      fatherName: 1,
+      age: 1,
+      email: 1,
+      phone: 1,
+    })
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum);
+
+    return res.status(200).json({
+      success: true,
+      data: children,
+      hasMore: pageNum * limitNum < totalCount,
+      totalCount,
+    });
+  } catch (error) {
+    console.error("Fetch Children Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch children.",
+      error: error.message,
+    });
+  }
+};
+
+exports.createChild = async (req, res) => {
+  try {
+    const { fullName, fatherName, age, email, phone, password } = req.body;
+
+    if (!fullName || !email || !phone || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "fullName, email, phone and password are required.",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const child = await User.create({
+      fullName,
+      fatherName: fatherName || "",
+      age: age ?? null,
+      email,
+      phone,
+      password: hashedPassword,
+      role: "Child",
+      agreeTerms: true,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Child created successfully.",
+      data: child,
+    });
+  } catch (error) {
+    console.error("Create Child Error:", error);
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "A user with this email or phone already exists.",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create child.",
+      error: error.message,
+    });
+  }
+};
+
+exports.updateChild = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, fatherName, age, email, phone, password } = req.body;
+
+    const updateFields = {
+      ...(fullName && { fullName }),
+      ...(fatherName !== undefined && { fatherName }),
+      ...(age !== undefined && { age }),
+      ...(email && { email }),
+      ...(phone && { phone }),
+    };
+
+    // Sirf tab password update karein jab user ne naya password diya ho
+    if (password) {
+      updateFields.password = await bcrypt.hash(password, 10);
+    }
+
+    const child = await User.findOneAndUpdate(
+      { _id: id, role: "Child" },
+      updateFields,
+      { new: true, runValidators: true }
+    );
+
+    if (!child) {
+      return res.status(404).json({ success: false, message: "Child not found." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Child updated successfully.",
+      data: child,
+    });
+  } catch (error) {
+    console.error("Update Child Error:", error);
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "A user with this email or phone already exists.",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update child.",
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteChild = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const child = await User.findOneAndDelete({ _id: id, role: "Child" });
+
+    if (!child) {
+      return res.status(404).json({ success: false, message: "Child not found." });
+    }
+
+    await TherapistAssignment.updateMany(
+      { childIds: id },
+      { $pull: { childIds: id } }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Child deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Delete Child Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete child.",
+      error: error.message,
+    });
+  }
+};
