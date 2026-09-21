@@ -437,7 +437,7 @@ export default function TherapistsScreen({ navigation }) {
 
     setAssigning(true);
     const therapistId = selectedAssignTherapist._id || selectedAssignTherapist.id;
-    console.log(addChildIds,removeChildIds,originalAssignedIds,selectedChildIds)
+    // console.log(addChildIds,removeChildIds,originalAssignedIds,selectedChildIds)
 
     try {
       const response = await assignChildrenToTherapist({ therapistId, addChildIds, removeChildIds });
@@ -527,10 +527,9 @@ export default function TherapistsScreen({ navigation }) {
           {selectedSpecilites.map((cat) => {
             const specility = therapistSpecialities.find((item) => item.id === cat);
             if(!specility) return;
-            console.log(specility.id,"id");
             return (
               <View
-                // key={specility.id}
+                key={specility.id}
                 // onPress={() => setSelectedFilter(specility.id)}
                 style={[
                   styles.tabChip,
@@ -567,7 +566,7 @@ export default function TherapistsScreen({ navigation }) {
           const isMenuOpen = activeMenuId === therapist.id;
           const avatarColor = getAvatarColor(therapist.id || therapist.name);
           return (
-            <View  style={styles.therapistCard}>
+            <View  style={styles.therapistCard} key={therapist.id}>
               <View style={styles.cardHeaderRow}>
                 {/* <Image
                   source={{ uri: therapist.avatar }}
@@ -581,9 +580,9 @@ export default function TherapistsScreen({ navigation }) {
                 <View style={styles.therapistInfo}>
                   <Text style={styles.therapistName}>{therapist.name}</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                    {(therapist.specialties || []).map((spec) => {  
+                    {(therapist.specialties || []).map((spec,index) => {  
                     return (
-                      <View style={[styles.specialtyBadge, { backgroundColor: spec.bg }]}>
+                      <View style={[styles.specialtyBadge, { backgroundColor: spec.bg }]} key={index}>
                         <Text style={[styles.specialtyText, { color: spec.color }]}>{spec.label}</Text>
                       </View>
                     )})}
@@ -696,9 +695,10 @@ export default function TherapistsScreen({ navigation }) {
                 <Text style={styles.filterModalChipTextAll}>All Types</Text>
               </TouchableOpacity>
 
-              {therapistSpecialities.map((cat) => {
+              {therapistSpecialities.map((cat,index) => {
               return (
                 <TouchableOpacity
+                  key={index}
                   style={[
                     styles.filterModalChip,
                     { backgroundColor: cat.bg },
@@ -763,15 +763,17 @@ export default function TherapistsScreen({ navigation }) {
 
               <Text style={styles.fieldLabel}>Specialty</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 6 }}>
-                  {therapistSpecialities.map((item) => {
+                  {therapistSpecialities.map((item,index) => {
                     const isSelected = newTherapist.specialty === item.id;
                     return (
                       <TouchableOpacity
+                        key={index}
                         style={[
                           styles.tabChip,
                           { backgroundColor: item.bg },
                           isSelected && { borderWidth: 2, borderColor: '#0B4A6F' }
                         ]}
+                        key={item.id}
                         onPress={() => setNewTherapist({ 
                           ...newTherapist, 
                           specialty: item.id,
@@ -925,7 +927,7 @@ export default function TherapistsScreen({ navigation }) {
                   {!assignLoading && assignTherapistResults.length === 0 && (
                     <Text style={styles.emptyListText}>No therapists found.</Text>
                   )}
-                  {assignTherapistResults.map((t) => {console.log(t.id,"t id")
+                  {assignTherapistResults.map((t) => {
                   return (
                     <TouchableOpacity
                       key={t._id || t.id}
@@ -964,7 +966,7 @@ export default function TherapistsScreen({ navigation }) {
                     const isSelected = selectedChildIds.includes(childId);
                     return (
                       <TouchableOpacity
-                        // key={`${childId}-${index}`} // Safe unique key prevents UI duplicate warning
+                        key={`${childId}-${index}`} // Safe unique key prevents UI duplicate warning
                         style={styles.selectableRow}
                         onPress={() => toggleChildSelection(childId)}
                       >

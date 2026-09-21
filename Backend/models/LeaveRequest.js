@@ -8,9 +8,9 @@ const leaveRequestSchema = new mongoose.Schema(
       required: true,
     },
    approved_by: {
-      type: String,
-      trim: true,
-      default: "",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
     role: {
       type: String,
@@ -34,6 +34,15 @@ const leaveRequestSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+    },
+    rejectionReason: {         
+      type: String,
+      trim: true,
+      default: "",
+    },
+    actionedAt: {            
+      type: Date,
+      default: null,
     },
     status: {
       type: String,

@@ -1,3 +1,4 @@
+const LeaveRequest = require("../models/LeaveRequest");
 const TherapistAssignment = require("../models/TherapistAssignment");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
@@ -405,6 +406,8 @@ exports.assignChildrenToTherapist = async (req, res) => {
   }
 };
 
+
+
 exports.childUsers = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = "" } = req.query;
@@ -450,7 +453,7 @@ exports.createChild = async (req, res) => {
     const { fullName, fatherName, age, email, phone, password } = req.body;
 
     if (!fullName || !email || !phone || !password) {
-      return res.status(400).json({
+      return res.json({
         success: false,
         message: "fullName, email, phone and password are required.",
       });
@@ -505,7 +508,6 @@ exports.updateChild = async (req, res) => {
       ...(phone && { phone }),
     };
 
-    // Sirf tab password update karein jab user ne naya password diya ho
     if (password) {
       updateFields.password = await bcrypt.hash(password, 10);
     }
@@ -517,7 +519,7 @@ exports.updateChild = async (req, res) => {
     );
 
     if (!child) {
-      return res.status(404).json({ success: false, message: "Child not found." });
+      return res.json({ success: false, message: "Child not found." });
     }
 
     return res.status(200).json({
@@ -550,7 +552,7 @@ exports.deleteChild = async (req, res) => {
     const child = await User.findOneAndDelete({ _id: id, role: "Child" });
 
     if (!child) {
-      return res.status(404).json({ success: false, message: "Child not found." });
+      return res.json({ success: false, message: "Child not found." });
     }
 
     await TherapistAssignment.updateMany(
@@ -567,6 +569,188 @@ exports.deleteChild = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to delete child.",
+      error: error.message,
+    });
+  }
+};
+
+
+
+const getOnLeaveToday = async () => {
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const end = new Date(); end.setHours(23, 59, 59, 999);
+
+  const docs = await LeaveRequest.find({
+    status: "approved",
+    startDate: { $lte: end },
+    endDate: { $gte: start },
+  })
+    .populate("applicantId", "fullName role")
+    .sort({ endDate: 1 });
+
+  const seen = new Set();
+  return docs.filter((d) => {
+    if (!d.applicantId) return false;
+    const key = String(d.applicantId._id);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+exports.getLeaveRequests = async (req, res) => {
+  try {
+    const { status = "pending", page = 1, limit = 10 } = req.query;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+
+    const filter = {};
+    const tab = status.toLowerCase();
+
+    if (tab === "pending") filter.status = "pending";
+    else if (tab === "approved") filter.status = "approved";
+    else if (tab === "rejected") filter.status = "rejected";
+
+    const totalCount = await LeaveRequest.countDocuments(filter);
+
+    const requests = await LeaveRequest.find(filter)
+      .populate("applicantId", "fullName role")
+      .populate("approved_by", "fullName")
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum);
+
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const [pendingCount, pendingSinceYesterday, onLeaveDocs] = await Promise.all([
+      LeaveRequest.countDocuments({ status: "pending" }),
+      LeaveRequest.countDocuments({ status: "pending", createdAt: { $gte: yesterday } }),
+      getOnLeaveToday(),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: requests,
+      hasMore: pageNum * limitNum < totalCount,
+      totalCount,
+      stats: {
+        pendingCount,
+        pendingSinceYesterday,
+        onLeaveToday: onLeaveDocs.length,
+        onLeaveNames: onLeaveDocs.map((d) => d.applicantId.fullName),
+      },
+    });
+  } catch (error) {
+    console.error("Fetch Leave Requests Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch leave requests.",
+      error: error.message,
+    });
+  }
+};
+
+exports.approveLeaveRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.user?.id; 
+
+    const leaveRequest = await LeaveRequest.findById(id);
+
+    if (!leaveRequest) {
+      return res.json({
+        success: false,
+        message: "Leave request not found.",
+      });
+    }
+
+    if (leaveRequest.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: `This request has already been ${leaveRequest.status}.`,
+      });
+    }
+
+    leaveRequest.status = "approved";
+    leaveRequest.approved_by = adminId || null;
+    leaveRequest.actionedAt = new Date();
+    leaveRequest.rejectionReason = ""; 
+
+    await leaveRequest.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Leave request approved successfully.",
+      data: leaveRequest,
+    });
+  } catch (error) {
+    console.error("Approve Leave Request Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to approve leave request.",
+      error: error.message,
+    });
+  }
+};
+
+exports.rejectLeaveRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rejectionReason } = req.body;
+    const adminId = req.user?.id;
+
+    if (!rejectionReason || !rejectionReason.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "A rejection reason is required.",
+      });
+    }
+
+    const leaveRequest = await LeaveRequest.findById(id);
+
+    if (!leaveRequest) {
+      return res.json({
+        success: false,
+        message: "Leave request not found.",
+      });
+    }
+
+    if (leaveRequest.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: `This request has already been ${leaveRequest.status}.`,
+      });
+    }
+
+    leaveRequest.status = "rejected";
+    leaveRequest.rejectionReason = rejectionReason.trim();
+    leaveRequest.approved_by = adminId || null;
+    leaveRequest.actionedAt = new Date();
+
+    await leaveRequest.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Leave request rejected.",
+      data: leaveRequest,
+    });
+  } catch (error) {
+    console.error("Reject Leave Request Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to reject leave request.",
+      error: error.message,
+    });
+  }
+};
+exports.getStaffOnLeaveToday = async (req, res) => {
+  try {
+    const data = await getOnLeaveToday();
+    return res.status(200).json({ success: true, data, totalCount: data.length });
+  } catch (error) {
+    console.error("Staff On Leave Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch staff on leave.",
       error: error.message,
     });
   }

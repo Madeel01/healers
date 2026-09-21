@@ -65,3 +65,10 @@ export const childUsers = (params) => apiClient.get("/admin/children", { params 
 export const createChild = (data) => apiClient.post("/admin/children", data);
 export const updateChild = (id, data) => apiClient.put(`/admin/children/${id}`, data);
 export const deleteChild = (id) => apiClient.delete(`/admin/children/${id}`);
+
+///////////////////// Leave Request API's /////////////////////////////
+export const getLeaveRequests = (params) => apiClient.get("/admin/leave-requests", { params });
+export const approveLeaveRequest = (id) => apiClient.put(`/admin/leave-requests/${id}/approve`);
+export const rejectLeaveRequest = (id, rejectionReason) =>
+  apiClient.put(`/admin/leave-requests/${id}/reject`, { rejectionReason });
+export const getStaffOnLeaveToday = () => apiClient.get("/admin/leave-requests/on-leave-today");
