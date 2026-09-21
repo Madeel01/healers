@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState,useRef } from 'react';
 
 import {
   ActivityIndicator,
@@ -71,7 +71,8 @@ export default function ChildrenScreen({ navigation }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const isEditMode = editingChildId !== null;
-
+    const menuTouchRef = useRef(false);
+  
   const resetChildForm = () => {
     setNewChild(initialChildState);
     setEditingChildId(null);
@@ -85,7 +86,7 @@ export default function ChildrenScreen({ navigation }) {
   };
 
   const openEditModal = (child) => {
-    console.log("EDIT CHILD:", child);
+    // console.log("EDIT CHILD:", child);
 
     setActiveMenuId(null);
     setEditingChildId(child.id);
@@ -296,7 +297,15 @@ export default function ChildrenScreen({ navigation }) {
     };
 
   return (
-    <SafeAreaView style={styles.mainContainer}>
+    <SafeAreaView style={styles.mainContainer}
+      onTouchStart={() => {
+        if (menuTouchRef.current) {
+          menuTouchRef.current = false; 
+          return;
+        }
+        if (activeMenuId) setActiveMenuId(null);
+      }}
+    >
       <TopBar
         navigation={navigation}
         isNotificationOpen={isNotificationOpen}
@@ -309,6 +318,7 @@ export default function ChildrenScreen({ navigation }) {
         // onTouchStart={() => {
         //     if (activeMenuId) setActiveMenuId(null);
         // }}
+        onScrollBeginDrag={() => setActiveMenuId(null)}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
@@ -403,11 +413,14 @@ export default function ChildrenScreen({ navigation }) {
 
                     {/* MENU */}
                     <View
-                    style={{
+                      onTouchStart={() => {
+                        menuTouchRef.current = true;
+                      }}
+                      style={{
                         position: "relative",
                         zIndex: isMenuOpen ? 1000 : 1,
                         elevation: isMenuOpen ? 20 : 1,
-                    }}
+                      }}
                     >
                     <TouchableOpacity
                         style={styles.moreOptionsButton}
