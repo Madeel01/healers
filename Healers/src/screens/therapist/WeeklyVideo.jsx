@@ -10,6 +10,7 @@ import {
   useCameraPermissions,
   useMicrophonePermissions,
 } from 'expo-camera';
+import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import {
   useVideoPlayer,
@@ -18,7 +19,6 @@ import {
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Modal,
   RefreshControl,
   ScrollView,
@@ -36,9 +36,11 @@ import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import {
+  createWeeklyVideoApi,
   deleteWeeklyVideoApi,
   getChildVideosApi,
   therapistUsers,
+  uploadToCloudinaryFileSystem,
 } from '../../api/therapist/api';
 import TherapistBottomBar from '../../components/TherapistBottomBar';
 import TopBar from '../../components/TopBar';
@@ -49,40 +51,58 @@ import {
   fonts,
 } from '../../styles/theme';
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
 const CloudinaryVideoPlayer = ({ uri }) => {
-  const player = useVideoPlayer(uri, (player) => {
-    player.loop = false;
+  const player = useVideoPlayer(uri, (playerInstance) => {
+    playerInstance.loop = false;
+    playerInstance.play();
   });
 
   return (
-    <VideoView
-      player={player}
-      style={{
-        width: "100%",
-        height: 300,
-        backgroundColor: "#000",
-      }}
-      nativeControls
-      contentFit="contain"
-    />
+    <View style={{ width: "100%", height: 300 }}>
+      <VideoView
+        player={player}
+        nativeControls
+        contentFit="contain"
+        style={{
+          width: "100%",
+          height: "100%",
+        }}
+      />
+    </View>
   );
 };
 
-export default function WeeklyVideoScreen({ navigation }) {
+export default function WeeklyVideoScreen({
+  navigation,
+}) {
   const { user } = useContext(AuthContext);
 
   const cameraRef = useRef(null);
+
+  const recordingTimerRef = useRef(null);
+  const discardRecordingRef = useRef(false);
+  const recordingActionRef = useRef(false);
+  const flipAfterStopRef = useRef(false);
   const [children, setChildren] = useState([]);
-  const [loadingChildren, setLoadingChildren] = useState(true);
   const [selectedChildId, setSelectedChildId] = useState(null);
   const [videos, setVideos] = useState([]);
+  const [loadingChildren, setLoadingChildren] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSearch, setModalSearch] = useState("");
   const [demoVideoModal, setDemoVideoModal] = useState(false);
   const [activeVideo, setActiveVideo] = useState(null);
+  const [recordModalVisible, setRecordModalVisible] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState("back");
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [cameraZoom, setCameraZoom] = useState(0);
+  const [videoPage, setVideoPage] = useState(1);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [loadingMoreVideos, setLoadingMoreVideos] = useState(false);
+  const [hasMoreVideos, setHasMoreVideos] = useState(true);
   const [
     cameraPermission,
     requestCameraPermission,
@@ -91,23 +111,32 @@ export default function WeeklyVideoScreen({ navigation }) {
     audioPermission,
     requestAudioPermission,
   ] = useMicrophonePermissions();
-  const [recordModalVisible, setRecordModalVisible] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [cameraFacing, setCameraFacing] = useState("back");
-  const [refreshing, setRefreshing] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const recordingTimerRef = useRef(null);
-  const MAX_VIDEO_SIZE = 30 * 1024 * 1024;
+
+  const MAX_VIDEO_SIZE = 80 * 1024 * 1024;
+
   useEffect(() => {
     fetchChildren();
   }, []);
 
   useEffect(() => {
     if (selectedChildId) {
-      // fetchVideos(selectedChildId);
+      setVideos([]);
+      setVideoPage(1);
+      setHasMoreVideos(true);
+
+      fetchVideos(
+        selectedChildId,
+        1,
+        false,
+      );
     }
   }, [selectedChildId]);
+
+  useEffect(() => {
+    return () => {
+      stopRecordingTimer();
+    };
+  }, []);
 
   const fetchChildren = async () => {
     try {
@@ -127,30 +156,55 @@ export default function WeeklyVideoScreen({ navigation }) {
         fetchedUsers.length > 0
         && !selectedChildId
       ) {
-        const initialChildId = fetchedUsers[0]._id
-          || fetchedUsers[0].id;
+        const initialChildId = fetchedUsers[0]?._id
+          || fetchedUsers[0]?.id;
 
-        setSelectedChildId(initialChildId);
+        setSelectedChildId(
+          initialChildId,
+        );
       }
     } catch (error) {
       console.error(
         "Error fetching children:",
         error,
       );
+
+      Alert.alert(
+        "Error",
+        "Could not load children.",
+      );
     } finally {
       setLoadingChildren(false);
     }
   };
+  const handleZoomIn = () => {
+    setCameraZoom((previous) => Math.min(previous + 0.1, 1));
+  };
 
-  const fetchVideos = async (childId) => {
+  const handleZoomOut = () => {
+    setCameraZoom((previous) => Math.max(previous - 0.1, 0));
+  };
+  const fetchVideos = async (
+    childId,
+    page = 1,
+    append = false,
+  ) => {
     if (!childId) {
       return;
     }
 
     try {
-      setLoading(true);
+      if (append) {
+        setLoadingMoreVideos(true);
+      } else {
+        setVideoLoading(true);
+      }
 
-      const response = await getChildVideosApi(childId);
+      const response = await getChildVideosApi(
+        childId,
+        page,
+        5,
+      );
 
       console.log(
         "Videos response:",
@@ -158,9 +212,28 @@ export default function WeeklyVideoScreen({ navigation }) {
       );
 
       if (response?.success) {
-        setVideos(response.data || []);
+        const newVideos = response?.data || [];
+
+        if (append) {
+          setVideos((previousVideos) => [
+            ...previousVideos,
+            ...newVideos,
+          ]);
+        } else {
+          setVideos(newVideos);
+        }
+
+        setVideoPage(page);
+
+        setHasMoreVideos(
+          response?.pagination?.hasMore === true,
+        );
       } else {
-        setVideos([]);
+        if (!append) {
+          setVideos([]);
+        }
+
+        setHasMoreVideos(false);
       }
     } catch (error) {
       console.error(
@@ -168,16 +241,23 @@ export default function WeeklyVideoScreen({ navigation }) {
         error,
       );
 
+      if (!append) {
+        setVideos([]);
+      }
+
       Alert.alert(
         "Error",
         "Could not load videos for selected child.",
       );
     } finally {
-      setLoading(false);
+      setVideoLoading(false);
+      setLoadingMoreVideos(false);
     }
   };
 
-  const handleDeleteVideo = async (videoId) => {
+  const handleDeleteVideo = async (
+    videoId,
+  ) => {
     if (!videoId) {
       return;
     }
@@ -193,6 +273,7 @@ export default function WeeklyVideoScreen({ navigation }) {
         {
           text: "Delete",
           style: "destructive",
+
           onPress: async () => {
             try {
               const response = await deleteWeeklyVideoApi(
@@ -200,17 +281,26 @@ export default function WeeklyVideoScreen({ navigation }) {
               );
 
               if (response?.success) {
-                setVideos((prev) =>
-                  prev.filter(
-                    (item) =>
-                      item._id !== videoId
-                      && item.id !== videoId,
-                  )
+                setVideos(
+                  (previousVideos) =>
+                    previousVideos.filter(
+                      (item) =>
+                        item?._id
+                          !== videoId
+                        && item?.id
+                          !== videoId,
+                    ),
                 );
 
                 Alert.alert(
                   "Success",
                   "Video deleted successfully.",
+                );
+              } else {
+                Alert.alert(
+                  "Error",
+                  response?.message
+                    || "Failed to delete video.",
                 );
               }
             } catch (error) {
@@ -266,6 +356,11 @@ export default function WeeklyVideoScreen({ navigation }) {
         return;
       }
 
+      setRecordingSeconds(0);
+      setCameraFacing("front");
+      setTimeout(() => {
+        handleFlipCamera();
+      }, 200);
       setRecordModalVisible(true);
     } catch (error) {
       console.error(
@@ -280,8 +375,60 @@ export default function WeeklyVideoScreen({ navigation }) {
     }
   };
 
+  const startRecordingTimer = () => {
+    setRecordingSeconds(0);
+
+    stopRecordingTimer();
+
+    recordingTimerRef.current = setInterval(() => {
+      setRecordingSeconds(
+        (previous) => previous + 1,
+      );
+    }, 1000);
+  };
+
+  const stopRecordingTimer = () => {
+    if (
+      recordingTimerRef.current
+    ) {
+      clearInterval(
+        recordingTimerRef.current,
+      );
+
+      recordingTimerRef.current = null;
+    }
+  };
+
+  const formatRecordingTime = (
+    seconds,
+  ) => {
+    const minutes = Math.floor(
+      seconds / 60,
+    );
+
+    const remainingSeconds = seconds % 60;
+
+    return (
+      `${
+        String(minutes).padStart(
+          2,
+          "0",
+        )
+      }:`
+      + `${
+        String(
+          remainingSeconds,
+        ).padStart(2, "0")
+      }`
+    );
+  };
+
   const handleStartRecording = async () => {
     if (!cameraRef.current) {
+      Alert.alert(
+        "Camera Error",
+        "Camera is not ready.",
+      );
       return;
     }
 
@@ -290,80 +437,156 @@ export default function WeeklyVideoScreen({ navigation }) {
     }
 
     try {
+      discardRecordingRef.current = false;
+      flipAfterStopRef.current = false;
+      recordingActionRef.current = false;
+
+      setRecordingSeconds(0);
       setIsRecording(true);
 
-      console.log(
-        "Starting video recording...",
-      );
+      startRecordingTimer();
+
+      console.log("Starting video recording...");
 
       const recordedVideo = await cameraRef.current.recordAsync({
-        maxDuration: 60,
+        maxDuration: 60 * 60, // 1 hour
+        maxFileSize: 80 * 1024 * 1024, // 80 MB
       });
 
       console.log(
-        "Recorded video:",
+        "Recording finished:",
         recordedVideo,
       );
 
+      stopRecordingTimer();
+
       setIsRecording(false);
 
-      if (recordedVideo?.uri) {
+      if (discardRecordingRef.current) {
         console.log(
-          "Uploading recorded video:",
-          recordedVideo.uri,
+          "Recording discarded - NOT uploading.",
         );
 
-        await handleUploadAndSave(
-          recordedVideo.uri,
-          "Live Session",
-        );
-      } else {
+        if (flipAfterStopRef.current) {
+          flipAfterStopRef.current = false;
+
+          setCameraFacing((previous) =>
+            previous === "back"
+              ? "front"
+              : "back"
+          );
+
+          setTimeout(() => {
+            handleStartRecording();
+          }, 500);
+
+          return;
+        }
+
+        setRecordingSeconds(0);
+
+        return;
+      }
+
+      if (!recordedVideo?.uri) {
         Alert.alert(
           "Recording Error",
           "No video file was returned.",
         );
+
+        return;
       }
+
+      const validSize = await checkVideoSize(
+        recordedVideo.uri,
+      );
+
+      if (!validSize) {
+        console.log(
+          "Recording rejected because it is larger than 30 MB.",
+        );
+
+        return;
+      }
+
+      await handleUploadAndSave(
+        recordedVideo.uri,
+        "Live Session",
+      );
     } catch (error) {
       console.error(
         "Recording Error:",
         error,
       );
 
+      stopRecordingTimer();
+
       setIsRecording(false);
 
-      Alert.alert(
-        "Recording Error",
-        error?.message
-          || "Failed to record video.",
-      );
+      if (
+        !discardRecordingRef.current
+      ) {
+        Alert.alert(
+          "Recording Error",
+          error?.message
+            || "Failed to record video.",
+        );
+      }
+    } finally {
+      recordingActionRef.current = false;
     }
   };
 
   const handleStopRecording = () => {
     if (
-      cameraRef.current
-      && isRecording
+      !cameraRef.current
+      || !isRecording
+      || recordingActionRef.current
     ) {
-      cameraRef.current.stopRecording();
+      return;
     }
+
+    recordingActionRef.current = true;
+
+    discardRecordingRef.current = false;
+    flipAfterStopRef.current = false;
+
+    stopRecordingTimer();
+
+    cameraRef.current.stopRecording();
   };
-  const startRecordingTimer = () => {
+
+  const handleCancelRecording = () => {
+    if (uploading) {
+      return;
+    }
+
+    if (isRecording) {
+      console.log(
+        "Cancelling recording - video will NOT be saved.",
+      );
+
+      discardRecordingRef.current = true;
+      flipAfterStopRef.current = false;
+
+      stopRecordingTimer();
+
+      cameraRef.current?.stopRecording();
+
+      setIsRecording(false);
+
+      setRecordingSeconds(0);
+
+      setRecordModalVisible(false);
+
+      return;
+    }
+
+    stopRecordingTimer();
+
     setRecordingSeconds(0);
 
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-    }
-
-    recordingTimerRef.current = setInterval(() => {
-      setRecordingSeconds((prev) => prev + 1);
-    }, 1000);
-  };
-
-  const stopRecordingTimer = () => {
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = null;
-    }
+    setRecordModalVisible(false);
   };
 
   const checkVideoSize = async (fileUri) => {
@@ -371,26 +594,33 @@ export default function WeeklyVideoScreen({ navigation }) {
       const file = new File(fileUri);
 
       if (!file.exists) {
-        throw new Error("Video file does not exist.");
+        throw new Error(
+          "Video file does not exist.",
+        );
       }
 
       const size = file.size || 0;
 
-      console.log("Video size:", size);
+      const sizeMB = size
+        / (1024 * 1024);
+
       console.log(
-        "Video size MB:",
-        (size / (1024 * 1024)).toFixed(2),
+        "Video size:",
+        sizeMB.toFixed(2),
+        "MB",
       );
 
-      if (size > MAX_VIDEO_SIZE) {
+      if (
+        size
+          > MAX_VIDEO_SIZE
+      ) {
         Alert.alert(
           "Video Too Large",
           `This video is ${
-            (size / (1024 * 1024)).toFixed(
+            sizeMB.toFixed(
               2,
             )
           } MB.\n\nMaximum allowed size is 30 MB.`,
-          [{ text: "OK" }],
         );
 
         return false;
@@ -398,7 +628,10 @@ export default function WeeklyVideoScreen({ navigation }) {
 
       return true;
     } catch (error) {
-      console.error("Video size check error:", error);
+      console.error(
+        "Video size check error:",
+        error,
+      );
 
       Alert.alert(
         "Error",
@@ -409,26 +642,9 @@ export default function WeeklyVideoScreen({ navigation }) {
     }
   };
 
-  const formatRecordingTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-
-    return `${String(minutes).padStart(2, "0")}:${
-      String(
-        remainingSeconds,
-      ).padStart(2, "0")
-    }`;
-  };
-
-  useEffect(() => {
-    return () => {
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
-      }
-    };
-  }, []);
-
-  const formatDuration = (seconds) => {
+  const formatDuration = (
+    seconds,
+  ) => {
     if (
       seconds === undefined
       || seconds === null
@@ -437,142 +653,30 @@ export default function WeeklyVideoScreen({ navigation }) {
       return "00:00";
     }
 
-    const totalSeconds = Math.floor(Number(seconds));
+    const totalSeconds = Math.floor(
+      Number(seconds),
+    );
 
-    const minutes = Math.floor(totalSeconds / 60);
+    const minutes = Math.floor(
+      totalSeconds / 60,
+    );
 
     const remainingSeconds = totalSeconds % 60;
 
-    return `${
-      String(minutes).padStart(
-        2,
-        "0",
-      )
-    }:${
-      String(
-        remainingSeconds,
-      ).padStart(2, "0")
-    }`;
+    return (
+      `${
+        String(minutes).padStart(
+          2,
+          "0",
+        )
+      }:`
+      + `${
+        String(
+          remainingSeconds,
+        ).padStart(2, "0")
+      }`
+    );
   };
-
-  // const handleUploadAndSave = async (
-  //   localUri,
-  //   tag = "Live Session",
-  // ) => {
-  //   if (!localUri) {
-  //     Alert.alert(
-  //       "Error",
-  //       "Video file is missing.",
-  //     );
-
-  //     return;
-  //   }
-
-  //   if (!selectedChildId) {
-  //     Alert.alert(
-  //       "Select Child",
-  //       "Please select a child first.",
-  //     );
-
-  //     return;
-  //   }
-
-  //   try {
-  //     setUploading(true);
-
-  //     console.log(
-  //       "Uploading video:",
-  //       localUri,
-  //     );
-
-  //     const result = await uploadToCloudinaryFileSystem(
-  //       localUri,
-  //       "video",
-  //     );
-
-  //     console.log(
-  //       "Cloudinary result:",
-  //       result,
-  //     );
-
-  //     if (!result?.secure_url) {
-  //       throw new Error(
-  //         "Cloudinary did not return a video URL.",
-  //       );
-  //     }
-
-  //     const payload = {
-  //       childId: selectedChildId,
-
-  //       tag: tag,
-
-  //       duration: formatDuration(
-  //         result.duration,
-  //       ),
-
-  //       videoUrl: result.secure_url,
-
-  //       cloudinaryPublicId: result.public_id,
-
-  //       cloudinaryResourceType: result.resource_type,
-
-  //       videoFormat: result.format,
-
-  //       width: result.width,
-
-  //       height: result.height,
-
-  //       durationSeconds: result.duration,
-  //     };
-
-  //     console.log(
-  //       "Video payload:",
-  //       payload,
-  //     );
-
-  //     /*
-  //     const response =
-  //       await createWeeklyVideoApi(payload);
-
-  //     console.log(
-  //       "Create video response:",
-  //       response
-  //     );
-
-  //     if (!response?.success) {
-  //       throw new Error(
-  //         response?.message ||
-  //           "Failed to save video."
-  //       );
-  //     }
-  //     */
-
-  //     setRecordModalVisible(false);
-
-  //     // await fetchVideos(
-  //     //   selectedChildId,
-  //     // );
-
-  //     Alert.alert(
-  //       "Success",
-  //       "Video uploaded successfully.",
-  //     );
-  //   } catch (error) {
-  //     console.error(
-  //       "Upload/save error:",
-  //       error,
-  //     );
-
-  //     Alert.alert(
-  //       "Upload Failed",
-  //       error?.message
-  //         || "Cloudinary upload failed.",
-  //     );
-  //   } finally {
-  //     setUploading(false);
-  //     setIsRecording(false);
-  //   }
-  // };
 
   const handleUploadAndSave = async (
     videoUri,
@@ -580,78 +684,114 @@ export default function WeeklyVideoScreen({ navigation }) {
   ) => {
     try {
       if (!videoUri) {
-        Alert.alert("Error", "Video file not found.");
+        Alert.alert(
+          "Error",
+          "Video file not found.",
+        );
+
         return false;
       }
 
-      // --------------------------------
-      // CHECK VIDEO SIZE BEFORE UPLOAD
-      // --------------------------------
-      const isValidSize = await checkVideoSize(videoUri);
+      if (!selectedChildId) {
+        Alert.alert(
+          "Select Child",
+          "Please select a child first.",
+        );
+
+        return false;
+      }
+
+      const isValidSize = await checkVideoSize(
+        videoUri,
+      );
 
       if (!isValidSize) {
-        console.log("Video rejected because it is larger than 30 MB.");
+        console.log(
+          "Video rejected because it is larger than 30 MB.",
+        );
+
         return false;
       }
 
       setUploading(true);
 
-      console.log("Uploading video:", videoUri);
+      console.log(
+        "Uploading video:",
+        videoUri,
+      );
 
-      // --------------------------------
-      // CLOUDINARY UPLOAD
-      // --------------------------------
       const result = await uploadToCloudinaryFileSystem(
         videoUri,
         "video",
       );
 
+      // console.log(
+      //   "Cloudinary result:",
+      //   result,
+      // );
+
       if (!result?.secure_url) {
-        throw new Error("Cloudinary upload failed.");
+        throw new Error(
+          "Cloudinary did not return a video URL.",
+        );
       }
+      //  Alert.alert(
+      //   "Success",
+      //   "Video uploaded successfully.",
+      // );
+      // return true;
 
-      console.log(
-        "Cloudinary upload successful:",
-        result.secure_url,
-      );
-
-      // --------------------------------
-      // CREATE PAYLOAD
-      // --------------------------------
       const payload = {
         childId: selectedChildId,
-        tag,
-        duration: result.duration
-          ? formatDuration(result.duration)
-          : "00:00",
+        tag: tag,
+        duration: result?.duration
+          ? formatDuration(
+            result.duration,
+          )
+          : formatDuration(
+            recordingSeconds,
+          ),
 
         videoUrl: result.secure_url,
-
         cloudinaryPublicId: result.public_id,
         cloudinaryResourceType: result.resource_type,
-
         videoFormat: result.format,
-
         width: result.width,
         height: result.height,
-
         fileSize: result.bytes,
+        durationSeconds: result.duration
+          || recordingSeconds,
       };
 
-      console.log("Video payload:", payload);
+      console.log(
+        "Video payload:",
+        payload,
+      );
 
-      // --------------------------------
-      // SAVE TO BACKEND
-      // --------------------------------
+      const response = await createWeeklyVideoApi(
+        payload,
+      );
 
-      const response = await createWeeklyVideoApi(payload);
+      console.log(
+        "Create video response:",
+        response,
+      );
 
       if (!response?.success) {
-        throw new Error("Failed to save video.");
+        throw new Error(
+          response?.message
+            || "Failed to save video.",
+        );
       }
 
-      // Refresh videos
-      await fetchVideos(selectedChildId);
+      // Close recorder
+      setRecordModalVisible(
+        false,
+      );
+
+      await fetchVideos(
+        selectedChildId,
+      );
 
       Alert.alert(
         "Success",
@@ -660,21 +800,36 @@ export default function WeeklyVideoScreen({ navigation }) {
 
       return true;
     } catch (error) {
-      console.error("Upload/save error:", error);
+      console.error(
+        "Upload/save error:",
+        error,
+      );
 
       Alert.alert(
         "Upload Failed",
-        error?.message || "Unable to upload video.",
+        error?.message
+          || "Unable to upload video.",
       );
 
       return false;
     } finally {
       setUploading(false);
+      setIsRecording(false);
+      stopRecordingTimer();
     }
   };
-  
+
   const handlePickVideo = async () => {
     try {
+      if (!selectedChildId) {
+        Alert.alert(
+          "Select Child",
+          "Please select a child first.",
+        );
+
+        return;
+      }
+
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
@@ -688,8 +843,12 @@ export default function WeeklyVideoScreen({ navigation }) {
 
       const result = await ImagePicker.launchImageLibraryAsync(
         {
-          mediaTypes: ["videos"],
+          mediaTypes: [
+            "videos",
+          ],
+
           allowsEditing: false,
+
           quality: 1,
         },
       );
@@ -732,12 +891,13 @@ export default function WeeklyVideoScreen({ navigation }) {
     }
   };
 
-  const handleOpenDemoVideo = (
-    video = null,
-  ) => {
-    const targetVideo = video || videos[0];
+  const handleOpenDemoVideo = (video = null) => {
+    const targetVideo = video
+      || videos?.[0];
 
-    if (!targetVideo?.videoUrl) {
+    if (
+      !targetVideo?.videoUrl
+    ) {
       Alert.alert(
         "No Video",
         "There is no uploaded video available.",
@@ -750,31 +910,47 @@ export default function WeeklyVideoScreen({ navigation }) {
       targetVideo,
     );
 
-    setDemoVideoModal(true);
-  };
-
-  const handleFlipCamera = () => {
-    setCameraFacing(
-      (prev) =>
-        prev === "back"
-          ? "front"
-          : "back",
+    setDemoVideoModal(
+      true,
     );
   };
+  const handleFlipCamera = () => {
+    if (uploading) {
+      return null;
+    }
 
-  const filteredModalChildren = children?.filter((child) => {
-    const childName = child?.fullName
-      ?? child?.name
-      ?? "";
-
-    return childName
-      .toLowerCase()
-      .includes(
-        modalSearch
-          .toLowerCase()
-          .trim(),
+    if (isRecording) {
+      Alert.alert(
+        "Cannot Flip Camera",
+        "You cannot flip the camera while recording is in progress.",
       );
-  });
+
+      return null;
+    }
+
+    setCameraFacing((previous) =>
+      previous === "back"
+        ? "front"
+        : "back"
+    );
+
+    return null;
+  };
+  const filteredModalChildren = children?.filter(
+    (child) => {
+      const childName = child?.fullName
+        ?? child?.name
+        ?? "";
+
+      return childName
+        .toLowerCase()
+        .includes(
+          modalSearch
+            .toLowerCase()
+            .trim(),
+        );
+    },
+  );
 
   const onRefresh = async () => {
     try {
@@ -783,15 +959,53 @@ export default function WeeklyVideoScreen({ navigation }) {
       await fetchChildren();
 
       if (selectedChildId) {
-        // await fetchVideos(
-        //   selectedChildId,
-        // );
+        setVideos([]);
+        setVideoPage(1);
+        setHasMoreVideos(true);
+
+        await fetchVideos(
+          selectedChildId,
+          1,
+          false,
+        );
       }
     } finally {
       setRefreshing(false);
     }
   };
 
+  const zoomPercentage = Math.round(
+    cameraZoom * 100,
+  );
+  const handleVideoScroll = ({
+    nativeEvent,
+  }) => {
+    const {
+      layoutMeasurement,
+      contentOffset,
+      contentSize,
+    } = nativeEvent;
+
+    const paddingToBottom = 100;
+
+    const isNearBottom = layoutMeasurement.height
+        + contentOffset.y
+      >= contentSize.height
+        - paddingToBottom;
+
+    if (
+      isNearBottom
+      && !loadingMoreVideos
+      && hasMoreVideos
+      && selectedChildId
+    ) {
+      fetchVideos(
+        selectedChildId,
+        videoPage + 1,
+        true,
+      );
+    }
+  };
   return (
     <SafeAreaView
       style={[
@@ -812,13 +1026,10 @@ export default function WeeklyVideoScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#004E9F"]}
-            tintColor="#004E9F"
           />
         }
+        onScroll={handleVideoScroll}
       >
-        {/* HEADER */}
-
         <View
           style={styles.headerBanner}
         >
@@ -922,15 +1133,12 @@ export default function WeeklyVideoScreen({ navigation }) {
             )}
         </View>
 
-        {/* ACTION CARD */}
-
         <View
           style={styles.mediaActionCard}
         >
           <TouchableOpacity
             style={styles.playPreviewCircle}
             activeOpacity={0.8}
-            onPress={() => handleOpenDemoVideo()}
           >
             <Ionicons
               name="play"
@@ -1006,20 +1214,33 @@ export default function WeeklyVideoScreen({ navigation }) {
           </View>
         </View>
 
-        {loading
+        {videoLoading
           ? (
-            <ActivityIndicator
-              size="large"
-              color={colors.primary}
+            <View
               style={{
-                marginTop: 20,
+                paddingVertical: 40,
+                alignItems: "center",
+                justifyContent: "center",
               }}
-            />
+            >
+              <ActivityIndicator
+                size="large"
+                color={colors.primary}
+              />
+
+              <Text
+                style={{
+                  marginTop: 10,
+                  color: "#64748B",
+                  fontFamily: fonts.regular,
+                }}
+              >
+                Loading videos...
+              </Text>
+            </View>
           )
           : (
-            <View
-              style={styles.videoList}
-            >
+            <View style={styles.videoList}>
               {videos.length === 0
                 ? (
                   <View
@@ -1046,104 +1267,117 @@ export default function WeeklyVideoScreen({ navigation }) {
                   </View>
                 )
                 : (
-                  videos.map(
-                    (video) => (
-                      <View
-                        key={video._id
-                          || video.id}
-                        style={styles.videoCard}
+                  videos.map((video) => (
+                    <View
+                      key={video._id || video.id}
+                      style={styles.videoCard}
+                    >
+                      <TouchableOpacity
+                        style={styles.videoThumbnail}
+                        activeOpacity={0.9}
+                        onPress={() => handleOpenDemoVideo(video)}
                       >
-                        <TouchableOpacity
-                          style={styles.videoThumbnail}
-                          activeOpacity={0.9}
-                          onPress={() =>
-                            handleOpenDemoVideo(
-                              video,
-                            )}
-                        >
-                          <View
-                            style={styles.centerPlayBtn}
+                        <View style={styles.centerPlayBtn}>
+                          <Ionicons
+                            name="play"
+                            size={28}
+                            color="#035388"
+                          />
+                        </View>
+
+                        <View style={styles.durationBadge}>
+                          <Text style={styles.durationText}>
+                            {video.duration || "00:00"}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+
+                      <View style={styles.videoFooter}>
+                        <View style={styles.videoMetaColumn}>
+                          <Text style={styles.videoChildName}>
+                            {video.childId?.name
+                              || video.childId?.fullName
+                              || "Child Session"}
+                          </Text>
+
+                          <Text style={styles.videoSubDetails}>
+                            {video.createdAt
+                              ? new Date(
+                                video.createdAt,
+                              ).toLocaleDateString()
+                              : ""}
+
+                            <Text
+                              style={styles.bulletSeparator}
+                            >
+                              {" "}•{" "}
+                            </Text>
+
+                            {video.tag || "Video"}
+                          </Text>
+                        </View>
+
+                        <View style={styles.videoActionGroup}>
+                          <TouchableOpacity
+                            style={styles.iconActionBtn}
+                            activeOpacity={0.7}
+                            onPress={() =>
+                              handleDeleteVideo(
+                                video._id || video.id,
+                              )}
                           >
-                            <Ionicons
-                              name="play"
-                              size={28}
-                              color="#035388"
+                            <Feather
+                              name="trash-2"
+                              size={18}
+                              color="#475569"
                             />
-                          </View>
-
-                          <View
-                            style={styles.durationBadge}
-                          >
-                            <Text
-                              style={styles.durationText}
-                            >
-                              {video.duration
-                                || "00:00"}
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-
-                        <View
-                          style={styles.videoFooter}
-                        >
-                          <View
-                            style={styles.videoMetaColumn}
-                          >
-                            <Text
-                              style={styles.videoChildName}
-                            >
-                              {video.childId
-                                ?.name
-                                || video.childId
-                                  ?.fullName
-                                || "Child Session"}
-                            </Text>
-
-                            <Text
-                              style={styles.videoSubDetails}
-                            >
-                              {video.createdAt
-                                ? new Date(
-                                  video.createdAt,
-                                ).toLocaleDateString()
-                                : ""}
-
-                              <Text
-                                style={styles.bulletSeparator}
-                              >
-                                {" "}
-                                •{" "}
-                              </Text>
-
-                              {video.tag
-                                || "Video"}
-                            </Text>
-                          </View>
-
-                          <View
-                            style={styles.videoActionGroup}
-                          >
-                            <TouchableOpacity
-                              style={styles.iconActionBtn}
-                              activeOpacity={0.7}
-                              onPress={() =>
-                                handleDeleteVideo(
-                                  video._id
-                                    || video.id,
-                                )}
-                            >
-                              <Feather
-                                name="trash-2"
-                                size={18}
-                                color="#475569"
-                              />
-                            </TouchableOpacity>
-                          </View>
+                          </TouchableOpacity>
                         </View>
                       </View>
-                    ),
-                  )
+                    </View>
+                  ))
                 )}
+
+              {/* Load more loader */}
+              {loadingMoreVideos && (
+                <View
+                  style={{
+                    paddingVertical: 20,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.primary}
+                  />
+
+                  <Text
+                    style={{
+                      marginTop: 8,
+                      color: "#64748B",
+                      fontFamily: fonts.regular,
+                    }}
+                  >
+                    Loading more videos...
+                  </Text>
+                </View>
+              )}
+
+              {!loadingMoreVideos
+                && videos.length > 0
+                && !hasMoreVideos && (
+                <Text
+                  style={{
+                    textAlign: "center",
+                    paddingVertical: 15,
+                    color: "#94A3B8",
+                    fontFamily: fonts.regular,
+                  }}
+                >
+                  No more videos
+                </Text>
+              )}
             </View>
           )}
       </ScrollView>
@@ -1238,30 +1472,26 @@ export default function WeeklyVideoScreen({ navigation }) {
 
       <Modal
         visible={recordModalVisible}
-        transparent={true}
+        transparent
         animationType="slide"
         onRequestClose={() => {
           if (!uploading) {
+            if (isRecording) {
+              handleStopRecording();
+            }
+
+            stopRecordingTimer();
+
             setRecordModalVisible(
               false,
             );
           }
         }}
       >
-        <View
-          style={styles.fullModalOverlay}
-        >
-          <View
-            style={styles.recorderContainer}
-          >
-            {/* HEADER */}
-
-            <View
-              style={styles.modalHeaderRow}
-            >
-              <View
-                style={styles.recordingStatusBadge}
-              >
+        <View style={styles.fullModalOverlay}>
+          <View style={styles.recorderContainer}>
+            <View style={styles.modalHeaderRow}>
+              <View style={[commonStyles.flexClass, { gap: 5 }]}>
                 <View
                   style={[
                     styles.redDot,
@@ -1269,17 +1499,15 @@ export default function WeeklyVideoScreen({ navigation }) {
                     && styles.redDotActive,
                   ]}
                 />
-
-                <Text
-                  style={styles.recordingStatusText}
-                >
+                <Text style={styles.recordingStatusText}>
                   {uploading
-                    ? "UPLOADING TO CLOUDINARY..."
+                    ? "UPLOADING..."
                     : isRecording
                     ? "RECORDING..."
                     : "READY TO RECORD"}
                 </Text>
               </View>
+
               {isRecording && (
                 <View
                   style={{
@@ -1303,12 +1531,10 @@ export default function WeeklyVideoScreen({ navigation }) {
                   </Text>
                 </View>
               )}
+
               <TouchableOpacity
                 disabled={uploading}
-                onPress={() =>
-                  setRecordModalVisible(
-                    false,
-                  )}
+                onPress={handleCancelRecording}
               >
                 <Feather
                   name="x"
@@ -1318,61 +1544,110 @@ export default function WeeklyVideoScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <View
-              style={styles.viewfinderContainer}
-            >
+            <View style={styles.viewfinderContainer}>
               {uploading
                 ? (
-                  <View
-                    style={styles.uploadingBox}
-                  >
-                    <ActivityIndicator
-                      size="large"
-                      color="#FFFFFF"
-                    />
+                  <View>
+                    <ActivityIndicator size="large" color="#FFFFFF" />
 
-                    <Text
-                      style={styles.uploadingText}
-                    >
-                      Uploading video to Cloudinary...
+                    <Text style={styles.uploadingText}>
+                      Uploading video ...
                     </Text>
                   </View>
                 )
                 : cameraPermission?.granted
                 ? (
-                  <CameraView
-                    ref={cameraRef}
+                  <View
                     style={{
                       flex: 1,
+                      overflow: "hidden",
                     }}
-                    facing={cameraFacing}
-                    mode="video"
-                    videoQuality="720p"
-                  />
+                  >
+                    <View
+                      style={{
+                        position: "absolute",
+                        right: 15,
+                        bottom: 30,
+                        zIndex: 10,
+                        gap: 10,
+                      }}
+                    >
+                      <TouchableOpacity
+                        onPress={handleZoomIn}
+                        style={{
+                          width: 45,
+                          height: 45,
+                          borderRadius: 25,
+                          backgroundColor: "rgba(0,0,0,0.65)",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Ionicons
+                          name="add"
+                          size={28}
+                          color="#FFFFFF"
+                        />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={handleZoomOut}
+                        style={{
+                          width: 45,
+                          height: 45,
+                          borderRadius: 25,
+                          backgroundColor: "rgba(0,0,0,0.65)",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Ionicons
+                          name="remove"
+                          size={28}
+                          color="#FFFFFF"
+                        />
+                      </TouchableOpacity>
+                      <Text
+                        style={{
+                          color: "#FFFFFF",
+                          fontSize: 16,
+                          fontWeight: "bold",
+                          textAlign: "center",
+                        }}
+                      >
+                        {zoomPercentage}%
+                      </Text>
+                    </View>
+                    <CameraView
+                      ref={cameraRef}
+                      facing={cameraFacing}
+                      mode="video"
+                      zoom={cameraZoom}
+                      videoQuality="480p"
+                      style={{
+                        flex: 1,
+                      }}
+                      videoBitrate={200_000}
+                    />
+                  </View>
                 )
                 : (
-                  <View
-                    style={styles.cameraFallbackBox}
-                  >
+                  <View style={styles.cameraFallbackBox}>
                     <Ionicons
                       name="camera-outline"
                       size={64}
                       color="#94A3B8"
                     />
 
-                    <Text
-                      style={styles.fallbackTitle}
-                    >
+                    <Text style={styles.fallbackTitle}>
                       Camera Access Required
                     </Text>
 
                     <TouchableOpacity
-                      style={styles.grantPermissionBtn}
                       onPress={handleOpenRecordModal}
+                      style={styles.grantPermissionBtn}
                     >
-                      <Text
-                        style={styles.grantPermissionText}
-                      >
+                      <Text style={styles.grantPermissionText}>
                         Grant Access
                       </Text>
                     </TouchableOpacity>
@@ -1384,31 +1659,33 @@ export default function WeeklyVideoScreen({ navigation }) {
               <View
                 style={styles.recorderControls}
               >
-                <View
-                  style={styles.controlButtonsRow}
-                >
+                <View style={styles.controlButtonsRow}>
                   <TouchableOpacity
+                    onPress={handleFlipCamera}
+                    disabled={uploading}
                     style={styles.flipCameraBtn}
                     activeOpacity={0.7}
-                    onPress={handleFlipCamera}
-                    disabled={isRecording}
                   >
                     <Ionicons
                       name="camera-reverse-outline"
-                      size={26}
+                      size={30}
                       color="#FFFFFF"
                     />
+
+                    <Text style={styles.btnText}>
+                      Flip
+                    </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
+                    onPress={isRecording
+                      ? handleStopRecording
+                      : handleStartRecording}
                     style={[
                       styles.recordToggleButton,
                       isRecording
                       && styles.recordingActiveBtn,
                     ]}
-                    onPress={isRecording
-                      ? handleStopRecording
-                      : handleStartRecording}
                   >
                     <Ionicons
                       name={isRecording
@@ -1417,11 +1694,13 @@ export default function WeeklyVideoScreen({ navigation }) {
                       size={32}
                       color="#FFFFFF"
                     />
-                  </TouchableOpacity>
 
-                  <View
-                    style={styles.flipCameraSpacer}
-                  />
+                    <Text style={styles.btnText}>
+                      {isRecording
+                        ? "Stop"
+                        : "Record"}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             )}
@@ -1904,9 +2183,9 @@ const styles = StyleSheet.create({
     width: 42,
   },
   recordToggleButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 999,
     backgroundColor: "#DC2626",
     alignItems: "center",
     justifyContent: "center",
@@ -1990,5 +2269,16 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: "#0B598F",
     lineHeight: 20,
+  },
+  btnText: {
+    color: "#fff",
+    fontFamily: fonts.regular,
+    fontSize: 12,
+  },
+  uploadingText: {
+    color: "#fff",
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    textAlign: "center",
   },
 });

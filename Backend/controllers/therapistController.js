@@ -4,7 +4,7 @@ const User = require("../models/User");
 const Program = require("../models/Program");
 const Scheduling = require("../models/Scheduling");
 const Feedback = require("../models/Feedback");
-const LeaveRequest = require('../models/LeaveRequest');
+const LeaveRequest = require("../models/LeaveRequest");
 const WeeklyVideo = require("../models/Video");
 
 exports.getDashboardStats = async (req, res) => {
@@ -23,9 +23,8 @@ exports.getDashboardStats = async (req, res) => {
     const now = new Date();
 
     const assignment = await TherapistAssignment.findOne({ therapistId }).lean();
-     const assignedChildrenList = assignment?.childIds || [];
-     const assignedChildrenCount = assignedChildrenList.length;
-  
+    const assignedChildrenList = assignment?.childIds || [];
+    const assignedChildrenCount = assignedChildrenList.length;
 
     const schedules = await Scheduling.find({ therapistId }).populate(
       "childId",
@@ -629,21 +628,21 @@ exports.createLeaveRequest = async (req, res) => {
     if (!applicantId) {
       return res.status(401).json({
         success: false,
-        message: 'Unauthorized: User ID not found in token payload.',
+        message: "Unauthorized: User ID not found in token payload.",
       });
     }
 
     if (!leaveType || !startDate || !endDate || !reason) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields: leaveType, startDate, endDate, reason',
+        message: "Please provide all required fields: leaveType, startDate, endDate, reason",
       });
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
     const today = new Date();
-    
+
     today.setHours(0, 0, 0, 0);
     const startWithoutTime = new Date(start);
     startWithoutTime.setHours(0, 0, 0, 0);
@@ -651,22 +650,22 @@ exports.createLeaveRequest = async (req, res) => {
     if (startWithoutTime < today) {
       return res.status(400).json({
         success: false,
-        message: 'Start date cannot be in the past.',
+        message: "Start date cannot be in the past.",
       });
     }
 
     if (end < start) {
       return res.status(400).json({
         success: false,
-        message: 'End date cannot be earlier than start date.',
+        message: "End date cannot be earlier than start date.",
       });
     }
 
     const userRole = role || req.user.role;
-    if (!['Child', 'Therapist'].includes(userRole)) {
+    if (!["Child", "Therapist"].includes(userRole)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid role specified. Must be Child or Therapist.',
+        message: "Invalid role specified. Must be Child or Therapist.",
       });
     }
 
@@ -681,13 +680,13 @@ exports.createLeaveRequest = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Leave request submitted successfully',
+      message: "Leave request submitted successfully",
       data: leaveRequest,
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message || 'Server Error while submitting leave request',
+      message: error.message || "Server Error while submitting leave request",
     });
   }
 };
@@ -720,74 +719,173 @@ exports.getLeaveRequests = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message || 'Server Error fetching leave requests',
+      message: error.message || "Server Error fetching leave requests",
     });
   }
 };
 
-
-// Get all videos for a specific child
 exports.getVideosByChild = async (req, res) => {
   try {
     const { childId } = req.params;
 
-    const videos = await WeeklyVideo.find({ childId })
-      .populate("childId", "name")
-      .sort({ createdAt: -1 });
+    const therapistId = req.user?._id || req.user?.id;
+
+    if (!therapistId) {
+      return res.status(401).json({
+        success: false,
+        message: "Therapist authentication is required.",
+      });
+    }
+
+    const page = Math.max(
+      parseInt(req.query.page) || 1,
+      1,
+    );
+
+    const limit = Math.min(
+      parseInt(req.query.limit) || 2,
+      20,
+    );
+
+    const skip = (page - 1) * limit;
+
+    const filter = {
+      childId,
+      therapistId,
+    };
+
+    const [videos, totalVideos] = await Promise.all([
+      WeeklyVideo.find(filter)
+        .populate("childId", "name fullName")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+
+      WeeklyVideo.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(
+      totalVideos / limit,
+    );
 
     return res.status(200).json({
       success: true,
       data: videos,
+      pagination: {
+        page,
+        limit,
+        totalVideos,
+        totalPages,
+        hasMore: page < totalPages,
+      },
     });
   } catch (error) {
+    console.error("Get videos error:", error);
+
     return res.status(500).json({
       success: false,
-      message: error.message || "Error fetching videos",
+      message: error.message
+        || "Error fetching videos",
     });
   }
 };
 
-// Create a new weekly video entry
 exports.createWeeklyVideo = async (req, res) => {
   try {
-    const { childId, tag, videoUrl, duration, title } = req.body;
-    const therapistId = req.user?._id || req.user?.id;
+    const {
+      childId,
+      tag,
+      videoUrl,
+      duration,
+      title,
+      cloudinaryPublicId,
+      cloudinaryResourceType,
+      videoFormat,
+      width,
+      height,
+      fileSize,
+      durationSeconds,
+    } = req.body;
 
-    if (!childId || !videoUrl) {
+    const therapistId = req.user?._id || req.user?.id;
+    if (!therapistId) {
+      return res.status(401).json({
+        success: false,
+        message: "Therapist authentication is required.",
+      });
+    }
+
+    if (!childId) {
       return res.status(400).json({
         success: false,
-        message: "childId and videoUrl are required fields.",
+        message: "childId is required.",
+      });
+    }
+
+    if (!videoUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "videoUrl is required.",
       });
     }
 
     const video = await WeeklyVideo.create({
-      childId,
       therapistId,
+      childId,
       title: title || "Live Session",
       tag: tag || "Live Session",
       videoUrl,
-      duration: duration || "02:45",
+      cloudinaryPublicId: cloudinaryPublicId || null,
+
+      cloudinaryResourceType: cloudinaryResourceType || "video",
+
+      videoFormat: videoFormat || null,
+
+      width: width !== undefined
+        ? Number(width)
+        : null,
+
+      height: height !== undefined
+        ? Number(height)
+        : null,
+
+      fileSize: fileSize !== undefined
+        ? Number(fileSize)
+        : 0,
+
+      duration: duration || "00:00",
+
+      durationSeconds: durationSeconds !== undefined
+        ? Number(durationSeconds)
+        : 0,
     });
 
-    const populatedVideo = await WeeklyVideo.findById(video._id).populate(
+    const populatedVideo = await WeeklyVideo.findById(
+      video._id,
+    ).populate(
       "childId",
-      "name"
+      "name fullName",
     );
 
     return res.status(201).json({
       success: true,
-      message: "Weekly video saved successfully",
+      message: "Weekly video saved successfully.",
       data: populatedVideo,
     });
   } catch (error) {
+    console.error(
+      "Create weekly video error:",
+      error,
+    );
+
     return res.status(500).json({
       success: false,
-      message: error.message || "Error saving weekly video",
+      message: error.message
+        || "Error saving weekly video.",
     });
   }
 };
 
-// Delete a weekly video entry
 exports.deleteWeeklyVideo = async (req, res) => {
   try {
     const { id } = req.params;
