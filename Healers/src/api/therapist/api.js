@@ -109,7 +109,7 @@ export const getLeaveRequestsApi = async ({ page = 1, limit = 5 } = {}) => {
 
 export const uploadToCloudinaryFileSystem = async (
   fileUri,
-  resourceType = "video"
+  resourceType = "video",
 ) => {
   const CLOUD_NAME = "ddd3aphzb";
   const UPLOAD_PRESET = "healers_preset";
@@ -119,17 +119,16 @@ export const uploadToCloudinaryFileSystem = async (
       throw new Error("Video URI is required.");
     }
 
-    console.log("Uploading video:", fileUri);
+    // console.log("Uploading video:", fileUri);
 
-    const uploadUrl =
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`;
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`;
 
     const file = new File(fileUri);
+    const sizeMB = file.size / (1024 * 1024);
 
     console.log("File exists:", file.exists);
     console.log("File type:", file.type);
-    console.log("File size:", file.size);
-
+    console.log("File size MB:", sizeMB.toFixed(2));
     if (!file.exists) {
       throw new Error("Video file does not exist.");
     }
@@ -148,17 +147,17 @@ export const uploadToCloudinaryFileSystem = async (
 
     const data = await response.json();
 
-    console.log("Cloudinary response:", data);
+    // console.log("Cloudinary response:", data);
 
     if (!response.ok) {
       throw new Error(
-        data?.error?.message || "Cloudinary upload failed."
+        data?.error?.message || "Cloudinary upload failed.",
       );
     }
 
     console.log(
       "Cloudinary upload successful:",
-      data.secure_url
+      data.secure_url,
     );
 
     return data;
@@ -167,46 +166,12 @@ export const uploadToCloudinaryFileSystem = async (
     throw error;
   }
 };
-// export const uploadToCloudinary = async (fileUri, resourceType = "video") => {
-//   try {
-//     const filename = fileUri.split("/").pop();
-//     const match = /\.(\w+)$/.exec(filename);
-//     const extension = match ? match[1] : resourceType === "video" ? "mp4" : "jpeg";
-//     const mimeType = `${resourceType}/${extension}`;
 
-//     const formData = new FormData();
-//     // Use object format with uri, name, and type
-//     formData.append("file", {
-//       uri: fileUri,
-//       name: filename || `upload.${extension}`,
-//       type: mimeType,
-//     });
-//     formData.append("upload_preset", UPLOAD_PRESET);
+export const getChildVideosApi = async (childId, page = 1, limit = 2) => {
+  const response = await apiClient.get(
+    `/therapist/video/child/${childId}?page=${page}&limit=${limit}`,
+  );
 
-//     const response = await fetch(
-//       `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`,
-//       {
-//         method: "POST",
-//         body: formData,
-//         // DO NOT set 'Content-Type': 'multipart/form-data' here!
-//       },
-//     );
-
-//     const data = await response.json();
-
-//     if (!response.ok) {
-//       throw new Error(data.error?.message || "Cloudinary upload failed");
-//     }
-
-//     return data.secure_url;
-//   } catch (error) {
-//     console.error("Cloudinary Upload Error:", error);
-//     throw error;
-//   }
-// };
-
-export const getChildVideosApi = async (childId) => {
-  const response = await apiClient.get(`/therapist/video/child/${childId}`);
   return response.data;
 };
 
