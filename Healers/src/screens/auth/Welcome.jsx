@@ -9,107 +9,110 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
 import {
   colors,
+  commonStyles,
   fonts,
 } from '../../styles/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function WelcomeScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
- const onCreateAccount = () => {
+  const onCreateAccount = () => {
     navigation.navigate("Register");
   };
-   const onLogin = () => {
+  const onLogin = () => {
     navigation.navigate("Login");
   };
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10 }]}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <Image
-          source={require("../../asstes/logo.png")}
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
-        <Text style={styles.headerBrand}>HEALERS INSTITUTION</Text>
-      </View>
+    <SafeAreaView style={[styles.container, commonStyles.container]}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Image
+            source={require("../../asstes/logo.png")}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.headerBrand}>HEALERS INSTITUTION</Text>
+        </View>
 
-      <View style={styles.heroCardContainer}>
-        <Image
-          source={require("../../asstes/welcome_hero.jpeg")}
-          style={styles.heroImage}
-          resizeMode="cover"
-        />
+        <View style={styles.heroCardContainer}>
+          <Image
+            source={require("../../asstes/welcome_hero.jpeg")}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
 
-        <View style={styles.progressChip}>
-          <View style={styles.progressIconBox}>
-            <View style={styles.progressBox}>
-              <MaterialIcons name="favorite-border" size={14} color="#0D7A5F" />
+          <View style={styles.progressChip}>
+            <View style={styles.progressIconBox}>
+              <View style={styles.progressBox}>
+                <MaterialIcons name="favorite-border" size={14} color="#0D7A5F" />
+              </View>
+              <Text style={styles.progressChipTitle}>Progress</Text>
             </View>
-            <Text style={styles.progressChipTitle}>Progress</Text>
+            <View style={styles.progressBarTrack}>
+              <View style={styles.progressBarFill} />
+            </View>
           </View>
-          <View style={styles.progressBarTrack}>
-            <View style={styles.progressBarFill} />
+
+          <View style={styles.certifiedChip}>
+            <View style={styles.certifiedIconBox}>
+              <MaterialIcons name="verified" size={20} color="#FFFFFF" />
+            </View>
+            <View style={styles.certifiedTextContainer}>
+              <Text style={styles.certifiedTitle}>Certified Care</Text>
+              <Text style={styles.certifiedSubtitle}>Expert therapeutic staff</Text>
+            </View>
           </View>
         </View>
 
-        <View style={styles.certifiedChip}>
-          <View style={styles.certifiedIconBox}>
-            <MaterialIcons name="verified" size={20} color="#FFFFFF" />
-          </View>
-          <View style={styles.certifiedTextContainer}>
-            <Text style={styles.certifiedTitle}>Certified Care</Text>
-            <Text style={styles.certifiedSubtitle}>Expert therapeutic staff</Text>
-          </View>
+        <View style={styles.badgeTag}>
+          <MaterialIcons name="auto-awesome" size={14} color="#D97706" style={{ marginRight: 6 }} />
+          <Text style={styles.badgeText}>A Passion for Holistic Healing</Text>
         </View>
-      </View>
 
-      <View style={styles.badgeTag}>
-        <MaterialIcons name="auto-awesome" size={14} color="#D97706" style={{ marginRight: 6 }} />
-        <Text style={styles.badgeText}>A Passion for Holistic Healing</Text>
-      </View>
+        <View style={styles.content}>
+          <Text style={styles.title}>
+            Welcome to {"\n"}
+            <Text style={styles.titleHighlight}>Healers</Text>
+            {"\n"}Institution
+          </Text>
 
-      <View style={styles.content}>
-        <Text style={styles.title}>
-          Welcome to {"\n"}
-          <Text style={styles.titleHighlight}>Healers</Text>
-          {"\n"}Institution
-        </Text>
+          <Text style={styles.subtitle}>
+            Supporting children with compassion, expert care, and personalized therapy.
+          </Text>
+        </View>
 
-        <Text style={styles.subtitle}>
-          Supporting children with compassion, expert care, and personalized therapy.
-        </Text>
-      </View>
-
-      <View style={styles.actionContainer}>
-        <TouchableOpacity
+        <View style={styles.actionContainer}>
+          {
+            /* <TouchableOpacity
           style={styles.primaryButton}
           onPress={onCreateAccount}
           activeOpacity={0.8}
         >
           <Text style={styles.primaryButtonText}>Create Account</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */
+          }
 
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={onLogin}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.secondaryButtonText}>Login</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={onLogin}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.secondaryButtonText}>Login</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -167,12 +170,11 @@ const styles = StyleSheet.create({
     gap: 4,
     marginBottom: 6,
   },
-  progressBox:{
-    backgroundColor:"rgba(0,107,88,.1)",
-    padding:8,
-    paddingBottom:16,
-    borderRadius:8
-    
+  progressBox: {
+    backgroundColor: "rgba(0,107,88,.1)",
+    padding: 8,
+    paddingBottom: 16,
+    borderRadius: 8,
   },
   progressChipTitle: {
     fontSize: 12,
@@ -203,7 +205,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     gap: 16,
-    width:240,
+    width: 240,
   },
   certifiedIconBox: {
     backgroundColor: colors.primary,
@@ -219,7 +221,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fonts.semiBold,
     color: colors.primary,
-    lineHeight:16
+    lineHeight: 16,
   },
   certifiedSubtitle: {
     fontSize: 12,

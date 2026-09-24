@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+
 import {
   colors,
   commonStyles,
@@ -59,10 +61,12 @@ export default function SlideOne({ onNext, onSkip, step, totalSteps, onDotPress 
       </View>
 
       <TouchableOpacity style={styles.primaryButton} onPress={onNext}>
-        <Text style={styles.primaryButtonText}>Get Started →</Text>
+        <Text style={styles.primaryButtonText}>Get Started 
+          </Text>
+          <FontAwesome name="long-arrow-right" size={18} color="white" />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.secondaryButton} onPress={onSkip}>
+       <TouchableOpacity style={styles.secondaryButton} onPress={onSkip}>
         <Text style={styles.secondaryButtonText}>Already have an account?</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -144,10 +148,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary || colors.primary,
     paddingVertical: 16,
     borderRadius: 14,
-    alignItems: "center",
-    justify: "center",
     marginHorizontal: "auto",
     marginTop: 24,
+    flexDirection:'row',
+    justifyContent:'center',
+    gap:10,
+    alignItems:'flex-end',
   },
   primaryButtonText: {
     color: "#FFFFFF",

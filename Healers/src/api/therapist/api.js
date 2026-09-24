@@ -184,3 +184,72 @@ export const deleteWeeklyVideoApi = async (id) => {
   const response = await apiClient.delete(`/therapist/video/delete/${id}`);
   return response.data;
 };
+
+export const createQuarterlyReport = async (data) => {
+  try {
+    const response = await apiClient.post(
+      "/therapist/quarterly-reports",
+      data,
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error(
+      "createQuarterlyReport error:",
+      error?.response?.data || error,
+    );
+
+    throw error;
+  }
+};
+
+export const getQuarterlyReport = async ({
+  userId,
+  year,
+  quarter,
+}) => {
+  try {
+    const response = await apiClient.get(
+      "/therapist/quarterly-reports",
+      {
+        params: {
+          userId,
+          year,
+          quarter,
+        },
+      },
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error(
+      "getQuarterlyReport error:",
+      error?.response?.data || error,
+    );
+
+    throw error;
+  }
+};
+
+export const getQuarterlyReportsByChild = async ({ userId, year }) => {
+  try {
+    const response = await apiClient.get(
+      "/therapist/quarterly-reports/all",
+      {
+        params: {
+          userId,
+          year,
+        },
+      },
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error(
+      "getQuarterlyReportsByChild error:",
+      error?.response?.data || error,
+    );
+
+    throw error;
+  }
+};

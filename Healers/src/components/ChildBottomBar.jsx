@@ -6,14 +6,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
 export default function ChildBottomBar({ activeTab = "ChildDashboard" }) {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
 
   const [currentTab, setCurrentTab] = useState(activeTab);
@@ -32,7 +30,7 @@ export default function ChildBottomBar({ activeTab = "ChildDashboard" }) {
   // };
 
   return (
-    <View style={[styles.bottomBar, { paddingBottom: insets.bottom || 10 }]}>
+    <View style={styles.bottomBar}>
       {tabs.map((tab) => {
         const isActive = currentTab === tab.id;
         const IconComponent = tab.iconType === "MaterialIcons" ? MaterialIcons : FontAwesome5;

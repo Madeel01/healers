@@ -304,8 +304,8 @@ export default function ProgramBuilderScreen({ navigation }) {
             </ScrollView>
           )
           : (
-            <View style={styles.noUserContainer}>
-              <Text style={styles.noUserText}>No user found</Text>
+            <View style={styles.childChipsRow}>
+              <Text style={styles.emptyText}>No user found</Text>
             </View>
           )}
 

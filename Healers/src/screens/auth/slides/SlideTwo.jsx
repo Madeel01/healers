@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+
 import {
   commonStyles,
   fonts,
@@ -92,17 +94,16 @@ export default function SlideTwo({ onNext, onSkip, step, totalSteps, onDotPress 
         style={[styles.primaryButton, { backgroundColor: "#35A391" }]}
         onPress={onNext}
       >
-        <Text style={styles.primaryButtonText}>Continue Journey →</Text>
+        <Text style={styles.primaryButtonText}>Continue Journey</Text>
+        <FontAwesome name="long-arrow-right" size={18} color="white" />
       </TouchableOpacity>
 
-  
       <Text style={styles.stepsText}>{`Step ${step} of ${totalSteps}`}</Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
- 
   headerBgCard: {
     position: "absolute",
     left: 30,
@@ -139,8 +140,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: "#0B4A6F",
   },
-  skipTextWrapper:{
-    height:25,
+  skipTextWrapper: {
+    height: 25,
   },
   skipText: {
     fontSize: 15,
@@ -211,9 +212,11 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH - 40,
     paddingVertical: 16,
     borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
     marginHorizontal: "auto",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+    alignItems: "flex-end",
   },
   primaryButtonText: {
     color: "#FFFFFF",
@@ -226,7 +229,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#94A3B8",
     fontFamily: fonts.semiBold,
-    backgroundColor:'#f7fafd',
-    paddingVertical:24,
+    backgroundColor: "#f7fafd",
+    paddingVertical: 24,
   },
 });

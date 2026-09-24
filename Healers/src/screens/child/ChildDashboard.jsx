@@ -2,28 +2,29 @@ import React, { useContext } from 'react';
 
 import {
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import Entypo from '@expo/vector-icons/Entypo';
 import Feather from '@expo/vector-icons/Feather';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import ChildBottomBar from '../../components/ChildBottomBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
+  colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
 
 export default function ChildDashboardScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
   const { user, logout } = useContext(AuthContext);
   const userName = user?.fullName || user?.name || "";
 
@@ -32,7 +33,6 @@ export default function ChildDashboardScreen({ navigation }) {
       style={[
         styles.mainContainer,
         commonStyles.container,
-        { paddingTop: insets.top },
       ]}
     >
       <View style={styles.headerRow}>
@@ -92,9 +92,9 @@ export default function ChildDashboardScreen({ navigation }) {
 
           <TouchableOpacity style={styles.gridCard} activeOpacity={0.8}>
             <View style={[styles.iconCircle, { backgroundColor: "#FEE2E2" }]}>
-              <Feather name="mega-phone" size={24} color="#EF4444" />
+              <Entypo name="modern-mic" size={24} color="#EF4444" />
             </View>
-            <Text style={styles.gridCardTitle}>School Announcements</Text>
+            <Text style={styles.gridCardTitle}>School {"\n"} Announcements</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.gridCard} activeOpacity={0.8}>
@@ -109,7 +109,7 @@ export default function ChildDashboardScreen({ navigation }) {
           <View style={styles.messageBannerHeader}>
             <View style={styles.messageBannerTitleRow}>
               <View style={styles.bannerIconBox}>
-                <Feather name="message-square" size={16} color="#65A30D" />
+                <Feather name="message-square" size={16} color="#7CB342" />
               </View>
               <Text style={styles.messageBannerTitle}>Messages</Text>
             </View>
@@ -130,24 +130,24 @@ export default function ChildDashboardScreen({ navigation }) {
         </View>
 
         <View style={styles.quickActionsSection}>
-          <Text style={styles.sectionHeaderTitle}>Quick Actions</Text>
+          <Text style={[styles.sectionHeaderTitle, { marginBottom: 12 }]}>Quick Actions</Text>
           <View style={styles.quickActionsRow}>
             <TouchableOpacity style={styles.actionItem} activeOpacity={0.7}>
-              <View style={[styles.actionIconCircle, { backgroundColor: "#DBEAFE" }]}>
-                <Feather name="play" size={20} color="#1D4ED8" />
+              <View style={[styles.actionIconCircle, { backgroundColor: "rgba(22,105,169,.4)" }]}>
+                <Feather name="play" size={20} color={colors.primary} />
               </View>
               <Text style={[styles.actionLabel, styles.actionLabelActive]}>Media</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionItem} activeOpacity={0.7}>
-              <View style={[styles.actionIconCircle, { backgroundColor: "#FFEDD5" }]}>
+              <View style={[styles.actionIconCircle, { backgroundColor: "#FDE2D6" }]}>
                 <Feather name="calendar" size={20} color="#EA580C" />
               </View>
               <Text style={styles.actionLabel}>Reports</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionItem} activeOpacity={0.7}>
-              <View style={[styles.actionIconCircle, { backgroundColor: "#FFEDD5" }]}>
+              <View style={[styles.actionIconCircle, { backgroundColor: "rgba(255,220,196,.6)" }]}>
                 <Feather name="user" size={20} color="#EA580C" />
               </View>
               <Text style={styles.actionLabel}>Attendance</Text>
@@ -165,7 +165,7 @@ export default function ChildDashboardScreen({ navigation }) {
 
           <View style={styles.classCard}>
             <View style={styles.classIconCircle}>
-              <Feather name="bulb" size={22} color="#0284C7" />
+              <Ionicons name="bulb-sharp" size={22} color="#0284C7" />
             </View>
             <View style={styles.classInfoContainer}>
               <Text style={styles.className}>Sara</Text>
@@ -190,8 +190,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 8,
     paddingBottom: 12,
+    backgroundColor: "#fff",
   },
   profileContainer: {
     flexDirection: "row",
@@ -232,21 +232,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   userName: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#334155",
-    letterSpacing: 0.2,
+    fontSize: 16,
+    fontFamily: fonts.regular,
+    color: "#717781",
+    lineHeight: 24,
   },
   dropdownRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: 2,
   },
   userSubtext: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0B598F",
+    color: "#191C20",
+    fontSize: 16,
+    fontFamily: fonts.regular,
+    lineHeight: 24,
   },
 
   scrollArea: {
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 24,
+    paddingBottom: 20,
   },
   gridContainer: {
     flexDirection: "row",
@@ -267,8 +267,8 @@ const styles = StyleSheet.create({
   gridCard: {
     width: "47.5%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    paddingVertical: 20,
+    borderRadius: 24,
+    paddingVertical: 24,
     paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -279,8 +279,8 @@ const styles = StyleSheet.create({
     elevation: 1.5,
   },
   iconCircle: {
-    width: 54,
-    height: 54,
+    width: 56,
+    height: 56,
     borderRadius: 27,
     alignItems: "center",
     justifyContent: "center",
@@ -300,16 +300,16 @@ const styles = StyleSheet.create({
   },
   gridCardTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#1E293B",
+    fontFamily: fonts.semiBold,
+    color: "#191C20",
     textAlign: "center",
     lineHeight: 18,
   },
   messageBanner: {
-    backgroundColor: "#ECFCCB",
+    backgroundColor: "#E1F3D8",
     borderRadius: 20,
-    padding: 16,
-    marginBottom: 24,
+    padding: 20,
+    marginBottom: 20,
   },
   messageBannerHeader: {
     flexDirection: "row",
@@ -323,23 +323,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   bannerIconBox: {
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
     borderRadius: 14,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
   messageBannerTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#365314",
+    fontSize: 16,
+    fontFamily: fonts.regular,
+    color: "#191C20",
+    lineHeight: 24,
   },
   badgeNew: {
-    backgroundColor: "#84CC16",
-    paddingHorizontal: 10,
+    backgroundColor: "#7CB342",
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 999,
   },
   badgeNewText: {
     fontSize: 12,
@@ -347,8 +348,8 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   messageCardContent: {
-    backgroundColor: "#F7FEE7",
-    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,.6)",
+    borderRadius: 20,
     padding: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -357,64 +358,67 @@ const styles = StyleSheet.create({
   msgAvatarCircle: {
     width: 42,
     height: 42,
-    borderRadius: 21,
-    backgroundColor: "#D9F99D",
+    borderRadius: 999,
+    backgroundColor: "#E1F3D8",
     alignItems: "center",
     justifyContent: "center",
   },
   msgAvatarText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#3F6212",
+    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    color: "#7CB342",
+    lineHeight: 24,
   },
   msgTextContainer: {
     flex: 1,
   },
   teacherName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1E293B",
+    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    color: "#191C20",
+    lineHeight: 24,
   },
   messageSnippet: {
-    fontSize: 13,
-    color: "#475569",
-    marginTop: 2,
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    color: colors.blackFont,
+    lineHeight: 20,
   },
   quickActionsSection: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   sectionHeaderTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#1E293B",
-    marginBottom: 14,
+    fontFamily: fonts.regular,
+    color: "#191C20",
+    lineHeight: 24,
   },
   quickActionsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
     gap: 32,
-    paddingLeft: 8,
   },
   actionItem: {
     alignItems: "center",
   },
   actionIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
   },
   actionLabel: {
     fontSize: 12,
-    fontWeight: "500",
-    color: "#64748B",
+    color: "#191C20",
+    fontFamily: fonts.regular,
+    lineHeight: 24,
   },
   actionLabelActive: {
-    fontWeight: "700",
-    color: "#1D4ED8",
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
   },
   classesSection: {
     marginBottom: 16,
@@ -424,24 +428,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginBottom: 12,
+    justifyContent: "space-between",
   },
   counterBadge: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: 999,
     backgroundColor: "#0F172A",
     alignItems: "center",
     justifyContent: "center",
   },
   counterBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize: 12,
     color: "#FFFFFF",
+    fontFamily: fonts.regular,
+    lineHeight: 16,
   },
   classCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 28,
+    padding: 20,
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
@@ -452,8 +458,8 @@ const styles = StyleSheet.create({
     elevation: 1.5,
   },
   classIconCircle: {
-    width: 48,
-    height: 48,
+    width: 52,
+    height: 52,
     borderRadius: 24,
     backgroundColor: "#E0F2FE",
     alignItems: "center",
@@ -464,12 +470,14 @@ const styles = StyleSheet.create({
   },
   className: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#1E293B",
+    fontFamily: fonts.regular,
+    lineHeight: 24,
+    color: "#191C20",
   },
   classSubtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    marginTop: 2,
+    fontSize: 16,
+    fontFamily: fonts.regular,
+    lineHeight: 24,
+    color: colors.blackFont,
   },
 });

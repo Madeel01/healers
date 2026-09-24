@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const YOUR_COMPUTER_IP = '192.168.100.17';
 
+// const BASE_URL = `https://dialviz.com/api`;
 const BASE_URL = `http://${YOUR_COMPUTER_IP}:5000/api`;
 
 const apiClient = axios.create({
@@ -11,6 +12,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  
   timeout: 10000,
 });
 
