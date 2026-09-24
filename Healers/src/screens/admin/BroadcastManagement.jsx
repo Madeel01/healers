@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 
 import {
   Modal,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -45,7 +44,7 @@ const RECIPIENT_GROUPS = [
 ];
 
 export default function BroadcastManagementScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
+  // const insets = useSafeAreaInsets();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [activeBottomTab, setActiveBottomTab] = useState("");
 
@@ -70,7 +69,7 @@ export default function BroadcastManagementScreen({ navigation }) {
   const currentList = recipientGroup === "Specific Users" ? MOCK_USERS : MOCK_THERAPISTS;
 
   return (
-    <SafeAreaView style={[styles.mainContainer, { paddingTop: insets.top }]}>
+    <SafeAreaView style={[styles.mainContainer]}>
       <TopBar
         navigation={navigation}
         isNotificationOpen={isNotificationOpen}

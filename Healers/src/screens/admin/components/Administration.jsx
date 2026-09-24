@@ -26,6 +26,24 @@ export default function Administration({ customstyles }) {
       </Text>
 
       <TouchableOpacity
+        style={[styles.adminBanner, { backgroundColor: "#e6cff9" }]}
+        onPress={() => navigation.navigate('BatchManagment')}
+      >
+        <View style={[styles.adminIconBox, { backgroundColor: "#dc9ee8" }]}>
+          <MaterialIcons name="dynamic-feed" size={22} color="#FFFFFF" />
+        </View>
+
+        <View style={styles.adminTextContainer}>
+          <View style={{ width: "70%" }}>
+            <Text style={styles.adminBannerTitle}>Batch Management</Text>
+            <Text style={styles.adminBannerSub}>Create and manage batches</Text>
+          </View>
+
+          <AntDesign name="file-text" size={24} color="#717781" />
+        </View>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
         style={[styles.adminBanner, { backgroundColor: "#F9DDCF" }]}
         onPress={() => navigation.navigate('LeaveRequest')}
       >

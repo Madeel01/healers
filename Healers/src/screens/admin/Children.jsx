@@ -282,7 +282,7 @@ export default function ChildrenScreen({ navigation }) {
         }
 
         closeAddModal();
-        fetchChildrenData(1, true);
+        await fetchChildrenData(1, true);
     } catch (error) {
         console.log("Failed to save child:", error);
         const backendMessage = error?.response?.data?.message;
@@ -508,7 +508,6 @@ export default function ChildrenScreen({ navigation }) {
       >
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={closeAddModal}>
           <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>
                   {isEditMode ? "Edit Child" : "Add New Child"}
@@ -517,6 +516,7 @@ export default function ChildrenScreen({ navigation }) {
                   <Feather name="x" size={22} color="#64748B" />
                 </TouchableOpacity>
               </View>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
               <Text style={styles.fieldLabel}>
                 Full Name <Text style={styles.requiredText}>*</Text>
@@ -565,7 +565,7 @@ export default function ChildrenScreen({ navigation }) {
               </Text>
               <TextInput
                 style={styles.formInput}
-                placeholder="+1 555-0000"
+                placeholder="0300 1234567"
                 placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
                 value={newChild.phone || ""}

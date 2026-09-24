@@ -1,7 +1,15 @@
+const { default: mongoose } = require("mongoose");
+const Feedback = require("../models/Feedback");
 const LeaveRequest = require("../models/LeaveRequest");
+const Scheduling = require("../models/Scheduling");
 const TherapistAssignment = require("../models/TherapistAssignment");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
+const Batch = require("../models/Batch");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const { v4: uuidv4 } = require("uuid");
 
 exports.getAdminOverview = async (req, res) => {
   try {
@@ -447,7 +455,6 @@ exports.childUsers = async (req, res) => {
     });
   }
 };
-
 exports.createChild = async (req, res) => {
   try {
     const { fullName, fatherName, age, email, phone, password } = req.body;
@@ -494,7 +501,6 @@ exports.createChild = async (req, res) => {
     });
   }
 };
-
 exports.updateChild = async (req, res) => {
   try {
     const { id } = req.params;
@@ -544,7 +550,6 @@ exports.updateChild = async (req, res) => {
     });
   }
 };
-
 exports.deleteChild = async (req, res) => {
   try {
     const { id } = req.params;
@@ -648,7 +653,6 @@ exports.getLeaveRequests = async (req, res) => {
     });
   }
 };
-
 exports.approveLeaveRequest = async (req, res) => {
   try {
     const { id } = req.params;
@@ -691,7 +695,6 @@ exports.approveLeaveRequest = async (req, res) => {
     });
   }
 };
-
 exports.rejectLeaveRequest = async (req, res) => {
   try {
     const { id } = req.params;
@@ -751,6 +754,453 @@ exports.getStaffOnLeaveToday = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch staff on leave.",
+      error: error.message,
+    });
+  }
+};
+
+
+
+exports.getAdminFeedbackManagement = async (req, res) => {
+  try {
+    const { status } = req.params;
+
+    if (!["all", "pending", "new"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Use all, pending, or new.",
+      });
+    }
+
+    const now = new Date();
+
+    const startOfYesterday = new Date();
+    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+    startOfYesterday.setHours(0, 0, 0, 0);
+
+    const ratingResult = await Feedback.aggregate([
+      {
+        $group: {
+          _id: null,
+          averageRating: {
+            $avg: "$rating",
+          },
+        },
+      },
+    ]);
+
+    const averageSatisfaction = ratingResult.length
+      ? Number(ratingResult[0].averageRating.toFixed(1))
+      : 0;
+
+    const sinceYesterdayFeedback = await Feedback.countDocuments({
+      createdAt: {
+        $gte: startOfYesterday,
+      },
+    });
+
+    const existingFeedbacks = await Feedback.find(
+      {},
+      {
+        appointmentId: 1,
+      }
+    ).lean();
+
+    const feedbackAppointmentIds = new Set(
+      existingFeedbacks.map((feedback) =>
+        feedback.appointmentId?.toString()
+      )
+    );
+
+    const schedules = await Scheduling.find({})
+      .populate("therapistId", "fullName email role")
+      .populate("childId", "fullName email role")
+      .lean();
+
+    const pendingFeedback = [];
+
+    for (const schedule of schedules) {
+      if (!schedule.appointments?.length) {
+        continue;
+      }
+
+      for (const appointment of schedule.appointments) {
+        const appointmentDate = new Date(appointment.date);
+        const alreadyHappened = appointmentDate < now;
+        const hasFeedback = feedbackAppointmentIds.has(
+          appointment._id.toString()
+        );
+
+        if (alreadyHappened && !hasFeedback) {
+          pendingFeedback.push({
+            appointmentId: appointment._id,
+            therapistId: schedule.therapistId,
+            childId: schedule.childId,
+            session: {
+              date: appointment.date,
+              startTime: appointment.startTime,
+              endTime: appointment.endTime,
+              attendanceStatus: appointment.attendance_status,
+            },
+          });
+        }
+      }
+    }
+
+    let data = [];
+
+    if (status === "all") {
+      data = await Feedback.find({})
+        .populate("therapistId", "fullName email role")
+        .populate("childId", "fullName email role")
+        .lean()
+        .sort({ createdAt: -1 });
+
+      data = data.map((feedback) => {
+        const appointment = schedules
+          .flatMap((schedule) => schedule.appointments || [])
+          .find(
+            (appointment) =>
+              appointment._id.toString() === feedback.appointmentId?.toString()
+          );
+        const { replies, ...feedbackData } = feedback;
+        return {
+          ...feedbackData,
+          isRespond: Array.isArray(replies) && replies.length > 0,
+          appointment: appointment
+            ? {
+                startTime: appointment.startTime,
+              }
+            : null,
+        };
+      });
+    }
+
+    if (status === "new") {
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+      data = await Feedback.find({
+        createdAt: {
+          $gte: threeDaysAgo,
+        },
+      })
+        .populate("therapistId", "fullName email role")
+        .populate("childId", "fullName email role")
+        .lean()
+        .sort({ createdAt: -1 });
+
+      data = data.map((feedback) => {
+        const appointment = schedules
+          .flatMap((schedule) => schedule.appointments || [])
+          .find(
+            (appointment) =>
+              appointment._id.toString() === feedback.appointmentId?.toString()
+          );
+
+        return {
+          ...feedback,
+          appointment: appointment
+            ? {
+                startTime: appointment.startTime,
+              }
+            : null,
+        };
+      });
+    }
+
+    if (status === "pending") {
+      data = pendingFeedback;
+
+      data.sort(
+        (a, b) =>
+          new Date(a.session.date) -
+          new Date(b.session.date)
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      status,
+      stats: {
+        pendingFeedback: pendingFeedback.length,
+        sinceYesterdayFeedback,
+        averageSatisfaction,
+      },
+      count: data.length,
+      data,
+    });
+  } catch (error) {
+    console.error("Admin Feedback Management Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch feedback management data.",
+      error: error.message,
+    });
+  }
+};
+exports.getFeedbackReplies = async (req, res) => {
+  try {
+    const { feedbackId } = req.params;
+
+    const feedback = await Feedback.findById(feedbackId)
+      .populate("replies.repliedBy", "fullName role email")
+      .lean();
+
+    if (!feedback) {
+      return res.json({ success: false, message: "Feedback not found." });
+    }
+
+    let appt = null;
+    if (feedback.appointmentId) {
+      const apptId = new mongoose.Types.ObjectId(feedback.appointmentId);
+      const schedule = await Scheduling.findOne(
+        { "appointments._id": apptId },
+        { "appointments.$": 1 } 
+      ).lean();
+
+      appt = schedule?.appointments?.[0] || null;
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        feedbackId: feedback._id,
+        appointmentId: feedback.appointmentId,
+        startTime: appt?.startTime || null,
+        endTime: appt?.endTime || null,
+        appointmentDate: appt?.date || null,
+        attendanceStatus: appt?.attendance_status || null,
+        replies: (feedback.replies || []).map((r) => ({
+          _id: r._id,
+          message: r.message,
+          repliedByRole: r.repliedByRole,
+          createdAt: r.createdAt,
+          repliedBy: {
+            id: r.repliedBy?._id,
+            name: r.repliedBy?.fullName || "Unknown",
+          },
+        })),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+exports.addFeedbackReply = async (req, res) => {
+  try {
+    const { feedbackId } = req.params;
+    const { message } = req.body; 
+
+    if (!message?.trim()) {
+      return res.json({
+        success: false,
+        message: "Reply message is required.",
+      });
+    }
+
+    const feedback = await Feedback.findById(feedbackId);
+
+    if (!feedback) {
+      return res.json({
+        success: false,
+        message: "Feedback not found.",
+      });
+    }
+
+    feedback.replies.push({
+      repliedBy: req.user.id,
+      repliedByRole: req.user.role,
+      message: message.trim(),
+    });
+
+    await feedback.save();
+
+    const updatedFeedback = await Feedback.findById(feedbackId)
+      .populate("replies.repliedBy")
+      .lean();
+
+    return res.status(201).json({
+      success: true,
+      message: "Reply added successfully.",
+      data: {
+        feedbackId: updatedFeedback._id,
+        replies: updatedFeedback.replies,
+      },
+    });
+  } catch (error) {
+    console.error("Add Feedback Reply Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to add reply.",
+      error: error.message,
+    });
+  }
+};
+exports.deleteFeedback = async (req, res) => {
+  try {
+    const { feedbackId } = req.params;
+
+    const feedback = await Feedback.findByIdAndDelete(feedbackId);
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Feedback deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Delete Feedback Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete feedback.",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+exports.getBatches = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, speciality } = req.query;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+
+    const filter = {};
+    if (speciality) {
+      const specialityList = Array.isArray(speciality)
+        ? speciality
+        : speciality.split(",");
+      filter.speciality = { $in: specialityList };
+    }
+
+    const totalCount = await Batch.countDocuments(filter);
+
+    const batches = await Batch.find(filter)
+      .populate("therapistIds", "fullName email")
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum);
+
+    return res.status(200).json({
+      success: true,
+      data: batches,
+      hasMore: pageNum * limitNum < totalCount,
+      totalCount,
+    });
+  } catch (error) {
+    console.error("Get Batches Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch batches.",
+      error: error.message,
+    });
+  }
+};
+exports.createBatch = async (req, res) => {
+  try {
+    const { batchName, speciality, dateFrom, dateTo, maxChild, fee } = req.body;
+    const specialityList = Array.isArray(speciality) ? speciality : [];
+    if (
+      !batchName ||
+      !specialityList.length ||
+      !dateFrom ||
+      !dateTo ||
+      !maxChild ||
+      !fee
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "batchName, speciality (at least one), dateFrom, dateTo, Batch fee and Batch Size are required.",
+      });
+    }
+
+    const batch = await Batch.create({
+      batchName: batchName.trim(),
+      speciality: specialityList,
+      dateFrom: new Date(dateFrom),
+      dateTo: new Date(dateTo),
+      maxChild: parseInt(maxChild, 10),
+      fee: parseInt(fee, 10),
+    });
+
+    const populated = await batch.populate("therapistIds", "fullName email");
+
+    return res.status(201).json({
+      success: true,
+      message: "Batch created successfully.",
+      data: populated,
+    });
+  } catch (error) {
+    console.error("Create Batch Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create batch.",
+      error: error.message,
+    });
+  }
+};
+exports.updateBatch = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { batchName, speciality, dateFrom, dateTo, maxChild, fee } = req.body;
+
+    const batch = await Batch.findById(id);
+    if (!batch) {
+      return res.json({ success: false, message: "Batch not found." });
+    }
+
+    if (batchName !== undefined) batch.batchName = batchName.trim();
+    if (speciality !== undefined) {
+      batch.speciality = Array.isArray(speciality) ? speciality : [];
+    }
+    if (dateFrom !== undefined) batch.dateFrom = new Date(dateFrom);
+    if (dateTo !== undefined) batch.dateTo = new Date(dateTo);
+    if (maxChild !== undefined) batch.maxChild = parseInt(maxChild, 10);
+    if (fee !== undefined) batch.fee = parseInt(fee, 10);
+
+    await batch.save();
+    const populated = await batch.populate("therapistIds", "fullName email");
+
+    return res.status(200).json({
+      success: true,
+      message: "Batch updated successfully.",
+      data: populated,
+    });
+  } catch (error) {
+    console.error("Update Batch Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update batch.",
+      error: error.message,
+    });
+  }
+};
+exports.deleteBatch = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const batch = await Batch.findByIdAndDelete(id);
+
+    if (!batch) {
+      return res.json({ success: false, message: "Batch not found." });
+    }
+
+    return res.status(200).json({ success: true, message: "Batch deleted." });
+  } catch (error) {
+    console.error("Delete Batch Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete batch.",
       error: error.message,
     });
   }

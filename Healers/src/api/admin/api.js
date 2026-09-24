@@ -72,3 +72,33 @@ export const approveLeaveRequest = (id) => apiClient.put(`/admin/leave-requests/
 export const rejectLeaveRequest = (id, rejectionReason) =>
   apiClient.put(`/admin/leave-requests/${id}/reject`, { rejectionReason });
 export const getStaffOnLeaveToday = () => apiClient.get("/admin/leave-requests/on-leave-today");
+
+///////////////////// Feedback Request API's /////////////////////////////
+export const getFeedbackRequests = (params) => apiClient.get(`/admin/feedback/${params.status}`);
+export const deleteFeedback = (feedbackId) => apiClient.delete(`/admin/feedback/${feedbackId}`);
+export const getFeedbackReplies = async (feedbackId) => {
+  const response = await apiClient.get(
+    `/admin/feedback/${feedbackId}/replies`
+  );
+  return response.data;
+};
+export const addFeedbackReply = async (feedbackId, message) => {
+  const response = await apiClient.post(
+    `/admin/feedback/${feedbackId}/replies`,
+    { message }
+  );
+  return response.data;
+};
+
+///////////////////// Batch API's /////////////////////////////
+export const getBatches = (params) =>
+  apiClient.get("/admin/batches", { params }).then((r) => r.data);
+
+export const createBatch = (data) =>
+  apiClient.post("/admin/batches", data).then((r) => r.data);
+
+export const updateBatch = (id, data) =>
+  apiClient.put(`/admin/batches/${id}`, data).then((r) => r.data);
+
+export const deleteBatch = (id) =>
+  apiClient.delete(`/admin/batches/${id}`).then((r) => r.data);

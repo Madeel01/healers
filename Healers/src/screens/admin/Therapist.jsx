@@ -141,7 +141,7 @@ export default function TherapistsScreen({ navigation }) {
             setTherapists((prev) => prev.filter((item) => item.id !== therapist.id));
             try {
               await deleteTherapist(therapist.id);
-              fetchTherapistData();
+              await fetchTherapistData(1, true);
             } catch (error) {
               console.log("Failed to delete therapist:", error);
               setTherapists(previous);
@@ -237,9 +237,9 @@ export default function TherapistsScreen({ navigation }) {
           address: created?.address || payload.address,
         };
 
-        setTherapists((prev) => [newItem, ...prev]);
+        // await fetchTherapistData(1, true);
       }
-      fetchTherapistData();
+      await fetchTherapistData(1, true);
       // Success - Modal close aur fields reset karein
       setIsAddModalOpen(false);
       resetTherapistForm();
@@ -455,7 +455,7 @@ export default function TherapistsScreen({ navigation }) {
 
       setIsAssignModalOpen(false);
       Alert.alert("Updated", response?.message || "Assignment updated successfully.");
-      fetchTherapistData();
+      await fetchTherapistData(1, true);
     } catch (error) {
       console.log("Failed to update assignment:", error);
       const backendMessage = error?.response?.data?.message || error?.message;
@@ -839,7 +839,7 @@ export default function TherapistsScreen({ navigation }) {
               <Text style={styles.fieldLabel}>Phone <Text style={styles.requiredText}>*</Text></Text>
               <TextInput
                 style={styles.formInput}
-                placeholder="+1 555-0000"
+                placeholder="0300 1234567"
                 placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
                 value={newTherapist.phone}
