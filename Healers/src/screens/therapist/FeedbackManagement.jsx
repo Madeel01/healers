@@ -79,7 +79,7 @@ export default function FeedbackManagementScreen({ navigation }) {
   const [monthDropdownVisible, setMonthDropdownVisible] = useState(false);
   const [children, setChildren] = useState([]);
   const [feedbackData, setFeedbackData] = useState([]);
-  const [loadingChildrenFeedback, setLoadingFeedback] = useState(true);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [selectedChildId, setSelectedChildId] = useState(null);
   const [stats, setStats] = useState({
     totalChildren: 0,
@@ -246,7 +246,7 @@ export default function FeedbackManagementScreen({ navigation }) {
           </View>
         </View>
 
-        {loadingChildrenFeedback
+        {loadingFeedback
           ? (
             <View style={styles.loaderContainer}>
               <ActivityIndicator size="large" color={colors.primary || "#006B5D"} />

@@ -75,7 +75,7 @@ export default function AttendanceTrackingScreen({ navigation, route }) {
   const [showFullHistory, setShowFullHistory] = useState(false);
 
   const [attendanceRecords, setAttendanceRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [childDropdownVisible, setChildDropdownVisible] = useState(false);
   const [monthDropdownVisible, setMonthDropdownVisible] = useState(false);

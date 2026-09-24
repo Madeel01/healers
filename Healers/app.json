@@ -4,21 +4,30 @@
     "slug": "Healers",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/ic_launcher_foreground.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.adeeltozcall.Healers",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+        "foregroundImage": "./assets/ic_launcher_foreground.png",
+        "backgroundImage": "./assets/ic_launcher_foreground.png",
+        "monochromeImage": "./assets/ic_launcher_foreground.png"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.adeeltozcall.Healers"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/ic_launcher_foreground.png"
     },
     "plugins": [
       "expo-font",
@@ -34,6 +43,11 @@
         }
       ],
       "expo-video"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e33718a1-c1dd-48c4-8c19-0fbc4c65cbc6"
+      }
+    }
   }
 }

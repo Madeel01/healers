@@ -71,18 +71,18 @@ export default function TherapistDashboardScreen({ navigation }) {
   };
 
   const formatSessionDate = (dateVal) => {
-  if (!dateVal) return "";
-  const rawDate = dateVal?.$date || dateVal;
-  const d = new Date(rawDate);
+    if (!dateVal) return "";
+    const rawDate = dateVal?.$date || dateVal;
+    const d = new Date(rawDate);
 
-  if (isNaN(d.getTime())) return "";
+    if (isNaN(d.getTime())) return "";
 
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }); // Output: "Sep 19, 2026"
-};
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }); // Output: "Sep 19, 2026"
+  };
   return (
     <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <View style={styles.headerRow}>
@@ -151,7 +151,7 @@ export default function TherapistDashboardScreen({ navigation }) {
 
           <TouchableOpacity
             style={[styles.gridCard, { backgroundColor: "#8CF0D8" }]}
-           onPress={() => navigation.navigate("AttendanceTracking", { filterType: "today" })}
+            onPress={() => navigation.navigate("AttendanceTracking", { filterType: "today" })}
             activeOpacity={0.85}
           >
             <View style={styles.cardIconBox}>
@@ -198,7 +198,7 @@ export default function TherapistDashboardScreen({ navigation }) {
         <Text style={styles.sectionHeaderTitle}>Quick Actions</Text>
 
         <View style={styles.actionsRow}>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.actionItem}
             onPress={() => navigation.navigate("ProgramBuilder")}
           >
@@ -206,7 +206,7 @@ export default function TherapistDashboardScreen({ navigation }) {
               <Feather name="plus" size={24} color="#1669A9" />
             </View>
             <Text style={styles.actionLabel}>Add Child Program</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <TouchableOpacity
             style={styles.actionItem}
@@ -251,7 +251,6 @@ export default function TherapistDashboardScreen({ navigation }) {
           }
         </View>
 
-        {/* Dynamic Next Scheduled Session Banner */}
         <View style={styles.sessionBanner}>
           <Text style={styles.bannerTag}>NEXT SCHEDULED SESSION</Text>
           {stats.nextSession
@@ -295,6 +294,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 12,
+    backgroundColor: "#fff",
   },
   profileContainer: {
     flexDirection: "row",

@@ -14,7 +14,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -26,6 +29,7 @@ import {
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
+  commonStyles,
   fonts,
 } from '../../styles/theme';
 
@@ -57,14 +61,13 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const response = await loginUser(identifier.trim(), password);
-      
+
       await login(response.token, response.user);
       Alert.alert("Success", "Logged in successfully!");
     } catch (error) {
-      const errorMsg =
-        error.response?.data?.message ||
-        error.message ||
-        "Invalid credentials or connection issue.";
+      const errorMsg = error.response?.data?.message
+        || error.message
+        || "Invalid credentials or connection issue.";
       Alert.alert("Login Failed", errorMsg);
     } finally {
       setLoading(false);
@@ -79,10 +82,9 @@ export default function LoginScreen() {
       await login(response.token, response.user);
       Alert.alert("Success", "Biometric Login Successful!");
     } catch (error) {
-      const errorMsg =
-        error.response?.data?.message ||
-        error.message ||
-        "Biometric authentication failed.";
+      const errorMsg = error.response?.data?.message
+        || error.message
+        || "Biometric authentication failed.";
       Alert.alert("Authentication Failed", errorMsg);
     } finally {
       setLoading(false);
@@ -90,103 +92,100 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.footerBgCard}>
-        <Image
-          source={require("../../asstes/slide2_bg4.png")}
-          style={styles.footerBgImage}
-          resizeMode="cover"
-        />
-      </View>
-
-      <View style={styles.header}>
-        <Image
-          source={require("../../asstes/logo.png")}
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>
-          Continue your journey of healing and growth.
-        </Text>
-      </View>
-
-      <View style={styles.cardContainer}>
-        <View style={styles.fieldContainer}>
-          <Text style={styles.label}>Email or Phone</Text>
-          <View style={styles.inputWrapper}>
-            <MaterialIcons name="person-outline" size={20} color="#6B7280" />
-            <TextInput
-              style={styles.input}
-              placeholder="name@example.com"
-              placeholderTextColor="#6B7280"
-              autoCapitalize="none"
-              value={identifier}
-              onChangeText={setIdentifier}
-            />
-          </View>
+    <SafeAreaView style={commonStyles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.footerBgCard}>
+          <Image
+            source={require("../../asstes/slide2_bg4.png")}
+            style={styles.footerBgImage}
+            resizeMode="cover"
+          />
         </View>
 
-        <View style={styles.fieldContainer}>
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.inputWrapper}>
-            <MaterialIcons name="lock-outline" size={20} color="#6B7280" />
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor="#6B7280"
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-            />
-            <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-              activeOpacity={0.7}
-            >
-              <MaterialIcons
-                name={showPassword ? "visibility" : "visibility-off"}
-                size={20}
-                color="#6B7280"
+        <View style={styles.header}>
+          <Image
+            source={require("../../asstes/logo.png")}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>
+            Continue your journey of healing and growth.
+          </Text>
+        </View>
+
+        <View style={styles.cardContainer}>
+          <View style={styles.fieldContainer}>
+            <Text style={styles.label}>Email or Phone</Text>
+            <View style={styles.inputWrapper}>
+              <MaterialIcons name="person-outline" size={20} color="#6B7280" />
+              <TextInput
+                style={styles.input}
+                placeholder="name@example.com"
+                placeholderTextColor="#6B7280"
+                autoCapitalize="none"
+                value={identifier}
+                onChangeText={setIdentifier}
               />
+            </View>
+          </View>
+
+          <View style={styles.fieldContainer}>
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.inputWrapper}>
+              <MaterialIcons name="lock-outline" size={20} color="#6B7280" />
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor="#6B7280"
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons
+                  name={showPassword ? "visibility" : "visibility-off"}
+                  size={20}
+                  color="#6B7280"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.optionsRow}>
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              onPress={() => setRememberMe(!rememberMe)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
+                {rememberMe && <MaterialIcons name="check" size={14} color="#FFFFFF" />}
+              </View>
+              <Text style={styles.checkboxLabel}>Remember Me</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7}>
+              <Text style={styles.forgotText}>Forgot Password?</Text>
             </TouchableOpacity>
           </View>
-        </View>
 
-        <View style={styles.optionsRow}>
           <TouchableOpacity
-            style={styles.checkboxRow}
-            onPress={() => setRememberMe(!rememberMe)}
-            activeOpacity={0.8}
+            style={styles.loginButton}
+            onPress={handleLogin}
+            disabled={loading}
+            activeOpacity={0.85}
           >
-            <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
-              {rememberMe && <MaterialIcons name="check" size={14} color="#FFFFFF" />}
-            </View>
-            <Text style={styles.checkboxLabel}>Remember Me</Text>
+            {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.loginButtonText}>Login</Text>}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7}>
-            <Text style={styles.forgotText}>Forgot Password?</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={styles.loginButton}
-          onPress={handleLogin}
-          disabled={loading}
-          activeOpacity={0.85}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.loginButtonText}>Login</Text>
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.biometricSection}>
+          {
+            /* <View style={styles.biometricSection}>
           <Text style={styles.biometricLabel}>Or use biometrics</Text>
           <TouchableOpacity
             style={styles.biometricButton}
@@ -196,23 +195,29 @@ export default function LoginScreen() {
           >
             <MaterialIcons name="fingerprint" size={32} color={colors.primary} />
           </TouchableOpacity>
+        </View> */
+          }
         </View>
-      </View>
 
-      <View style={styles.footerRow}>
+        {
+          /* <View style={styles.footerRow}>
         <Text style={styles.footerText}>Don't have an account?</Text>
         <TouchableOpacity onPress={handleCreateAccount} activeOpacity={0.7}>
           <Text style={styles.createAccountText}>Create Account</Text>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </View> */
+        }
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F0F7FB",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   footerBgCard: {
     position: "absolute",
@@ -229,7 +234,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    //  flexDirection:'row',
+    alignItems: "center",
+    justifyContent: "center",
   },
   header: {
     alignItems: "center",
@@ -254,11 +261,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   cardContainer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#fff",
     borderRadius: 24,
     paddingHorizontal: 24,
     paddingVertical: 24,
     marginBottom: 24,
+    width:'100%'
   },
   fieldContainer: {
     marginBottom: 16,
@@ -322,7 +330,7 @@ const styles = StyleSheet.create({
   loginButton: {
     backgroundColor: colors.primary,
     borderRadius: 20,
-    paddingVertical:16,
+    paddingVertical: 16,
     justify: "center",
     alignItems: "center",
     marginTop: 10,

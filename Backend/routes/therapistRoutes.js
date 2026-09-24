@@ -20,24 +20,31 @@ const {
   getLeaveRequests,
   getVideosByChild,
   createWeeklyVideo,
-  deleteWeeklyVideo
+  deleteWeeklyVideo,
+  createQuarterlyReport,
+  getQuarterlyReport,
+  getQuarterlyReportsByChild,
 } = require("../controllers/therapistController");
-router.get('/dashboard-stats', protect, getDashboardStats);
+router.get("/dashboard-stats", protect, getDashboardStats);
 router.get("/get_therapist_user", protect, getTherapistUser);
 router.get("/get_child_programs/:childId", protect, getChildPrograms);
 router.post("/delete_program/:programId/add_goal", protect, addGoalToProgram);
 router.post("/add_programs", protect, AddPrograms);
 router.delete("/delete_program/:programId", protect, deleteProgram);
 router.delete("/delete_program/:programId/goal/:goalId", protect, deleteGoal);
-router.patch("/program/:programId/goal/:goalId/progress", protect, updateGoalProgress );
+router.patch("/program/:programId/goal/:goalId/progress", protect, updateGoalProgress);
 router.get("/get_child_stats/:childId", protect, getChildSessionStats);
 router.get("/feedback_management/:childId", protect, getFeedbackManagementData);
 router.post("/feedback/create", protect, createFeedback);
 router.get("/get_attendance", protect, getAttendance);
 router.patch("/update_attendance_status", protect, updateAttendanceStatus);
-router.post('/leave-request/create', protect, createLeaveRequest);
-router.get('/leave-requests/get', protect, getLeaveRequests);
+router.post("/leave-request/create", protect, createLeaveRequest);
+router.get("/leave-requests/get", protect, getLeaveRequests);
 router.get("/video/child/:childId", protect, getVideosByChild);
 router.post("/video/create", protect, createWeeklyVideo);
 router.delete("/video/delete/:id", protect, deleteWeeklyVideo);
+router.post("/quarterly-reports", protect, createQuarterlyReport);
+router.get("/quarterly-reports", protect, getQuarterlyReport);
+router.get("/quarterly-reports/all", protect, getQuarterlyReportsByChild);
+
 module.exports = router;

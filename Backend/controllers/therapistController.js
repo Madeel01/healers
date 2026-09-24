@@ -6,6 +6,8 @@ const Scheduling = require("../models/Scheduling");
 const Feedback = require("../models/Feedback");
 const LeaveRequest = require("../models/LeaveRequest");
 const WeeklyVideo = require("../models/Video");
+const cloudinary = require("../config/cloudinary");
+const QuarterlyReport = require("../models/QuarterlyReport");
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -1081,16 +1083,327 @@ exports.createWeeklyVideo = async (req, res) => {
 exports.deleteWeeklyVideo = async (req, res) => {
   try {
     const { id } = req.params;
-    await WeeklyVideo.findByIdAndDelete(id);
+
+    const therapistId = req.user?._id || req.user?.id;
+
+    if (!therapistId) {
+      return res.status(401).json({
+        success: false,
+        message: "Therapist authentication is required.",
+      });
+    }
+
+    const video = await WeeklyVideo.findOne({
+      _id: id,
+      therapistId,
+    });
+
+    if (!video) {
+      return res.status(404).json({
+        success: false,
+        message: "Video not found.",
+      });
+    }
+
+    if (video.cloudinaryPublicId) {
+      try {
+        const cloudinaryResult = await cloudinary.uploader.destroy(
+          video.cloudinaryPublicId,
+          {
+            resource_type: video.cloudinaryResourceType || "video",
+
+            type: "upload",
+
+            invalidate: true,
+          },
+        );
+
+        console.log(
+          "Cloudinary delete result:",
+          cloudinaryResult,
+        );
+
+        if (
+          cloudinaryResult.result !== "ok"
+          && cloudinaryResult.result !== "not found"
+        ) {
+          console.warn(
+            "Cloudinary asset was not deleted:",
+            cloudinaryResult,
+          );
+        }
+      } catch (cloudinaryError) {
+        console.error(
+          "Cloudinary delete error:",
+          cloudinaryError,
+        );
+
+        return res.status(500).json({
+          success: false,
+          message: "Failed to delete video from Cloudinary.",
+          error: cloudinaryError.message,
+        });
+      }
+    }
+
+    await WeeklyVideo.deleteOne({
+      _id: video._id,
+    });
 
     return res.status(200).json({
       success: true,
-      message: "Video deleted successfully",
+      message: "Video deleted successfully.",
+      data: {
+        id: video._id,
+        cloudinaryDeleted: !!video.cloudinaryPublicId,
+      },
     });
   } catch (error) {
+    console.error(
+      "Delete weekly video error:",
+      error,
+    );
+
     return res.status(500).json({
       success: false,
-      message: error.message || "Error deleting video",
+      message: error.message
+        || "Error deleting video.",
+    });
+  }
+};
+
+exports.createQuarterlyReport = async (req, res) => {
+  try {
+    const therapistId = req.user?._id || req.user?.id;
+
+    if (!therapistId) {
+      return res.status(401).json({
+        success: false,
+        message: "Therapist authentication required.",
+      });
+    }
+
+    const {
+      userId,
+      year,
+      quarter,
+      programs,
+      sentToParents,
+      status,
+    } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "userId is required.",
+      });
+    }
+
+    if (!year) {
+      return res.status(400).json({
+        success: false,
+        message: "year is required.",
+      });
+    }
+
+    if (!quarter) {
+      return res.status(400).json({
+        success: false,
+        message: "quarter is required.",
+      });
+    }
+
+    if (!["Q1", "Q2", "Q3", "Q4"].includes(quarter)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid quarter. Use Q1, Q2, Q3 or Q4.",
+      });
+    }
+
+    if (!Array.isArray(programs)) {
+      return res.status(400).json({
+        success: false,
+        message: "programs must be an array.",
+      });
+    }
+
+    const cleanPrograms = programs.map((program) => ({
+      programId: program.programId,
+      programName: program.programName || "",
+      goals: Array.isArray(program.goals)
+        ? program.goals.map((goal) => ({
+          goalId: goal.goalId || null,
+          goalName: goal.goalName || "",
+        }))
+        : [],
+      report: program.report || "",
+    }));
+
+    const quarterlyReport = await QuarterlyReport.findOneAndUpdate(
+      {
+        therapistId,
+        userId,
+        year: Number(year),
+        quarter,
+      },
+      {
+        $set: {
+          programs: cleanPrograms,
+          sentToParents: typeof sentToParents === "boolean"
+            ? sentToParents
+            : true,
+          status: status || "submitted",
+        },
+      },
+      {
+        new: true,
+        upsert: true,
+        runValidators: true,
+        setDefaultsOnInsert: true,
+      },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Quarterly report saved successfully.",
+      data: quarterlyReport,
+    });
+  } catch (error) {
+    console.error(
+      "Create quarterly report error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to save quarterly report.",
+      error: error.message,
+    });
+  }
+};
+
+exports.getQuarterlyReport = async (req, res) => {
+  try {
+    const therapistId = req.user?._id || req.user?.id;
+
+    if (!therapistId) {
+      return res.status(401).json({
+        success: false,
+        message: "Therapist authentication required.",
+      });
+    }
+
+    const {
+      userId,
+      year,
+      quarter,
+    } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "userId is required.",
+      });
+    }
+
+    if (!year) {
+      return res.status(400).json({
+        success: false,
+        message: "year is required.",
+      });
+    }
+
+    if (!quarter) {
+      return res.status(400).json({
+        success: false,
+        message: "quarter is required.",
+      });
+    }
+
+    const report = await QuarterlyReport.findOne({
+      therapistId,
+      userId,
+      year: Number(year),
+      quarter,
+    }).lean();
+
+    if (!report) {
+      return res.status(200).json({
+        success: true,
+        message: "No quarterly report found.",
+        data: null,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Quarterly report fetched successfully.",
+      data: report,
+    });
+  } catch (error) {
+    console.error(
+      "Get quarterly report error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch quarterly report.",
+      error: error.message,
+    });
+  }
+};
+
+exports.getQuarterlyReportsByChild = async (req, res) => {
+  try {
+    const therapistId = req.user?._id || req.user?.id;
+
+    if (!therapistId) {
+      return res.status(401).json({
+        success: false,
+        message: "Therapist authentication required.",
+      });
+    }
+
+    const { userId, year } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "userId is required.",
+      });
+    }
+
+    const query = {
+      therapistId,
+      userId,
+    };
+
+    if (year) {
+      query.year = Number(year);
+    }
+
+    const reports = await QuarterlyReport.find(query)
+      .sort({
+        year: -1,
+        quarter: 1,
+      })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      data: reports,
+    });
+  } catch (error) {
+    console.error(
+      "Get child quarterly reports error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch quarterly reports.",
+      error: error.message,
     });
   }
 };

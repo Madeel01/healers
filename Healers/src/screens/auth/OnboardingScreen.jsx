@@ -8,8 +8,9 @@ import {
   FlatList,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { commonStyles } from '../../styles/theme';
 import SlideOne from './slides/SlideOne';
 import SlideThree from './slides/SlideThree';
 import SlideTwo from './slides/SlideTwo';
@@ -17,7 +18,6 @@ import SlideTwo from './slides/SlideTwo';
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function OnboardingScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
   const [step, setStep] = useState(1);
   const flatListRef = useRef(null);
 
@@ -87,22 +87,24 @@ export default function OnboardingScreen({ navigation }) {
   };
 
   return (
-    <View style={{ paddingTop: insets.top, flex: 1 }}>
-      <FlatList
-        ref={flatListRef}
-        data={slides}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
-            {item.component}
-          </View>
-        )}
-      />
-    </View>
+    <SafeAreaView style={commonStyles.container}>
+      <View style={{ flex: 1 }}>
+        <FlatList
+          ref={flatListRef}
+          data={slides}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
+              {item.component}
+            </View>
+          )}
+        />
+      </View>
+    </SafeAreaView>
   );
 }

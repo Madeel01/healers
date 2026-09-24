@@ -1,34 +1,41 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
 import {
+  ActivityIndicator,
   Alert,
   Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
-  RefreshControl,
-} from "react-native";
+} from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import Feather from "@expo/vector-icons/Feather";
-import DateTimePicker from "@react-native-community/datetimepicker";
+} from 'react-native-safe-area-context';
 
-import BottomBar from "../../components/BottomBar";
-import TopBar from "../../components/TopBar";
+import Feather from '@expo/vector-icons/Feather';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
 import {
-  getUsersByRole,
   addAppointment,
   createSchedule,
+  deleteAppointment,
   getSchedule,
   getTherapistSchedules,
+  getUsersByRole,
   updateAppointment,
-  deleteAppointment
-} from "../../api/admin/api";
+} from '../../api/admin/api';
+import BottomBar from '../../components/BottomBar';
+import TopBar from '../../components/TopBar';
 
 const MAX_APPOINTMENTS_PER_DAY = 2;
 
@@ -724,7 +731,7 @@ export default function ScheduleScreen({ navigation }) {
                 }
                 mode="time"
                 display="default"
-                onChange={(event, selected) => {
+                onValueChange={(event, selected) => {
                   setShowTimePicker(false);
                   if (selected) {
                     if (timePickerTarget === "start")

@@ -102,6 +102,8 @@ export default function WeeklyVideoScreen({
   const [videoPage, setVideoPage] = useState(1);
   const [videoLoading, setVideoLoading] = useState(false);
   const [loadingMoreVideos, setLoadingMoreVideos] = useState(false);
+  const [loadingUploadVideos, setLoadingUploadVideos] = useState(false);
+  const [deletingVideoId, setDeletingVideoId] = useState(null);
   const [hasMoreVideos, setHasMoreVideos] = useState(true);
   const [
     cameraPermission,
@@ -255,9 +257,7 @@ export default function WeeklyVideoScreen({
     }
   };
 
-  const handleDeleteVideo = async (
-    videoId,
-  ) => {
+  const handleDeleteVideo = async (videoId) => {
     if (!videoId) {
       return;
     }
@@ -276,20 +276,20 @@ export default function WeeklyVideoScreen({
 
           onPress: async () => {
             try {
+              // Start loader only after user confirms
+              setDeletingVideoId(videoId);
+
               const response = await deleteWeeklyVideoApi(
                 videoId,
               );
 
               if (response?.success) {
-                setVideos(
-                  (previousVideos) =>
-                    previousVideos.filter(
-                      (item) =>
-                        item?._id
-                          !== videoId
-                        && item?.id
-                          !== videoId,
-                    ),
+                setVideos((previousVideos) =>
+                  previousVideos.filter(
+                    (item) =>
+                      item?._id !== videoId
+                      && item?.id !== videoId,
+                  )
                 );
 
                 Alert.alert(
@@ -311,8 +311,12 @@ export default function WeeklyVideoScreen({
 
               Alert.alert(
                 "Error",
-                "Failed to delete video.",
+                error?.message
+                  || "Failed to delete video.",
               );
+            } finally {
+              // Stop loader
+              setDeletingVideoId(null);
             }
           },
         },
@@ -867,7 +871,7 @@ export default function WeeklyVideoScreen({
 
         return;
       }
-
+      setLoadingUploadVideos(true);
       console.log(
         "Selected video:",
         selectedVideo,
@@ -888,6 +892,8 @@ export default function WeeklyVideoScreen({
         error?.message
           || "Could not select video.",
       );
+    } finally {
+      setLoadingUploadVideos(false);
     }
   };
 
@@ -1006,6 +1012,7 @@ export default function WeeklyVideoScreen({
       );
     }
   };
+
   return (
     <SafeAreaView
       style={[
@@ -1017,244 +1024,115 @@ export default function WeeklyVideoScreen({
         navigation={navigation}
         headerTitle="Weekly Video"
       />
-
-      <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-          />
-        }
-        onScroll={handleVideoScroll}
-      >
-        <View
-          style={styles.headerBanner}
-        >
-          <Text
-            style={styles.bannerTitle}
-          >
-            Weekly Video Updates
-          </Text>
-        </View>
-
-        <View
-          style={styles.childHeaderRow}
-        >
-          <Text
-            style={styles.sectionHeaderTitle}
-          >
-            Select Child
-          </Text>
-
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => setModalVisible(true)}
-          >
-            <Text
-              style={styles.viewAllText}
-            >
-              View All
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View>
-          {loadingChildren
-            ? (
-              <ActivityIndicator
-                size="small"
-                color="#004E9F"
-                style={{
-                  marginBottom: 20,
-                }}
+      {loadingUploadVideos
+        ? <ActivityIndicator size="small" color="#004E9F" style={[styles.scrollArea, { marginBottom: 20 }]} />
+        : (
+          <ScrollView
+            style={styles.scrollArea}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
               />
-            )
-            : children.length > 0
-            ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.childChipsRow}
-              >
-                {children.map(
-                  (child) => {
-                    const id = child._id
-                      || child.id;
-
-                    const isSelected = id
-                      === selectedChildId;
-
-                    return (
-                      <TouchableOpacity
-                        key={id}
-                        style={[
-                          styles.childChip,
-                          isSelected
-                            ? styles.childChipSelected
-                            : styles.childChipUnselected,
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() =>
-                          setSelectedChildId(
-                            id,
-                          )}
-                      >
-                        <Text
-                          style={[
-                            styles.childChipText,
-                            isSelected
-                              ? styles.childChipTextSelected
-                              : styles.childChipTextUnselected,
-                          ]}
-                        >
-                          {child.fullName
-                            || child.name
-                            || "Child"}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  },
-                )}
-              </ScrollView>
-            )
-            : (
-              <View
-                style={styles.noUserContainer}
-              >
-                <Text
-                  style={styles.noUserText}
-                >
-                  No user found
-                </Text>
-              </View>
-            )}
-        </View>
-
-        <View
-          style={styles.mediaActionCard}
-        >
-          <TouchableOpacity
-            style={styles.playPreviewCircle}
-            activeOpacity={0.8}
+            }
+            onScroll={handleVideoScroll}
           >
-            <Ionicons
-              name="play"
-              size={24}
-              color="#fff"
-            />
-          </TouchableOpacity>
-
-          <View
-            style={styles.actionButtonsRow}
-          >
-            <TouchableOpacity
-              style={styles.uploadBtn}
-              activeOpacity={0.85}
-              onPress={handlePickVideo}
-              disabled={uploading}
-            >
-              <View
-                style={styles.btnIconBadge}
-              >
-                <AntDesign
-                  name="cloud-upload"
-                  size={18}
-                  color={colors.primary}
-                />
-              </View>
-
-              <View>
-                <Text
-                  style={styles.btnTitle}
-                >
-                  Upload
-                </Text>
-
-                <Text
-                  style={styles.btnSubtitle}
-                >
-                  Existing media
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.recordBtn}
-              activeOpacity={0.85}
-              onPress={handleOpenRecordModal}
-              disabled={uploading}
-            >
-              <View
-                style={styles.recordIconBadge}
-              >
-                <Ionicons
-                  name="disc-outline"
-                  size={20}
-                  color="#BA1A1A"
-                />
-              </View>
-
-              <View>
-                <Text
-                  style={styles.btnTitle}
-                >
-                  Live Record
-                </Text>
-
-                <Text
-                  style={styles.btnSubtitle}
-                >
-                  New session
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {videoLoading
-          ? (
             <View
-              style={{
-                paddingVertical: 40,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              style={styles.headerBanner}
             >
-              <ActivityIndicator
-                size="large"
-                color={colors.primary}
-              />
-
               <Text
-                style={{
-                  marginTop: 10,
-                  color: "#64748B",
-                  fontFamily: fonts.regular,
-                }}
+                style={styles.bannerTitle}
               >
-                Loading videos...
+                Weekly Video Updates
               </Text>
             </View>
-          )
-          : (
-            <View style={styles.videoList}>
-              {videos.length === 0
-                ? (
-                  <View
-                    style={{
-                      padding: 30,
-                      alignItems: "center",
-                    }}
-                  >
-                    <Ionicons
-                      name="videocam-outline"
-                      size={45}
-                      color="#94A3B8"
-                    />
 
+            <View
+              style={styles.childHeaderRow}
+            >
+              <Text
+                style={styles.sectionHeaderTitle}
+              >
+                Select Child
+              </Text>
+
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setModalVisible(true)}
+              >
+                <Text
+                  style={styles.viewAllText}
+                >
+                  View All
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View>
+              {loadingChildren
+                ? (
+                  <ActivityIndicator
+                    size="small"
+                    color="#004E9F"
+                    style={{
+                      marginBottom: 20,
+                    }}
+                  />
+                )
+                : children.length > 0
+                ? (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.childChipsRow}
+                  >
+                    {children.map(
+                      (child) => {
+                        const id = child._id
+                          || child.id;
+
+                        const isSelected = id
+                          === selectedChildId;
+
+                        return (
+                          <TouchableOpacity
+                            key={id}
+                            style={[
+                              styles.childChip,
+                              isSelected
+                                ? styles.childChipSelected
+                                : styles.childChipUnselected,
+                            ]}
+                            activeOpacity={0.8}
+                            onPress={() =>
+                              setSelectedChildId(
+                                id,
+                              )}
+                          >
+                            <Text
+                              style={[
+                                styles.childChipText,
+                                isSelected
+                                  ? styles.childChipTextSelected
+                                  : styles.childChipTextUnselected,
+                              ]}
+                            >
+                              {child.fullName
+                                || child.name
+                                || "Child"}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      },
+                    )}
+                  </ScrollView>
+                )
+                : (
+                  <View
+                    style={styles.childChipsRow}
+                  >
                     <Text
                       style={{
                         marginTop: 10,
@@ -1262,126 +1140,256 @@ export default function WeeklyVideoScreen({
                         fontFamily: fonts.regular,
                       }}
                     >
-                      No videos found
+                      No user found
                     </Text>
                   </View>
-                )
-                : (
-                  videos.map((video) => (
-                    <View
-                      key={video._id || video.id}
-                      style={styles.videoCard}
-                    >
-                      <TouchableOpacity
-                        style={styles.videoThumbnail}
-                        activeOpacity={0.9}
-                        onPress={() => handleOpenDemoVideo(video)}
-                      >
-                        <View style={styles.centerPlayBtn}>
-                          <Ionicons
-                            name="play"
-                            size={28}
-                            color="#035388"
-                          />
-                        </View>
-
-                        <View style={styles.durationBadge}>
-                          <Text style={styles.durationText}>
-                            {video.duration || "00:00"}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-
-                      <View style={styles.videoFooter}>
-                        <View style={styles.videoMetaColumn}>
-                          <Text style={styles.videoChildName}>
-                            {video.childId?.name
-                              || video.childId?.fullName
-                              || "Child Session"}
-                          </Text>
-
-                          <Text style={styles.videoSubDetails}>
-                            {video.createdAt
-                              ? new Date(
-                                video.createdAt,
-                              ).toLocaleDateString()
-                              : ""}
-
-                            <Text
-                              style={styles.bulletSeparator}
-                            >
-                              {" "}•{" "}
-                            </Text>
-
-                            {video.tag || "Video"}
-                          </Text>
-                        </View>
-
-                        <View style={styles.videoActionGroup}>
-                          <TouchableOpacity
-                            style={styles.iconActionBtn}
-                            activeOpacity={0.7}
-                            onPress={() =>
-                              handleDeleteVideo(
-                                video._id || video.id,
-                              )}
-                          >
-                            <Feather
-                              name="trash-2"
-                              size={18}
-                              color="#475569"
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </View>
-                  ))
                 )}
+            </View>
 
-              {/* Load more loader */}
-              {loadingMoreVideos && (
+            <View
+              style={styles.mediaActionCard}
+            >
+              <TouchableOpacity
+                style={styles.playPreviewCircle}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="play"
+                  size={24}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+
+              <View
+                style={styles.actionButtonsRow}
+              >
+                <TouchableOpacity
+                  style={styles.uploadBtn}
+                  activeOpacity={0.85}
+                  onPress={handlePickVideo}
+                  disabled={uploading}
+                >
+                  <View
+                    style={styles.btnIconBadge}
+                  >
+                    <AntDesign
+                      name="cloud-upload"
+                      size={18}
+                      color={colors.primary}
+                    />
+                  </View>
+
+                  <View>
+                    <Text
+                      style={styles.btnTitle}
+                    >
+                      Upload
+                    </Text>
+
+                    <Text
+                      style={styles.btnSubtitle}
+                    >
+                      Existing media
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.recordBtn}
+                  activeOpacity={0.85}
+                  onPress={handleOpenRecordModal}
+                  disabled={uploading}
+                >
+                  <View
+                    style={styles.recordIconBadge}
+                  >
+                    <Ionicons
+                      name="disc-outline"
+                      size={20}
+                      color="#BA1A1A"
+                    />
+                  </View>
+
+                  <View>
+                    <Text
+                      style={styles.btnTitle}
+                    >
+                      Live Record
+                    </Text>
+
+                    <Text
+                      style={styles.btnSubtitle}
+                    >
+                      New session
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {videoLoading
+              ? (
                 <View
                   style={{
-                    paddingVertical: 20,
+                    paddingVertical: 40,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
                   <ActivityIndicator
-                    size="small"
+                    size="large"
                     color={colors.primary}
                   />
 
                   <Text
                     style={{
-                      marginTop: 8,
+                      marginTop: 10,
                       color: "#64748B",
                       fontFamily: fonts.regular,
                     }}
                   >
-                    Loading more videos...
+                    Loading videos...
                   </Text>
                 </View>
-              )}
+              )
+              : (
+                <View style={styles.videoList}>
+                  {videos.length === 0
+                    ? (
+                      <View
+                        style={{
+                          padding: 30,
+                          alignItems: "center",
+                        }}
+                      >
+                        <Ionicons
+                          name="videocam-outline"
+                          size={45}
+                          color="#94A3B8"
+                        />
 
-              {!loadingMoreVideos
-                && videos.length > 0
-                && !hasMoreVideos && (
-                <Text
-                  style={{
-                    textAlign: "center",
-                    paddingVertical: 15,
-                    color: "#94A3B8",
-                    fontFamily: fonts.regular,
-                  }}
-                >
-                  No more videos
-                </Text>
-              )}
-            </View>
-          )}
-      </ScrollView>
+                        <Text
+                          style={{
+                            marginTop: 10,
+                            color: "#64748B",
+                            fontFamily: fonts.regular,
+                          }}
+                        >
+                          No videos found
+                        </Text>
+                      </View>
+                    )
+                    : (
+                      videos.map((video) => (
+                        <View
+                          key={video._id || video.id}
+                          style={styles.videoCard}
+                        >
+                          <TouchableOpacity
+                            style={styles.videoThumbnail}
+                            activeOpacity={0.9}
+                            onPress={() => handleOpenDemoVideo(video)}
+                          >
+                            <View style={styles.centerPlayBtn}>
+                              <Ionicons
+                                name="play"
+                                size={28}
+                                color="#035388"
+                              />
+                            </View>
 
+                            <View style={styles.durationBadge}>
+                              <Text style={styles.durationText}>
+                                {video.duration || "00:00"}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+
+                          <View style={styles.videoFooter}>
+                            <View style={styles.videoMetaColumn}>
+                              <Text style={styles.videoChildName}>
+                                {video.childId?.name
+                                  || video.childId?.fullName
+                                  || "Child Session"}
+                              </Text>
+
+                              <Text style={styles.videoSubDetails}>
+                                {video.createdAt
+                                  ? new Date(
+                                    video.createdAt,
+                                  ).toLocaleDateString()
+                                  : ""}
+
+                                <Text
+                                  style={styles.bulletSeparator}
+                                >
+                                  {" "}•{" "}
+                                </Text>
+
+                                {video.tag || "Video"}
+                              </Text>
+                            </View>
+
+                            <View style={styles.videoActionGroup}>
+                              <TouchableOpacity
+                                style={styles.iconActionBtn}
+                                activeOpacity={0.7}
+                                disabled={deletingVideoId === (video._id || video.id)}
+                                onPress={() => handleDeleteVideo(video._id || video.id)}
+                              >
+                                {deletingVideoId === (video._id || video.id)
+                                  ? <ActivityIndicator size="small" color="#475569" />
+                                  : <Feather name="trash-2" size={18} color="#475569" />}
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        </View>
+                      ))
+                    )}
+
+                  {loadingMoreVideos && (
+                    <View
+                      style={{
+                        paddingVertical: 20,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <ActivityIndicator
+                        size="small"
+                        color={colors.primary}
+                      />
+
+                      <Text
+                        style={{
+                          marginTop: 8,
+                          color: "#64748B",
+                          fontFamily: fonts.regular,
+                        }}
+                      >
+                        Loading more videos...
+                      </Text>
+                    </View>
+                  )}
+
+                  {!loadingMoreVideos
+                    && videos.length > 0
+                    && !hasMoreVideos && (
+                    <Text
+                      style={{
+                        textAlign: "center",
+                        paddingVertical: 15,
+                        color: "#94A3B8",
+                        fontFamily: fonts.regular,
+                      }}
+                    >
+                      No more videos
+                    </Text>
+                  )}
+                </View>
+              )}
+          </ScrollView>
+        )}
       <Modal
         visible={demoVideoModal}
         transparent={true}
