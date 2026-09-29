@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, {
+  useContext,
+  useState,
+} from 'react';
 
 import {
   FlatList,
@@ -14,7 +17,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
+import { AuthContext } from '../context/AuthContext';
 import {
+  colors,
   commonStyles,
   fonts,
 } from '../styles/theme';
@@ -49,7 +54,9 @@ const mockNotifications = [
   },
 ];
 
-export default function TopBar({ navigation, isNotificationOpen, onToggleNotification,headerTitle }) {
+export default function TopBar({ navigation, isNotificationOpen, onToggleNotification, headerTitle }) {
+  const { user } = useContext(AuthContext);
+
   const insets = useSafeAreaInsets();
   const [internalModalVisible, setInternalModalVisible] = useState(false);
   const [notifications] = useState(mockNotifications);
@@ -58,6 +65,8 @@ export default function TopBar({ navigation, isNotificationOpen, onToggleNotific
   const setModalVisible = onToggleNotification || setInternalModalVisible;
 
   const unreadCount = notifications.filter((n) => n.unread).length;
+  const userName = user?.fullName || user?.name || "";
+  const profileImage = user?.profileImage || "";
 
   return (
     <>
@@ -79,11 +88,27 @@ export default function TopBar({ navigation, isNotificationOpen, onToggleNotific
             <Ionicons name="notifications-outline" size={22} color="#334155" />
             {unreadCount > 0 && <View style={styles.notificationDot} />}
           </TouchableOpacity>
-
-          <Image
-            source={{ uri: "https://i.pravatar.cc/150?img=32" }}
-            style={styles.avatarHeader}
-          />
+          {profileImage
+            ? (
+              <Image
+                source={{
+                  uri: profileImage,
+                }}
+                style={styles.avatarHeader}
+              />
+            )
+            : (
+              <View style={styles.avatarFallback}>
+                <Text
+                  style={styles.avatarFallbackText}
+                >
+                  {(userName || "User")
+                    .trim()
+                    .charAt(0)
+                    .toUpperCase()}
+                </Text>
+              </View>
+            )}
         </View>
       </View>
 
@@ -150,7 +175,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,.1)",
-    marginBottom:10
+    marginBottom: 10,
   },
   headerIconButton: {
     padding: 6,
@@ -169,7 +194,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fonts.regular,
     color: "#0B4A6F",
-    lineHeight:24,
+    lineHeight: 24,
   },
   headerRightActions: {
     flexDirection: "row",
@@ -201,8 +226,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  modalTitle: { fontSize: 18, fontWeight: "700", color: "#0F172A" },
-  notifListContainer: { paddingTop: 16 },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: fonts.bold,
+    color: "#0F172A",
+  },
+  notifListContainer: {
+    paddingTop: 16,
+  },
   notifCard: {
     flexDirection: "row",
     backgroundColor: "#F8FAFC",
@@ -224,13 +255,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  notifContent: { flex: 1 },
-  notifTitle: { fontSize: 14, fontWeight: "700", color: "#1E293B" },
+  notifContent: {
+    flex: 1,
+  },
+  notifTitle: {
+    fontSize: 14,
+    fontFamily: fonts.bold,
+    color: "#1E293B",
+  },
   notifMessage: {
     fontSize: 12,
     color: "#475569",
     marginTop: 2,
     lineHeight: 18,
+    fontFamily: fonts.regular,
   },
-  notifTime: { fontSize: 11, color: "#94A3B8", marginTop: 6 },
+  notifTime: {
+    fontSize: 11,
+    color: "#94A3B8",
+    marginTop: 6,
+  },
+  avatarFallback: {
+    width: 32,
+    height: 32,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarFallbackText: {
+    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    color: "#FFFFFF",
+  },
 });

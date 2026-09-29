@@ -11,7 +11,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthContext } from '../context/AuthContext';
 import AddNewPackageScreen from '../screens/admin/AddNewPackage';
 import AdminDashboard from '../screens/admin/AdminDashboard';
+import BatchManagementScreen from '../screens/admin/BatchManagement';
 import BroadcastManagementScreen from '../screens/admin/BroadcastManagement';
+import ChildrenScreen from '../screens/admin/Children';
 import ComplainManagementScreen from '../screens/admin/ComplainManagement';
 import CreateNewInvoiceScreen from '../screens/admin/CreateNewInvoice';
 import FeedbackScreen from '../screens/admin/Feedback';
@@ -20,12 +22,19 @@ import InvoiceDetailScreen from '../screens/admin/InvoiceDetailScreen';
 import InvoiceManagementScreen from '../screens/admin/InvoiceManagement';
 import LeaveRequestsScreen from '../screens/admin/LeaveRequest';
 import ScheduleScreen from '../screens/admin/Schedule';
+import StaffOnLeaveScreen from '../screens/admin/StaffOnLeave';
 import TherapistsScreen from '../screens/admin/Therapist';
 import LoginScreen from '../screens/auth/LoginScreen';
 import OnboardingScreen from '../screens/auth/OnboardingScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import WelcomeScreen from '../screens/auth/Welcome';
+import ChildAddFeedbackScreen from '../screens/child/AddFeedback';
+import AttendanceScreen from '../screens/child/Attendence';
+import ChatDetailsScreen from '../screens/child/ChatDetails';
 import ChildDashboard from '../screens/child/ChildDashboard';
+import ChildVideoScreen from '../screens/child/ChildVideo';
+import ChildFeedbackScreen from '../screens/child/Feedback';
+import MessagingScreen from '../screens/child/Messages';
 import AddFeedbackScreen from '../screens/therapist/AddFeedback';
 import AssignedChildrenScreen from '../screens/therapist/AssignedChildren';
 import AttendanceTrackingScreen from '../screens/therapist/AttendanceTracking';
@@ -93,6 +102,9 @@ function TherapistStack() {
       <Stack.Screen name="LeaveRequest" component={LeaveRequestScreen} />
       <Stack.Screen name="QuarterlyReports" component={QuarterlyReportsScreen} />
       <Stack.Screen name="ProgressTracking" component={ProgressTrackingScreen} />
+        <Stack.Screen name="ChildMessages" component={MessagingScreen} />
+      <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
+
     </Stack.Navigator>
   );
 }
@@ -101,6 +113,14 @@ function ChildStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ChildDashboard" component={ChildDashboard} />
+      <Stack.Screen name="ChildFeedback" component={ChildFeedbackScreen} />
+      <Stack.Screen name="CreateFeedback" component={ChildAddFeedbackScreen} />
+      <Stack.Screen name="ChildAttendance" component={AttendanceScreen} />
+      <Stack.Screen name="ChildVideo" component={ChildVideoScreen} />
+      <Stack.Screen name="ChildMessages" component={MessagingScreen} />
+      <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
+
+
     </Stack.Navigator>
   );
 }

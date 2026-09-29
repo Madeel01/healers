@@ -93,6 +93,7 @@ exports.login = async (req, res) => {
         phone: user.phone,
         role: user.role,
         permissions: user.permissions,
+        profileImage: user.profileImage,
       },
     });
   } catch (error) {
@@ -148,13 +149,14 @@ exports.loginBiometric = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 exports.getUsers = async (req, res) => {
   try {
     let { filter = "Child" } = req.body;
 
     const user = await User.find(
       { role: filter },
-      { fullName: 1 }, 
+      { fullName: 1 },
     );
     if (!user) {
       return res.status(401).json({ message: "Invalid Role." });
@@ -168,4 +170,46 @@ exports.getUsers = async (req, res) => {
   }
 };
 
+exports.updateOnlineStatus = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+    const { isOnline } = req.body;
 
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        isOnline: Boolean(isOnline),
+        lastActive: new Date(),
+      },
+      {
+        returnDocument: "after",
+      },
+    ).select("_id isOnline lastActive");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      isOnline: user.isOnline,
+      lastActive: user.lastActive,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update online status",
+      error: error.message,
+    });
+  }
+};

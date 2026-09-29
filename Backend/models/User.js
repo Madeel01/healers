@@ -42,7 +42,7 @@ const userSchema = new mongoose.Schema(
     },
     isLogin: {
       type: Boolean,
-     default: false,
+      default: false,
     },
     fatherName: {
       type: String,
@@ -54,6 +54,19 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: null,
       min: 0,
+    },
+    profileImage: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+    lastActive: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true },

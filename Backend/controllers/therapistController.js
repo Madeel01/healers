@@ -729,7 +729,7 @@ exports.createFeedback = async (req, res) => {
       appointmentId,
       category,
       notes,
-      mood: mood || "happy", // Default matching MOOD_OPTIONS id
+      mood: mood || "Happy", 
       isVisibleToParent: isVisibleToParent !== undefined ? isVisibleToParent : true,
       rating: rating || 5,
     });

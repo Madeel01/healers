@@ -27,6 +27,7 @@ import {
 export default function ChildDashboardScreen({ navigation }) {
   const { user, logout } = useContext(AuthContext);
   const userName = user?.fullName || user?.name || "";
+  const profileImage = user?.profileImage || "";
 
   return (
     <SafeAreaView
@@ -37,13 +38,28 @@ export default function ChildDashboardScreen({ navigation }) {
     >
       <View style={styles.headerRow}>
         <View style={styles.profileContainer}>
-          <Image
-            source={{
-              uri: user?.avatarUrl
-                || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&auto=format&fit=crop&q=80",
-            }}
-            style={styles.avatar}
-          />
+          {profileImage
+            ? (
+              <Image
+                source={{
+                  uri: profileImage,
+                }}
+                style={styles.avatar}
+              />
+            )
+            : (
+              <View style={styles.avatarFallback}>
+                <Text
+                  style={styles.avatarFallbackText}
+                >
+                  {(userName || "User")
+                    .trim()
+                    .charAt(0)
+                    .toUpperCase()}
+                </Text>
+              </View>
+            )}
+
           <View style={styles.userDetails}>
             <Text style={styles.userName}>{userName}</Text>
             <TouchableOpacity style={styles.dropdownRow} activeOpacity={0.7}>
@@ -75,14 +91,22 @@ export default function ChildDashboardScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.gridContainer}>
-          <TouchableOpacity style={styles.gridCard} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.gridCard}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate("ChildFeedback")}
+          >
             <View style={[styles.iconCircle, { backgroundColor: "#FDE6D2" }]}>
               <Feather name="star" size={24} color="#F97316" />
             </View>
             <Text style={styles.gridCardTitle}>Feedback</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.gridCard} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.gridCard}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate("ChildMessages")}
+          >
             <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
               <Feather name="message-square" size={24} color="#10B981" />
               <View style={styles.cardBadgeDot} />
@@ -132,7 +156,11 @@ export default function ChildDashboardScreen({ navigation }) {
         <View style={styles.quickActionsSection}>
           <Text style={[styles.sectionHeaderTitle, { marginBottom: 12 }]}>Quick Actions</Text>
           <View style={styles.quickActionsRow}>
-            <TouchableOpacity style={styles.actionItem} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.actionItem}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate("ChildVideo")}
+            >
               <View style={[styles.actionIconCircle, { backgroundColor: "rgba(22,105,169,.4)" }]}>
                 <Feather name="play" size={20} color={colors.primary} />
               </View>
@@ -146,7 +174,11 @@ export default function ChildDashboardScreen({ navigation }) {
               <Text style={styles.actionLabel}>Reports</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionItem} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.actionItem}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate("ChildAttendance")}
+            >
               <View style={[styles.actionIconCircle, { backgroundColor: "rgba(255,220,196,.6)" }]}>
                 <Feather name="user" size={20} color="#EA580C" />
               </View>
@@ -479,5 +511,19 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     lineHeight: 24,
     color: colors.blackFont,
+  },
+  avatarFallback: {
+    width: 32,
+    height: 32,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  avatarFallbackText: {
+    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    color: "#FFFFFF",
   },
 });

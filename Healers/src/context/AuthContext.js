@@ -1,9 +1,13 @@
 import React, {
   createContext,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 
+import { AppState } from 'react-native';
+
+import { updateOnlineStatusApi } from '../api/authApi';
 import {
   clearAuthData,
   getAuthData,
@@ -17,12 +21,29 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const appState = useRef(AppState.currentState);
+
+  const updateOnlineStatus = async (isOnline) => {
+    try {
+      if (!token) {
+        return;
+      }
+
+      await updateOnlineStatusApi(isOnline);
+    } catch (error) {
+      console.log(
+        'Failed to update online status:',
+        error?.response?.data || error?.message,
+      );
+    }
+  };
+
   useEffect(() => {
     const loadSession = async () => {
       try {
         const data = await getAuthData();
-        // console.log("data",data)
-        if (data.token && data.user) {
+
+        if (data?.token && data?.user) {
           setToken(data.token);
           setUser(data.user);
         }
@@ -32,17 +53,66 @@ export const AuthProvider = ({ children }) => {
         setIsLoading(false);
       }
     };
+
     loadSession();
   }, []);
 
+  useEffect(() => {
+    if (!token || !user) {
+      return;
+    }
+
+    updateOnlineStatus(true);
+
+    const subscription = AppState.addEventListener(
+      'change',
+      async (nextAppState) => {
+        const previousAppState = appState.current;
+
+        if (
+          previousAppState.match(/inactive|background/) &&
+          nextAppState === 'active'
+        ) {
+          await updateOnlineStatus(true);
+        }
+
+        if (
+          previousAppState === 'active' &&
+          nextAppState.match(/inactive|background/)
+        ) {
+          await updateOnlineStatus(false);
+        }
+
+        appState.current = nextAppState;
+      },
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [token, user]);
+
   const login = async (jwtToken, userData) => {
     await setAuthData(jwtToken, userData);
+
     setToken(jwtToken);
     setUser(userData);
   };
 
   const logout = async () => {
+    try {
+      if (token) {
+        await updateOnlineStatus(false);
+      }
+    } catch (error) {
+      console.log(
+        'Failed to update offline status:',
+        error?.response?.data || error?.message,
+      );
+    }
+
     await clearAuthData();
+
     setToken(null);
     setUser(null);
   };
