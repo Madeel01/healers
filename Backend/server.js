@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const path = require("path");
 require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
@@ -37,6 +38,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/therapist", therapistRoutes);
 app.use("/api/scheduling", schedulingRoutes);
+app.use("/assets/broadcasts", express.static(path.join(__dirname, "assets", "broadcasts")));
 app.use((req, res, next) => {
   res.status(404).json({ message: `Cannot find ${req.originalUrl} on this server` });
 });

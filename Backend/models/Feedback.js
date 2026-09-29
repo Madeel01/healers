@@ -46,7 +46,7 @@ const feedbackSchema = new mongoose.Schema(
     },
     notes: {
       type: String,
-      required: true,
+      required: false,
     },
     mood: {
       type: String,
