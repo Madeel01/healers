@@ -1330,3 +1330,144 @@ exports.getVideosByChild = async (req, res) => {
     });
   }
 };
+
+exports.getAssignMembers = async (req, res) => {
+  try {
+    const targetId = req?.query?.userId
+      || req?.query?.therapistId
+      || req?.params?.userId
+      || req?.params?.therapistId
+      || req?.body?.userId
+      || req?.body?.therapistId
+      || req?.user?._id
+      || req?.user?.id;
+
+    const role = req?.query?.role
+      || req?.body?.role
+      || req?.user?.role;
+
+    if (role === "Admin") {
+      const allAssignments = await TherapistAssignment.find()
+        .populate({
+          path: "therapistId",
+          select: "_id fullName profileImage isOnline lastActive role",
+        })
+        .populate({
+          path: "childIds",
+          select: "_id fullName profileImage isOnline lastActive role",
+        })
+        .lean();
+
+      const formattedData = allAssignments.map((assignment) => ({
+        assignmentId: assignment._id,
+        specialty: assignment.specialty || "",
+        maxChildren: assignment.maxChildren || 0,
+        therapist: assignment.therapistId
+          ? {
+            id: assignment.therapistId._id,
+            fullName: assignment.therapistId.fullName,
+            profileImage: assignment.therapistId.profileImage || "",
+            isOnline: assignment.therapistId.isOnline,
+            lastActive: assignment.therapistId.lastActive ?? null,
+            role: assignment.therapistId.role || "therapist",
+          }
+          : null,
+        assignedChildren: Array.isArray(assignment.childIds)
+          ? assignment.childIds.map((child) => ({
+            id: child._id,
+            fullName: child.fullName,
+            profileImage: child.profileImage || "",
+            isOnline: child.isOnline,
+            lastActive: child.lastActive ?? null,
+            role: child.role || "child",
+          }))
+          : [],
+      }));
+
+      return res.status(200).json({
+        success: true,
+        count: formattedData.length,
+        data: formattedData,
+      });
+    }
+
+    if (!targetId) {
+      return res.status(400).json({
+        success: false,
+        message: "Therapist ID or User ID is required",
+      });
+    }
+
+    if (role === "Therapist") {
+      const assignments = await TherapistAssignment.find({
+        therapistId: targetId,
+      })
+        .populate({
+          path: "childIds",
+          select: "_id fullName profileImage isOnline lastActive role",
+        })
+        .lean();
+
+      const childrenMap = new Map();
+
+      assignments.forEach((item) => {
+        if (Array.isArray(item.childIds)) {
+          item.childIds.forEach((child) => {
+            if (child && !childrenMap.has(child._id.toString())) {
+              childrenMap.set(child._id.toString(), {
+                id: child._id,
+                fullName: child.fullName,
+                profileImage: child.profileImage || "",
+                isOnline: child.isOnline,
+                role: child.role || "child",
+                lastActive: child.lastActive ?? null,
+              });
+            }
+          });
+        }
+      });
+
+      const children = Array.from(childrenMap.values());
+
+      return res.status(200).json({
+        success: true,
+        count: children.length,
+        data: children,
+      });
+    }
+
+    const assignments = await TherapistAssignment.find({
+      childIds: targetId,
+    })
+      .populate({
+        path: "therapistId",
+        select: "_id fullName profileImage isOnline lastActive role",
+      })
+      .lean();
+
+    const therapists = assignments
+      .filter((item) => item.therapistId)
+      .map((item) => ({
+        id: item.therapistId._id,
+        fullName: item.therapistId.fullName,
+        profileImage: item.therapistId.profileImage || "",
+        isOnline: item.therapistId.isOnline,
+        role: item.therapistId.role || "therapist",
+        lastActive: item.therapistId.lastActive ?? null,
+        specialty: item.specialty || "",
+      }));
+
+    return res.status(200).json({
+      success: true,
+      count: therapists.length,
+      data: therapists,
+    });
+  } catch (error) {
+    console.error("getAssignMembers error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

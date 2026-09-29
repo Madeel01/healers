@@ -198,7 +198,8 @@ export default function TherapistDashboardScreen({ navigation }) {
         <Text style={styles.sectionHeaderTitle}>Quick Actions</Text>
 
         <View style={styles.actionsRow}>
-          {/* <TouchableOpacity
+          {
+            /* <TouchableOpacity
             style={styles.actionItem}
             onPress={() => navigation.navigate("ProgramBuilder")}
           >
@@ -206,7 +207,18 @@ export default function TherapistDashboardScreen({ navigation }) {
               <Feather name="plus" size={24} color="#1669A9" />
             </View>
             <Text style={styles.actionLabel}>Add Child Program</Text>
-          </TouchableOpacity> */}
+          </TouchableOpacity> */
+          }
+
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => navigation.navigate("ChildMessages")}
+          >
+            <View style={[styles.actionIconBox, { backgroundColor: "#DBEAFE" }]}>
+              <Feather name="message-square" size={24} color="#1669A9" />
+            </View>
+            <Text style={styles.actionLabel}>Messages</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionItem}

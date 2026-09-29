@@ -25,6 +25,33 @@ export const getChildVideos = async (childId, page = 1, limit = 2) => {
   const response = await apiClient.get(
     `/child/video/child/${childId}?page=${page}&limit=${limit}`,
   );
+  return response.data;
+};
 
+export const getAssignUser = async (userId, role) => {
+  const response = await apiClient.get("/child/assign_therapist", {
+    params: { userId, role },
+  });
+  return response.data;
+};
+export const getConversations = async (page = 1, limit = 5) => {
+  const response = await apiClient.get(`/chat/conversations?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const getMessagesApi = async (conversationId) => {
+  const response = await apiClient.get(`/chat/messages/${conversationId}`);
+  return response.data;
+};
+
+export const sendMessageApi = async (payload) => {
+  // payload: { senderId, receiverId, text }
+  const response = await apiClient.post("/chat/messages", payload);
+  return response.data;
+};
+
+export const markAsSeenApi = async (payload) => {
+  // payload: { conversationId, userId }
+  const response = await apiClient.post("/chat/messages/mark-as-seen", payload);
   return response.data;
 };

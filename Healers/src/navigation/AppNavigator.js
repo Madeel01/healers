@@ -30,6 +30,7 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import WelcomeScreen from '../screens/auth/Welcome';
 import ChildAddFeedbackScreen from '../screens/child/AddFeedback';
 import AttendanceScreen from '../screens/child/Attendence';
+import ChatDetailsScreen from '../screens/child/ChatDetails';
 import ChildDashboard from '../screens/child/ChildDashboard';
 import ChildVideoScreen from '../screens/child/ChildVideo';
 import ChildFeedbackScreen from '../screens/child/Feedback';
@@ -96,6 +97,9 @@ function TherapistStack() {
       <Stack.Screen name="LeaveRequest" component={LeaveRequestScreen} />
       <Stack.Screen name="QuarterlyReports" component={QuarterlyReportsScreen} />
       <Stack.Screen name="ProgressTracking" component={ProgressTrackingScreen} />
+        <Stack.Screen name="ChildMessages" component={MessagingScreen} />
+      <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
+
     </Stack.Navigator>
   );
 }
@@ -109,6 +113,7 @@ function ChildStack() {
       <Stack.Screen name="ChildAttendance" component={AttendanceScreen} />
       <Stack.Screen name="ChildVideo" component={ChildVideoScreen} />
       <Stack.Screen name="ChildMessages" component={MessagingScreen} />
+      <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
 
 
     </Stack.Navigator>

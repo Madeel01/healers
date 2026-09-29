@@ -1,182 +1,296 @@
-import React, { useState } from 'react';
+import React, {
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
+  ActivityIndicator,
   FlatList,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Feather } from '@expo/vector-icons';
-
+import {
+  getAssignUser,
+  getConversations,
+} from '../../api/child/api';
 import ChildBottomBar from '../../components/ChildBottomBar';
+import TherapistBottomBar from '../../components/TherapistBottomBar';
 import TopBar from '../../components/TopBar';
+import { AuthContext } from '../../context/AuthContext';
 import { fonts } from '../../styles/theme';
 
-const CARE_TEAM_MEMBERS = [
-  {
-    id: "1",
-    fullName: "Dr. Sarah Jenkins",
-    initials: "SJ",
-    isOnline: true,
-    avatarBg: "#D1E9FF",
-  },
-  {
-    id: "2",
-    fullName: "David Chen",
-    initials: "DC",
-    isOnline: false,
-    avatarBg: "#FFECD6",
-  },
-];
-
-const MESSAGES_LIST = [
-  {
-    id: "conv_1",
-    fullName: "Dr. Sarah Jenkins",
-    designation: "Occupational Therapist",
-    initials: "SJ",
-    avatarBg: "#D1E9FF",
-    lastMessage: "Leo had a great session to",
-    time: "10:30 AM",
-    isUnread: true,
-    isCareTeam: true,
-  },
-  {
-    id: "conv_2",
-    fullName: "David Chen",
-    designation: "Speech Pathologist",
-    initials: "DC",
-    avatarBg: "#FFECD6",
-    lastMessage: "Can we reschedule next ",
-    time: "Yesterday",
-    isUnread: false,
-    isCareTeam: true,
-  },
-];
-
 export default function MessagingScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
-  const [selectedFilter, setSelectedFilter] = useState("All");
-  const unreadCount = MESSAGES_LIST.filter((m) => m.isUnread).length;
+  const { user } = useContext(AuthContext);
+  const userId = user?.id;
 
-  const filteredMessages = MESSAGES_LIST.filter((item) => {
-    if (selectedFilter === "Unread") return item.isUnread;
+  const [selectedFilter, setSelectedFilter] = useState("All");
+  const [careTeamMembers, setCareTeamMembers] = useState([]);
+  const [conversations, setConversations] = useState([]);
+
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  const pageRef = useRef(page);
+  const loadingMoreRef = useRef(loadingMore);
+
+  useEffect(() => {
+    pageRef.current = page;
+  }, [page]);
+
+  useEffect(() => {
+    loadingMoreRef.current = loadingMore;
+  }, [loadingMore]);
+
+  useEffect(() => {
+    loadInitialData();
+    fetchMembers();
+
+    const initialDataInterval = setInterval(() => {
+      refreshCurrentList();
+    }, 3000);
+
+    const membersInterval = setInterval(fetchMembers, 30000);
+
+    return () => {
+      clearInterval(initialDataInterval);
+      clearInterval(membersInterval);
+    };
+  }, []);
+
+  const loadInitialData = async () => {
+    try {
+      setInitialLoading(true);
+      const limit = 5;
+      const convsRes = await getConversations(1, limit);
+      const data = convsRes?.data || [];
+
+      setConversations(data);
+      setPage(1);
+      setHasMore(data.length === limit);
+    } catch (error) {
+      console.log("Error loading initial data:", error);
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  const refreshCurrentList = async () => {
+    if (loadingMoreRef.current) return;
+
+    try {
+      const totalLoadedLimit = pageRef.current * 5;
+      const convsRes = await getConversations(1, totalLoadedLimit);
+      if (convsRes?.data) {
+        setConversations(convsRes.data);
+      }
+    } catch (error) {
+      console.log("Error refreshing conversations:", error);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMore || initialLoading) return;
+
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    const limit = 5;
+
+    try {
+      const convsRes = await getConversations(nextPage, limit);
+      const newItems = convsRes?.data || [];
+
+      if (newItems.length > 0) {
+        setConversations((prev) => [...prev, ...newItems]);
+        setPage(nextPage);
+      }
+
+      if (newItems.length < limit) {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.log("Error fetching next page:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const fetchMembers = async () => {
+    try {
+      const role = user?.role;
+      const membersRes = await getAssignUser(userId, role);
+      if (membersRes?.success) {
+        setCareTeamMembers(membersRes.data || []);
+      }
+    } catch (error) {
+      console.log("Error fetching members:", error);
+    }
+  };
+
+  const unreadUsersCount = conversations.reduce(
+    (acc, curr) => (curr.unreadCount > 0 ? acc + 1 : acc),
+    0,
+  );
+
+  const filteredMessages = conversations.filter((item) => {
+    if (selectedFilter === "Unread") return item.unreadCount > 0;
     if (selectedFilter === "CareTeam") return item.isCareTeam;
     return true;
   });
 
-  const renderMessageCard = ({ item }) => (
-    <TouchableOpacity
-      style={styles.chatCard}
-      activeOpacity={0.85}
-      onPress={() => navigation?.navigate("ChatDetails", { conversationId: item.id })}
-    >
-      <View style={[styles.avatarCircle, { backgroundColor: item.avatarBg }]}>
-        <Text style={styles.avatarInitials}>{item.initials}</Text>
-      </View>
+  const renderMessageCard = ({ item }) => {
+    const partner = item.partner;
+    const lastMsg = item.lastMessage?.text || "No messages yet";
+    const initials = partner?.fullName
+      ? partner.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+      : "U";
 
-      <View style={styles.chatCardContent}>
-        <View style={styles.cardHeaderRow}>
-          <Text style={styles.userName}>{item.fullName}</Text>
-          <View style={styles.timeContainer}>
-            <Text style={[styles.timeText, item.isUnread && styles.timeTextUnread]}>
-              {item.time}
-            </Text>
-            {item.isUnread && <View style={styles.unreadDot} />}
-          </View>
+    return (
+      <TouchableOpacity
+        style={styles.chatCard}
+        activeOpacity={0.85}
+        onPress={() =>
+          navigation?.navigate("ChatDetails", {
+            conversationId: item.conversationId,
+            receiverId: partner?.id,
+            partnerName: partner?.fullName,
+            partnerImage: partner?.profileImage,
+            isOnline: partner?.isOnline,
+            lastSeen: partner?.lastActive,
+            currentUserId: userId,
+          })}
+      >
+        <View style={styles.avatarWrapper}>
+          {partner?.profileImage
+            ? <Image source={{ uri: partner.profileImage }} style={styles.avatarCircle} />
+            : (
+              <View style={[styles.avatarCircle, { backgroundColor: "#D1E9FF" }]}>
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              </View>
+            )}
+
+          {item.unreadCount > 0 && (
+            <View style={styles.badgeContainer}>
+              <Text style={styles.badgeText}>
+                {item.unreadCount > 99 ? "99+" : item.unreadCount}
+              </Text>
+            </View>
+          )}
         </View>
 
-        <Text style={styles.designationText}>{item.designation}</Text>
-        <Text
-          style={[styles.lastMessageText, item.isUnread && styles.lastMessageUnread]}
-          numberOfLines={1}
-        >
-          {item.lastMessage}
-        </Text>
+        <View style={styles.chatCardContent}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.userName}>{partner?.fullName}</Text>
+            {item.lastMessage && (
+              <Text style={[styles.timeText, item.unreadCount > 0 && styles.timeTextUnread]}>
+                {new Date(item.lastMessage.createdAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Text>
+            )}
+          </View>
+
+          <Text style={styles.designationText}>{partner?.role}</Text>
+          <Text
+            style={[styles.lastMessageText, item.unreadCount > 0 && styles.lastMessageUnread]}
+            numberOfLines={1}
+          >
+            {lastMsg}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const ListHeader = () => (
+    <View style={styles.headerWrapper}>
+      <View style={styles.careTeamContainer}>
+        <Text style={styles.sectionTitle}>Care Team</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.careTeamRow}>
+          {careTeamMembers.map((member) => (
+            <TouchableOpacity
+              key={member.id}
+              style={styles.careTeamItem}
+              onPress={() =>
+                navigation?.navigate("ChatDetails", {
+                  receiverId: member.id,
+                  partnerName: member.fullName,
+                  partnerImage: member.profileImage,
+                  isOnline: member.isOnline,
+                  lastSeen: member.lastActive,
+                  currentUserId: userId,
+                })}
+            >
+              <View style={styles.avatarWrapper}>
+                {member.profileImage
+                  ? <Image source={{ uri: member.profileImage }} style={styles.avatarCircleLarge} />
+                  : (
+                    <View style={[styles.avatarCircleLarge, { backgroundColor: "#D1E9FF" }]}>
+                      <Text style={styles.avatarInitialsLarge}>
+                        {member.fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                {member.isOnline && <View style={styles.onlineBadge} />}
+              </View>
+              <Text style={styles.careTeamName} numberOfLines={1}>
+                {member.fullName}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
-    </TouchableOpacity>
+
+      <View style={styles.filterRow}>
+        {["All", "Unread"].map((filter) => (
+          <TouchableOpacity
+            key={filter}
+            style={[styles.filterPill, selectedFilter === filter && styles.filterPillActive]}
+            onPress={() => setSelectedFilter(filter)}
+          >
+            <Text style={[styles.filterText, selectedFilter === filter && styles.filterTextActive]}>
+              {filter === "All" ? "All Messages" : `Unread (${unreadUsersCount})`}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <TopBar
-        navigation={navigation}
-        headerTitle="Messages"
+    <SafeAreaView style={styles.container}>
+      <TopBar navigation={navigation} headerTitle="Messages" />
+
+      <FlatList
+        data={filteredMessages}
+        keyExtractor={(item) => item.conversationId}
+        renderItem={renderMessageCard}
+        ListHeaderComponent={ListHeader}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={loadingMore
+          ? (
+            <View style={styles.loadingFooter}>
+              <ActivityIndicator size="small" color="#005086" />
+            </View>
+          )
+          : null}
       />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        <View style={styles.careTeamContainer}>
-          <Text style={styles.sectionTitle}>Care Team</Text>
-          <View style={styles.careTeamRow}>
-            {CARE_TEAM_MEMBERS.map((member) => (
-              <TouchableOpacity key={member.id} style={styles.careTeamItem} activeOpacity={0.8}>
-                <View style={styles.avatarWrapper}>
-                  <View style={[styles.avatarCircleLarge, { backgroundColor: member.avatarBg }]}>
-                    <Text style={styles.avatarInitialsLarge}>{member.initials}</Text>
-                  </View>
-                  {member.isOnline && <View style={styles.onlineBadge} />}
-                </View>
-                <Text style={styles.careTeamName} numberOfLines={1}>
-                  {member.fullName}
-                </Text>
-              </TouchableOpacity>
-            ))}
 
-            <TouchableOpacity style={styles.careTeamItem} activeOpacity={0.8}>
-              <View style={styles.inviteCircle}>
-                <Feather name="plus" size={24} color="#475569" />
-              </View>
-              <Text style={styles.careTeamName}>Invite</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Filter Pills */}
-        <View style={styles.filterRow}>
-          <TouchableOpacity
-            style={[styles.filterPill, selectedFilter === "All" && styles.filterPillActive]}
-            onPress={() => setSelectedFilter("All")}
-          >
-            <Text style={[styles.filterText, selectedFilter === "All" && styles.filterTextActive]}>
-              All Messages
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterPill, selectedFilter === "Unread" && styles.filterPillActive]}
-            onPress={() => setSelectedFilter("Unread")}
-          >
-            <Text style={[styles.filterText, selectedFilter === "Unread" && styles.filterTextActive]}>
-              Unread ({unreadCount})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterPill, selectedFilter === "CareTeam" && styles.filterPillActive]}
-            onPress={() => setSelectedFilter("CareTeam")}
-          >
-            <Text style={[styles.filterText, selectedFilter === "CareTeam" && styles.filterTextActive]}>
-              Care Team
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Chat List */}
-        <View style={styles.chatListContainer}>
-          <FlatList
-            data={filteredMessages}
-            keyExtractor={(item) => item.id}
-            renderItem={renderMessageCard}
-            scrollEnabled={false}
-          />
-        </View>
-      </ScrollView>
-
-      <ChildBottomBar activeTab="ChildMessages" />
-    </View>
+      {user?.role === "Therapist" ? <TherapistBottomBar activeTab="" /> : <ChildBottomBar activeTab="ChildMessages" />}
+    </SafeAreaView>
   );
 }
 
@@ -185,7 +299,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
-
+  headerWrapper: {
+    backgroundColor: "#F8FAFC",
+  },
   careTeamContainer: {
     paddingHorizontal: 20,
     marginTop: 10,
@@ -209,7 +325,6 @@ const styles = StyleSheet.create({
   },
   avatarWrapper: {
     position: "relative",
-    marginBottom: 6,
   },
   avatarCircleLarge: {
     width: 56,
@@ -234,21 +349,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#F8FAFC",
   },
-  inviteCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#E2E8F0",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
   careTeamName: {
     fontSize: 12,
     lineHeight: 16,
     fontFamily: fonts.semiBold,
     color: "#1E293B",
     textAlign: "center",
+    marginTop: 6,
   },
   filterRow: {
     flexDirection: "row",
@@ -274,13 +381,11 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: "#FFFFFF",
   },
-  chatListContainer: {
-    paddingHorizontal: 20,
-  },
   chatCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
+    marginHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
@@ -291,19 +396,38 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 14,
   },
   avatarInitials: {
     fontSize: 16,
     fontFamily: fonts.bold,
     color: "#1E293B",
   },
+  badgeContainer: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#EF4444",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+  },
+  badgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontFamily: fonts.bold,
+  },
   chatCardContent: {
     flex: 1,
+    marginLeft: 14,
   },
   cardHeaderRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justify: "space-between",
     alignItems: "center",
   },
   userName: {
@@ -312,26 +436,16 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: "#0F172A",
   },
-  timeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
   timeText: {
     fontSize: 12,
     lineHeight: 16,
     fontFamily: fonts.regular,
     color: "#64748B",
+    marginLeft: "auto",
   },
   timeTextUnread: {
     color: "#005086",
     fontFamily: fonts.bold,
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#005086",
   },
   designationText: {
     fontSize: 12,
@@ -350,5 +464,10 @@ const styles = StyleSheet.create({
   lastMessageUnread: {
     fontFamily: fonts.bold,
     color: "#0F172A",
+  },
+  loadingFooter: {
+    paddingVertical: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

@@ -189,7 +189,7 @@ exports.updateOnlineStatus = async (req, res) => {
         lastActive: new Date(),
       },
       {
-        new: true,
+        returnDocument: "after",
       },
     ).select("_id isOnline lastActive");
 
