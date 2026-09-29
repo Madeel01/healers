@@ -39,6 +39,7 @@ import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
 import ChildrenScreen from '../screens/admin/Children';
 import StaffOnLeaveScreen from '../screens/admin/StaffOnLeave';
 import BatchManagementScreen from '../screens/admin/BatchManagement';
+import NotificationScreen from '../screens/admin/Notification';
 
 const Stack = createNativeStackNavigator();
 
@@ -73,6 +74,7 @@ function AdminStack() {
       <Stack.Screen name="InvoiceManagement" component={InvoiceManagementScreen} />
       <Stack.Screen name="CreateNewInvoice" component={CreateNewInvoiceScreen} />
       <Stack.Screen name="InvoiceDetail" component={InvoiceDetailScreen} />
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="StaffOnLeave" component={StaffOnLeaveScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );

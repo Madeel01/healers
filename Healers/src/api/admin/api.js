@@ -35,12 +35,9 @@ export const assignChildrenToTherapist = async ({ therapistId, addChildIds,remov
   return response.data;
 };
 
-export const getUsersByRole = async (params = {}) => {
-  const response = await apiClient.get("/admin/users",{ params });
-  return response.data;
-}
-///////////////////// Schedule API's /////////////////////////////
 
+
+///////////////////// Schedule API's /////////////////////////////
 export const createSchedule = (body) =>
   apiClient.post('/scheduling', body).then((r) => r.data);
 
@@ -102,3 +99,67 @@ export const updateBatch = (id, data) =>
 
 export const deleteBatch = (id) =>
   apiClient.delete(`/admin/batches/${id}`).then((r) => r.data);
+
+
+
+///////////////////// BroadCast API's /////////////////////////////
+export const createBroadcast = (formData) =>
+  apiClient.post('/admin/broadcast', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+export const updateBroadcast = (broadcastId, formData) =>
+  apiClient.put(`/admin/broadcast/${broadcastId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+
+export const getBroadcastById = (broadcastId) =>
+  apiClient.get(`/admin/broadcast/${broadcastId}`);
+
+export const getBroadcasts = (page = 1, limit = 20, search = '', status = '', type="") =>
+  apiClient.get('/admin/broadcast', { params: { page, limit, search, status, type } });
+
+export const deleteBroadcast = (broadcastId) =>
+  apiClient.delete(`/admin/broadcast/${broadcastId}`);
+
+
+
+///////////////////// Complaints API's /////////////////////////////
+export const getComplaints = (params = {}) =>
+  apiClient.get('/admin/complaints', { params }).then((res) => res.data);
+
+export const resolveComplaint = (complaintId, resolutionNote = '') =>
+  apiClient
+    .put(`/admin/complaints/${complaintId}/resolve`, { resolutionNote })
+    .then((res) => res.data);
+
+export const updateComplaintPriority = (complaintId, priority) =>
+  apiClient
+    .put(`/admin/complaints/${complaintId}/priority`, { priority })
+    .then((res) => res.data);
+
+export const getComplaintMessages = (complaintId) =>
+  apiClient.get(`/admin/complaints/${complaintId}/messages`).then((res) => res.data);
+
+export const sendComplaintMessage = (complaintId, text) =>
+  apiClient
+    .post(`/admin/complaints/${complaintId}/messages`, { text })
+    .then((res) => res.data);
+
+
+///////////////////// Common API's /////////////////////////////
+export const getParents = (params = {}) =>
+  apiClient.get('/admin/parents', { params }).then((res) => res.data);
+export const getUsersByRole = async (params = {}) => {
+  const response = await apiClient.get("/admin/users",{ params });
+  return response.data;
+}
+
+
+
+///////////////////// Notification API's /////////////////////////////
+export const getAllNotifications = (params) =>
+  apiClient.get("/admin/notifications", { params }).then((r) => r.data);
+
+export const markNotificationRead = (id) =>
+  apiClient.put(`/admin/notifications/${id}/read`).then((r) => r.data);
+
+export const markAllNotificationsRead = () =>
+  apiClient.put("/admin/notifications/read-all").then((r) => r.data);
