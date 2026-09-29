@@ -208,10 +208,6 @@ export default function WeeklyVideoScreen({
         5,
       );
 
-      console.log(
-        "Videos response:",
-        response,
-      );
 
       if (response?.success) {
         const newVideos = response?.data || [];

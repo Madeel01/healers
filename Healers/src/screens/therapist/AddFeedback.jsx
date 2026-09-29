@@ -56,9 +56,7 @@ export default function AddFeedbackScreen({ navigation, route }) {
   const [behaviorNote, setBehaviorNote] = useState(
     feedbackData?.notes || feedbackData?.behaviorNote || ""
   );
-  console.log(
-    "session",session
-  )
+
   const [isVisibleToParents, setIsVisibleToParents] = useState(
     feedbackData?.isVisibleToParent !== undefined ? feedbackData.isVisibleToParent : true
   );

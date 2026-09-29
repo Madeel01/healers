@@ -11,7 +11,7 @@ const replySchema = new mongoose.Schema(
     repliedByRole: {
       type: String,
       required: true,
-      enum: ["Child", "Therapist","Admin"],
+      enum: ["Child", "Therapist", "Admin"],
     },
 
     message: {
@@ -22,7 +22,7 @@ const replySchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 const feedbackSchema = new mongoose.Schema(
   {
@@ -46,11 +46,11 @@ const feedbackSchema = new mongoose.Schema(
     },
     notes: {
       type: String,
-      required: true,
+      default: null,
     },
     mood: {
       type: String,
-      enum: ["Happy", "Neutral", "Sad", "Anxious", "Calm", "Frustrated"],
+      enum: ["Happy", "Neutral", "Sad", "Anxious", "Calm", "Frustrated", "Excited"],
       default: "Neutral",
     },
     isVisibleToParent: {
