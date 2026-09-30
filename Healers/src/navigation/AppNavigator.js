@@ -13,7 +13,6 @@ import AddNewPackageScreen from '../screens/admin/AddNewPackage';
 import AdminDashboard from '../screens/admin/AdminDashboard';
 import BatchManagementScreen from '../screens/admin/BatchManagement';
 import BroadcastManagementScreen from '../screens/admin/BroadcastManagement';
-import ChildrenScreen from '../screens/admin/Children';
 import ComplainManagementScreen from '../screens/admin/ComplainManagement';
 import CreateNewInvoiceScreen from '../screens/admin/CreateNewInvoice';
 import FeedbackScreen from '../screens/admin/Feedback';
@@ -45,6 +44,8 @@ import ProgressTrackingScreen from '../screens/therapist/ProgressTracking';
 import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
+import ChildrenScreen from '../screens/admin/Children';
+import NotificationScreen from '../screens/admin/Notification';
 
 const Stack = createNativeStackNavigator();
 
@@ -79,6 +80,7 @@ function AdminStack() {
       <Stack.Screen name="InvoiceManagement" component={InvoiceManagementScreen} />
       <Stack.Screen name="CreateNewInvoice" component={CreateNewInvoiceScreen} />
       <Stack.Screen name="InvoiceDetail" component={InvoiceDetailScreen} />
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="StaffOnLeave" component={StaffOnLeaveScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );

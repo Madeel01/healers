@@ -162,8 +162,45 @@ export default function TherapistsScreen({ navigation }) {
   };
 
   const handleSaveTherapist = async () => {
-    if (!newTherapist.name || !newTherapist.email || !newTherapist.phone || saving) {
+    if (
+      !newTherapist.name ||
+      !newTherapist.email ||
+      !newTherapist.phone ||
+      saving
+    ) {
       Alert.alert("Validation Error", "Please fill in all required fields.");
+      return;
+    }
+
+    const email = newTherapist.email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Validation Error", "Please enter a valid email address.");
+      return;
+    }
+
+    const phone = newTherapist.phone.trim();
+    const phoneRegex = /^(030\d{8}|\+923\d{9})$/;
+
+    if (!phoneRegex.test(phone)) {
+      Alert.alert(
+        "Validation Error",
+        "Phone number must be in 03011234567 or +923011234567 format."
+      );
+      return;
+    }
+
+    const normalizedPhone = phone.startsWith("+92")
+      ? "0" + phone.slice(3)
+      : phone;
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+
+    if (password && !passwordRegex.test(password)) {
+      Alert.alert(
+        "Validation Error",
+        "Password must be at least 8 characters and contain 1 lowercase, 1 uppercase, and 1 special character."
+      );
       return;
     }
 
@@ -172,26 +209,33 @@ export default function TherapistsScreen({ navigation }) {
         Alert.alert("Error", "Please enter and confirm your password.");
         return;
       }
-      if (password !== confirmPassword) {
-        Alert.alert("Error", "Password and Confirm Password do not match.");
+    }
+
+    if (isEditMode && (password || confirmPassword)) {
+      if (!password || !confirmPassword) {
+        Alert.alert(
+          "Error",
+          "Please fill both password fields, or leave both blank."
+        );
         return;
       }
     }
 
-    setSaving(true);
+    if (password && password !== confirmPassword) {
+      Alert.alert("Error", "Password and Confirm Password do not match.");
+      return;
+    }
 
-    const matchedSpecialty = therapistSpecialities.find(
-      (item) => item.id === newTherapist.specialty
-    );
+    setSaving(true);
 
     const payload = {
       name: newTherapist.name,
       specialty: newTherapist.specialty,
       maxChildren: parseInt(newTherapist.maxChildren, 10) || 5,
-      email: newTherapist.email,
-      phone: newTherapist.phone,
+      email: email,
+      phone: normalizedPhone,
       address: newTherapist.address,
-      ...(!isEditMode && { password }),
+      ...((!isEditMode || password) && { password }),
     };
 
     try {
@@ -237,19 +281,24 @@ export default function TherapistsScreen({ navigation }) {
           address: created?.address || payload.address,
         };
 
-        // await fetchTherapistData(1, true);
+        setTherapists((prev) => [newItem, ...prev]);
       }
+
       await fetchTherapistData(1, true);
-      // Success - Modal close aur fields reset karein
+
       setIsAddModalOpen(false);
       resetTherapistForm();
       setPassword("");
       setConfirmPassword("");
     } catch (error) {
       console.log("Failed to save therapist:", error);
+      const backendMessage = error?.response?.data?.message;
       Alert.alert(
         "Error",
-        `Could not ${isEditMode ? "update" : "create"} this therapist. Please try again.`
+        backendMessage ||
+          `Could not ${
+            isEditMode ? "update" : "create"
+          } this therapist. Please try again.`
       );
     } finally {
       setSaving(false);
@@ -270,7 +319,7 @@ export default function TherapistsScreen({ navigation }) {
     try {
       const response = await therapistUsers({
         page: pageNum,
-        limit: 3,
+        limit: 5,
         search: searchQuery,
         specialty: selectedFilter === "All" ? "" : selectedFilter,
       });
@@ -763,8 +812,7 @@ export default function TherapistsScreen({ navigation }) {
             resetTherapistForm();
           }}
         >
-          <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <View activeOpacity={1} style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>
                   {isEditMode ? "Edit Therapist" : "Add New Therapist"}
@@ -778,6 +826,7 @@ export default function TherapistsScreen({ navigation }) {
                   <Feather name="x" size={22} color="#64748B" />
                 </TouchableOpacity>
               </View>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
               <Text style={styles.fieldLabel}>Full Name <Text style={styles.requiredText}>*</Text></Text>
               <TextInput
@@ -901,7 +950,7 @@ export default function TherapistsScreen({ navigation }) {
                   )}
                 </TouchableOpacity>
               </View>
-          </TouchableOpacity>
+          </View>
         </TouchableOpacity>
       </Modal>
 

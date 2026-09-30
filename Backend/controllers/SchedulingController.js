@@ -623,8 +623,6 @@ exports.deleteAppointment = async (req, res) => {
     });
   }
 };
-
-
 exports.getTherapistSchedules = async (req, res) => {
   try {
     const { therapistId, year, month, search } = req.query;
@@ -684,7 +682,6 @@ exports.getTherapistSchedules = async (req, res) => {
     });
   }
 };
-
 exports.getChildSchedules = async (req, res) => {
   try {
     const { childId, year, month } = req.query;

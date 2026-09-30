@@ -87,7 +87,7 @@ function mapFeedbackItem(item, status) {
     name: person.fullName || 'Unknown',
     role,
     rating: typeof item.rating === 'number' ? item.rating : 0,
-    comment: item.notes.trim() || item.notes.trim(),
+    comment: item?.notes?.trim() || item?.notes,
     avatar: DEFAULT_AVATAR,
     primaryAction: item.isRespond ? 'View Reply' : 'Reply',
     primaryIcon: item.isRespond ? undefined : 'corner-up-left',
@@ -592,7 +592,14 @@ export default function FeedbackScreen({ navigation }) {
                 </Text>
               ) : (
                 replies.map((reply) => {
-                  const isMyReply = reply.repliedBy.id === user.id;
+                  // const isMyReply = reply.repliedBy.id === user.id;
+                  const senderId = typeof reply.repliedBy === 'object' 
+                    ? (reply.repliedBy?.id || reply.repliedBy?._id) 
+                    : reply.repliedBy;
+
+                  const currentUserId = user?.id || user?._id;
+
+                  const isMyReply = String(senderId) === String(currentUserId);
                   return (
                     <View
                       key={reply._id}

@@ -15,8 +15,8 @@ const userSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      unique: true,
-      sparse: true,
+      // unique: true,
+      // sparse: true,
       trim: true,
     },
     password: {
@@ -49,6 +49,7 @@ const userSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    fatherCnic: { type: String, trim: true, default: "" },
     age: {
       type: Number,
       default: null,
