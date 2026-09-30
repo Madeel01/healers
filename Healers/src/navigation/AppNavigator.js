@@ -13,7 +13,6 @@ import AddNewPackageScreen from '../screens/admin/AddNewPackage';
 import AdminDashboard from '../screens/admin/AdminDashboard';
 import BatchManagementScreen from '../screens/admin/BatchManagement';
 import BroadcastManagementScreen from '../screens/admin/BroadcastManagement';
-import ChildrenScreen from '../screens/admin/Children';
 import ComplainManagementScreen from '../screens/admin/ComplainManagement';
 import CreateNewInvoiceScreen from '../screens/admin/CreateNewInvoice';
 import FeedbackScreen from '../screens/admin/Feedback';
@@ -46,8 +45,6 @@ import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
 import ChildrenScreen from '../screens/admin/Children';
-import StaffOnLeaveScreen from '../screens/admin/StaffOnLeave';
-import BatchManagementScreen from '../screens/admin/BatchManagement';
 import NotificationScreen from '../screens/admin/Notification';
 
 const Stack = createNativeStackNavigator();
