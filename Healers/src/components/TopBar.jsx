@@ -1,72 +1,109 @@
 import React, {
   useContext,
+  useEffect,
+  useRef,
   useState,
 } from 'react';
 
 import {
-  FlatList,
+  Animated,
   Image,
-  Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Feather } from '@expo/vector-icons';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useIsFocused } from '@react-navigation/native';
 
+import { getUnreadNotificationCountApi } from '../api/authApi';
 import { AuthContext } from '../context/AuthContext';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../styles/theme';
+import NotificationModal from './NotificationModal';
 
-const mockNotifications = [
-  {
-    id: "1",
-    title: "New Leave Request",
-    message: "Dr. Julian Brooks applied for Annual Leave.",
-    time: "10 mins ago",
-    unread: true,
-    icon: "event-note",
-    color: "#D97706",
-  },
-  {
-    id: "2",
-    title: "Session Completed",
-    message: "Sarah Mitchell completed speech therapy session with Alex.",
-    time: "1 hour ago",
-    unread: true,
-    icon: "check-circle",
-    color: "#059669",
-  },
-  {
-    id: "3",
-    title: "Fee Payment Received",
-    message: "Received PKR 15,000 for Patient #1042.",
-    time: "2 hours ago",
-    unread: false,
-    icon: "payments",
-    color: "#0B4A6F",
-  },
-];
-
-export default function TopBar({ navigation, isNotificationOpen, onToggleNotification, headerTitle }) {
+export default function TopBar({ navigation, headerTitle }) {
   const { user } = useContext(AuthContext);
 
-  const insets = useSafeAreaInsets();
-  const [internalModalVisible, setInternalModalVisible] = useState(false);
-  const [notifications] = useState(mockNotifications);
-
-  const isModalVisible = isNotificationOpen !== undefined ? isNotificationOpen : internalModalVisible;
-  const setModalVisible = onToggleNotification || setInternalModalVisible;
-
-  const unreadCount = notifications.filter((n) => n.unread).length;
   const userName = user?.fullName || user?.name || "";
   const profileImage = user?.profileImage || "";
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+
+  const fetchNotificationUnreadCount = async () => {
+    try {
+      const response = await getUnreadNotificationCountApi();
+
+      if (response?.success) {
+        setNotificationUnreadCount(response.count || 0);
+      }
+    } catch (error) {
+      console.log("fetchNotificationUnreadCount error:", error);
+    }
+  };
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    if (!isFocused) {
+      return;
+    }
+
+    fetchNotificationUnreadCount();
+
+    const intervalUnread = setInterval(() => {
+      fetchNotificationUnreadCount();
+    }, 10000);
+
+    return () => {
+      clearInterval(intervalUnread);
+    };
+  }, [isFocused]);
+  const bellShake = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (notificationUnreadCount > 0) {
+      const shakeAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(bellShake, {
+            toValue: 1,
+            duration: 80,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bellShake, {
+            toValue: -1,
+            duration: 80,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bellShake, {
+            toValue: 1,
+            duration: 80,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bellShake, {
+            toValue: 0,
+            duration: 80,
+            useNativeDriver: true,
+          }),
+          Animated.delay(1200),
+        ]),
+      );
+
+      shakeAnimation.start();
+
+      return () => {
+        shakeAnimation.stop();
+        bellShake.setValue(0);
+      };
+    }
+
+    bellShake.stopAnimation();
+    bellShake.setValue(0);
+  }, [notificationUnreadCount]);
 
   return (
     <>
@@ -82,11 +119,32 @@ export default function TopBar({ navigation, isNotificationOpen, onToggleNotific
         </View>
         <View style={styles.headerRightActions}>
           <TouchableOpacity
-            style={styles.headerIconButton}
-            onPress={() => setModalVisible(true)}
+            style={[styles.iconButton, { marginLeft: 12 }]}
+            activeOpacity={0.7}
+            onPress={() => setShowNotificationModal(true)}
           >
-            <Ionicons name="notifications-outline" size={22} color="#334155" />
-            {unreadCount > 0 && <View style={styles.notificationDot} />}
+            <View style={styles.notificationWrapper}>
+              <Animated.View
+                style={{
+                  transform: [
+                    {
+                      rotate: bellShake.interpolate({
+                        inputRange: [-1, 1],
+                        outputRange: ["-12deg", "12deg"],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                <Feather
+                  name="bell"
+                  size={20}
+                  color="#64748B"
+                />
+              </Animated.View>
+
+              {notificationUnreadCount > 0 && <View style={styles.redDot} />}
+            </View>
           </TouchableOpacity>
           {profileImage
             ? (
@@ -112,55 +170,10 @@ export default function TopBar({ navigation, isNotificationOpen, onToggleNotific
         </View>
       </View>
 
-      <Modal
-        visible={isModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { paddingTop: insets.top + 10 }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Notifications</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#0F172A" />
-              </TouchableOpacity>
-            </View>
-
-            <FlatList
-              data={notifications}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.notifListContainer}
-              renderItem={({ item }) => (
-                <View
-                  style={[
-                    styles.notifCard,
-                    item.unread && styles.unreadNotifCard,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.notifIconContainer,
-                      { backgroundColor: item.color + "20" },
-                    ]}
-                  >
-                    <MaterialIcons
-                      name={item.icon}
-                      size={20}
-                      color={item.color}
-                    />
-                  </View>
-                  <View style={styles.notifContent}>
-                    <Text style={styles.notifTitle}>{item.title}</Text>
-                    <Text style={styles.notifMessage}>{item.message}</Text>
-                    <Text style={styles.notifTime}>{item.time}</Text>
-                  </View>
-                </View>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
+      <NotificationModal
+        visible={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+      />
     </>
   );
 }
@@ -181,14 +194,17 @@ const styles = StyleSheet.create({
     padding: 6,
     position: "relative",
   },
-  notificationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#DC2626",
+  notificationWrapper: {
+    position: "relative",
+  },
+  redDot: {
     position: "absolute",
-    top: 6,
-    right: 6,
+    top: 0,
+    right: 0,
+    width: 7,
+    height: 7,
+    borderRadius: 99,
+    backgroundColor: "#DC2626",
   },
   headerTitle: {
     fontSize: 16,
