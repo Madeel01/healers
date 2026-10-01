@@ -45,13 +45,28 @@ export const getMessagesApi = async (conversationId) => {
 };
 
 export const sendMessageApi = async (payload) => {
-  // payload: { senderId, receiverId, text }
   const response = await apiClient.post("/chat/messages", payload);
   return response.data;
 };
 
 export const markAsSeenApi = async (payload) => {
-  // payload: { conversationId, userId }
   const response = await apiClient.post("/chat/messages/mark-as-seen", payload);
+  return response.data;
+};
+
+export const UnreadSummary = async (userId, role) => {
+  const response = await apiClient.get(
+    `/chat/unread-summary?userId=${userId}&role=${role}`,
+  );
+  return response.data;
+};
+
+export const getChildTherapist = async () => {
+  const response = await apiClient.get("/child/therapist");
+  return response.data;
+};
+
+export const getCNICUSERS = async (cnic) => {
+  const response = await apiClient.get(`/child/cnic_user/${cnic}`);
   return response.data;
 };

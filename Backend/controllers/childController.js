@@ -3,6 +3,7 @@ const Feedback = require("../models/Feedback");
 const Scheduling = require("../models/Scheduling");
 const TherapistAssignment = require("../models/TherapistAssignment");
 const WeeklyVideo = require("../models/Video");
+const User = require("../models/User");
 
 exports.getChildFeedbackManagement = async (req, res) => {
   try {
@@ -1471,3 +1472,88 @@ exports.getAssignMembers = async (req, res) => {
     });
   }
 };
+
+exports.getAssignTherapist = async (req, res) => {
+  try {
+    const rawChildId = req.user?._id || req.user?.id;
+
+    if (!rawChildId) {
+      return res.status(400).json({
+        success: false,
+        message: "Child ID is required.",
+      });
+    }
+
+    const childId = new mongoose.Types.ObjectId(rawChildId);
+
+    const assignments = await TherapistAssignment.find({ childIds: childId })
+      .populate({
+        path: "therapistId",
+        select: "fullName email",
+      })
+      .lean();
+
+    if (!assignments || assignments.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No therapists assigned for this child.",
+      });
+    }
+
+    const therapists = assignments
+      .filter((item) => item.therapistId)
+      .map((item) => ({
+        _id: item.therapistId._id,
+        name: item.therapistId.fullName,
+        email: item.therapistId.email,
+        specialty: item.specialty,
+      }));
+
+    return res.status(200).json({
+      success: true,
+      data: therapists,
+    });
+  } catch (error) {
+    console.error("Error fetching assigned therapists:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch assigned therapists.",
+      error: error.message,
+    });
+  }
+};
+
+exports.getCNICRegisterSameUser = async (req, res) => {
+  try {
+    const { cnic } = req.params;
+    const currentUserId = req.user?._id || req.user?.id;
+
+    if (!cnic) {
+      return res.status(400).json({
+        success: false,
+        message: "CNIC is required",
+      });
+    }
+
+    const users = await User.find({
+      fatherCnic: cnic,
+      _id: { $ne: currentUserId },
+    }).select(
+      "_id fullName email phone role permissions profileImage age fatherCnic",
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    console.error("getCNICRegisterSameUser error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+

@@ -35,6 +35,7 @@ import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
+  commonStyles,
   fonts,
 } from '../../styles/theme';
 import { formatTo12Hour } from '../../utils/hoursformat';
@@ -644,7 +645,7 @@ export default function ChildFeedback({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.mainContainer}>
+    <SafeAreaView style={[styles.mainContainer,commonStyles.container]}>
       <TopBar
         navigation={navigation}
         isNotificationOpen={isNotificationOpen}
@@ -1317,7 +1318,6 @@ export default function ChildFeedback({ navigation }) {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: "#F1F5F9",
   },
 
   scrollArea: {

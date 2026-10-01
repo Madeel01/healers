@@ -15,8 +15,12 @@ const recipientSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    isDelete: {
+      type: Boolean,
+      default: false,
+    },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const notificationSchema = new mongoose.Schema(
@@ -114,7 +118,7 @@ const notificationSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 module.exports = mongoose.model("Notification", notificationSchema);

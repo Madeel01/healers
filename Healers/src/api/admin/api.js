@@ -7,55 +7,47 @@ export const Overview = async () => {
 
 ///////////////////// Therapist API's /////////////////////////////
 export const therapistUsers = async (params = {}) => {
-  const response = await apiClient.get("/admin/get_therapists",{ params });
+  const response = await apiClient.get("/admin/get_therapists", { params });
   return response.data;
-}
+};
 
 export const createTherapist = async (payload) => {
   const response = await apiClient.post("/admin/therapists", payload);
   return response.data;
 };
- 
+
 export const updateTherapist = async (id, payload) => {
   const response = await apiClient.put(`/admin/therapists/${id}`, payload);
   return response.data;
 };
- 
+
 export const deleteTherapist = async (id) => {
   const response = await apiClient.delete(`/admin/therapists/${id}`);
   return response.data;
 };
 
-export const assignChildrenToTherapist = async ({ therapistId, addChildIds,removeChildIds }) => {
+export const assignChildrenToTherapist = async ({ therapistId, addChildIds, removeChildIds }) => {
   const response = await apiClient.post("/admin/therapists/assign", {
     therapistId,
     addChildIds,
-    removeChildIds
+    removeChildIds,
   });
   return response.data;
 };
 
-
-
 ///////////////////// Schedule API's /////////////////////////////
-export const createSchedule = (body) =>
-  apiClient.post('/scheduling', body).then((r) => r.data);
+export const createSchedule = (body) => apiClient.post("/scheduling", body).then((r) => r.data);
 
-export const getSchedule = (params) =>
-  apiClient.get('/scheduling', { params }).then((r) => r.data);
+export const getSchedule = (params) => apiClient.get("/scheduling", { params }).then((r) => r.data);
 
-export const addAppointment = (body) =>
-  apiClient.post('/scheduling/appointment', body).then((r) => r.data);
+export const addAppointment = (body) => apiClient.post("/scheduling/appointment", body).then((r) => r.data);
 
-export const updateAppointment = (body) =>
-  apiClient.put('/scheduling/appointment', body).then((r) => r.data);
+export const updateAppointment = (body) => apiClient.put("/scheduling/appointment", body).then((r) => r.data);
 
 export const deleteAppointment = (body) =>
-  apiClient.delete('/scheduling/appointment', { data: body }).then((r) => r.data);
+  apiClient.delete("/scheduling/appointment", { data: body }).then((r) => r.data);
 
-export const getTherapistSchedules = (params) =>
-  apiClient.get('/scheduling/therapist', { params }).then((r) => r.data);
-
+export const getTherapistSchedules = (params) => apiClient.get("/scheduling/therapist", { params }).then((r) => r.data);
 
 ///////////////////// Children API's /////////////////////////////
 export const childUsers = (params) => apiClient.get("/admin/children", { params });
@@ -75,30 +67,22 @@ export const getFeedbackRequests = (params) => apiClient.get(`/admin/feedback/${
 export const deleteFeedback = (feedbackId) => apiClient.delete(`/admin/feedback/${feedbackId}`);
 export const getFeedbackReplies = async (feedbackId) => {
   const response = await apiClient.get(
-    `/admin/feedback/${feedbackId}/replies`
+    `/admin/feedback/${feedbackId}/replies`,
   );
   return response.data;
 };
 export const addFeedbackReply = async (feedbackId, message) => {
   const response = await apiClient.post(
     `/admin/feedback/${feedbackId}/replies`,
-    { message }
+    { message },
   );
   return response.data;
 };
 
 ///////////////////// Batch API's /////////////////////////////
-export const getBatches = (params) =>
-  apiClient.get("/admin/batches", { params }).then((r) => r.data);
+export const getBatches = (params) => apiClient.get("/admin/batches", { params }).then((r) => r.data);
 
-export const createBatch = (data) =>
-  apiClient.post("/admin/batches", data).then((r) => r.data);
-
-export const updateBatch = (id, data) =>
-  apiClient.put(`/admin/batches/${id}`, data).then((r) => r.data);
-
-export const deleteBatch = (id) =>
-  apiClient.delete(`/admin/batches/${id}`).then((r) => r.data);
+export const createBatch = (data) => apiClient.post("/admin/batches", data).then((r) => r.data);
 
 export const getBatchScheduleData = (batchId) =>
   apiClient.get(`/admin/batches/schedule/${batchId}`).then((r) => r.data);
@@ -127,32 +111,35 @@ export const removeBatchAssignment = (batchId, assignmentId) =>
   apiClient
     .delete(`/admin/batches/${batchId}/assignments/${assignmentId}`)
     .then((r) => r.data);
+export const updateBatch = (id, data) => apiClient.put(`/admin/batches/${id}`, data).then((r) => r.data);
 
+export const deleteBatch = (id) => apiClient.delete(`/admin/batches/${id}`).then((r) => r.data);
 
 ///////////////////// BroadCast API's /////////////////////////////
 export const createBroadcast = (formData) =>
-  apiClient.post('/admin/broadcast', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  apiClient.post("/admin/broadcast", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
   });
 export const updateBroadcast = (broadcastId, formData) =>
-  apiClient.put(`/admin/broadcast/${broadcastId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+  apiClient.put(`/admin/broadcast/${broadcastId}`, formData, { headers: { "Content-Type": "multipart/form-data" } });
 
-export const getBroadcastById = (broadcastId) =>
-  apiClient.get(`/admin/broadcast/${broadcastId}`);
+export const getBroadcastById = (broadcastId) => apiClient.get(`/admin/broadcast/${broadcastId}`);
 
-export const getBroadcasts = (page = 1, limit = 20, search = '', status = '', type="") =>
-  apiClient.get('/admin/broadcast', { params: { page, limit, search, status, type } });
+export const getBroadcasts = (page = 1, limit = 20, search = "", status = "", type = "") =>
+  apiClient.get("/admin/broadcast", { params: { page, limit, search, status, type } });
 
-export const deleteBroadcast = (broadcastId) =>
-  apiClient.delete(`/admin/broadcast/${broadcastId}`);
-
-
+export const deleteBroadcast = (broadcastId, IsHide = false, userID = null) =>
+  apiClient.delete(`/admin/broadcast/${broadcastId}`, {
+    data: {
+      IsHide,
+      userID,
+    },
+  });
 
 ///////////////////// Complaints API's /////////////////////////////
-export const getComplaints = (params = {}) =>
-  apiClient.get('/admin/complaints', { params }).then((res) => res.data);
+export const getComplaints = (params = {}) => apiClient.get("/admin/complaints", { params }).then((res) => res.data);
 
-export const resolveComplaint = (complaintId, resolutionNote = '') =>
+export const resolveComplaint = (complaintId, resolutionNote = "") =>
   apiClient
     .put(`/admin/complaints/${complaintId}/resolve`, { resolutionNote })
     .then((res) => res.data);
@@ -170,26 +157,19 @@ export const sendComplaintMessage = (complaintId, text) =>
     .post(`/admin/complaints/${complaintId}/messages`, { text })
     .then((res) => res.data);
 
-
 ///////////////////// Common API's /////////////////////////////
-export const getParents = (params = {}) =>
-  apiClient.get('/admin/parents', { params }).then((res) => res.data);
+export const getParents = (params = {}) => apiClient.get("/admin/parents", { params }).then((res) => res.data);
 export const getUsersByRole = async (params = {}) => {
-  const response = await apiClient.get("/admin/users",{ params });
+  const response = await apiClient.get("/admin/users", { params });
   return response.data;
-}
-
-
+};
 
 ///////////////////// Notification API's /////////////////////////////
-export const getAllNotifications = (params) =>
-  apiClient.get("/admin/notifications", { params }).then((r) => r.data);
+export const getAllNotifications = (params) => apiClient.get("/admin/notifications", { params }).then((r) => r.data);
 
-export const markNotificationRead = (id) =>
-  apiClient.put(`/admin/notifications/${id}/read`).then((r) => r.data);
+export const markNotificationRead = (id) => apiClient.put(`/admin/notifications/${id}/read`).then((r) => r.data);
+export const markAllNotificationsRead = () => apiClient.put("/admin/notifications/read-all").then((r) => r.data);
 
-export const markAllNotificationsRead = () =>
-  apiClient.put("/admin/notifications/read-all").then((r) => r.data);
 
 
 

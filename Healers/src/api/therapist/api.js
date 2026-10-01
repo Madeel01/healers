@@ -55,8 +55,11 @@ export const updateGoalProgressApi = async (programId, goalId, progress) => {
   return response.data;
 };
 
-export const getChildStatsApi = async (childId) => {
-  const response = await apiClient.get(`/therapist/get_child_stats/${childId}`);
+export const getChildStatsApi = async (childId, therapistId) => {
+  const response = await apiClient.get(`/therapist/get_child_stats/${childId}`, {
+    params: therapistId ? { therapistId } : {},
+  });
+
   return response.data;
 };
 
@@ -111,8 +114,8 @@ export const uploadToCloudinaryFileSystem = async (
   fileUri,
   resourceType = "video",
 ) => {
-  const CLOUD_NAME = "ddd3aphzb";
-  const UPLOAD_PRESET = "healers_preset";
+  const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
   try {
     if (!fileUri) {

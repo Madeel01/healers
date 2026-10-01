@@ -1200,7 +1200,8 @@ exports.assignChildrenToTherapist = async (req, res) => {
       );
       return res.status(400).json({
         success: false,
-        message: `Only ${availableSlots} slot(s) available for this therapist after removals. You tried to add ${toAdd.length} new child(ren).`,
+        message:
+          `Only ${availableSlots} slot(s) available for this therapist after removals. You tried to add ${toAdd.length} new child(ren).`,
         data: {
           therapistId,
           currentLoad,
@@ -2058,17 +2059,16 @@ exports.createBatch = async (req, res) => {
     const { batchName, speciality, dateFrom, dateTo, maxChild, fee } = req.body;
     const specialityList = Array.isArray(speciality) ? speciality : [];
     if (
-      !batchName ||
-      !specialityList.length ||
-      !dateFrom ||
-      !dateTo ||
-      !maxChild ||
-      !fee
+      !batchName
+      || !specialityList.length
+      || !dateFrom
+      || !dateTo
+      || !maxChild
+      || !fee
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "batchName, speciality (at least one), dateFrom, dateTo, Batch fee and Batch Size are required.",
+        message: "batchName, speciality (at least one), dateFrom, dateTo, Batch fee and Batch Size are required.",
       });
     }
 
@@ -2528,15 +2528,68 @@ exports.updateBroadcast = async (req, res) => {
       });
   }
 };
+
+// exports.deleteBroadcast = async (req, res) => {
+//   try {
+//     const { broadcastId, IsHide = false, userID = null } = req.params;
+//     const broadcast = await Notification.findByIdAndDelete(broadcastId);
+//     if (!broadcast) {
+//       return res.status(404).json({ success: false, message: "Broadcast not found." });
+//     }
+//     if (broadcast.attachment?.url) {
+//       const filePath = path.join(__dirname, "..", broadcast.attachment.url.replace(/^\//, ""));
+//       fs.unlink(filePath, () => {}); // best-effort cleanup, no need to block response on it
+//     }
+//     return res.status(200).json({ success: true, message: "Broadcast deleted." });
+//   } catch (error) {
+//     return res.status(500).json({ success: false, message: "Failed to delete broadcast.", error: error.message });
+//   }
+// };
+
 exports.deleteBroadcast = async (req, res) => {
   try {
     const { broadcastId } = req.params;
-    const broadcast = await Notification.findByIdAndDelete(broadcastId);
+    const { IsHide = false, userID = null } = req.body;
+
+    const broadcast = await Notification.findById(broadcastId);
+
     if (!broadcast) {
       return res
         .status(404)
         .json({ success: false, message: "Broadcast not found." });
     }
+
+    if (IsHide === true || IsHide === "true") {
+      if (!userID) {
+        return res.status(400).json({
+          success: false,
+          message: "userID is required when hiding a broadcast.",
+        });
+      }
+
+      const recipient = broadcast.recipients.find(
+        (item) => item.user?.toString() === userID.toString(),
+      );
+
+      if (!recipient) {
+        return res.status(404).json({
+          success: false,
+          message: "User is not a recipient of this broadcast.",
+        });
+      }
+
+      recipient.isDelete = true;
+
+      await broadcast.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Broadcast hidden for this user.",
+      });
+    }
+
+    await Notification.findByIdAndDelete(broadcastId);
+
     if (broadcast.attachment?.url) {
       const filePath = path.join(
         __dirname,
@@ -2720,11 +2773,7 @@ exports.getComplaintMessages = async (req, res) => {
     await Complaint.updateOne(
       { _id: id },
       { $set: { "messages.$[m].readByRecipient": true } },
-      {
-        arrayFilters: [
-          { "m.senderRole": { $ne: "Admin" }, "m.readByRecipient": false },
-        ],
-      },
+      { arrayFilters: [{ "m.senderRole": { $ne: "Admin" }, "m.readByRecipient": false }] },
     );
 
     return res.status(200).json({
@@ -2760,11 +2809,7 @@ exports.sendComplaintMessage = async (req, res) => {
 
     const updated = await Complaint.findOneAndUpdate(
       { _id: req.params.id, status: "Pending" },
-      {
-        $push: {
-          messages: { senderId: req.user.id, senderRole: "Admin", text },
-        },
-      },
+      { $push: { messages: { senderId: req.user.id, senderRole: "Admin", text } } },
       { new: true, projection: { messages: { $slice: -1 } } },
     ).lean();
 
@@ -2792,21 +2837,51 @@ exports.getMyNotifications = async (req, res) => {
     const userId = req.user.id;
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit, 10) || 15, 50);
-    console.log(userId, "id");
-    const filter = { status: "sent", "recipients.user": userId };
+    const { typeFilter = "All" } = req.query;
+
+    const filter = {
+      status: "sent",
+      recipients: {
+        $elemMatch: {
+          user: userId,
+          $or: [
+            { isDelete: false },
+            { isDelete: { $exists: false } },
+          ],
+        },
+      },
+    };
+
+    if (typeFilter && typeFilter !== "All") {
+      filter.type = typeFilter;
+    }
+
+    const unreadFilter = {
+      status: "sent",
+      type: filter.type,
+      recipients: {
+        $elemMatch: {
+          user: userId,
+          readAt: null,
+          $or: [
+            { isDelete: false },
+            { isDelete: { $exists: false } },
+          ],
+        },
+      },
+    };
 
     const [total, notifications, unreadCount] = await Promise.all([
       Notification.countDocuments(filter),
+
       Notification.find(filter)
         .populate("createdBy", "fullName role")
         .sort({ sentAt: -1, createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Notification.countDocuments({
-        ...filter,
-        recipients: { $elemMatch: { user: userId, readAt: null } },
-      }),
+
+      Notification.countDocuments(unreadFilter),
     ]);
 
     const data = notifications.map((n) => {
@@ -2814,6 +2889,7 @@ exports.getMyNotifications = async (req, res) => {
         (r) => String(r.user) === String(userId),
       );
       const { recipients, ...rest } = n;
+
       return {
         ...rest,
         isRead: !!mine?.readAt,
@@ -2831,6 +2907,7 @@ exports.getMyNotifications = async (req, res) => {
     });
   } catch (error) {
     console.error("Get My Notifications Error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to fetch notifications.",
@@ -2838,6 +2915,7 @@ exports.getMyNotifications = async (req, res) => {
     });
   }
 };
+
 exports.markNotificationRead = async (req, res) => {
   try {
     const { id } = req.params;
