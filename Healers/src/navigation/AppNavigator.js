@@ -92,6 +92,8 @@ function AdminStack() {
       <Stack.Screen name="StaffOnLeave" component={StaffOnLeaveScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ChildMessages" component={MessagingScreen} />
       <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
+      <Stack.Screen name="ChildProfile" component={ChildProfileScreen} />
+
     </Stack.Navigator>
   );
 }
@@ -111,6 +113,8 @@ function TherapistStack() {
       <Stack.Screen name="ProgressTracking" component={ProgressTrackingScreen} />
       <Stack.Screen name="ChildMessages" component={MessagingScreen} />
       <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
+      <Stack.Screen name="ChildProfile" component={ChildProfileScreen} />
+
     </Stack.Navigator>
   );
 }
