@@ -16,7 +16,10 @@ import {
 
 import { Feather } from '@expo/vector-icons';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useIsFocused } from '@react-navigation/native';
+import {
+  useIsFocused,
+  useNavigation,
+} from '@react-navigation/native';
 
 import { getUnreadNotificationCountApi } from '../api/authApi';
 import { AuthContext } from '../context/AuthContext';
@@ -27,9 +30,10 @@ import {
 } from '../styles/theme';
 import NotificationModal from './NotificationModal';
 
-export default function TopBar({ navigation, headerTitle }) {
+export default function TopBar({ headerTitle }) {
   const { user } = useContext(AuthContext);
 
+  const navigation = useNavigation();
   const userName = user?.fullName || user?.name || "";
   const profileImage = user?.profileImage || "";
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
@@ -146,27 +150,32 @@ export default function TopBar({ navigation, headerTitle }) {
               {notificationUnreadCount > 0 && <View style={styles.redDot} />}
             </View>
           </TouchableOpacity>
-          {profileImage
-            ? (
-              <Image
-                source={{
-                  uri: profileImage,
-                }}
-                style={styles.avatarHeader}
-              />
-            )
-            : (
-              <View style={styles.avatarFallback}>
-                <Text
-                  style={styles.avatarFallbackText}
-                >
-                  {(userName || "User")
-                    .trim()
-                    .charAt(0)
-                    .toUpperCase()}
-                </Text>
-              </View>
-            )}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation?.navigate("ChildProfile")}
+          >
+            {profileImage
+              ? (
+                <Image
+                  source={{
+                    uri: profileImage,
+                  }}
+                  style={styles.avatarHeader}
+                />
+              )
+              : (
+                <View style={styles.avatarFallback}>
+                  <Text
+                    style={styles.avatarFallbackText}
+                  >
+                    {(userName || "User")
+                      .trim()
+                      .charAt(0)
+                      .toUpperCase()}
+                  </Text>
+                </View>
+              )}
+          </TouchableOpacity>
         </View>
       </View>
 
