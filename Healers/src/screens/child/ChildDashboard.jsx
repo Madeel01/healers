@@ -532,13 +532,6 @@ export default function ChildDashboardScreen({ navigation }) {
       <NotificationModal
         visible={showNotificationModal}
         onClose={() => setShowNotificationModal(false)}
-        onUnreadChange={(count) => {
-          setUnreadData((prev) => ({
-            ...prev,
-            hasUnread: count > 0,
-            totalUnreadCount: count,
-          }));
-        }}
       />
 
       <ChildBottomBar />
