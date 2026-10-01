@@ -46,6 +46,9 @@ import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
 import ChildrenScreen from '../screens/admin/Children';
 import NotificationScreen from '../screens/admin/Notification';
+import TherapistAvailabilityScreen from '../screens/admin/TherapistAvailability';
+import BatchScheduleScreen from '../screens/admin/BatchSchedule';
+import BatchScheduleCreateScreen from '../screens/admin/Batchschedulecreatescreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -81,6 +84,9 @@ function AdminStack() {
       <Stack.Screen name="CreateNewInvoice" component={CreateNewInvoiceScreen} />
       <Stack.Screen name="InvoiceDetail" component={InvoiceDetailScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
+      <Stack.Screen name="TherapistAvailability" component={TherapistAvailabilityScreen} />
+      <Stack.Screen name="BatchSchedule" component={BatchScheduleScreen} />
+      <Stack.Screen name="BatchScheduleCreate" component={BatchScheduleCreateScreen} />
       <Stack.Screen name="StaffOnLeave" component={StaffOnLeaveScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );

@@ -1,7 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const { protect, checkRole } = require("../middleware/authMiddleware");
-const { getAdminOverview, getTherapistsUsers, createTherapist, updateTherapist, deleteTherapist, assignChildrenToTherapist, childUsers, createChild, updateChild, deleteChild, getLeaveRequests, approveLeaveRequest, rejectLeaveRequest, getStaffOnLeaveToday, getAdminFeedbackManagement, getFeedbackReplies, addFeedbackReply, getBatches, createBatch, updateBatch, deleteBatch, deleteFeedback, createBroadcast, getAllBroadcasts, deleteBroadcast, getBroadcastById, updateBroadcast, getComplaints, resolveComplaint, updateComplaintPriority, getComplaintMessages, sendComplaintMessage, getMyNotifications, markNotificationRead, markAllNotificationsRead, getSettings, createSettings, updateSettings, deleteSettings } = require("../controllers/adminController");
+const { 
+    getAdminOverview, getTherapistsUsers, createTherapist, updateTherapist, deleteTherapist, assignChildrenToTherapist, childUsers, createChild, updateChild, deleteChild, getLeaveRequests, approveLeaveRequest, rejectLeaveRequest, getStaffOnLeaveToday, getAdminFeedbackManagement, getFeedbackReplies, addFeedbackReply, getBatches, createBatch, updateBatch, deleteBatch, deleteFeedback, createBroadcast, getAllBroadcasts, deleteBroadcast, getBroadcastById, updateBroadcast, getComplaints, resolveComplaint, updateComplaintPriority, getComplaintMessages, sendComplaintMessage, getMyNotifications, markNotificationRead, markAllNotificationsRead, getSettings, createSettings, updateSettings, deleteSettings, getAvailability, createAvailability, updateAvailability, deleteAvailability, 
+    getBatchScheduleData,
+    saveBatchSchedule,
+    getBatchTherapistOptions,
+    getBatchSlotOptions,
+    previewBatchSchedule,
+    getBatchEligibleChildren,
+    updateBatchChildren,
+    removeBatchAssignment
+} = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
 
@@ -35,6 +45,15 @@ router.post("/batches", protect, createBatch);
 router.put("/batches/:id", protect, updateBatch);
 router.delete("/batches/:id", protect, deleteBatch);
 
+router.get("/batches/schedule/:batchId", protect, getBatchScheduleData);
+router.get("/batches/:batchId/therapist-options", protect, getBatchTherapistOptions);
+router.post("/batches/:batchId/schedule/options", protect, getBatchSlotOptions);
+router.post("/batches/:batchId/schedule/preview", protect, previewBatchSchedule);
+router.post("/batches/:batchId/schedule", protect, saveBatchSchedule);
+router.get("/batches/:batchId/eligible-children", protect, getBatchEligibleChildren);
+router.put("/batches/:batchId/children", protect, updateBatchChildren);
+router.delete("/batches/:batchId/assignments/:assignmentId", protect, removeBatchAssignment);
+
 router.post("/broadcast", protect,uploadBroadcastAttachment, createBroadcast);
 router.get("/broadcast", protect, getAllBroadcasts);
 router.get("/broadcast/:broadcastId", getBroadcastById);
@@ -56,5 +75,10 @@ router.get("/settings", getSettings);
 router.post("/settings", createSettings);
 router.put("/settings", updateSettings);
 router.delete("/settings", deleteSettings);
+
+router.get("/scheduling/availability", protect, getAvailability);
+router.post("/scheduling/availability", protect, createAvailability);
+router.put("/scheduling/availability/:id", protect, updateAvailability);
+router.delete("/scheduling/availability/:id", protect, deleteAvailability);
 
 module.exports = router;

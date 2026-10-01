@@ -100,6 +100,33 @@ export const updateBatch = (id, data) =>
 export const deleteBatch = (id) =>
   apiClient.delete(`/admin/batches/${id}`).then((r) => r.data);
 
+export const getBatchScheduleData = (batchId) =>
+  apiClient.get(`/admin/batches/schedule/${batchId}`).then((r) => r.data);
+
+export const getBatchTherapistOptions = (batchId) =>
+  apiClient.get(`/admin/batches/${batchId}/therapist-options`).then((r) => r.data);
+
+export const getBatchSlotOptions = (batchId, data) =>
+  apiClient.post(`/admin/batches/${batchId}/schedule/options`, data).then((r) => r.data);
+
+export const previewBatchSchedule = (batchId, data) =>
+  apiClient.post(`/admin/batches/${batchId}/schedule/preview`, data).then((r) => r.data);
+
+export const saveBatchSchedule = (batchId, data) =>
+  apiClient.post(`/admin/batches/${batchId}/schedule`, data).then((r) => r.data);
+
+export const getBatchEligibleChildren = (batchId, search = "") =>
+  apiClient
+    .get(`/admin/batches/${batchId}/eligible-children`, { params: { search } })
+    .then((r) => r.data);
+
+export const updateBatchChildren = (batchId, data) =>
+  apiClient.put(`/admin/batches/${batchId}/children`, data).then((r) => r.data);
+
+export const removeBatchAssignment = (batchId, assignmentId) =>
+  apiClient
+    .delete(`/admin/batches/${batchId}/assignments/${assignmentId}`)
+    .then((r) => r.data);
 
 
 ///////////////////// BroadCast API's /////////////////////////////
@@ -163,3 +190,18 @@ export const markNotificationRead = (id) =>
 
 export const markAllNotificationsRead = () =>
   apiClient.put("/admin/notifications/read-all").then((r) => r.data);
+
+
+
+///////////////////// Availability API's /////////////////////////////
+export const getAvailability = (params) =>
+  apiClient.get('/admin/scheduling/availability', { params }).then((r) => r.data);
+
+export const createAvailability = (body) =>
+  apiClient.post('/admin/scheduling/availability', body).then((r) => r.data);
+
+export const updateAvailability = (id, body) =>
+  apiClient.put(`/admin/scheduling/availability/${id}`, body).then((r) => r.data);
+
+export const deleteAvailability = (id) =>
+  apiClient.delete(`/admin/scheduling/availability/${id}`).then((r) => r.data);
