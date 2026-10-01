@@ -347,7 +347,6 @@ export default function AssignedChildrenScreen({ navigation }) {
                         {program.programName ? `Program: ${program.programName}` : "General Goal"}
                       </Text>
 
-                      {/* Progress Bar Container */}
                       <View style={styles.progressBarBg}>
                         <View
                           style={[

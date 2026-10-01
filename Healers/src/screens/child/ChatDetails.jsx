@@ -30,6 +30,7 @@ import {
   markAsSeenApi,
   sendMessageApi,
 } from '../../api/child/api';
+import { commonStyles } from '../../styles/theme';
 
 export default function ChatDetailsScreen({ route, navigation }) {
   const {
@@ -38,8 +39,8 @@ export default function ChatDetailsScreen({ route, navigation }) {
     partnerName,
     partnerImage,
     isOnline,
-    lastSeen, 
-    currentUserId
+    lastSeen,
+    currentUserId,
   } = route.params || {};
 
   const [conversationId, setConversationId] = useState(initialConvId);
@@ -168,8 +169,7 @@ export default function ChatDetailsScreen({ route, navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {/* Top Header */}
+    <SafeAreaView style={[styles.container, commonStyles.container]} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation?.goBack()}
@@ -258,7 +258,9 @@ export default function ChatDetailsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: {
+    flex: 1,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",

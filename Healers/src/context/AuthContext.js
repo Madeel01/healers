@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }) => {
       await updateOnlineStatusApi(isOnline);
     } catch (error) {
       console.log(
-        'Failed to update online status:',
+        "Failed to update online status:",
         error?.response?.data || error?.message,
       );
     }
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
           setUser(data.user);
         }
       } catch (e) {
-        console.error('Failed to load auth state', e);
+        console.error("Failed to load auth state", e);
       } finally {
         setIsLoading(false);
       }
@@ -65,20 +65,20 @@ export const AuthProvider = ({ children }) => {
     updateOnlineStatus(true);
 
     const subscription = AppState.addEventListener(
-      'change',
+      "change",
       async (nextAppState) => {
         const previousAppState = appState.current;
 
         if (
-          previousAppState.match(/inactive|background/) &&
-          nextAppState === 'active'
+          previousAppState.match(/inactive|background/)
+          && nextAppState === "active"
         ) {
           await updateOnlineStatus(true);
         }
 
         if (
-          previousAppState === 'active' &&
-          nextAppState.match(/inactive|background/)
+          previousAppState === "active"
+          && nextAppState.match(/inactive|background/)
         ) {
           await updateOnlineStatus(false);
         }
@@ -106,7 +106,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.log(
-        'Failed to update offline status:',
+        "Failed to update offline status:",
         error?.response?.data || error?.message,
       );
     }
@@ -116,7 +116,35 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
   };
+  const switchUser = async (jwtToken, userData) => {
+    try {
+      await updateOnlineStatus(false);
+    } catch (error) {
+      console.log(
+        "Failed to update previous user offline status:",
+        error?.response?.data || error?.message,
+      );
+    }
 
+    await clearAuthData();
+
+    setToken(null);
+    setUser(null);
+
+    await setAuthData(jwtToken, userData);
+
+    setToken(jwtToken);
+    setUser(userData);
+  };
+  const updateUser = async (userData) => {
+    if (!token) {
+      return;
+    }
+
+    await setAuthData(token, userData);
+
+    setUser(userData);
+  };
   return (
     <AuthContext.Provider
       value={{
@@ -126,6 +154,8 @@ export const AuthProvider = ({ children }) => {
         isLoading,
         login,
         logout,
+        switchUser,
+        updateUser
       }}
     >
       {children}

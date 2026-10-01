@@ -17,8 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Feather from '@expo/vector-icons/Feather';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
@@ -42,6 +42,8 @@ export default function AdminDashboard() {
     totalUsers: 0,
     sessionCount: 0,
   });
+  const userName = user?.fullName || user?.name || "";
+  const profileImage = user?.profileImage || "";
 
   useEffect(() => {
     fetchOverviewData();
@@ -77,15 +79,32 @@ export default function AdminDashboard() {
         <View style={styles.headerRow}>
           <View style={styles.profileContainer}>
             <View style={styles.avatarContainer}>
-              <Image
-                source={{ uri: user?.avatarUrl || "https://i.pravatar.cc/150?img=32" }}
-                style={styles.avatar}
-              />
+              {profileImage
+                ? (
+                  <Image
+                    source={{
+                      uri: profileImage,
+                    }}
+                    style={styles.avatar}
+                  />
+                )
+                : (
+                  <View style={styles.avatarFallback}>
+                    <Text
+                      style={styles.avatarFallbackText}
+                    >
+                      {(userName || "User")
+                        .trim()
+                        .charAt(0)
+                        .toUpperCase()}
+                    </Text>
+                  </View>
+                )}
             </View>
 
             <View>
               <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
-                {user?.fullName || user?.name || "Admin"}
+                {userName}
               </Text>
               <Text style={styles.headerDate}>{getCurrentFormattedDate()}</Text>
             </View>
@@ -135,7 +154,7 @@ export default function AdminDashboard() {
 
           <View style={[styles.statCard, { backgroundColor: "#f39c12" }]}>
             <View style={[styles.cardIconContainer, { backgroundColor: colors.white }]}>
-              <FontAwesome name="users" size={22} color="#F58B2A" />
+              <MaterialCommunityIcons name="message" size={22} color="#F58B2A" />
             </View>
             <Text style={styles.statLabelLight}>Total Users</Text>
             <Text style={styles.statValueLight}>
@@ -143,7 +162,20 @@ export default function AdminDashboard() {
             </Text>
           </View>
 
-          <LinearGradient
+          <TouchableOpacity
+            style={[styles.statCard, { backgroundColor: "#fff" }]}
+            onPress={() => navigation.navigate("ChildMessages")}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
+              <Feather name="message-square" size={24} color="#10B981" />
+              <View style={styles.cardBadgeDot} />
+            </View>
+            <Text style={styles.gridCardTitle}>Messages</Text>
+           
+          </TouchableOpacity>
+
+          {
+            /* <LinearGradient
             colors={["#F8B88B", "#FCEADE", "rgba(255, 255, 255, 0.4)"]}
             locations={[0, 0.6, 1]}
             start={{ x: 0.5, y: 0 }}
@@ -153,10 +185,12 @@ export default function AdminDashboard() {
             <Text style={styles.statLabelDark}>
               Sessions : {String(stats.sessionCount)}
             </Text>
-          </LinearGradient>
+          </LinearGradient>*/
+          }
         </LinearGradient>
 
         <Fee customstyles={styles} />
+
         <Administration customstyles={styles} />
 
         <Text style={styles.sectionHeadTitle}>Quick Actions</Text>
@@ -183,8 +217,7 @@ export default function AdminDashboard() {
           <AntDesign name="file-text" size={24} color="#717781" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.quickActionCard} 
-        onPress={() => navigation.navigate("InvoiceManagement")}>
+        <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate("InvoiceManagement")}>
           <View style={[styles.quickIconBox, { backgroundColor: "#DBEAFE" }]}>
             <MaterialIcons name="description" size={22} color="#2563EB" />
           </View>
@@ -357,5 +390,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#414750",
     fontFamily: fonts.regular,
+  },
+  avatarFallback: {
+    width: 32,
+    height: 32,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  avatarFallbackText: {
+    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    color: "#FFFFFF",
+  },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 27,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+    position: "relative",
+  },
+  cardBadgeDot: {
+    position: "absolute",
+    top: 2,
+    right: -2,
+    width: 15,
+    height: 15,
+    borderRadius: 999,
+    backgroundColor: "#EF4444",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+  gridCardTitle: {
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
+    color: "#191C20",
+    textAlign: "center",
+    lineHeight: 18,
   },
 });

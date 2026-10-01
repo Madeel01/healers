@@ -347,8 +347,9 @@ exports.deleteGoal = async (req, res) => {
 exports.getChildSessionStats = async (req, res) => {
   try {
     const { childId } = req.params;
-    const therapistId = req.user._id || req.user.id;
-
+    const therapistId = req.query.therapistId
+      || req.user?._id
+      || req.user?.id;
     const schedules = await Scheduling.find({ therapistId, childId });
 
     let nextSession = null;
@@ -729,7 +730,7 @@ exports.createFeedback = async (req, res) => {
       appointmentId,
       category,
       notes,
-      mood: mood || "Happy", 
+      mood: mood || "Happy",
       isVisibleToParent: isVisibleToParent !== undefined ? isVisibleToParent : true,
       rating: rating || 5,
     });

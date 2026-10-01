@@ -1,7 +1,15 @@
-import React, { useContext } from 'react';
+import React, {
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
+  ActivityIndicator,
+  Animated,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,8 +23,18 @@ import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useIsFocused } from '@react-navigation/native';
 
+import {
+  getUnreadNotificationCountApi,
+  switchUserApi,
+} from '../../api/authApi';
+import {
+  getCNICUSERS,
+  UnreadSummary,
+} from '../../api/child/api';
 import ChildBottomBar from '../../components/ChildBottomBar';
+import NotificationModal from '../../components/NotificationModal';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
@@ -25,57 +43,234 @@ import {
 } from '../../styles/theme';
 
 export default function ChildDashboardScreen({ navigation }) {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, switchUser } = useContext(AuthContext);
   const userName = user?.fullName || user?.name || "";
   const profileImage = user?.profileImage || "";
+  const userId = user?.id || user?.id;
+  const role = user?.role;
+  const fatherCnic = user?.fatherCnic;
+  // console.log("user", user);
+  const [unreadData, setUnreadData] = useState({
+    hasUnread: false,
+    totalUnreadCount: 0,
+    latestUnreadMessage: null,
+  });
+  const [cnicUsers, setCnicUsers] = useState([]);
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
+  const [switchingUser, setSwitchingUser] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
+
+  const fetchNotificationUnreadCount = async () => {
+    try {
+      const response = await getUnreadNotificationCountApi();
+
+      if (response?.success) {
+        setNotificationUnreadCount(response.count || 0);
+      }
+    } catch (error) {
+      console.log("fetchNotificationUnreadCount error:", error);
+    }
+  };
+  const fetchCNICusers = async () => {
+    try {
+      if (!fatherCnic) return;
+      const response = await getCNICUSERS(fatherCnic);
+      if (response?.success) {
+        setCnicUsers(response.data || []);
+      }
+    } catch (err) {
+      console.log("cnic error:", err);
+    }
+  };
+
+  const handleOpenSwitchUser = async () => {
+    await fetchCNICusers();
+    setShowSwitchModal(true);
+  };
+  const handleSwitchUser = async (selectedUser) => {
+    try {
+      setSwitchingUser(true);
+
+      const response = await switchUserApi(selectedUser._id);
+
+      if (!response?.success) {
+        return;
+      }
+
+      setShowSwitchModal(false);
+
+      await switchUser(response.token, response.user);
+    } catch (error) {
+      console.log(
+        "switch user error:",
+        error?.response?.data || error?.message,
+      );
+    } finally {
+      setSwitchingUser(false);
+    }
+  };
+  const fetchUnreadSummary = async () => {
+    try {
+      if (!userId) return;
+      const response = await UnreadSummary(userId, role);
+      if (response?.success) {
+        setUnreadData(response.data);
+      }
+    } catch (err) {
+      console.log("fetchUnreadSummary error:", err);
+    }
+  };
+
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    if (!isFocused || !userId) {
+      return;
+    }
+
+    fetchUnreadSummary();
+    fetchNotificationUnreadCount();
+    const interval = setInterval(() => {
+      fetchUnreadSummary();
+    }, 5000);
+
+    const intervalUnread = setInterval(() => {
+      fetchNotificationUnreadCount();
+    }, 10000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(intervalUnread);
+    };
+  }, [isFocused, userId]);
+
+  const latestMsg = unreadData.latestUnreadMessage;
+  const senderName = latestMsg?.sender?.fullName || "New Message";
+  const senderInitials = senderName
+    ? senderName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+    : "MSG";
+
+  const bellShake = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (notificationUnreadCount > 0) {
+      const shakeAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(bellShake, {
+            toValue: 1,
+            duration: 80,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bellShake, {
+            toValue: -1,
+            duration: 80,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bellShake, {
+            toValue: 1,
+            duration: 80,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bellShake, {
+            toValue: 0,
+            duration: 80,
+            useNativeDriver: true,
+          }),
+          Animated.delay(1200),
+        ]),
+      );
+
+      shakeAnimation.start();
+
+      return () => {
+        shakeAnimation.stop();
+        bellShake.setValue(0);
+      };
+    }
+
+    bellShake.stopAnimation();
+    bellShake.setValue(0);
+  }, [notificationUnreadCount]);
 
   return (
-    <SafeAreaView
-      style={[
-        styles.mainContainer,
-        commonStyles.container,
-      ]}
-    >
+    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <View style={styles.headerRow}>
         <View style={styles.profileContainer}>
-          {profileImage
-            ? (
-              <Image
-                source={{
-                  uri: profileImage,
-                }}
-                style={styles.avatar}
-              />
-            )
-            : (
-              <View style={styles.avatarFallback}>
-                <Text
-                  style={styles.avatarFallbackText}
-                >
-                  {(userName || "User")
-                    .trim()
-                    .charAt(0)
-                    .toUpperCase()}
-                </Text>
-              </View>
-            )}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate("ChildProfile")}
+          >
+            {profileImage
+              ? (
+                <Image
+                  source={{ uri: profileImage }}
+                  style={styles.avatar}
+                />
+              )
+              : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarFallbackText}>
+                    {(userName || "")
+                      .trim()
+                      .charAt(0)
+                      .toUpperCase()}
+                  </Text>
+                </View>
+              )}
+          </TouchableOpacity>
 
           <View style={styles.userDetails}>
             <Text style={styles.userName}>{userName}</Text>
-            <TouchableOpacity style={styles.dropdownRow} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.dropdownRow}
+              activeOpacity={0.7}
+              onPress={handleOpenSwitchUser}
+            >
               <Text style={styles.userSubtext}>
-                {user?.id ? (user.id.length > 10 ? `${user.id.slice(0, 10)}...` : user.id) : ""}
+                {userId
+                  ? userId.length > 10
+                    ? `${userId.slice(0, 10)}...`
+                    : userId
+                  : ""}
               </Text>
-              <Feather name="chevron-down" size={16} color="#0F172A" />
+
+              <Feather
+                name="chevron-down"
+                size={16}
+                color="#0F172A"
+              />
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.headerActions}>
-          <TouchableOpacity style={[styles.iconButton, { marginLeft: 12 }]}>
+          <TouchableOpacity
+            style={[styles.iconButton, { marginLeft: 12 }]}
+            activeOpacity={0.7}
+            onPress={() => setShowNotificationModal(true)}
+          >
             <View style={styles.notificationWrapper}>
-              <Feather name="bell" size={20} color="#64748B" />
-              <View style={styles.redDot} />
+              <Animated.View
+                style={{
+                  transform: [
+                    {
+                      rotate: bellShake.interpolate({
+                        inputRange: [-1, 1],
+                        outputRange: ["-12deg", "12deg"],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                <Feather
+                  name="bell"
+                  size={20}
+                  color="#64748B"
+                />
+              </Animated.View>
+
+              {notificationUnreadCount > 0 && <View style={styles.redDot} />}
             </View>
           </TouchableOpacity>
 
@@ -109,12 +304,16 @@ export default function ChildDashboardScreen({ navigation }) {
           >
             <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
               <Feather name="message-square" size={24} color="#10B981" />
-              <View style={styles.cardBadgeDot} />
+              {unreadData.hasUnread && <View style={styles.cardBadgeDot} />}
             </View>
             <Text style={styles.gridCardTitle}>Messages</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.gridCard} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.gridCard}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate("Notifications")}
+          >
             <View style={[styles.iconCircle, { backgroundColor: "#FEE2E2" }]}>
               <Entypo name="modern-mic" size={24} color="#EF4444" />
             </View>
@@ -129,30 +328,41 @@ export default function ChildDashboardScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.messageBanner}>
-          <View style={styles.messageBannerHeader}>
-            <View style={styles.messageBannerTitleRow}>
-              <View style={styles.bannerIconBox}>
-                <Feather name="message-square" size={16} color="#7CB342" />
+        {unreadData.hasUnread && (
+          <TouchableOpacity
+            style={styles.messageBanner}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate("ChildMessages")}
+          >
+            <View style={styles.messageBannerHeader}>
+              <View style={styles.messageBannerTitleRow}>
+                <View style={styles.bannerIconBox}>
+                  <Feather name="message-square" size={16} color="#7CB342" />
+                </View>
+                <Text style={styles.messageBannerTitle}>Messages</Text>
               </View>
-              <Text style={styles.messageBannerTitle}>Messages</Text>
+              <View style={styles.badgeNew}>
+                <Text style={styles.badgeNewText}>
+                  {unreadData.totalUnreadCount} {unreadData.totalUnreadCount === 1 ? "New" : "New Messages"}
+                </Text>
+              </View>
             </View>
-            <View style={styles.badgeNew}>
-              <Text style={styles.badgeNewText}>2 New</Text>
-            </View>
-          </View>
 
-          <View style={styles.messageCardContent}>
-            <View style={styles.msgAvatarCircle}>
-              <Text style={styles.msgAvatarText}>Mr. S</Text>
+            <View style={styles.messageCardContent}>
+              <View style={styles.msgAvatarCircle}>
+                <Text style={styles.msgAvatarText}>{senderInitials}</Text>
+              </View>
+              <View style={styles.msgTextContainer}>
+                <Text style={styles.teacherName}>{senderName}</Text>
+                <Text style={styles.messageSnippet} numberOfLines={1}>
+                  {latestMsg?.text || "You have a new message!"}
+                </Text>
+              </View>
             </View>
-            <View style={styles.msgTextContainer}>
-              <Text style={styles.teacherName}>Mr. Smith (Math)</Text>
-              <Text style={styles.messageSnippet}>Alex did great on today's quiz!</Text>
-            </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        )}
 
+        {/* Quick Actions */}
         <View style={styles.quickActionsSection}>
           <Text style={[styles.sectionHeaderTitle, { marginBottom: 12 }]}>Quick Actions</Text>
           <View style={styles.quickActionsRow}>
@@ -167,7 +377,11 @@ export default function ChildDashboardScreen({ navigation }) {
               <Text style={[styles.actionLabel, styles.actionLabelActive]}>Media</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionItem} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.actionItem}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate("ChildReport")}
+            >
               <View style={[styles.actionIconCircle, { backgroundColor: "#FDE2D6" }]}>
                 <Feather name="calendar" size={20} color="#EA580C" />
               </View>
@@ -187,6 +401,7 @@ export default function ChildDashboardScreen({ navigation }) {
           </View>
         </View>
 
+        {/* Classes Section */}
         <View style={styles.classesSection}>
           <View style={styles.classesHeaderRow}>
             <Text style={styles.sectionHeaderTitle}>Classes</Text>
@@ -206,6 +421,125 @@ export default function ChildDashboardScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showSwitchModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSwitchModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.switchModal}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Switch User</Text>
+                <Text style={styles.modalSubtitle}>
+                  Select another user
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setShowSwitchModal(false)}
+                style={styles.closeButton}
+              >
+                <Feather name="x" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.userList}
+            >
+              {cnicUsers.length === 0
+                ? (
+                  <View style={styles.emptyContainer}>
+                    <Feather
+                      name="users"
+                      size={40}
+                      color="#94A3B8"
+                    />
+
+                    <Text style={styles.emptyText}>
+                      No other users found
+                    </Text>
+                  </View>
+                )
+                : (
+                  cnicUsers.map((item) => (
+                    <TouchableOpacity
+                      key={String(item._id)}
+                      style={styles.switchUserCard}
+                      activeOpacity={0.75}
+                      disabled={switchingUser}
+                      onPress={() => handleSwitchUser(item)}
+                    >
+                      {item.profileImage
+                        ? (
+                          <Image
+                            source={{ uri: item.profileImage }}
+                            style={styles.switchUserAvatar}
+                          />
+                        )
+                        : (
+                          <View style={styles.switchUserAvatarFallback}>
+                            <Text style={styles.switchUserAvatarText}>
+                              {item.fullName
+                                ?.trim()
+                                ?.charAt(0)
+                                ?.toUpperCase() || "U"}
+                            </Text>
+                          </View>
+                        )}
+
+                      <View style={styles.switchUserInfo}>
+                        <Text style={styles.switchUserName}>
+                          {item.fullName}
+                        </Text>
+
+                        <Text style={styles.switchUserRole}>
+                          {item.role}
+                        </Text>
+
+                        {!!item.email && (
+                          <Text style={styles.switchUserEmail}>
+                            {item.email}
+                          </Text>
+                        )}
+                      </View>
+
+                      {switchingUser
+                        ? (
+                          <ActivityIndicator
+                            size="small"
+                            color={colors.primary}
+                          />
+                        )
+                        : (
+                          <Feather
+                            name="chevron-right"
+                            size={20}
+                            color="#94A3B8"
+                          />
+                        )}
+                    </TouchableOpacity>
+                  ))
+                )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <NotificationModal
+        visible={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+        onUnreadChange={(count) => {
+          setUnreadData((prev) => ({
+            ...prev,
+            hasUnread: count > 0,
+            totalUnreadCount: count,
+          }));
+        }}
+      />
 
       <ChildBottomBar />
     </SafeAreaView>
@@ -233,7 +567,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: 999,
   },
   headerTitle: {
     fontSize: 16,
@@ -254,9 +588,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     right: 0,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 99,
     backgroundColor: "#DC2626",
   },
 
@@ -322,10 +656,10 @@ const styles = StyleSheet.create({
   cardBadgeDot: {
     position: "absolute",
     top: 2,
-    right: 2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    right: 1,
+    width: 13,
+    height: 13,
+    borderRadius: 999,
     backgroundColor: "#EF4444",
     borderWidth: 2,
     borderColor: "#FFFFFF",
@@ -513,9 +847,9 @@ const styles = StyleSheet.create({
     color: colors.blackFont,
   },
   avatarFallback: {
-    width: 32,
-    height: 32,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 999,
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -525,5 +859,118 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    justifyContent: "flex-end",
+  },
+
+  switchModal: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+    maxHeight: "75%",
+  },
+
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+
+  modalTitle: {
+    fontSize: 21,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+
+  modalSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: "#64748B",
+  },
+
+  closeButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  userList: {
+    gap: 10,
+  },
+
+  switchUserCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  switchUserAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+
+  switchUserAvatarFallback: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#DBEAFE",
+  },
+
+  switchUserAvatarText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#2563EB",
+  },
+
+  switchUserInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+
+  switchUserName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+
+  switchUserRole: {
+    marginTop: 2,
+    fontSize: 13,
+    color: "#2563EB",
+  },
+
+  switchUserEmail: {
+    marginTop: 2,
+    fontSize: 12,
+    color: "#64748B",
+  },
+
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+
+  emptyText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: "#64748B",
   },
 });

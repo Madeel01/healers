@@ -17,8 +17,7 @@ const POPULATE = [
   { path: "complainantId", select: "fullName role" },
   { path: "resolvedBy", select: "fullName" },
 ];
-const normalizeName = (name) =>
-  name?.trim().replace(/\s+/g, " ").toLowerCase();
+const normalizeName = (name) => name?.trim().replace(/\s+/g, " ").toLowerCase();
 const normalizeCnic = (v = "") => {
   const d = String(v).replace(/\D/g, "");
   return d.length === 13 ? `${d.slice(0, 5)}-${d.slice(5, 12)}-${d.slice(12)}` : null;
@@ -75,8 +74,9 @@ const validateSettingsPayload = (body, current, { partial = false } = {}) => {
     if (settingsToMinutes(breakEnd) <= settingsToMinutes(breakStart)) {
       errors.push("breakEndTime must be after breakStartTime.");
     } else if (
-      start && end &&
-      (settingsToMinutes(breakStart) < settingsToMinutes(start) || settingsToMinutes(breakEnd) > settingsToMinutes(end))
+      start && end
+      && (settingsToMinutes(breakStart) < settingsToMinutes(start)
+        || settingsToMinutes(breakEnd) > settingsToMinutes(end))
     ) {
       errors.push("Break time must fall within clinic working hours.");
     }
@@ -84,8 +84,6 @@ const validateSettingsPayload = (body, current, { partial = false } = {}) => {
 
   return { errors, data: out };
 };
-
-
 
 exports.getAdminOverview = async (req, res) => {
   try {
@@ -95,7 +93,7 @@ exports.getAdminOverview = async (req, res) => {
       User.countDocuments(),
     ]);
 
-    const sessionCount = 5; 
+    const sessionCount = 5;
 
     return res.status(200).json({
       success: true,
@@ -116,7 +114,6 @@ exports.getAdminOverview = async (req, res) => {
   }
 };
 
-
 exports.getTherapistsUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -129,7 +126,7 @@ exports.getTherapistsUsers = async (req, res) => {
     if (search) {
       matchStage.$or = [
         { fullName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } }
+        { email: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -143,12 +140,12 @@ exports.getTherapistsUsers = async (req, res) => {
           pipeline: [
             {
               $match: {
-                $expr: { $eq: [{ $toObjectId: "$therapistId" }, "$$userId"] }
-              }
-            }
+                $expr: { $eq: [{ $toObjectId: "$therapistId" }, "$$userId"] },
+              },
+            },
           ],
-          as: "assignments"
-        }
+          as: "assignments",
+        },
       },
       {
         $project: {
@@ -165,17 +162,17 @@ exports.getTherapistsUsers = async (req, res) => {
               $map: {
                 input: "$assignments",
                 as: "a",
-                in: { $size: { $ifNull: ["$$a.childIds", []] } }
-              }
-            }
-          }
-        }
-      }
+                in: { $size: { $ifNull: ["$$a.childIds", []] } },
+              },
+            },
+          },
+        },
+      },
     ];
 
     if (specialty && specialty !== "All") {
       pipeline.push({
-        $match: { specialties: specialty }
+        $match: { specialties: specialty },
       });
     }
 
@@ -190,14 +187,14 @@ exports.getTherapistsUsers = async (req, res) => {
       count: therapists.length,
       hasMore: therapists.length === limit,
       data: therapists,
-      specialties: specialties
+      specialties: specialties,
     });
   } catch (error) {
     console.log("Get Therapists Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to get therapists",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -233,7 +230,8 @@ exports.createTherapist = async (req, res) => {
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         success: false,
-        message: "Password must be at least 8 characters and contain 1 lowercase, 1 uppercase, and 1 special character.",
+        message:
+          "Password must be at least 8 characters and contain 1 lowercase, 1 uppercase, and 1 special character.",
       });
     }
 
@@ -242,11 +240,11 @@ exports.createTherapist = async (req, res) => {
     const user = await User.create({
       fullName: name,
       email,
-      phone:normalizedPhone,
+      phone: normalizedPhone,
       address,
       role: "Therapist",
       password: hashedPassword,
-      agreeTerms:true
+      agreeTerms: true,
     });
 
     const assignment = await TherapistAssignment.create({
@@ -296,7 +294,7 @@ exports.updateTherapist = async (req, res) => {
 
       const existingUser = await User.findOne({
         _id: { $ne: id },
-        email: { $regex: new RegExp(`^${normalizedEmail}$`, "i") }
+        email: { $regex: new RegExp(`^${normalizedEmail}$`, "i") },
       });
       if (existingUser) {
         return res.status(400).json({ success: false, message: "An account with this email already exists." });
@@ -319,7 +317,8 @@ exports.updateTherapist = async (req, res) => {
       if (!passwordRegex.test(password)) {
         return res.status(400).json({
           success: false,
-          message: "Password must be at least 8 characters and contain 1 lowercase, 1 uppercase, and 1 special character.",
+          message:
+            "Password must be at least 8 characters and contain 1 lowercase, 1 uppercase, and 1 special character.",
         });
       }
       user.password = await bcrypt.hash(password, 10);
@@ -374,14 +373,14 @@ exports.updateTherapist = async (req, res) => {
 exports.deleteTherapist = async (req, res) => {
   try {
     const { id } = req.params;
- 
+
     const user = await User.findOneAndDelete({ _id: id, role: "Therapist" });
     if (!user) {
       return res.status(404).json({ success: false, message: "Therapist not found." });
     }
- 
+
     await TherapistAssignment.deleteOne({ therapistId: id });
- 
+
     return res.status(200).json({ success: true, message: "Therapist deleted." });
   } catch (error) {
     console.error("Delete Therapist Error:", error);
@@ -429,7 +428,8 @@ exports.assignChildrenToTherapist = async (req, res) => {
       if (uniqueAddIds.length > maxChildren) {
         return res.status(400).json({
           success: false,
-          message: `This therapist can have a maximum of ${maxChildren} children. You tried to assign ${uniqueAddIds.length}.`,
+          message:
+            `This therapist can have a maximum of ${maxChildren} children. You tried to assign ${uniqueAddIds.length}.`,
           data: { therapistId, requestedChildren: uniqueAddIds.length, maxChildren, availableSlots: maxChildren },
         });
       }
@@ -474,7 +474,8 @@ exports.assignChildrenToTherapist = async (req, res) => {
       const availableSlots = Math.max(maxChildren - (currentLoad - toRemove.length), 0);
       return res.status(400).json({
         success: false,
-        message: `Only ${availableSlots} slot(s) available for this therapist after removals. You tried to add ${toAdd.length} new child(ren).`,
+        message:
+          `Only ${availableSlots} slot(s) available for this therapist after removals. You tried to add ${toAdd.length} new child(ren).`,
         data: {
           therapistId,
           currentLoad,
@@ -505,7 +506,7 @@ exports.assignChildrenToTherapist = async (req, res) => {
     }
 
     assignment.childIds = assignment.childIds.filter(
-      (c) => !toRemove.includes(c.toString())
+      (c) => !toRemove.includes(c.toString()),
     );
     assignment.childIds.push(...toAdd);
 
@@ -541,8 +542,6 @@ exports.assignChildrenToTherapist = async (req, res) => {
     });
   }
 };
-
-
 
 exports.childUsers = async (req, res) => {
   try {
@@ -615,7 +614,7 @@ exports.createChild = async (req, res) => {
 
     const child = await User.create({
       fullName,
-      fatherName: fatherName ,
+      fatherName: fatherName,
       fatherCnic: cnic,
       age: age ?? null,
       email,
@@ -685,11 +684,10 @@ exports.updateChild = async (req, res) => {
       }).lean();
 
       if (
-        otherChildren.length > 0 &&
-        fatherName !== undefined &&
-        otherChildren.some(
-          (child) =>
-            normalizeName(child.fatherName) !== normalizeName(fatherName)
+        otherChildren.length > 0
+        && fatherName !== undefined
+        && otherChildren.some(
+          (child) => normalizeName(child.fatherName) !== normalizeName(fatherName),
         )
       ) {
         return res.status(409).json({
@@ -714,7 +712,7 @@ exports.updateChild = async (req, res) => {
     const child = await User.findOneAndUpdate(
       { _id: id, role: "Child" },
       updateFields,
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!child) {
@@ -755,7 +753,7 @@ exports.deleteChild = async (req, res) => {
 
     await TherapistAssignment.updateMany(
       { childIds: id },
-      { $pull: { childIds: id } }
+      { $pull: { childIds: id } },
     );
 
     return res.status(200).json({
@@ -772,11 +770,11 @@ exports.deleteChild = async (req, res) => {
   }
 };
 
-
-
 const getOnLeaveToday = async () => {
-  const start = new Date(); start.setHours(0, 0, 0, 0);
-  const end = new Date(); end.setHours(23, 59, 59, 999);
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
 
   const docs = await LeaveRequest.find({
     status: "approved",
@@ -849,7 +847,7 @@ exports.getLeaveRequests = async (req, res) => {
 exports.approveLeaveRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const adminId = req.user?.id; 
+    const adminId = req.user?.id;
 
     const leaveRequest = await LeaveRequest.findById(id);
 
@@ -870,7 +868,7 @@ exports.approveLeaveRequest = async (req, res) => {
     leaveRequest.status = "approved";
     leaveRequest.approved_by = adminId || null;
     leaveRequest.actionedAt = new Date();
-    leaveRequest.rejectionReason = ""; 
+    leaveRequest.rejectionReason = "";
 
     await leaveRequest.save();
 
@@ -952,8 +950,6 @@ exports.getStaffOnLeaveToday = async (req, res) => {
   }
 };
 
-
-
 exports.getAdminFeedbackManagement = async (req, res) => {
   try {
     const { status } = req.params;
@@ -997,16 +993,15 @@ exports.getAdminFeedbackManagement = async (req, res) => {
       {
         appointmentId: 1,
         notes: 1,
-      }
+      },
     ).lean();
 
     const feedbackMap = new Map(
       existingFeedbacks.map((feedback) => [
         feedback.appointmentId?.toString(),
         feedback,
-      ])
+      ]),
     );
-
 
     const schedules = await Scheduling.find({})
       .populate("therapistId", "fullName email role")
@@ -1027,10 +1022,9 @@ exports.getAdminFeedbackManagement = async (req, res) => {
         //   appointment._id.toString()
         // );
         const feedback = feedbackMap.get(appointment._id.toString());
-        const hasPendingFeedback =
-          !feedback ||
-          feedback.notes == null ||
-          feedback.notes.trim() === "";
+        const hasPendingFeedback = !feedback
+          || feedback.notes == null
+          || feedback.notes.trim() === "";
 
         if (alreadyHappened && hasPendingFeedback) {
           pendingFeedback.push({
@@ -1065,8 +1059,7 @@ exports.getAdminFeedbackManagement = async (req, res) => {
         const appointment = schedules
           .flatMap((schedule) => schedule.appointments || [])
           .find(
-            (appointment) =>
-              appointment._id.toString() === feedback.appointmentId?.toString()
+            (appointment) => appointment._id.toString() === feedback.appointmentId?.toString(),
           );
         const { replies, ...feedbackData } = feedback;
         return {
@@ -1074,8 +1067,8 @@ exports.getAdminFeedbackManagement = async (req, res) => {
           isRespond: Array.isArray(replies) && replies.length > 0,
           appointment: appointment
             ? {
-                startTime: appointment.startTime,
-              }
+              startTime: appointment.startTime,
+            }
             : null,
         };
       });
@@ -1102,16 +1095,15 @@ exports.getAdminFeedbackManagement = async (req, res) => {
         const appointment = schedules
           .flatMap((schedule) => schedule.appointments || [])
           .find(
-            (appointment) =>
-              appointment._id.toString() === feedback.appointmentId?.toString()
+            (appointment) => appointment._id.toString() === feedback.appointmentId?.toString(),
           );
 
         return {
           ...feedback,
           appointment: appointment
             ? {
-                startTime: appointment.startTime,
-              }
+              startTime: appointment.startTime,
+            }
             : null,
         };
       });
@@ -1122,8 +1114,8 @@ exports.getAdminFeedbackManagement = async (req, res) => {
 
       data.sort(
         (a, b) =>
-          new Date(b.session.date) -
-          new Date(a.session.date)
+          new Date(b.session.date)
+          - new Date(a.session.date),
       );
     }
 
@@ -1165,7 +1157,7 @@ exports.getFeedbackReplies = async (req, res) => {
       const apptId = new mongoose.Types.ObjectId(feedback.appointmentId);
       const schedule = await Scheduling.findOne(
         { "appointments._id": apptId },
-        { "appointments.$": 1 } 
+        { "appointments.$": 1 },
       ).lean();
 
       appt = schedule?.appointments?.[0] || null;
@@ -1199,7 +1191,7 @@ exports.getFeedbackReplies = async (req, res) => {
 exports.addFeedbackReply = async (req, res) => {
   try {
     const { feedbackId } = req.params;
-    const { message } = req.body; 
+    const { message } = req.body;
 
     if (!message?.trim()) {
       return res.json({
@@ -1274,9 +1266,6 @@ exports.deleteFeedback = async (req, res) => {
   }
 };
 
-
-
-
 exports.getBatches = async (req, res) => {
   try {
     const { page = 1, limit = 20, speciality } = req.query;
@@ -1319,17 +1308,16 @@ exports.createBatch = async (req, res) => {
     const { batchName, speciality, dateFrom, dateTo, maxChild, fee } = req.body;
     const specialityList = Array.isArray(speciality) ? speciality : [];
     if (
-      !batchName ||
-      !specialityList.length ||
-      !dateFrom ||
-      !dateTo ||
-      !maxChild ||
-      !fee
+      !batchName
+      || !specialityList.length
+      || !dateFrom
+      || !dateTo
+      || !maxChild
+      || !fee
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "batchName, speciality (at least one), dateFrom, dateTo, Batch fee and Batch Size are required.",
+        message: "batchName, speciality (at least one), dateFrom, dateTo, Batch fee and Batch Size are required.",
       });
     }
 
@@ -1414,12 +1402,9 @@ exports.deleteBatch = async (req, res) => {
   }
 };
 
-
-
-
 async function resolveRecipients(audience, roles, users) {
   if (audience === "all") {
-    return User.find({ role: { $in: ["Therapist", "Child","Admin"] } }, "_id").lean();
+    return User.find({ role: { $in: ["Therapist", "Child", "Admin"] } }, "_id").lean();
   }
   if (audience === "role") {
     return User.find({ role: { $in: roles } }, "_id").lean();
@@ -1504,7 +1489,11 @@ exports.createBroadcast = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: status === "draft" ? "Draft saved." : status === "scheduled" ? "Broadcast scheduled." : "Broadcast sent.",
+      message: status === "draft"
+        ? "Draft saved."
+        : status === "scheduled"
+        ? "Broadcast scheduled."
+        : "Broadcast sent.",
       data: notification,
     });
   } catch (error) {
@@ -1514,7 +1503,7 @@ exports.createBroadcast = async (req, res) => {
 };
 exports.getAllBroadcasts = async (req, res) => {
   try {
-    const { page = 1, limit = 20, search = "", status = "", type= "" } = req.query;
+    const { page = 1, limit = 20, search = "", status = "", type = "" } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
     const filter = {};
@@ -1662,24 +1651,93 @@ exports.updateBroadcast = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to update broadcast.", error: error.message });
   }
 };
+
+// exports.deleteBroadcast = async (req, res) => {
+//   try {
+//     const { broadcastId, IsHide = false, userID = null } = req.params;
+//     const broadcast = await Notification.findByIdAndDelete(broadcastId);
+//     if (!broadcast) {
+//       return res.status(404).json({ success: false, message: "Broadcast not found." });
+//     }
+//     if (broadcast.attachment?.url) {
+//       const filePath = path.join(__dirname, "..", broadcast.attachment.url.replace(/^\//, ""));
+//       fs.unlink(filePath, () => {}); // best-effort cleanup, no need to block response on it
+//     }
+//     return res.status(200).json({ success: true, message: "Broadcast deleted." });
+//   } catch (error) {
+//     return res.status(500).json({ success: false, message: "Failed to delete broadcast.", error: error.message });
+//   }
+// };
+
 exports.deleteBroadcast = async (req, res) => {
   try {
     const { broadcastId } = req.params;
-    const broadcast = await Notification.findByIdAndDelete(broadcastId);
+    const { IsHide = false, userID = null } = req.body;
+
+    const broadcast = await Notification.findById(broadcastId);
+
     if (!broadcast) {
-      return res.status(404).json({ success: false, message: "Broadcast not found." });
+      return res.status(404).json({
+        success: false,
+        message: "Broadcast not found.",
+      });
     }
+
+    if (IsHide === true || IsHide === "true") {
+      if (!userID) {
+        return res.status(400).json({
+          success: false,
+          message: "userID is required when hiding a broadcast.",
+        });
+      }
+
+      const recipient = broadcast.recipients.find(
+        (item) => item.user?.toString() === userID.toString(),
+      );
+
+      if (!recipient) {
+        return res.status(404).json({
+          success: false,
+          message: "User is not a recipient of this broadcast.",
+        });
+      }
+
+      recipient.isDelete = true;
+
+      await broadcast.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Broadcast hidden for this user.",
+      });
+    }
+
+    await Notification.findByIdAndDelete(broadcastId);
+
     if (broadcast.attachment?.url) {
-      const filePath = path.join(__dirname, "..", broadcast.attachment.url.replace(/^\//, ""));
-      fs.unlink(filePath, () => {}); // best-effort cleanup, no need to block response on it
+      const filePath = path.join(
+        __dirname,
+        "..",
+        broadcast.attachment.url.replace(/^\//, ""),
+      );
+
+      fs.unlink(filePath, () => {});
     }
-    return res.status(200).json({ success: true, message: "Broadcast deleted." });
+
+    return res.status(200).json({
+      success: true,
+      message: "Broadcast deleted.",
+    });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Failed to delete broadcast.", error: error.message });
+    console.log("err", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete broadcast.",
+      error: error.message,
+    });
   }
 };
-
-
 
 exports.getComplaints = async (req, res) => {
   try {
@@ -1750,8 +1808,8 @@ exports.getComplaints = async (req, res) => {
       hasMore: page * limit < total,
       stats: {
         total: await Complaint.countDocuments(),
-        pending: pendingWeek,                   
-        resolved: resolvedWeek,                
+        pending: pendingWeek,
+        resolved: resolvedWeek,
       },
     });
   } catch (error) {
@@ -1769,7 +1827,7 @@ exports.resolveComplaint = async (req, res) => {
         resolvedAt: new Date(),
         resolutionNote: (req.body?.resolutionNote || "").trim().slice(0, 500),
       },
-      { new: true, projection: { messages: 0 } }
+      { new: true, projection: { messages: 0 } },
     ).populate(POPULATE);
 
     if (!complaint) {
@@ -1791,7 +1849,7 @@ exports.updateComplaintPriority = async (req, res) => {
     const complaint = await Complaint.findOneAndUpdate(
       { _id: req.params.id, status: "Pending" },
       { priority },
-      { new: true, projection: { messages: 0 } }
+      { new: true, projection: { messages: 0 } },
     ).populate(POPULATE);
 
     if (!complaint) {
@@ -1815,7 +1873,7 @@ exports.getComplaintMessages = async (req, res) => {
     await Complaint.updateOne(
       { _id: id },
       { $set: { "messages.$[m].readByRecipient": true } },
-      { arrayFilters: [{ "m.senderRole": { $ne: "Admin" }, "m.readByRecipient": false }] }
+      { arrayFilters: [{ "m.senderRole": { $ne: "Admin" }, "m.readByRecipient": false }] },
     );
 
     return res.status(200).json({
@@ -1843,7 +1901,7 @@ exports.sendComplaintMessage = async (req, res) => {
     const updated = await Complaint.findOneAndUpdate(
       { _id: req.params.id, status: "Pending" },
       { $push: { messages: { senderId: req.user.id, senderRole: "Admin", text } } },
-      { new: true, projection: { messages: { $slice: -1 } } }
+      { new: true, projection: { messages: { $slice: -1 } } },
     ).lean();
 
     if (!updated) {
@@ -1861,33 +1919,65 @@ exports.sendComplaintMessage = async (req, res) => {
   }
 };
 
-
-
 exports.getMyNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit, 10) || 15, 50);
-    console.log(userId,"id");
-    const filter = { status: "sent", "recipients.user": userId };
+    const { typeFilter = "All" } = req.query;
+
+    const filter = {
+      status: "sent",
+      recipients: {
+        $elemMatch: {
+          user: userId,
+          $or: [
+            { isDelete: false },
+            { isDelete: { $exists: false } },
+          ],
+        },
+      },
+    };
+
+    if (typeFilter && typeFilter !== "All") {
+      filter.type = typeFilter;
+    }
+
+    const unreadFilter = {
+      status: "sent",
+      type: filter.type,
+      recipients: {
+        $elemMatch: {
+          user: userId,
+          readAt: null,
+          $or: [
+            { isDelete: false },
+            { isDelete: { $exists: false } },
+          ],
+        },
+      },
+    };
 
     const [total, notifications, unreadCount] = await Promise.all([
       Notification.countDocuments(filter),
+
       Notification.find(filter)
         .populate("createdBy", "fullName role")
         .sort({ sentAt: -1, createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Notification.countDocuments({
-        ...filter,
-        recipients: { $elemMatch: { user: userId, readAt: null } },
-      }),
+
+      Notification.countDocuments(unreadFilter),
     ]);
 
     const data = notifications.map((n) => {
-      const mine = (n.recipients || []).find((r) => String(r.user) === String(userId));
+      const mine = (n.recipients || []).find(
+        (r) => String(r.user) === String(userId),
+      );
+
       const { recipients, ...rest } = n;
+
       return {
         ...rest,
         isRead: !!mine?.readAt,
@@ -1905,6 +1995,7 @@ exports.getMyNotifications = async (req, res) => {
     });
   } catch (error) {
     console.error("Get My Notifications Error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to fetch notifications.",
@@ -1912,6 +2003,7 @@ exports.getMyNotifications = async (req, res) => {
     });
   }
 };
+
 exports.markNotificationRead = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1925,7 +2017,7 @@ exports.markNotificationRead = async (req, res) => {
         },
         $setOnInsert: {},
       },
-      { new: true, projection: { recipients: 1 } }
+      { new: true, projection: { recipients: 1 } },
     );
 
     if (!notification) {
@@ -1936,7 +2028,7 @@ exports.markNotificationRead = async (req, res) => {
     if (!mine?.deliveredAt) {
       await Notification.updateOne(
         { _id: id, "recipients.user": userId },
-        { $set: { "recipients.$.deliveredAt": new Date() } }
+        { $set: { "recipients.$.deliveredAt": new Date() } },
       );
     }
 
@@ -1961,7 +2053,7 @@ exports.markAllNotificationsRead = async (req, res) => {
     const result = await Notification.updateMany(
       { status: "sent", recipients: { $elemMatch: { user: userId, readAt: null } } },
       { $set: { "recipients.$[r].readAt": new Date() } },
-      { arrayFilters: [{ "r.user": userId, "r.readAt": null }] }
+      { arrayFilters: [{ "r.user": userId, "r.readAt": null }] },
     );
 
     return res.status(200).json({
@@ -1978,8 +2070,6 @@ exports.markAllNotificationsRead = async (req, res) => {
     });
   }
 };
-
-
 
 exports.getSettings = async (req, res) => {
   try {

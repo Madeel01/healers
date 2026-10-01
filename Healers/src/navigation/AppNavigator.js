@@ -13,6 +13,7 @@ import AddNewPackageScreen from '../screens/admin/AddNewPackage';
 import AdminDashboard from '../screens/admin/AdminDashboard';
 import BatchManagementScreen from '../screens/admin/BatchManagement';
 import BroadcastManagementScreen from '../screens/admin/BroadcastManagement';
+import ChildrenScreen from '../screens/admin/Children';
 import ComplainManagementScreen from '../screens/admin/ComplainManagement';
 import CreateNewInvoiceScreen from '../screens/admin/CreateNewInvoice';
 import FeedbackScreen from '../screens/admin/Feedback';
@@ -20,11 +21,13 @@ import FeeManagementScreen from '../screens/admin/FeeManagement';
 import InvoiceDetailScreen from '../screens/admin/InvoiceDetailScreen';
 import InvoiceManagementScreen from '../screens/admin/InvoiceManagement';
 import LeaveRequestsScreen from '../screens/admin/LeaveRequest';
+import NotificationScreen from '../screens/admin/Notification';
 import ScheduleScreen from '../screens/admin/Schedule';
 import StaffOnLeaveScreen from '../screens/admin/StaffOnLeave';
 import TherapistsScreen from '../screens/admin/Therapist';
 import LoginScreen from '../screens/auth/LoginScreen';
 import OnboardingScreen from '../screens/auth/OnboardingScreen';
+import ChildProfileScreen from '../screens/auth/ProfileScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import WelcomeScreen from '../screens/auth/Welcome';
 import ChildAddFeedbackScreen from '../screens/child/AddFeedback';
@@ -34,6 +37,7 @@ import ChildDashboard from '../screens/child/ChildDashboard';
 import ChildVideoScreen from '../screens/child/ChildVideo';
 import ChildFeedbackScreen from '../screens/child/Feedback';
 import MessagingScreen from '../screens/child/Messages';
+import ReportScreen from '../screens/child/Report';
 import AddFeedbackScreen from '../screens/therapist/AddFeedback';
 import AssignedChildrenScreen from '../screens/therapist/AssignedChildren';
 import AttendanceTrackingScreen from '../screens/therapist/AttendanceTracking';
@@ -44,8 +48,6 @@ import ProgressTrackingScreen from '../screens/therapist/ProgressTracking';
 import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
-import ChildrenScreen from '../screens/admin/Children';
-import NotificationScreen from '../screens/admin/Notification';
 
 const Stack = createNativeStackNavigator();
 
@@ -82,6 +84,8 @@ function AdminStack() {
       <Stack.Screen name="InvoiceDetail" component={InvoiceDetailScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="StaffOnLeave" component={StaffOnLeaveScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ChildMessages" component={MessagingScreen} />
+      <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
     </Stack.Navigator>
   );
 }
@@ -99,9 +103,8 @@ function TherapistStack() {
       <Stack.Screen name="LeaveRequest" component={LeaveRequestScreen} />
       <Stack.Screen name="QuarterlyReports" component={QuarterlyReportsScreen} />
       <Stack.Screen name="ProgressTracking" component={ProgressTrackingScreen} />
-        <Stack.Screen name="ChildMessages" component={MessagingScreen} />
+      <Stack.Screen name="ChildMessages" component={MessagingScreen} />
       <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
-
     </Stack.Navigator>
   );
 }
@@ -116,8 +119,9 @@ function ChildStack() {
       <Stack.Screen name="ChildVideo" component={ChildVideoScreen} />
       <Stack.Screen name="ChildMessages" component={MessagingScreen} />
       <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
-
-
+      <Stack.Screen name="ChildReport" component={ReportScreen} />
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
+      <Stack.Screen name="ChildProfile" component={ChildProfileScreen} />
     </Stack.Navigator>
   );
 }

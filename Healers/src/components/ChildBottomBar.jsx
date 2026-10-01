@@ -18,10 +18,10 @@ export default function ChildBottomBar({ activeTab = "ChildDashboard" }) {
 
   const tabs = [
     { id: "ChildDashboard", label: "Home", iconType: "MaterialIcons", iconName: "home", iconSize: 22 },
-    { id: "AssignedChildren", label: "Children", iconType: "FontAwesome5", iconName: "child", iconSize: 18 },
+    { id: "ChildReport", label: "Children", iconType: "FontAwesome5", iconName: "child", iconSize: 18 },
     { id: "ChildFeedback", label: "Feedback", iconType: "MaterialIcons", iconName: "feedback", iconSize: 22 },
     { id: "ChildAttendance", label: "Scheduling", iconType: "MaterialIcons", iconName: "event", iconSize: 22 },
-    { id: "Alert", label: "Alerts", iconType: "MaterialIcons", iconName: "notifications", iconSize: 22 },
+    { id: "Notifications", label: "Alerts", iconType: "MaterialIcons", iconName: "notifications", iconSize: 22 },
   ];
 
   // const handlePress = (tabId) => {
