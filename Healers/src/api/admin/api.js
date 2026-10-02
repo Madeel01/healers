@@ -10,7 +10,10 @@ export const therapistUsers = async (params = {}) => {
   const response = await apiClient.get("/admin/get_therapists", { params });
   return response.data;
 };
-
+export const therapistAssignUsers = async () => {
+  const response = await apiClient.get("/admin/get_therapists_users");
+  return response.data;
+};
 export const createTherapist = async (payload) => {
   const response = await apiClient.post("/admin/therapists", payload);
   return response.data;

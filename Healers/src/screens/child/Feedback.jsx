@@ -1,7 +1,6 @@
 import React, {
   useCallback,
   useContext,
-  useEffect,
   useState,
 } from 'react';
 
@@ -23,6 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
   addChildFeedbackReply,
@@ -69,20 +69,6 @@ const MOOD_OPTIONS = [
   },
 ];
 
-function formatDate(dateStr) {
-  if (!dateStr) {
-    return "Unknown date";
-  }
-
-  const date = new Date(dateStr);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Unknown date";
-  }
-
-  return date.toLocaleDateString();
-}
-
 function formatFeedbackDate(date) {
   if (!date) {
     return "Unknown date";
@@ -102,199 +88,112 @@ function formatFeedbackDate(date) {
 }
 
 function mapFeedbackItem(item, status) {
-  const isPendingItem = !item._id
-    && !!item.appointmentId
-    && !!item.session;
+  const isPendingItem = item.isPending === true
+    || (
+      !item._id
+      && item.statusLabel === "Pending"
+    );
 
   if (isPendingItem) {
-    const therapist = item.therapistId || {};
-
     return {
-      id: String(item.appointmentId),
+      ...item,
+      id: String(
+        item.id
+          || item.appointmentId,
+      ),
       appointmentId: String(item.appointmentId),
-
-      therapistId: item.therapistId,
-      childId: item.childId,
-      name: therapist.fullName || "Therapist",
-      specialty: item.specialty || "",
-      role: therapist.role || "Therapist",
-
-      rating: null,
-
-      comment: `Session on ${
-        formatDate(
-          item.session?.date,
-        )
-      } (${item.session?.startTime || ""} - ${item.session?.endTime || ""}) is awaiting feedback.`,
-
-      avatar: therapist.profileImage || null,
-
-      primaryAction: "Give Feedback",
-      primaryIcon: "corner-up-left",
+      primaryAction: "Add Feedback",
+      primaryIcon: "plus",
       actionType: "primary",
-
-      secondaryAction: "Delete",
-      secondaryIcon: "trash-2",
-
-      tab: status,
-
-      statusLabel: item.isNew ? "New" : "Pending",
-
-      isNew: item.isNew === true,
-
+      statusLabel: "Pending",
       isPending: true,
-
       isRespond: false,
-
       canReply: false,
-
-      childName: item.childId?.fullName || "You",
-
-      startTime: item.session?.startTime || "--:--",
-      endTime: item.session?.endTime || "--:--",
-
-      date: item.session?.date || null,
-      sessionDate: item.session?.date || null,
-
-      moodLabel: item?.moodLabel || "No reaction",
-      moodEmoji: "🙂",
-
-      category: item.category || "Unknown",
-
+      rating: null,
+      comment: item.comment || "",
+      startTime: item.startTime
+        || "--:--",
+      endTime: item.endTime
+        || "--:--",
+      date: item.date
+        || item.sessionDate
+        || null,
+      sessionDate: item.sessionDate
+        || item.date
+        || null,
       replies: [],
       myReplies: [],
     };
   }
 
-  const therapist = item.therapistId || {};
+  const replies = Array.isArray(item.replies)
+    ? item.replies
+    : [];
 
-  const sessionDate = item.appointment?.date
-    || item.date
-    || null;
+  const myReplies = Array.isArray(item.myReplies)
+    ? item.myReplies
+    : [];
 
-  const now = new Date();
-
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  let isNew = false;
-
-  if (sessionDate) {
-    const itemSessionDate = new Date(sessionDate);
-
-    if (!Number.isNaN(itemSessionDate.getTime())) {
-      itemSessionDate.setHours(0, 0, 0, 0);
-
-      isNew = itemSessionDate.getTime() === today.getTime()
-        || itemSessionDate.getTime() === yesterday.getTime();
-    }
-  }
+  const isResponded = item.isRespond === true
+    || myReplies.length > 0;
 
   const mood = MOOD_OPTIONS.find(
-    (m) => m.id === item.moodLabel,
+    (option) => option.id === item.moodLabel,
   );
 
-  const isResponded = item.isRespond === true;
-
-  let statusLabel = "Feedback";
-
-  if (isResponded) {
-    statusLabel = "Responded";
-  } else if (isNew) {
-    statusLabel = "New";
-  }
-
   return {
-    id: item._id
-      ? String(item._id)
-      : item.appointmentId
-      ? String(item.appointmentId)
-      : `${status}-${Date.now()}-${Math.random()}`,
-
+    ...item,
+    id: String(
+      item.id
+        || item._id
+        || item.appointmentId,
+    ),
     appointmentId: item.appointmentId
-      ? String(item.appointmentId)
+      ? String(
+        item.appointmentId,
+      )
       : null,
-
-    specialty: item.specialty || "",
-
-    therapistId: item.therapistId,
-    childId: item.childId,
-
-    name: therapist.fullName || "Therapist",
-    role: therapist.role || "Therapist",
-
-    rating: typeof item.rating === "number"
-      ? item.rating
-      : 0,
-
-    comment: typeof item.notes === "string"
-      ? item.notes.trim()
-      : typeof item.comment === "string"
-      ? item.comment.trim()
-      : "",
-
-    avatar: therapist.profileImage || null,
-
     primaryAction: isResponded
       ? "View Reply"
-      : "Reply",
-
+      : "Add Reply",
     primaryIcon: isResponded
       ? undefined
       : "corner-up-left",
-
     actionType: isResponded
       ? "outline"
       : "primary",
-
-    secondaryAction: "Delete",
-    secondaryIcon: "trash-2",
-
-    tab: status,
-
-    statusLabel,
-
+    statusLabel: isResponded
+      ? "Responded"
+      : status === "new"
+      ? "New"
+      : item.statusLabel
+        || "Feedback",
     isRespond: isResponded,
-
-    canReply: item.canReply !== false,
-
-    isNew,
-
+    canReply: !isResponded,
     isPending: false,
-
-    childName: item.childId?.fullName || "You",
-
-    startTime: item.appointment?.startTime
-      || item.startTime
+    isNew: status === "new"
+      || item.isNew === true,
+    rating: typeof item.rating
+        === "number"
+      ? item.rating
+      : 0,
+    comment: typeof item.comment
+        === "string"
+      ? item.comment.trim()
+      : "",
+    startTime: item.startTime
       || "--:--",
-
-    endTime: item.appointment?.endTime
-      || item.endTime
+    endTime: item.endTime
       || "--:--",
-
-    date: item.appointment?.date
+    date: item.date
+      || item.sessionDate
+      || null,
+    sessionDate: item.sessionDate
       || item.date
       || null,
-
-    sessionDate: item.appointment?.date
-      || item.date
-      || null,
-
-    moodLabel: item?.moodLabel || "No reaction",
     moodEmoji: mood?.emoji || "",
-
-    category: item.category || "Unknown",
-
-    replies: Array.isArray(item.replies)
-      ? item.replies
-      : [],
-
-    myReplies: Array.isArray(item.myReplies)
-      ? item.myReplies
-      : [],
+    replies,
+    myReplies,
   };
 }
 
@@ -348,7 +247,6 @@ export default function ChildFeedback({ navigation }) {
         );
 
         const payload = response?.data;
-
         if (!payload?.success) {
           throw new Error(
             payload?.message
@@ -412,15 +310,16 @@ export default function ChildFeedback({ navigation }) {
     [status],
   );
 
-  useEffect(() => {
-    setPage(1);
-    setHasMore(true);
-    setFeedbackItems([]);
+  useFocusEffect(
+    useCallback(() => {
+      setPage(1);
+      setHasMore(true);
 
-    fetchFeedback({
-      nextPage: 1,
-    });
-  }, [status, fetchFeedback]);
+      fetchFeedback({
+        nextPage: 1,
+      });
+    }, [fetchFeedback]),
+  );
 
   const loadMoreFeedback = useCallback(() => {
     if (loading || loadingMore || refreshing || !hasMore) {
@@ -644,8 +543,23 @@ export default function ChildFeedback({ navigation }) {
     }
   };
 
+  const formatSessionDate = (date) => {
+    if (!date) {
+      return "Unknown date";
+    }
+    const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "Unknown date";
+    }
+    return parsedDate.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    });
+  };
+
   return (
-    <SafeAreaView style={[styles.mainContainer,commonStyles.container]}>
+    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <TopBar
         navigation={navigation}
         isNotificationOpen={isNotificationOpen}
@@ -839,17 +753,13 @@ export default function ChildFeedback({ navigation }) {
               {item.avatar
                 ? (
                   <Image
-                    source={{
-                      uri: item.avatar,
-                    }}
+                    source={{ uri: item.avatar }}
                     style={styles.userAvatar}
                   />
                 )
                 : (
                   <View style={styles.avatarFallback}>
-                    <Text
-                      style={styles.avatarFallbackText}
-                    >
+                    <Text style={styles.avatarFallbackText}>
                       {(item.name || "User")
                         .trim()
                         .charAt(0)
@@ -896,44 +806,28 @@ export default function ChildFeedback({ navigation }) {
                       </View>
                     </View>
 
-                    {item.rating != null
-                      && renderStars(item.rating)}
+                    {item.rating != null && renderStars(item.rating)}
                   </View>
 
                   {!item.isPending && (
-                    <View
-                      style={styles.appointmentInfo}
-                    >
-                      <Text
-                        style={styles.detailLine}
-                      >
-                        <Text
-                          style={styles.detailLabel}
-                        >
-                          Appt:
+                    <View style={styles.appointmentInfo}>
+                      <Text style={styles.detailLine}>
+                        <Text style={styles.detailLabel}>
+                          Appt:{" "}
                         </Text>
 
                         {formatFeedbackDate(
-                          item.date,
+                          item.sessionDate || item.date,
                         )}
 
-                        {item.startTime
-                            && item.startTime !== "--:--"
-                          ? `, ${
-                            formatTo12Hour(
-                              item.startTime,
-                            )
-                          }`
+                        {item.startTime && item.startTime !== "--:--"
+                          ? `, ${formatTo12Hour(item.startTime)}`
                           : ""}
                       </Text>
 
-                      <Text
-                        style={styles.detailLine}
-                      >
-                        <Text
-                          style={styles.detailLabel}
-                        >
-                          Reaction:
+                      <Text style={styles.detailLine}>
+                        <Text style={styles.detailLabel}>
+                          Reaction:{" "}
                         </Text>
 
                         {item.moodEmoji || ""} {item.moodLabel || "--"}
@@ -944,15 +838,67 @@ export default function ChildFeedback({ navigation }) {
               </View>
             </View>
 
-            <Text
-              style={item.comment
-                ? styles.commentText
-                : styles.notesText}
-              numberOfLines={2}
-              ellipsizeMode="tail"
-            >
-              {item.comment || "No message"}
-            </Text>
+            {item.isPending
+              ? (
+                <View style={styles.pendingSessionBox}>
+                  <View style={styles.pendingSessionHeader}>
+                    <Feather
+                      name="clock"
+                      size={16}
+                      color="#B45309"
+                    />
+
+                    <Text style={styles.pendingSessionTitle}>
+                      Your session feedback is pending
+                    </Text>
+                  </View>
+
+                  <View style={styles.pendingSessionDetails}>
+                    <View style={styles.pendingSessionDetailItem}>
+                      <Feather
+                        name="calendar"
+                        size={14}
+                        color="#64748B"
+                      />
+
+                      <Text style={styles.pendingSessionDetailText}>
+                        {formatFeedbackDate(
+                          item.sessionDate || item.date,
+                        )}
+                      </Text>
+                    </View>
+
+                    <View style={styles.pendingSessionDetailItem}>
+                      <Feather
+                        name="clock"
+                        size={14}
+                        color="#64748B"
+                      />
+
+                      <Text style={styles.pendingSessionDetailText}>
+                        {item.startTime && item.startTime !== "--:--"
+                          ? formatTo12Hour(item.startTime)
+                          : "--:--"}
+                        {" - "}
+                        {item.endTime && item.endTime !== "--:--"
+                          ? formatTo12Hour(item.endTime)
+                          : "--:--"}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )
+              : (
+                <Text
+                  style={item.comment
+                    ? styles.commentText
+                    : styles.notesText}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  {item.comment || "No message"}
+                </Text>
+              )}
 
             <View style={styles.cardActionsRow}>
               <TouchableOpacity
@@ -964,45 +910,69 @@ export default function ChildFeedback({ navigation }) {
                 ]}
                 onPress={() => {
                   if (
-                    item.primaryAction === "Reply"
+                    item.primaryAction === "Add Reply"
                     || item.primaryAction === "View Reply"
                   ) {
                     handleViewFeedback(item);
                     return;
                   }
 
-                  if (
-                    item.primaryAction
-                      === "Give Feedback"
-                  ) {
-                    navigation.navigate(
-                      "CreateFeedback",
-                      {
+                  if (item.primaryAction === "Add Feedback") {
+                    navigation.navigate("CreateFeedback", {
+                      session: {
                         appointmentId: item.appointmentId,
-
-                        therapistId: item.therapistId,
-
-                        childId: item.childId,
-
-                        session: {
-                          date: item.sessionDate,
-                          startTime: item.startTime,
-                          endTime: item.endTime,
+                        childId: {
+                          _id: item.childId,
                         },
+                        therapistId: {
+                          _id: item.therapistId,
+                          fullName: item.name
+                            || item.therapistName
+                            || "",
+                          email: item.therapistEmail
+                            || "",
+                          profileImage: item.avatar
+                            || "",
+                          role: item.role
+                            || "Therapist",
+                        },
+                        therapistName: item.name
+                          || item.therapistName
+                          || "",
+                        specialty: item.specialty
+                          || "",
+                        sessionDate: item.sessionDate
+                          || item.date,
+                        date: item.sessionDate
+                          || item.date,
+                        startTime: item.startTime
+                          || "--:--",
+                        endTime: item.endTime
+                          || "--:--",
+                        attendanceStatus: item.attendanceStatus
+                          || "Pending",
+                        sessionType: item.sessionType
+                          || "regular",
+                        type: item.type
+                          || null,
+                        batchSessionId: item.batchSessionId
+                          || null,
+                        batchId: item.batchId
+                          || null,
+                        batchAssignmentId: item.batchAssignmentId
+                          || null,
                       },
-                    );
+                    });
                   }
                 }}
-                disabled={item.primaryAction
-                    === "Give Feedback"
+                disabled={item.primaryAction === "Add Feedback"
                   && !item.appointmentId}
               >
                 {item.primaryIcon && (
                   <Feather
                     name={item.primaryIcon}
                     size={16}
-                    color={item.actionType
-                        === "primary"
+                    color={item.actionType === "primary"
                       ? "#FFFFFF"
                       : "#0B4A6F"}
                     style={styles.btnIcon}
@@ -1012,8 +982,7 @@ export default function ChildFeedback({ navigation }) {
                 <Text
                   style={[
                     styles.actionBtnText,
-                    item.actionType
-                        === "primary"
+                    item.actionType === "primary"
                       ? styles.primaryBtnText
                       : styles.outlineBtnText,
                   ]}
@@ -1052,8 +1021,7 @@ export default function ChildFeedback({ navigation }) {
                     <Feather
                       name="trash-2"
                       size={16}
-                      color={!item.isPending
-                          && item.isRespond
+                      color={!item.isPending && item.isRespond
                         ? "#FFFFFF"
                         : "#94A3B8"}
                       style={styles.btnIcon}
@@ -1065,8 +1033,7 @@ export default function ChildFeedback({ navigation }) {
                     styles.secondaryGrayBtnText,
                     deletingId === item.id
                       ? styles.deleteBtnTextSending
-                      : !item.isPending
-                          && item.isRespond
+                      : !item.isPending && item.isRespond
                       ? styles.deleteBtnText
                       : styles.deleteBtnTextDisabled,
                   ]}
@@ -1857,5 +1824,38 @@ const styles = StyleSheet.create({
 
   pendingBadgeText: {
     color: "#92400E",
+  },
+  pendingSessionBox: {
+    backgroundColor: "#FFF7ED",
+    borderWidth: 1,
+    borderColor: "#FED7AA",
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  pendingSessionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  pendingSessionTitle: {
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    color: "#B45309",
+  },
+  pendingSessionDetails: {
+    marginTop: 9,
+    gap: 6,
+  },
+  pendingSessionDetailItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  pendingSessionDetailText: {
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: "#475569",
   },
 });

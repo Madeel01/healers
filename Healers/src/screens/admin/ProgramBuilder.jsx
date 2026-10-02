@@ -23,15 +23,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { therapistAssignUsers } from '../../api/admin/api';
 import {
   addGoalToProgramApi,
   AddPrograms,
   deleteGoalApi,
   deleteProgramApi,
   getChildPrograms,
-  therapistUsers,
 } from '../../api/therapist/api';
-import TherapistBottomBar from '../../components/TherapistBottomBar';
+import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
@@ -74,7 +74,7 @@ export default function ProgramBuilderScreen({ navigation }) {
     try {
       setLoadingChildren(true);
       const ID = user?.id;
-      const responseData = await therapistUsers({ filter: ID });
+      const responseData = await therapistAssignUsers();
       const fetchedUsers = responseData?.data || [];
       setChildren(fetchedUsers);
 
@@ -531,7 +531,7 @@ export default function ProgramBuilderScreen({ navigation }) {
         </TouchableWithoutFeedback>
       </Modal>
 
-      <TherapistBottomBar activeTab="AssignedChildren" />
+      <BottomBar  />
     </SafeAreaView>
   );
 }

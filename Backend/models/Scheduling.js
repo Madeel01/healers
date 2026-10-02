@@ -21,7 +21,7 @@ const appointmentChildSchema = new mongoose.Schema(
       default: "Pending",
     },
   },
-  { _id: true }
+  { _id: true },
 );
 
 const appointmentSchema = new mongoose.Schema(
@@ -71,13 +71,22 @@ const appointmentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null,
     },
-
+    session_status: {
+      type: String,
+      enum: [
+        "Upcoming",
+        "InProgress",
+        "Completed",
+        "Missed",
+      ],
+      default: "Upcoming",
+    },
     children: {
       type: [appointmentChildSchema],
       default: [],
     },
   },
-  { _id: true }
+  { _id: true },
 );
 
 const schedulingSchema = new mongoose.Schema(
@@ -107,7 +116,7 @@ const schedulingSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 schedulingSchema.index(
@@ -118,10 +127,10 @@ schedulingSchema.index(
   },
   {
     unique: true,
-  }
+  },
 );
 
-schedulingSchema.pre("validate", function () {
+schedulingSchema.pre("validate", function() {
   const byDate = {};
 
   for (const ap of this.appointments) {
@@ -133,7 +142,7 @@ schedulingSchema.pre("validate", function () {
     if (end <= start) {
       this.invalidate(
         "appointments",
-        `End time must be after start time for appointment on ${key}.`
+        `End time must be after start time for appointment on ${key}.`,
       );
       return;
     }
@@ -143,7 +152,7 @@ schedulingSchema.pre("validate", function () {
     if (list.some((x) => start < x.end && x.start < end)) {
       this.invalidate(
         "appointments",
-        `This therapist already has an appointment at that time on ${key}.`
+        `This therapist already has an appointment at that time on ${key}.`,
       );
       return;
     }

@@ -65,7 +65,6 @@ export default function AttendanceTrackingScreen({ navigation, route }) {
   const { user } = useContext(AuthContext);
   const filterType = route?.params?.filterType;
 
-  console.log("filterType", filterType);
   const currentMonthIdx = new Date().getMonth();
   const defaultRangeLabel = MONTH_RANGES[currentMonthIdx]?.label || "All Months";
 
@@ -150,149 +149,108 @@ export default function AttendanceTrackingScreen({ navigation, route }) {
       setLoading(false);
     }
   };
-  // const fetchAttendanceData = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const activeConfig = MONTH_RANGES.find((r) => r.label === selectedRange);
 
-  //     const params = { childId: selectedChildId };
-  //     if (activeConfig?.monthIndex) {
-  //       params.month = activeConfig.monthIndex;
-  //       params.year = new Date().getFullYear();
-  //     }
-
-  //     const res = await getAttendanceApi(params);
-  //     if (res?.success) {
-  //       setAttendanceRecords(res.data || []);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching scheduling data:", error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  const activeChild = children.find((c) => (c._id || c.id) === selectedChildId) || {};
+  const activeChild = children.find(
+    (c) => (c._id || c.id) === selectedChildId,
+  ) || {};
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const formattedAppointments = attendanceRecords.flatMap((record) => {
-    const childObj = record.childId || {};
-    const childName = childObj.fullName || childObj.name || "Unknown Child";
 
-    return (record.appointments || []).map((appt) => {
-      const rawDateVal = appt.date?.$date || appt.date;
-      const dateObj = new Date(rawDateVal);
+  const formattedAppointments = attendanceRecords.map(
+    (item) => {
+      const dateObj = new Date(item.date);
+      const startDateTime = new Date(item.date);
 
-      const monthName = MONTH_NAMES[dateObj.getMonth()];
-      const formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+      if (item.startTime) {
+        const [hours, minutes] = item.startTime
+          .split(":")
+          .map(Number);
 
-      const apptDateTime = new Date(dateObj);
-      if (appt.startTime) {
-        const [hours, minutes] = appt.startTime.split(":").map(Number);
-        if (!isNaN(hours) && !isNaN(minutes)) {
-          apptDateTime.setHours(hours, minutes, 0, 0);
-        }
+        startDateTime.setHours(
+          hours || 0,
+          minutes || 0,
+          0,
+          0,
+        );
       }
 
-      const now = new Date();
-      const isFutureDate = apptDateTime > now;
-
-      const rawStatus = appt.attendance_status || "Pending";
-      const displayStatus = rawStatus === "Complete" ? "Present" : rawStatus;
-
-      const isTodayAppointment = dateObj.getDate() === now.getDate()
-        && dateObj.getMonth() === now.getMonth()
-        && dateObj.getFullYear() === now.getFullYear();
-
       return {
-        id: appt._id?.$oid || appt._id,
-        attendanceDocId: record._id?.$oid || record._id,
-        childName,
+        id: item.appointmentId,
+        attendanceDocId: item.attendanceId,
+        childAttendanceId: item.childAttendanceId,
+        childId: item.childId,
+        childName: item.childName,
+        fatherName: item.fatherName
+          || item.parentName,
+        profileImage: item.profileImage,
         dateObj,
-        isTodayAppointment,
-        date: formattedDate,
-        time: appt.startTime ? `${appt.startTime} - ${appt.endTime}` : (appt.time || "-"),
-        month: monthName,
-        status: displayStatus,
-        isFutureDate,
+        date: dateObj.toLocaleDateString(
+          "en-US",
+          {
+            month: "short",
+            day: "2-digit",
+          },
+        ),
+        time: `${item.startTime} - ${item.endTime}`,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        status: item.attendanceStatus === "Complete"
+          ? "Present"
+          : item.attendanceStatus,
+        isFutureDate: startDateTime > new Date(),
       };
-    });
-  }).filter((item) => {
-    // If "Today" filter is active, only retain today's appointments
-    if (selectedRange === "Today") {
-      return item.isTodayAppointment;
-    }
-    return true;
-  });
-  // const formattedAppointments = attendanceRecords.flatMap((record) => {
-  //   return (record.appointments || []).map((appt) => {
-  //     const rawDateVal = appt.date?.$date || appt.date;
-  //     const dateObj = new Date(rawDateVal);
-
-  //     const monthName = MONTH_NAMES[dateObj.getMonth()];
-  //     const formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
-
-  //     const apptDateTime = new Date(dateObj);
-  //     if (appt.startTime) {
-  //       const [hours, minutes] = appt.startTime.split(":").map(Number);
-  //       if (!isNaN(hours) && !isNaN(minutes)) {
-  //         apptDateTime.setHours(hours, minutes, 0, 0);
-  //       }
-  //     }
-
-  //     const now = new Date();
-  //     const isFutureDate = apptDateTime > now;
-
-  //     const rawStatus = appt.attendance_status || "Pending";
-  //     const displayStatus = rawStatus === "Complete" ? "Present" : rawStatus;
-
-  //     return {
-  //       id: appt._id?.$oid || appt._id,
-  //       attendanceDocId: record._id?.$oid || record._id,
-  //       date: formattedDate,
-  //       time: appt.startTime ? `${appt.startTime} - ${appt.endTime}` : (appt.time || "-"),
-  //       month: monthName,
-  //       status: displayStatus,
-  //       isFutureDate,
-  //     };
-  //   });
-  // });
+    },
+  );
 
   const visibleAppointments = showFullHistory
     ? formattedAppointments
     : formattedAppointments.slice(0, 5);
 
-  const handleToggleStatus = async (attendanceDocId, appointmentId, targetStatus, currentStatus, isFutureDate) => {
+  const handleToggleStatus = async (
+    attendanceDocId,
+    appointmentId,
+    childId,
+    targetStatus,
+    currentStatus,
+    isFutureDate,
+  ) => {
     if (isFutureDate) return;
 
-    const nextStatus = currentStatus === targetStatus ? "Pending" : targetStatus;
-    const dbStatus = nextStatus === "Present" ? "Complete" : nextStatus;
+    const nextStatus = currentStatus === targetStatus
+      ? "Pending"
+      : targetStatus;
 
-    setAttendanceRecords((prevRecords) =>
-      prevRecords.map((doc) => {
-        const docId = doc._id?.$oid || doc._id;
-        if (docId !== attendanceDocId) return doc;
-        return {
-          ...doc,
-          appointments: doc.appointments.map((appt) => {
-            const apptId = appt._id?.$oid || appt._id;
-            return apptId === appointmentId
-              ? { ...appt, attendance_status: dbStatus }
-              : appt;
-          }),
-        };
-      })
-    );
+    const dbStatus = nextStatus === "Present"
+      ? "Complete"
+      : nextStatus;
 
     try {
       await updateAttendanceStatusApi({
         attendanceId: attendanceDocId,
         appointmentId,
+        childId,
         status: dbStatus,
       });
+
+      setAttendanceRecords((prev) =>
+        prev.map((item) =>
+          item.attendanceId === attendanceDocId
+            && item.appointmentId === appointmentId
+            && item.childId === childId
+            ? {
+              ...item,
+              attendanceStatus: dbStatus,
+            }
+            : item
+        )
+      );
     } catch (error) {
-      console.error("Failed to update attendance_status:", error);
+      console.log(
+        "Attendance update error:",
+        error?.response?.data,
+      );
+
       fetchAttendanceData();
     }
   };
@@ -376,7 +334,6 @@ export default function AttendanceTrackingScreen({ navigation, route }) {
                   const isAbsent = item.status === "Absent";
                   const isPending = item.status === "Pending";
                   const isDisabled = item.isFutureDate;
-
                   let toggleGroupBg = "hsl(60, 26%, 93%)";
                   if (isPresent) toggleGroupBg = "#E0F7F1";
                   if (isAbsent) toggleGroupBg = "rgba(186,26,26,0.10)";
@@ -384,7 +341,7 @@ export default function AttendanceTrackingScreen({ navigation, route }) {
 
                   return (
                     <View
-                      key={item.id}
+                      key={`${item.id}-${index}`}
                       style={[
                         styles.attendanceRow,
                         index < visibleAppointments.length - 1 && styles.borderBottom,
@@ -403,7 +360,6 @@ export default function AttendanceTrackingScreen({ navigation, route }) {
                         </Text>
                       </View>
 
-                      {/* Toggle Switch Pill */}
                       <View style={[styles.toggleGroup, { backgroundColor: toggleGroupBg }]}>
                         <TouchableOpacity
                           style={[
@@ -417,6 +373,7 @@ export default function AttendanceTrackingScreen({ navigation, route }) {
                             handleToggleStatus(
                               item.attendanceDocId,
                               item.id,
+                              item.childId,
                               "Present",
                               item.status,
                               item.isFutureDate,
@@ -438,7 +395,14 @@ export default function AttendanceTrackingScreen({ navigation, route }) {
                           activeOpacity={isDisabled ? 1 : 0.7}
                           disabled={isDisabled}
                           onPress={() =>
-                            handleToggleStatus(item.attendanceDocId, item.id, "Absent", item.status, item.isFutureDate)}
+                            handleToggleStatus(
+                              item.attendanceDocId,
+                              item.id,
+                              item.childId,
+                              "Absent",
+                              item.status,
+                              item.isFutureDate,
+                            )}
                         >
                           <Ionicons
                             name="close-circle"
