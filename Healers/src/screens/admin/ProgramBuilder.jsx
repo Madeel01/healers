@@ -1,7 +1,7 @@
 import React, {
   useCallback,
-  useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
@@ -23,7 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { therapistAssignUsers } from '../../api/admin/api';
+import { AssignTheraistChild } from '../../api/admin/api';
 import {
   addGoalToProgramApi,
   AddPrograms,
@@ -33,7 +33,6 @@ import {
 } from '../../api/therapist/api';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
-import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
@@ -42,92 +41,179 @@ import {
 import { therapistSpecialities } from '../../utils/specialities';
 
 export default function ProgramBuilderScreen({ navigation }) {
-  const { user, logout } = useContext(AuthContext);
   const [children, setChildren] = useState([]);
   const [loadingChildren, setLoadingChildren] = useState(true);
-  const [selectedChildId, setSelectedChildId] = useState(null);
-
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [programs, setPrograms] = useState([]);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
-
   const [refreshing, setRefreshing] = useState(false);
-
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSearch, setModalSearch] = useState("");
   const [programModalVisible, setProgramModalVisible] = useState(false);
-
   const [goalInputText, setGoalInputText] = useState({});
   const [activeGoalInputProgramId, setActiveGoalInputProgramId] = useState(null);
+
+  const getAssignmentId = (item) =>
+    `${item.childId}-${item.therapistId}`;
+
+  const selectedAssignment = useMemo(
+    () =>
+      children.find(
+        (item) =>
+          getAssignmentId(item) === selectedAssignmentId,
+      ) || null,
+    [children, selectedAssignmentId],
+  );
+
+  const selectedChildId = selectedAssignment?.childId || null;
+  const selectedTherapistId = selectedAssignment?.therapistId || null;
 
   useEffect(() => {
     fetchChildren();
   }, []);
 
   useEffect(() => {
-    if (selectedChildId) {
-      fetchProgramsForChild(selectedChildId);
+    if (selectedChildId && selectedTherapistId) {
+      fetchProgramsForChild(
+        selectedChildId,
+        selectedTherapistId,
+      );
+    } else {
+      setPrograms([]);
     }
-  }, [selectedChildId]);
+  }, [selectedChildId, selectedTherapistId]);
 
   const fetchChildren = async () => {
     try {
       setLoadingChildren(true);
-      const ID = user?.id;
-      const responseData = await therapistAssignUsers();
+
+      const responseData = await AssignTheraistChild();
       const fetchedUsers = responseData?.data || [];
+
       setChildren(fetchedUsers);
 
-      if (fetchedUsers.length > 0 && !selectedChildId) {
-        const initialChildId = fetchedUsers[0]._id || fetchedUsers[0].id;
-        setSelectedChildId(initialChildId);
+      if (fetchedUsers.length === 0) {
+        setSelectedAssignmentId(null);
+        return;
+      }
+
+      const selectedStillExists = fetchedUsers.some(
+        (item) =>
+          getAssignmentId(item) === selectedAssignmentId,
+      );
+
+      if (!selectedStillExists) {
+        setSelectedAssignmentId(
+          getAssignmentId(fetchedUsers[0]),
+        );
       }
     } catch (error) {
-      console.error("Error fetching children:", error);
+      console.error(
+        "Error fetching children:",
+        error?.response?.data || error.message,
+      );
     } finally {
       setLoadingChildren(false);
     }
   };
 
-  const fetchProgramsForChild = async (childId) => {
+  const fetchProgramsForChild = async (
+    childId,
+    therapistId,
+  ) => {
+    if (!childId || !therapistId) {
+      setPrograms([]);
+      return;
+    }
+
     try {
       setLoadingPrograms(true);
-      const response = await getChildPrograms(childId, user?.id);
+
+      const response = await getChildPrograms(
+        childId,
+        therapistId,
+      );
+
       if (response?.success) {
         setPrograms(response.data || []);
+      } else {
+        setPrograms([]);
       }
     } catch (error) {
-      console.error("Error fetching child programs:", error);
+      console.error(
+        "Error fetching child programs:",
+        error?.response?.data || error.message,
+      );
+      setPrograms([]);
     } finally {
       setLoadingPrograms(false);
     }
   };
 
   const onRefresh = useCallback(async () => {
-    setRefreshing(true);
     try {
-      await fetchChildren();
-      if (selectedChildId) {
-        await fetchProgramsForChild(selectedChildId);
+      setRefreshing(true);
+
+      const responseData = await AssignTheraistChild();
+      const fetchedUsers = responseData?.data || [];
+
+      setChildren(fetchedUsers);
+
+      let assignment = fetchedUsers.find(
+        (item) =>
+          getAssignmentId(item) === selectedAssignmentId,
+      );
+
+      if (!assignment && fetchedUsers.length > 0) {
+        assignment = fetchedUsers[0];
+        setSelectedAssignmentId(
+          getAssignmentId(assignment),
+        );
+      }
+
+      if (assignment) {
+        await fetchProgramsForChild(
+          assignment.childId,
+          assignment.therapistId,
+        );
+      } else {
+        setPrograms([]);
+        setSelectedAssignmentId(null);
       }
     } catch (error) {
-      console.error("Error on refreshing:", error);
+      console.error(
+        "Error on refreshing:",
+        error?.response?.data || error.message,
+      );
     } finally {
       setRefreshing(false);
     }
-  }, [selectedChildId]);
+  }, [selectedAssignmentId]);
+
+  const handleSelectAssignment = (item) => {
+    setSelectedAssignmentId(
+      getAssignmentId(item),
+    );
+  };
 
   const handleAddProgram = async (department) => {
-    if (!selectedChildId) {
-      alert("Please select a child first.");
+    if (!selectedAssignment) {
+      Alert.alert(
+        "Error",
+        "Please select a child and therapist.",
+      );
       return;
     }
 
     try {
       const payload = {
-        therapistId: user?.id,
-        childId: selectedChildId,
-        programName: department.title || department.label || "Untitled Program",
+        therapistId: selectedAssignment.therapistId,
+        childId: selectedAssignment.childId,
+        programName:
+          department.title
+          || department.label
+          || "Untitled Program",
         description: "describe behavior, engagement,",
         goals: [],
       };
@@ -135,108 +221,235 @@ export default function ProgramBuilderScreen({ navigation }) {
       const response = await AddPrograms(payload);
 
       if (response?.success) {
-        setPrograms((prev) => [response.program, ...prev]);
+        if (response.program) {
+          setPrograms((prev) => [
+            response.program,
+            ...prev,
+          ]);
+        } else {
+          await fetchProgramsForChild(
+            selectedAssignment.childId,
+            selectedAssignment.therapistId,
+          );
+        }
+
         setProgramModalVisible(false);
       }
     } catch (error) {
-      console.error("Failed to add program:", error);
+      console.error(
+        "Failed to add program:",
+        error?.response?.data || error.message,
+      );
+
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message
+        || "Failed to add program.",
+      );
     }
   };
 
   const handleDeleteProgram = (program) => {
     const programId = program._id || program.id;
-    const programName = program.programName || program.title || "this program";
+    const programName =
+      program.programName
+      || program.title
+      || "this program";
 
     Alert.alert(
       "Are you sure?",
       `Do you really want to delete "${programName}"? This action cannot be undone.`,
       [
-        { text: "Cancel", style: "cancel" },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
         {
           text: "Yes, Delete",
           style: "destructive",
           onPress: async () => {
             try {
-              const res = await deleteProgramApi(programId);
-              if (res.success) {
-                setPrograms((prev) => prev.filter((prog) => (prog._id || prog.id) !== programId));
+              const res = await deleteProgramApi(
+                programId,
+              );
+
+              if (res?.success) {
+                setPrograms((prev) =>
+                  prev.filter(
+                    (item) =>
+                      (item._id || item.id) !== programId,
+                  ),
+                );
               }
             } catch (error) {
-              console.error("Failed to delete program:", error?.response?.data || error.message);
+              console.error(
+                "Failed to delete program:",
+                error?.response?.data || error.message,
+              );
             }
           },
         },
       ],
     );
   };
- const handleDeleteGoal = async (programId, goalId) => {
-  try {
-    const response = await deleteGoalApi(programId, goalId);
 
-    if (response?.success) {
-      setPrograms((prev) =>
-        prev.map((prog) => {
-          const currentProgId = prog._id || prog.id;
-          if (currentProgId === programId) {
+  const handleDeleteGoal = async (
+    programId,
+    goalId,
+  ) => {
+    try {
+      const response = await deleteGoalApi(
+        programId,
+        goalId,
+      );
+
+      if (response?.success) {
+        setPrograms((prev) =>
+          prev.map((program) => {
+            const currentProgramId =
+              program._id || program.id;
+
+            if (currentProgramId !== programId) {
+              return program;
+            }
+
             return {
-              ...prog,
-              programGoals: (prog.programGoals || prog.goals || []).filter(
-                (g) => (g._id || g.id) !== goalId
+              ...program,
+              programGoals: (
+                program.programGoals
+                || program.goals
+                || []
+              ).filter(
+                (goal) =>
+                  (goal._id || goal.id) !== goalId,
               ),
             };
-          }
-          return prog;
-        })
+          }),
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Failed to delete goal:",
+        error?.response?.data || error.message,
       );
     }
-  } catch (error) {
-    console.error("Failed to delete goal:", error?.response?.data || error.message);
-  }
-};
+  };
 
-  const handleGoalInputChange = (programId, text) => {
-    setGoalInputText((prev) => ({ ...prev, [programId]: text }));
+  const handleGoalInputChange = (
+    programId,
+    text,
+  ) => {
+    setGoalInputText((prev) => ({
+      ...prev,
+      [programId]: text,
+    }));
   };
 
   const handleSaveGoal = async (programId) => {
-    const text = goalInputText[programId]?.trim();
-    if (!text) return;
+    const text =
+      goalInputText[programId]?.trim();
+
+    if (!text) {
+      return;
+    }
 
     try {
-      const response = await addGoalToProgramApi(programId, text);
-
-      if (response?.success && response?.program) {
-        setPrograms((prev) =>
-          prev.map((prog) => {
-            const currentProgId = prog._id || prog.id;
-            return currentProgId === programId ? response.program : prog;
-          })
+      const response =
+        await addGoalToProgramApi(
+          programId,
+          text,
         );
-        setGoalInputText((prev) => ({ ...prev, [programId]: "" }));
+
+      if (
+        response?.success
+        && response?.program
+      ) {
+        setPrograms((prev) =>
+          prev.map((program) => {
+            const currentProgramId =
+              program._id || program.id;
+
+            return currentProgramId === programId
+              ? response.program
+              : program;
+          }),
+        );
+
+        setGoalInputText((prev) => ({
+          ...prev,
+          [programId]: "",
+        }));
+
         setActiveGoalInputProgramId(null);
       }
     } catch (error) {
-      console.error("Failed to save goal to database:", error?.response?.data || error.message);
+      console.error(
+        "Failed to save goal:",
+        error?.response?.data || error.message,
+      );
     }
   };
 
-  const filteredModalChildren = children?.filter((child) => {
-    const childName = child?.fullName ?? child?.name ?? "";
-    return childName.toLowerCase().includes(modalSearch.toLowerCase().trim());
-  });
+  const filteredModalChildren = children.filter(
+    (item) => {
+      const search =
+        modalSearch.toLowerCase().trim();
 
-  const filteredPrograms = programs.filter((prog) => {
-    const title = prog?.programName ?? prog?.title ?? "";
-    return title.toLowerCase().includes((searchQuery ?? "").toLowerCase().trim());
-  });
+      if (!search) {
+        return true;
+      }
+
+      return (
+        item.childName
+          ?.toLowerCase()
+          .includes(search)
+        || item.therapistName
+          ?.toLowerCase()
+          .includes(search)
+        || item.combinedName
+          ?.toLowerCase()
+          .includes(search)
+        || item.specialty
+          ?.toLowerCase()
+          .includes(search)
+      );
+    },
+  );
+
+  const filteredPrograms = programs.filter(
+    (program) => {
+      const title =
+        program?.programName
+        ?? program?.title
+        ?? "";
+
+      return title
+        .toLowerCase()
+        .includes(
+          searchQuery
+            .toLowerCase()
+            .trim(),
+        );
+    },
+  );
 
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
-      <TopBar navigation={navigation} headerTitle="Program Builder" />
+    <SafeAreaView
+      style={[
+        styles.mainContainer,
+        commonStyles.container,
+      ]}
+    >
+      <TopBar
+        navigation={navigation}
+        headerTitle="Program Builder"
+      />
 
       <ScrollView
         style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={
+          styles.scrollContent
+        }
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -248,37 +461,61 @@ export default function ProgramBuilderScreen({ navigation }) {
         }
       >
         <View style={styles.headerBanner}>
-          <Text style={styles.bannerTitle}>Program Builder</Text>
+          <Text style={styles.bannerTitle}>
+            Program Builder
+          </Text>
+
           <Text style={styles.bannerSubtitle}>
             Managing Therapist Program add child program
           </Text>
         </View>
 
         <View style={styles.childHeaderRow}>
-          <Text style={styles.sectionHeaderTitle}>Select Child</Text>
+          <Text style={styles.sectionHeaderTitle}>
+            Select Child - Therapist
+          </Text>
+
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => setModalVisible(true)}
+            onPress={() =>
+              setModalVisible(true)}
           >
-            <Text style={styles.viewAllText}>View All</Text>
+            <Text style={styles.viewAllText}>
+              View All
+            </Text>
           </TouchableOpacity>
         </View>
 
         {loadingChildren
-          ? <ActivityIndicator size="small" color="#004E9F" style={{ marginBottom: 20 }} />
+          ? (
+            <ActivityIndicator
+              size="small"
+              color="#004E9F"
+              style={{
+                marginBottom: 20,
+              }}
+            />
+          )
           : children.length > 0
           ? (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.childChipsRow}
+              contentContainerStyle={
+                styles.childChipsRow
+              }
             >
-              {children.map((child) => {
-                const childId = child._id || child.id;
-                const isSelected = childId === selectedChildId;
+              {children.map((item) => {
+                const uniqueId =
+                  getAssignmentId(item);
+
+                const isSelected =
+                  uniqueId
+                  === selectedAssignmentId;
+
                 return (
                   <TouchableOpacity
-                    key={childId}
+                    key={uniqueId}
                     style={[
                       styles.childChip,
                       isSelected
@@ -286,7 +523,10 @@ export default function ProgramBuilderScreen({ navigation }) {
                         : styles.childChipUnselected,
                     ]}
                     activeOpacity={0.8}
-                    onPress={() => setSelectedChildId(childId)}
+                    onPress={() =>
+                      handleSelectAssignment(
+                        item,
+                      )}
                   >
                     <Text
                       style={[
@@ -296,8 +536,23 @@ export default function ProgramBuilderScreen({ navigation }) {
                           : styles.childChipTextUnselected,
                       ]}
                     >
-                      {child.fullName || child.name}
+                      {item.combinedName
+                        || `${item.childName} - ${item.therapistName}`}
                     </Text>
+
+                    {!!item.specialty && (
+                      <Text
+                        style={
+                          styles.childSpecialty
+                        }
+                      >
+                        {item.specialty
+                          .replace(
+                            /_/g,
+                            " ",
+                          )}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -305,18 +560,75 @@ export default function ProgramBuilderScreen({ navigation }) {
           )
           : (
             <View style={styles.childChipsRow}>
-              <Text style={styles.emptyText}>No user found</Text>
+              <Text style={styles.emptyText}>
+                No user found
+              </Text>
             </View>
           )}
 
+        {selectedAssignment && (
+          <View style={styles.selectedInfoCard}>
+            <View style={styles.selectedInfoRow}>
+              <View style={styles.selectedInfoBox}>
+                <Text style={styles.selectedInfoLabel}>
+                  Child
+                </Text>
+                <Text style={styles.selectedInfoValue}>
+                  {selectedAssignment.childName}
+                </Text>
+              </View>
+
+              <View style={styles.selectedInfoBox}>
+                <Text style={styles.selectedInfoLabel}>
+                  Therapist
+                </Text>
+                <Text style={styles.selectedInfoValue}>
+                  {selectedAssignment.therapistName}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.selectedInfoRow}>
+              <View style={styles.selectedInfoBox}>
+                <Text style={styles.selectedInfoLabel}>
+                  Specialty
+                </Text>
+                <Text style={styles.selectedInfoValue}>
+                  {selectedAssignment.specialty
+                    ?.replace(/_/g, " ")
+                    || "-"}
+                </Text>
+              </View>
+
+              <View style={styles.selectedInfoBox}>
+                <Text style={styles.selectedInfoLabel}>
+                  Assigned Children
+                </Text>
+                <Text style={styles.selectedInfoValue}>
+                  {selectedAssignment.assignedChildren
+                    || 0}
+                  /
+                  {selectedAssignment.maxChildren
+                    || 0}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         <View style={styles.searchCard}>
-          <View style={styles.searchInputContainer}>
+          <View
+            style={
+              styles.searchInputContainer
+            }
+          >
             <Feather
               name="search"
               size={18}
               color="#94A3B8"
               style={styles.searchIcon}
             />
+
             <TextInput
               style={styles.searchInput}
               placeholder="Search..."
@@ -327,93 +639,215 @@ export default function ProgramBuilderScreen({ navigation }) {
           </View>
 
           <View style={styles.actionButtonsRow}>
-            <TouchableOpacity style={styles.allLabelsBtn} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.allLabelsBtn}
+              activeOpacity={0.8}
+            >
               <Ionicons
                 name="checkmark-circle-outline"
                 size={18}
                 color="#FFFFFF"
               />
-              <Text style={styles.allLabelsText}>All Labels</Text>
+
+              <Text style={styles.allLabelsText}>
+                All Labels
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.addProgramBtn}
               activeOpacity={0.8}
-              onPress={() => setProgramModalVisible(true)}
+              disabled={!selectedAssignment}
+              onPress={() =>
+                setProgramModalVisible(true)}
             >
-              <Text style={styles.addProgramText}>Add program</Text>
+              <Text style={styles.addProgramText}>
+                Add program
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <Text style={styles.allProgramTitle}>All Programs</Text>
+        <Text style={styles.allProgramTitle}>
+          All Programs
+        </Text>
 
         <View style={styles.programList}>
           {loadingPrograms
-            ? <ActivityIndicator size="small" color="#004E9F" style={{ marginTop: 20 }} />
+            ? (
+              <ActivityIndicator
+                size="small"
+                color="#004E9F"
+                style={{
+                  marginTop: 20,
+                }}
+              />
+            )
             : filteredPrograms.length === 0
             ? (
               <Text style={styles.emptyText}>
                 No programs added yet. Click "Add program" above.
               </Text>
             )
-            : (
-              filteredPrograms.map((program) => {
-                const programId = program._id || program.id;
-                const programGoalsList = program.programGoals || program.goals || [];
+            : filteredPrograms.map(
+              (program) => {
+                const programId =
+                  program._id
+                  || program.id;
+
+                const programGoalsList =
+                  program.programGoals
+                  || program.goals
+                  || [];
 
                 return (
-                  <View key={programId} style={styles.programCard}>
-                    <View style={styles.programHeaderRow}>
-                      <Text style={styles.cardTitle}>{program.programName || program.title}</Text>
+                  <View
+                    key={String(programId)}
+                    style={styles.programCard}
+                  >
+                    <View
+                      style={
+                        styles.programHeaderRow
+                      }
+                    >
+                      <Text style={styles.cardTitle}>
+                        {program.programName
+                          || program.title}
+                      </Text>
+
                       <TouchableOpacity
                         activeOpacity={0.7}
-                        onPress={() => handleDeleteProgram(program)}
+                        onPress={() =>
+                          handleDeleteProgram(
+                            program,
+                          )}
                       >
-                        <Feather name="trash-2" size={20} color="#BA1A1A" />
+                        <Feather
+                          name="trash-2"
+                          size={20}
+                          color="#BA1A1A"
+                        />
                       </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.cardDescription}>{program.description}</Text>
-
-                    <Text style={styles.cardTitle}>{program.therapistTitle || "Therapist"}</Text>
-                    <Text style={styles.cardDescription}>
-                      {program.therapistDescription || "describe behavior, engagement,"}
+                    <Text
+                      style={
+                        styles.cardDescription
+                      }
+                    >
+                      {program.description}
                     </Text>
 
-                    {programGoalsList.map((goal) => {
-                      const goalId = goal._id || goal.id;
-                      return (
-                        <View key={goalId} style={styles.goalBox}>
-                          <View style={styles.goalLeftRow}>
-                            <View style={styles.radioCircle} />
-                            <Text style={styles.goalTitle}>{goal.title}</Text>
-                          </View>
-                          <TouchableOpacity
-                            activeOpacity={0.7}
-                            onPress={() => handleDeleteGoal(programId, goalId)}
-                          >
-                            <Feather name="trash-2" size={18} color="#BA1A1A" />
-                          </TouchableOpacity>
-                        </View>
-                      );
-                    })}
+                    <Text style={styles.cardTitle}>
+                      {program.therapistTitle
+                        || selectedAssignment
+                          ?.therapistName
+                        || "Therapist"}
+                    </Text>
 
-                    {activeGoalInputProgramId === programId && (
-                      <View style={styles.goalInputRow}>
+                    <Text
+                      style={
+                        styles.cardDescription
+                      }
+                    >
+                      {program.therapistDescription
+                        || "describe behavior, engagement,"}
+                    </Text>
+
+                    {programGoalsList.map(
+                      (goal, goalIndex) => {
+                        const goalId =
+                          goal._id
+                          || goal.id
+                          || `${programId}-${goalIndex}`;
+
+                        return (
+                          <View
+                            key={String(goalId)}
+                            style={styles.goalBox}
+                          >
+                            <View
+                              style={
+                                styles.goalLeftRow
+                              }
+                            >
+                              <View
+                                style={
+                                  styles.radioCircle
+                                }
+                              />
+
+                              <Text
+                                style={
+                                  styles.goalTitle
+                                }
+                              >
+                                {goal.title}
+                              </Text>
+                            </View>
+
+                            <TouchableOpacity
+                              activeOpacity={0.7}
+                              onPress={() =>
+                                handleDeleteGoal(
+                                  programId,
+                                  goal._id
+                                  || goal.id,
+                                )}
+                            >
+                              <Feather
+                                name="trash-2"
+                                size={18}
+                                color="#BA1A1A"
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      },
+                    )}
+
+                    {activeGoalInputProgramId
+                      === programId && (
+                      <View
+                        style={
+                          styles.goalInputRow
+                        }
+                      >
                         <TextInput
-                          style={styles.goalTextInput}
+                          style={
+                            styles.goalTextInput
+                          }
                           placeholder="Enter goal title..."
                           placeholderTextColor="#94A3B8"
-                          value={goalInputText[programId] || ""}
-                          onChangeText={(text) => handleGoalInputChange(programId, text)}
+                          value={
+                            goalInputText[
+                              programId
+                            ] || ""
+                          }
+                          onChangeText={(text) =>
+                            handleGoalInputChange(
+                              programId,
+                              text,
+                            )}
                           autoFocus
                         />
+
                         <TouchableOpacity
-                          style={styles.saveGoalBtn}
-                          onPress={() => handleSaveGoal(programId)}
+                          style={
+                            styles.saveGoalBtn
+                          }
+                          onPress={() =>
+                            handleSaveGoal(
+                              programId,
+                            )}
                         >
-                          <Text style={styles.saveGoalBtnText}>Add</Text>
+                          <Text
+                            style={
+                              styles.saveGoalBtnText
+                            }
+                          >
+                            Add
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -421,74 +855,169 @@ export default function ProgramBuilderScreen({ navigation }) {
                     <TouchableOpacity
                       style={styles.addGoalBtn}
                       activeOpacity={0.8}
-                      onPress={() => setActiveGoalInputProgramId(programId)}
+                      onPress={() =>
+                        setActiveGoalInputProgramId(
+                          programId,
+                        )}
                     >
-                      <Feather name="plus-circle" size={18} color="#8BF6D9" />
-                      <Text style={styles.addGoalBtnText}>Add Another Goal</Text>
+                      <Feather
+                        name="plus-circle"
+                        size={18}
+                        color="#8BF6D9"
+                      />
+
+                      <Text
+                        style={
+                          styles.addGoalBtnText
+                        }
+                      >
+                        Add Another Goal
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 );
-              })
+              },
             )}
         </View>
       </ScrollView>
 
       <Modal
         visible={modalVisible}
-        transparent={true}
+        transparent
         animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={() =>
+          setModalVisible(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+        <TouchableWithoutFeedback
+          onPress={() =>
+            setModalVisible(false)}
+        >
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Select Child</Text>
-                  <TouchableOpacity onPress={() => setModalVisible(false)}>
-                    <Feather name="x" size={20} color="#64748B" />
+                  <Text style={styles.modalTitle}>
+                    Select Child - Therapist
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      setModalVisible(false)}
+                  >
+                    <Feather
+                      name="x"
+                      size={20}
+                      color="#64748B"
+                    />
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.modalSearchContainer}>
-                  <Feather name="search" size={16} color="#94A3B8" style={{ marginRight: 8 }} />
+                <View
+                  style={
+                    styles.modalSearchContainer
+                  }
+                >
+                  <Feather
+                    name="search"
+                    size={16}
+                    color="#94A3B8"
+                    style={{
+                      marginRight: 8,
+                    }}
+                  />
+
                   <TextInput
-                    style={styles.modalSearchInput}
-                    placeholder="Search child..."
+                    style={
+                      styles.modalSearchInput
+                    }
+                    placeholder="Search child or therapist..."
                     placeholderTextColor="#94A3B8"
                     value={modalSearch}
                     onChangeText={setModalSearch}
                   />
                 </View>
 
-                <ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={true}>
-                  {filteredModalChildren.map((child) => {
-                    const childId = child._id || child.id;
-                    const isSelected = childId === selectedChildId;
-                    return (
-                      <TouchableOpacity
-                        key={childId}
-                        style={[
-                          styles.modalOption,
-                          isSelected && styles.modalOptionSelected,
-                        ]}
-                        onPress={() => {
-                          setSelectedChildId(childId);
-                          setModalVisible(false);
-                        }}
-                      >
-                        <Text
+                <ScrollView
+                  style={{
+                    maxHeight: 300,
+                  }}
+                  showsVerticalScrollIndicator
+                >
+                  {filteredModalChildren.map(
+                    (item) => {
+                      const uniqueId =
+                        getAssignmentId(item);
+
+                      const isSelected =
+                        uniqueId
+                        === selectedAssignmentId;
+
+                      return (
+                        <TouchableOpacity
+                          key={uniqueId}
                           style={[
-                            styles.modalOptionText,
-                            isSelected && styles.modalOptionTextSelected,
+                            styles.modalOption,
+                            isSelected
+                              && styles.modalOptionSelected,
                           ]}
+                          onPress={() => {
+                            handleSelectAssignment(
+                              item,
+                            );
+                            setModalVisible(
+                              false,
+                            );
+                          }}
                         >
-                          {child.fullName || child.name}
-                        </Text>
-                        {isSelected && <Feather name="check" size={18} color="#0B598F" />}
-                      </TouchableOpacity>
-                    );
-                  })}
+                          <View
+                            style={
+                              styles.modalOptionInfo
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.modalOptionText,
+                                isSelected
+                                  && styles.modalOptionTextSelected,
+                              ]}
+                            >
+                              {item.combinedName
+                                || `${item.childName} - ${item.therapistName}`}
+                            </Text>
+
+                            {!!item.specialty && (
+                              <Text
+                                style={
+                                  styles.modalOptionSubtext
+                                }
+                              >
+                                {item.specialty
+                                  .replace(
+                                    /_/g,
+                                    " ",
+                                  )}
+                              </Text>
+                            )}
+                          </View>
+
+                          {isSelected && (
+                            <Feather
+                              name="check"
+                              size={18}
+                              color="#0B598F"
+                            />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    },
+                  )}
+
+                  {filteredModalChildren.length
+                    === 0 && (
+                    <Text style={styles.emptyText}>
+                      No user found
+                    </Text>
+                  )}
                 </ScrollView>
               </View>
             </TouchableWithoutFeedback>
@@ -498,32 +1027,71 @@ export default function ProgramBuilderScreen({ navigation }) {
 
       <Modal
         visible={programModalVisible}
-        transparent={true}
+        transparent
         animationType="fade"
-        onRequestClose={() => setProgramModalVisible(false)}
+        onRequestClose={() =>
+          setProgramModalVisible(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setProgramModalVisible(false)}>
+        <TouchableWithoutFeedback
+          onPress={() =>
+            setProgramModalVisible(false)}
+        >
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Select Department</Text>
-                  <TouchableOpacity onPress={() => setProgramModalVisible(false)}>
-                    <Feather name="x" size={20} color="#64748B" />
+                  <Text style={styles.modalTitle}>
+                    Select Department
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      setProgramModalVisible(
+                        false,
+                      )}
+                  >
+                    <Feather
+                      name="x"
+                      size={20}
+                      color="#64748B"
+                    />
                   </TouchableOpacity>
                 </View>
 
-                <ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={true}>
-                  {therapistSpecialities.map((dept) => (
-                    <TouchableOpacity
-                      key={dept.id}
-                      style={styles.modalOption}
-                      onPress={() => handleAddProgram(dept)}
-                    >
-                      <Text style={styles.modalOptionText}>{dept.label}</Text>
-                      <Feather name="plus" size={18} color="#00725E" />
-                    </TouchableOpacity>
-                  ))}
+                <ScrollView
+                  style={{
+                    maxHeight: 260,
+                  }}
+                  showsVerticalScrollIndicator
+                >
+                  {therapistSpecialities.map(
+                    (department) => (
+                      <TouchableOpacity
+                        key={department.id}
+                        style={
+                          styles.modalOption
+                        }
+                        onPress={() =>
+                          handleAddProgram(
+                            department,
+                          )}
+                      >
+                        <Text
+                          style={
+                            styles.modalOptionText
+                          }
+                        >
+                          {department.label}
+                        </Text>
+
+                        <Feather
+                          name="plus"
+                          size={18}
+                          color="#00725E"
+                        />
+                      </TouchableOpacity>
+                    ),
+                  )}
                 </ScrollView>
               </View>
             </TouchableWithoutFeedback>
@@ -531,7 +1099,7 @@ export default function ProgramBuilderScreen({ navigation }) {
         </TouchableWithoutFeedback>
       </Modal>
 
-      <BottomBar  />
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -589,9 +1157,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   childChip: {
-    paddingHorizontal: 20,
-    height: 44,
+    minHeight: 50,
     borderRadius: 32,
+    paddingHorizontal: 20,
+    paddingVertical: 7,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -604,9 +1173,9 @@ const styles = StyleSheet.create({
     borderColor: "#D7E3FF",
   },
   childChipText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.medium,
-    lineHeight: 24,
+    lineHeight: 20,
     color: "#004E9F",
   },
   childChipTextSelected: {
@@ -614,6 +1183,42 @@ const styles = StyleSheet.create({
   },
   childChipTextUnselected: {
     color: "#004E9F",
+  },
+  childSpecialty: {
+    marginTop: 1,
+    fontSize: 9,
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    textTransform: "capitalize",
+  },
+  selectedInfoCard: {
+    backgroundColor: "#FFFFFF",
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    gap: 12,
+  },
+  selectedInfoRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  selectedInfoBox: {
+    flex: 1,
+  },
+  selectedInfoLabel: {
+    fontSize: 10,
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    marginBottom: 3,
+  },
+  selectedInfoValue: {
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    color: "#0F172A",
+    textTransform: "capitalize",
   },
   searchCard: {
     backgroundColor: "#FFFFFF",
@@ -624,7 +1229,10 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     marginBottom: 24,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
     shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 1,
@@ -730,7 +1338,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(139,246,217,.2)",
     borderRadius: 10,
     paddingHorizontal: 14,
-    height: 46,
+    minHeight: 46,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -740,6 +1348,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    flex: 1,
   },
   radioCircle: {
     width: 14,
@@ -749,6 +1358,7 @@ const styles = StyleSheet.create({
     borderColor: "#717781",
   },
   goalTitle: {
+    flex: 1,
     fontSize: 12,
     fontFamily: fonts.bold,
     color: "#006B58",
@@ -850,6 +1460,10 @@ const styles = StyleSheet.create({
   modalOptionSelected: {
     backgroundColor: "#F1F5F9",
   },
+  modalOptionInfo: {
+    flex: 1,
+    paddingRight: 10,
+  },
   modalOptionText: {
     fontSize: 14,
     fontFamily: fonts.regular,
@@ -859,6 +1473,11 @@ const styles = StyleSheet.create({
   modalOptionTextSelected: {
     fontFamily: fonts.bold,
     color: "#0B598F",
-    lineHeight: 20,
+  },
+  modalOptionSubtext: {
+    fontSize: 10,
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    textTransform: "capitalize",
   },
 });

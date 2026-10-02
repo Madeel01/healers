@@ -996,101 +996,269 @@ exports.getTherapistsUsers = async (req, res) => {
   }
 };
 
-exports.getTherapistsAssignUsers = async (req, res) => {
+exports.assignTherapistsUsers = async (req, res) => {
   try {
-    const therapistId = req.user?._id || req.user?.id;
+    const page = Math.max(
+      parseInt(req.query.page, 10) || 1,
+      1,
+    );
 
-    if (!therapistId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
+    const limit = Math.max(
+      parseInt(req.query.limit, 10) || 10,
+      1,
+    );
+
+    const skip = (page - 1) * limit;
+
+    const {
+      search,
+      specialty,
+    } = req.query;
+
+    const matchStage = {};
+
+    if (
+      specialty
+      && specialty !== "All"
+    ) {
+      matchStage.specialty = specialty;
+    }
+
+    const pipeline = [
+      {
+        $match: matchStage,
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "therapistId",
+          foreignField: "_id",
+          as: "therapist",
+        },
+      },
+      {
+        $unwind: "$therapist",
+      },
+      {
+        $unwind: "$childIds",
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "childIds",
+          foreignField: "_id",
+          as: "child",
+        },
+      },
+      {
+        $unwind: "$child",
+      },
+      {
+        $match: {
+          "therapist.role": "Therapist",
+        },
+      },
+    ];
+
+    if (search?.trim()) {
+      const searchText = search.trim();
+
+      pipeline.push({
+        $match: {
+          $or: [
+            {
+              "child.fullName": {
+                $regex: searchText,
+                $options: "i",
+              },
+            },
+            {
+              "child.email": {
+                $regex: searchText,
+                $options: "i",
+              },
+            },
+            {
+              "therapist.fullName": {
+                $regex: searchText,
+                $options: "i",
+              },
+            },
+            {
+              "therapist.email": {
+                $regex: searchText,
+                $options: "i",
+              },
+            },
+          ],
+        },
       });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(therapistId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid therapist ID",
-      });
-    }
+    pipeline.push(
+      {
+        $sort: {
+          "therapist.fullName": 1,
+          "child.fullName": 1,
+        },
+      },
+      {
+        $facet: {
+          metadata: [
+            {
+              $count: "total",
+            },
+          ],
+          data: [
+            {
+              $skip: skip,
+            },
+            {
+              $limit: limit,
+            },
+            {
+              $project: {
+                _id: 0,
+                assignmentId: {
+                  $toString: "$_id",
+                },
+                childId: {
+                  $toString: "$child._id",
+                },
+                childName: {
+                  $ifNull: [
+                    "$child.fullName",
+                    "$child.name",
+                  ],
+                },
+                childEmail: {
+                  $ifNull: [
+                    "$child.email",
+                    "",
+                  ],
+                },
+                childPhone: {
+                  $ifNull: [
+                    "$child.phone",
+                    "",
+                  ],
+                },
+                childProfileImage: {
+                  $ifNull: [
+                    "$child.profileImage",
+                    "",
+                  ],
+                },
+                therapistId: {
+                  $toString: "$therapist._id",
+                },
+                therapistName: {
+                  $ifNull: [
+                    "$therapist.fullName",
+                    "$therapist.name",
+                  ],
+                },
+                therapistEmail: {
+                  $ifNull: [
+                    "$therapist.email",
+                    "",
+                  ],
+                },
+                therapistPhone: {
+                  $ifNull: [
+                    "$therapist.phone",
+                    "",
+                  ],
+                },
+                therapistProfileImage: {
+                  $ifNull: [
+                    "$therapist.profileImage",
+                    "",
+                  ],
+                },
+                specialty: 1,
+                maxChildren: 1,
+                assignedChildren: {
+                  $size: {
+                    $ifNull: [
+                      "$childIdsOriginal",
+                      [],
+                    ],
+                  },
+                },
+                combinedName: {
+                  $concat: [
+                    {
+                      $ifNull: [
+                        "$child.fullName",
+                        "$child.name",
+                      ],
+                    },
+                    " - ",
+                    {
+                      $ifNull: [
+                        "$therapist.fullName",
+                        "$therapist.name",
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+    );
 
-    const assignments = await TherapistAssignment.find({
-      therapistId,
-    })
-      .populate(
-        "therapistId",
-        "fullName name email profileImage role",
-      )
-      .populate(
-        "childIds",
-        "fullName name email phone profileImage fatherName parentName role",
-      )
-      .lean();
-
-    const usersMap = new Map();
-
-    assignments.forEach((assignment) => {
-      const therapist = assignment.therapistId;
-
-      const therapistName = therapist?.fullName
-        || therapist?.name
-        || "Therapist";
-
-      (assignment.childIds || []).forEach((child) => {
-        if (!child?._id) {
-          return;
-        }
-
-        const childId = String(child._id);
-
-        if (!usersMap.has(childId)) {
-          usersMap.set(childId, {
-            _id: child._id,
-            id: childId,
-            fullName: child.fullName
-              || child.name
-              || "Child",
-            name: child.fullName
-              || child.name
-              || "Child",
-            email: child.email || "",
-            phone: child.phone || "",
-            profileImage: child.profileImage || "",
-            fatherName: child.fatherName
-              || child.parentName
-              || "",
-            parentName: child.parentName || "",
-            role: child.role || "Child",
-            therapistId: therapist?._id || therapistId,
-            therapistName,
-            therapistProfileImage: therapist?.profileImage || "",
-            specialty: assignment.specialty || "",
-            displayName: `${
-              child.fullName
-              || child.name
-              || "Child"
-            } - ${therapistName}`,
-          });
-        }
-      });
+    pipeline.splice(1, 0, {
+      $set: {
+        childIdsOriginal: {
+          $cond: [
+            {
+              $isArray: "$childIds",
+            },
+            "$childIds",
+            [],
+          ],
+        },
+      },
     });
 
-    const data = Array.from(usersMap.values());
+    const result = await TherapistAssignment.aggregate(
+      pipeline,
+    );
+
+    const data = result[0]?.data || [];
+
+    const total =
+      result[0]?.metadata?.[0]?.total
+      || 0;
+
+    const specialties =
+      await TherapistAssignment.distinct(
+        "specialty",
+      );
 
     return res.status(200).json({
       success: true,
+      page,
+      limit,
+      total,
       count: data.length,
+      hasMore: skip + data.length < total,
       data,
+      specialties,
     });
   } catch (error) {
     console.error(
-      "getTherapistsAssignUsers error:",
+      "Get Therapist Users Error:",
       error,
     );
 
     return res.status(500).json({
       success: false,
-      message: "Failed to get assigned users",
+      message:
+        "Failed to get therapist users",
       error: error.message,
     });
   }
