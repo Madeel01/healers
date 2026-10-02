@@ -140,10 +140,13 @@ export const deleteBatchSession = (batchId, assignmentId, sessionId) =>
     .delete(`/admin/batches/${batchId}/assignments/${assignmentId}/sessions/${sessionId}`)
     .then((r) => r.data);
 
-export const getAllPackages = () =>
-  apiClient
-    .get("/admin/packages")
-    .then((res) => res.data);
+export const getAllPackages = (page = 1, limit = 5) =>
+  apiClient.get("/admin/packages", {
+    params: {
+      page,
+      limit,
+    },
+  }).then((res) => res.data);
 
 export const getPackageById = (packageId) =>
   apiClient

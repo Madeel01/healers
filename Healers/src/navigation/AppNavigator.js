@@ -11,9 +11,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthContext } from '../context/AuthContext';
 import AddNewPackageScreen from '../screens/admin/AddNewPackage';
 import AdminDashboard from '../screens/admin/AdminDashboard';
+import AllPackagesScreen from '../screens/admin/AllPackages';
 import BatchAdditionalClassScreen
   from '../screens/admin/BatchAdditionalClassScreen';
 import BatchManagementScreen from '../screens/admin/BatchManagement';
+import BatchScheduleScreen from '../screens/admin/BatchSchedule';
 import BatchScheduleCreateScreen
   from '../screens/admin/Batchschedulecreatescreen';
 import BatchSessionPostponeScreen
@@ -60,14 +62,6 @@ import ProgressTrackingScreen from '../screens/therapist/ProgressTracking';
 import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
-import ChildrenScreen from '../screens/admin/Children';
-import BatchScheduleScreen from '../screens/admin/BatchSchedule';
-import BatchSessionPostponeScreen from '../screens/admin/BatchSessionPostponeScreen';
-import BatchAdditionalClassScreen from '../screens/admin/BatchAdditionalClassScreen';
-import TherapistScheduleScreen from '../screens/admin/TherapistScheduleScreen';
-import ChildScheduleScreen from '../screens/admin/ChildScheduleScreen';
-import ChildCustomAppointmentScreen from '../screens/admin/ChildCustomAppointmentScreen';
-import AllPackagesScreen from '../screens/admin/AllPackages';
 
 const Stack = createNativeStackNavigator();
 

@@ -625,13 +625,12 @@ const analyzePlan = async (batch, body) => {
 
     if (
       hits.some(
-        (x) => x.batchId === String(batch._id) && x.therapistId === s.therapistId && x.a === a && x.b === b
+        (x) => x.batchId === String(batch._id) && x.therapistId === s.therapistId && x.a === a && x.b === b,
       )
     ) {
       duplicates.push(s);
       continue;
     }
-
 
     const reasons = [];
 
@@ -700,8 +699,8 @@ const clockMinutes = (tz) => {
   });
   return toMin(hhmm);
 };
-const SLOT_STEP = 15; 
-const INACTIVE_TYPES = ["cancel", "postponed"]; 
+const SLOT_STEP = 15;
+const INACTIVE_TYPES = ["cancel", "postponed"];
 const loadBatchAppointments = (batchId, extraMatch = {}) => {
   const id = new mongoose.Types.ObjectId(String(batchId));
   return Scheduling.aggregate([
@@ -823,7 +822,7 @@ const loadBatchAndAssignment = async (batchId, assignmentId) => {
   }
   return { batch, assignment };
 };
- const addBatchAppointment = async ({
+const addBatchAppointment = async ({
   therapistId,
   date,
   startTime,
@@ -837,12 +836,12 @@ const loadBatchAndAssignment = async (batchId, assignmentId) => {
   const d = utcMidnight(date);
   const year = d.getUTCFullYear();
   const month = d.getUTCMonth() + 1;
- 
+
   let schedule = await Scheduling.findOne({ therapistId, year, month });
   if (!schedule) {
     schedule = new Scheduling({ therapistId, year, month, appointments: [] });
   }
- 
+
   schedule.appointments.push({
     date: d,
     startTime,
@@ -854,7 +853,7 @@ const loadBatchAndAssignment = async (batchId, assignmentId) => {
     originalAppointmentId,
     children: childIds.map((childId) => ({ childId, attendance_status: "Pending" })),
   });
- 
+
   await schedule.save(); // runs the overlap validation hook
   return schedule.appointments[schedule.appointments.length - 1];
 };
@@ -1230,14 +1229,12 @@ exports.assignTherapistsUsers = async (req, res) => {
 
     const data = result[0]?.data || [];
 
-    const total =
-      result[0]?.metadata?.[0]?.total
+    const total = result[0]?.metadata?.[0]?.total
       || 0;
 
-    const specialties =
-      await TherapistAssignment.distinct(
-        "specialty",
-      );
+    const specialties = await TherapistAssignment.distinct(
+      "specialty",
+    );
 
     return res.status(200).json({
       success: true,
@@ -1257,8 +1254,7 @@ exports.assignTherapistsUsers = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to get therapist users",
+      message: "Failed to get therapist users",
       error: error.message,
     });
   }
@@ -1680,43 +1676,43 @@ exports.assignChildrenToTherapist = async (req, res) => {
 exports.getTherapistSchedule = async (req, res) => {
   try {
     const { therapistId } = req.params;
- 
+
     if (!mongoose.isValidObjectId(therapistId)) {
       return res.status(400).json({ success: false, message: "Invalid therapistId." });
     }
- 
+
     const therapist = await User.findOne(
       { _id: therapistId, role: "Therapist" },
       "fullName email phone",
     ).lean();
- 
+
     if (!therapist) {
       return res.status(404).json({ success: false, message: "Therapist not found." });
     }
- 
+
     const pastDays = Math.min(Math.max(parseInt(req.query.pastDays, 10) || 90, 1), 365);
- 
+
     const st = await loadScheduleSettings();
     const today = todayKey(st.tz);
     const nowMin = clockMinutes(st.tz);
     const cutoff = addDays(today, -pastDays);
- 
+
     const [availability, assignments, schedules] = await Promise.all([
       TherapistAvailability.find({ therapistId, isActive: true })
         .sort({ type: -1, date: 1, createdAt: 1 })
         .lean(),
- 
+
       TherapistAssignment.find({ therapistId }, "specialty").lean(),
- 
+
       Scheduling.find({ therapistId })
         .populate("appointments.batchId", "batchName")
         .populate("appointments.batchAssignmentId", "speciality")
         .populate("appointments.children.childId", "fullName")
         .lean(),
     ]);
- 
+
     const sessions = [];
- 
+
     for (const sc of schedules) {
       for (const ap of sc.appointments || []) {
         const date = dateKeyOf(ap.date);
@@ -1741,14 +1737,12 @@ exports.getTherapistSchedule = async (req, res) => {
         });
       }
     }
- 
-    sessions.sort((a, b) =>
-      a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date),
-    );
- 
+
+    sessions.sort((a, b) => a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date));
+
     const upcoming = sessions.filter((s) => !s.isPast);
     const past = sessions.filter((s) => s.isPast).reverse();
- 
+
     return res.json({
       success: true,
       data: {
@@ -1775,7 +1769,6 @@ exports.getTherapistSchedule = async (req, res) => {
     });
   }
 };
-
 
 exports.childUsers = async (req, res) => {
   try {
@@ -2222,28 +2215,27 @@ exports.getAdminFeedbackManagement = async (req, res) => {
     startOfYesterday.setDate(startOfYesterday.getDate() - 1);
     startOfYesterday.setHours(0, 0, 0, 0);
 
-    const [ratingResult, sinceYesterdayFeedback] =
-      await Promise.all([
-        Feedback.aggregate([
-          {
-            $group: {
-              _id: null,
-              averageRating: {
-                $avg: "$rating",
-              },
+    const [ratingResult, sinceYesterdayFeedback] = await Promise.all([
+      Feedback.aggregate([
+        {
+          $group: {
+            _id: null,
+            averageRating: {
+              $avg: "$rating",
             },
           },
-        ]),
+        },
+      ]),
 
-        Feedback.countDocuments({
-          createdAt: {
-            $gte: startOfYesterday,
-          },
-          notes: {
-            $nin: [null, ""],
-          },
-        }),
-      ]);
+      Feedback.countDocuments({
+        createdAt: {
+          $gte: startOfYesterday,
+        },
+        notes: {
+          $nin: [null, ""],
+        },
+      }),
+    ]);
 
     const averageSatisfaction = ratingResult.length
       ? Number(ratingResult[0].averageRating.toFixed(1))
@@ -2272,7 +2264,7 @@ exports.getAdminFeedbackManagement = async (req, res) => {
         replies: 1,
         createdAt: 1,
         updatedAt: 1,
-      }
+      },
     )
       .populate("therapistId", "fullName email role")
       .lean()
@@ -2289,7 +2281,7 @@ exports.getAdminFeedbackManagement = async (req, res) => {
 
       feedbackMap.set(
         feedback.appointmentId.toString(),
-        feedback
+        feedback,
       );
     }
 
@@ -2320,7 +2312,7 @@ exports.getAdminFeedbackManagement = async (req, res) => {
           {
             appointment,
             therapistId: schedule.therapistId,
-          }
+          },
         );
       }
     }
@@ -2360,7 +2352,7 @@ exports.getAdminFeedbackManagement = async (req, res) => {
         // -----------------------------------------------------
 
         const feedback = feedbackMap.get(
-          appointment._id.toString()
+          appointment._id.toString(),
         );
 
         // Feedback already exists
@@ -2377,20 +2369,18 @@ exports.getAdminFeedbackManagement = async (req, res) => {
 
           therapistId: schedule.therapistId,
 
-          childId:
-            appointment.children?.length > 0
-              ? appointment.children[0].childId
-              : null,
+          childId: appointment.children?.length > 0
+            ? appointment.children[0].childId
+            : null,
 
           session: {
             date: appointment.date,
             startTime: appointment.startTime,
             endTime: appointment.endTime,
 
-            attendanceStatus:
-              appointment.children?.length > 0
-                ? appointment.children[0].attendance_status
-                : null,
+            attendanceStatus: appointment.children?.length > 0
+              ? appointment.children[0].attendance_status
+              : null,
           },
         });
       }
@@ -2410,8 +2400,8 @@ exports.getAdminFeedbackManagement = async (req, res) => {
       data = feedbacks.map((feedback) => {
         const appointmentData = feedback.appointmentId
           ? appointmentMap.get(
-              feedback.appointmentId.toString()
-            )
+            feedback.appointmentId.toString(),
+          )
           : null;
 
         const { replies, ...feedbackData } = feedback;
@@ -2419,15 +2409,13 @@ exports.getAdminFeedbackManagement = async (req, res) => {
         return {
           ...feedbackData,
 
-          isRespond:
-            Array.isArray(replies) &&
-            replies.length > 0,
+          isRespond: Array.isArray(replies)
+            && replies.length > 0,
 
           appointment: appointmentData
             ? {
-                startTime:
-                  appointmentData.appointment.startTime,
-              }
+              startTime: appointmentData.appointment.startTime,
+            }
             : null,
         };
       });
@@ -2441,31 +2429,28 @@ exports.getAdminFeedbackManagement = async (req, res) => {
       const threeDaysAgo = new Date();
 
       threeDaysAgo.setDate(
-        threeDaysAgo.getDate() - 3
+        threeDaysAgo.getDate() - 3,
       );
 
       data = feedbacks
         .filter(
-          (feedback) =>
-            feedback.createdAt >= threeDaysAgo
+          (feedback) => feedback.createdAt >= threeDaysAgo,
         )
         .map((feedback) => {
-          const appointmentData =
-            feedback.appointmentId
-              ? appointmentMap.get(
-                  feedback.appointmentId.toString()
-                )
-              : null;
+          const appointmentData = feedback.appointmentId
+            ? appointmentMap.get(
+              feedback.appointmentId.toString(),
+            )
+            : null;
 
           return {
             ...feedback,
 
             appointment: appointmentData
               ? {
-                  startTime:
-                    appointmentData.appointment
-                      .startTime,
-                }
+                startTime: appointmentData.appointment
+                  .startTime,
+              }
               : null,
           };
         });
@@ -2480,8 +2465,8 @@ exports.getAdminFeedbackManagement = async (req, res) => {
 
       data.sort(
         (a, b) =>
-          new Date(b.session.date) -
-          new Date(a.session.date)
+          new Date(b.session.date)
+          - new Date(a.session.date),
       );
     }
 
@@ -2507,18 +2492,16 @@ exports.getAdminFeedbackManagement = async (req, res) => {
   } catch (error) {
     console.error(
       "Admin Feedback Management Error:",
-      error
+      error,
     );
 
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to fetch feedback management data.",
+      message: "Failed to fetch feedback management data.",
       error: error.message,
     });
   }
 };
-
 
 exports.getFeedbackReplies = async (req, res) => {
   try {
@@ -3862,8 +3845,6 @@ exports.deleteAvailability = async (req, res) => {
   }
 };
 
-
-
 exports.getBatchTherapistOptions = async (req, res) => {
   try {
     const batch = await Batch.findById(req.params.batchId).lean();
@@ -4056,19 +4037,19 @@ exports.getBatchSlotOptions = async (req, res) => {
     });
 
     const nameById = new Map(
-      existing.map((a) => [String(a.therapistId?._id), a.therapistId?.fullName || "Therapist"])
+      existing.map((a) => [String(a.therapistId?._id), a.therapistId?.fullName || "Therapist"]),
     );
     const specByAssignment = new Map(existing.map((a) => [String(a._id), a.speciality]));
-    
+
     const batchAps = await loadBatchAppointments(batch._id);
     for (const ap of batchAps) {
       const tid = String(ap.therapistId);
       const date = dateKeyOf(ap.date);
       if (!ids.includes(tid) || INACTIVE_TYPES.includes(ap.sessionType) || date < today) continue;
-    
+
       const day = weekdayOf(date);
       const exists = blocked[day].some(
-        (x) => x.therapistId === tid && x.startTime === ap.startTime && x.endTime === ap.endTime
+        (x) => x.therapistId === tid && x.startTime === ap.startTime && x.endTime === ap.endTime,
       );
       if (!exists) {
         blocked[day].push({
@@ -4080,7 +4061,6 @@ exports.getBatchSlotOptions = async (req, res) => {
         });
       }
     }
-
 
     return res.json({
       success: true,
@@ -4194,10 +4174,10 @@ exports.saveBatchSchedule = async (req, res) => {
     for (const plan of r.plans) {
       const therapistId = String(plan.therapistId);
       const sessions = r.toCreate.filter(
-        (s) => s.therapistId === therapistId && s.speciality === plan.speciality
+        (s) => s.therapistId === therapistId && s.speciality === plan.speciality,
       );
       if (!sessions.length) continue;
-    
+
       const key = { batchId: batch._id, therapistId, speciality: plan.speciality };
       await BatchAssignment.updateOne(
         key,
@@ -4205,33 +4185,32 @@ exports.saveBatchSchedule = async (req, res) => {
           $set: { childIds: r.children, sessionMinutes: r.minutes },
           $setOnInsert: { maxChildren: batch.maxChild },
         },
-        { upsert: true }
+        { upsert: true },
       );
       const assignment = await BatchAssignment.findOne(key).select("_id").lean();
-    
+
       const byMonth = new Map();
       for (const s of sessions) {
         const k = s.date.slice(0, 7);
         if (!byMonth.has(k)) byMonth.set(k, []);
         byMonth.get(k).push(s);
       }
-    
+
       for (const [k, list] of byMonth) {
         const [year, month] = k.split("-").map(Number);
-        const schedule =
-          (await Scheduling.findOne({ therapistId, year, month })) ||
-          new Scheduling({ therapistId, year, month, appointments: [] });
-    
+        const schedule = (await Scheduling.findOne({ therapistId, year, month }))
+          || new Scheduling({ therapistId, year, month, appointments: [] });
+
         for (const s of list) {
           const exists = schedule.appointments.some(
             (ap) =>
-              ap.type === "batch" &&
-              String(ap.batchAssignmentId) === String(assignment._id) &&
-              dateKeyOf(ap.date) === s.date &&
-              ap.startTime === s.startTime
+              ap.type === "batch"
+              && String(ap.batchAssignmentId) === String(assignment._id)
+              && dateKeyOf(ap.date) === s.date
+              && ap.startTime === s.startTime,
           );
           if (exists) continue;
-    
+
           schedule.appointments.push({
             date: utcMidnight(s.date),
             startTime: s.startTime,
@@ -4248,7 +4227,6 @@ exports.saveBatchSchedule = async (req, res) => {
         await schedule.save();
       }
     }
-
 
     await Batch.updateOne(
       { _id: batch._id },
@@ -4343,7 +4321,6 @@ exports.getBatchEligibleChildren = async (req, res) => {
 };
 exports.updateBatchChildren = async (req, res) => {
   try {
-
     const batch = await Batch.findById(req.params.batchId)
       .select("childrenIds maxChild dateTo")
       .lean();
@@ -4359,7 +4336,7 @@ exports.updateBatchChildren = async (req, res) => {
       ...new Set(
         (Array.isArray(value) ? value : [])
           .filter((id) => mongoose.isValidObjectId(id))
-          .map(String)
+          .map(String),
       ),
     ];
 
@@ -4367,16 +4344,12 @@ exports.updateBatchChildren = async (req, res) => {
     const add = normalizeIds(req.body.addChildIds);
 
     const current = new Set(
-      (batch.childrenIds || []).map(String)
+      (batch.childrenIds || []).map(String),
     );
 
-    const actualRemove = remove.filter((id) =>
-      current.has(id)
-    );
+    const actualRemove = remove.filter((id) => current.has(id));
 
-    const actualAdd = add.filter((id) =>
-      !current.has(id)
-    );
+    const actualAdd = add.filter((id) => !current.has(id));
 
     if (!actualRemove.length && !actualAdd.length) {
       return res.status(400).json({
@@ -4420,7 +4393,7 @@ exports.updateBatchChildren = async (req, res) => {
         $set: {
           childrenIds: finalChildren,
         },
-      }
+      },
     );
 
     const assignments = await BatchAssignment.find({
@@ -4448,14 +4421,13 @@ exports.updateBatchChildren = async (req, res) => {
         $set: {
           childIds: finalChildren,
         },
-      }
+      },
     );
 
     const st = await loadScheduleSettings();
 
     const today = todayKey(st.tz);
     const batchEnd = dateKeyOf(batch.dateTo);
-
 
     if (actualRemove.length) {
       await Scheduling.updateMany(
@@ -4500,7 +4472,7 @@ exports.updateBatchChildren = async (req, res) => {
               },
             },
           ],
-        }
+        },
       );
     }
 
@@ -4518,7 +4490,7 @@ exports.updateBatchChildren = async (req, res) => {
     }
 
     const addObjIds = actualAdd.map((id) => new mongoose.Types.ObjectId(id));
- 
+
     const busyRows = await Scheduling.aggregate([
       { $match: { "appointments.children.childId": { $in: addObjIds } } },
       { $unwind: "$appointments" },
@@ -4531,7 +4503,7 @@ exports.updateBatchChildren = async (req, res) => {
       },
       { $replaceRoot: { newRoot: "$appointments" } },
     ]);
-    
+
     const childBusy = new Map(actualAdd.map((id) => [id, []]));
     for (const ap of busyRows) {
       for (const c of ap.children || []) {
@@ -4539,27 +4511,27 @@ exports.updateBatchChildren = async (req, res) => {
         if (list) list.push({ date: dateKeyOf(ap.date), startTime: ap.startTime, endTime: ap.endTime });
       }
     }
-    
+
     const upcomingAps = await loadBatchAppointments(batch._id, {
       "appointments.sessionType": { $nin: INACTIVE_TYPES },
       "appointments.date": { $gte: utcMidnight(today) },
     });
-    
+
     const skipped = [];
     const ops = [];
-    
+
     for (const ap of upcomingAps) {
       const date = dateKeyOf(ap.date);
       const already = new Set((ap.children || []).map((c) => String(c.childId)));
       const toAdd = [];
-    
+
       for (const childId of actualAdd) {
         if (already.has(childId)) continue;
         const clash = (childBusy.get(childId) || []).some(
           (b) =>
-            b.date === date &&
-            toMin(b.startTime) < toMin(ap.endTime) &&
-            toMin(ap.startTime) < toMin(b.endTime)
+            b.date === date
+            && toMin(b.startTime) < toMin(ap.endTime)
+            && toMin(ap.startTime) < toMin(b.endTime),
         );
         if (clash) {
           skipped.push({
@@ -4573,7 +4545,7 @@ exports.updateBatchChildren = async (req, res) => {
           toAdd.push({ childId, attendance_status: "Pending" });
         }
       }
-    
+
       if (toAdd.length) {
         ops.push({
           updateOne: {
@@ -4583,11 +4555,11 @@ exports.updateBatchChildren = async (req, res) => {
         });
       }
     }
-    
+
     for (let i = 0; i < ops.length; i += 500) {
       await Scheduling.bulkWrite(ops.slice(i, i + 500), { ordered: false });
     }
-    
+
     return res.json({
       success: true,
       message: "Batch children updated.",
@@ -4601,13 +4573,12 @@ exports.updateBatchChildren = async (req, res) => {
   } catch (error) {
     console.error(
       "updateBatchChildren:",
-      error
+      error,
     );
 
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to update batch children.",
+      message: "Failed to update batch children.",
     });
   }
 };
@@ -4653,8 +4624,8 @@ exports.removeBatchAssignment = async (req, res) => {
     for (const schedule of schedules) {
       for (const appointment of schedule.appointments || []) {
         if (
-          String(appointment.batchAssignmentId) !==
-          String(assignment._id)
+          String(appointment.batchAssignmentId)
+            !== String(assignment._id)
         ) {
           continue;
         }
@@ -4664,15 +4635,14 @@ exports.removeBatchAssignment = async (req, res) => {
         }
 
         futureAppointmentIds.push(
-          appointment._id
+          appointment._id,
         );
       }
     }
     let removedAppointments = 0;
 
     if (futureAppointmentIds.length) {
-      removedAppointments =
-        futureAppointmentIds.length;
+      removedAppointments = futureAppointmentIds.length;
 
       await Scheduling.updateMany(
         {},
@@ -4684,7 +4654,7 @@ exports.removeBatchAssignment = async (req, res) => {
               },
             },
           },
-        }
+        },
       );
       await Scheduling.deleteMany({
         appointments: { $size: 0 },
@@ -4701,22 +4671,19 @@ exports.removeBatchAssignment = async (req, res) => {
     }
     await BatchAssignment.deleteOne({ _id: assignment._id });
 
-
-    const therapistStillAssigned =
-      await BatchAssignment.exists({
-        batchId,
-        therapistId: assignment.therapistId,
-      });
+    const therapistStillAssigned = await BatchAssignment.exists({
+      batchId,
+      therapistId: assignment.therapistId,
+    });
 
     if (!therapistStillAssigned) {
       await Batch.updateOne(
         { _id: batchId },
         {
           $pull: {
-            therapistIds:
-              assignment.therapistId,
+            therapistIds: assignment.therapistId,
           },
-        }
+        },
       );
     }
 
@@ -4725,10 +4692,10 @@ exports.removeBatchAssignment = async (req, res) => {
       message: "Batch assignment removed.",
       data: {
         assignmentId: String(
-          assignment._id
+          assignment._id,
         ),
         therapistId: String(
-          assignment.therapistId
+          assignment.therapistId,
         ),
         removedAppointments,
       },
@@ -4736,24 +4703,23 @@ exports.removeBatchAssignment = async (req, res) => {
   } catch (error) {
     console.error(
       "removeBatchAssignment:",
-      error
+      error,
     );
 
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to remove batch assignment.",
+      message: "Failed to remove batch assignment.",
     });
   }
 };
 exports.getBatchScheduleData = async (req, res) => {
   try {
     const { batchId } = req.params;
- 
+
     if (!mongoose.isValidObjectId(batchId)) {
       return res.status(400).json({ success: false, message: "Invalid batchId." });
     }
- 
+
     const [batch, assignments] = await Promise.all([
       Batch.findById(batchId)
         .populate("therapistIds", "fullName email")
@@ -4764,11 +4730,11 @@ exports.getBatchScheduleData = async (req, res) => {
         .populate("childIds", "fullName")
         .lean(),
     ]);
- 
+
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
- 
+
     const aps = await loadBatchAppointments(batch._id);
     const byAssignment = new Map();
     for (const ap of aps) {
@@ -4789,7 +4755,6 @@ exports.getBatchScheduleData = async (req, res) => {
       );
     }
     return res.json({ success: true, data: { batch, assignments } });
-
   } catch (error) {
     console.error("getBatchScheduleData:", error);
     return res.status(500).json({
@@ -4804,7 +4769,7 @@ exports.getSessionSlotOptions = async (req, res) => {
     if (loaded.status) {
       return res.status(loaded.status).json({ success: false, message: loaded.message });
     }
- 
+
     const minutes = Number(req.body.sessionMinutes);
     if (!SESSION_TIMES.includes(minutes)) {
       return res.status(400).json({
@@ -4812,16 +4777,16 @@ exports.getSessionSlotOptions = async (req, res) => {
         message: "Session time must be 45, 60, 90 or 120 minutes.",
       });
     }
- 
+
     const r = await freeSlotsForDate({
       batch: loaded.batch,
       therapistId: loaded.assignment.therapistId,
       date: req.body.date,
       minutes,
     });
- 
+
     if (r.error) return res.status(400).json({ success: false, message: r.error });
- 
+
     return res.json({ success: true, data: { slots: r.slots, reason: r.reason } });
   } catch (error) {
     console.error("getSessionSlotOptions:", error);
@@ -4836,7 +4801,7 @@ exports.createAdditionalSession = async (req, res) => {
     }
     const { batch, assignment } = loaded;
     const { date, startTime, endTime } = req.body;
- 
+
     if (!TIME_REGEX.test(startTime || "") || !TIME_REGEX.test(endTime || "")) {
       return res.status(400).json({ success: false, message: "Start and end time must be HH:mm." });
     }
@@ -4847,7 +4812,7 @@ exports.createAdditionalSession = async (req, res) => {
         message: "Session time must be 45, 60, 90 or 120 minutes.",
       });
     }
- 
+
     const r = await freeSlotsForDate({
       batch,
       therapistId: assignment.therapistId,
@@ -4855,14 +4820,14 @@ exports.createAdditionalSession = async (req, res) => {
       minutes,
     });
     if (r.error) return res.status(400).json({ success: false, message: r.error });
- 
+
     if (!r.slots.some((s) => s.startTime === startTime && s.endTime === endTime)) {
       return res.status(409).json({
         success: false,
         message: "That time is no longer available. Pick another one.",
       });
     }
- 
+
     await createExtraSession({
       batch,
       assignment,
@@ -4872,7 +4837,7 @@ exports.createAdditionalSession = async (req, res) => {
       sessionType: "additional",
       childIds: batch.childrenIds || [],
     });
- 
+
     return res.status(201).json({
       success: true,
       message: "Additional class created.",
@@ -4895,12 +4860,12 @@ exports.postponeBatchSession = async (req, res) => {
       return res.status(loaded.status).json({ success: false, message: loaded.message });
     }
     const { batch, assignment } = loaded;
- 
+
     const { sessionId: appointmentId } = req.params;
- 
+
     const originalDoc = await Scheduling.findOne(
       { appointments: { $elemMatch: { _id: appointmentId, batchAssignmentId: assignment._id } } },
-      { therapistId: 1, "appointments.$": 1 }
+      { therapistId: 1, "appointments.$": 1 },
     ).lean();
     const originalAp = originalDoc?.appointments?.[0];
     if (!originalAp) {
@@ -4909,20 +4874,22 @@ exports.postponeBatchSession = async (req, res) => {
     if (INACTIVE_TYPES.includes(originalAp.sessionType)) {
       return res.status(400).json({ success: false, message: "This session was already postponed or cancelled." });
     }
-    
+
     const st = await loadScheduleSettings();
     const origDate = dateKeyOf(originalAp.date);
-    if (origDate < todayKey(st.tz) || (origDate === todayKey(st.tz) && toMin(originalAp.endTime) <= clockMinutes(st.tz))) {
+    if (
+      origDate < todayKey(st.tz) || (origDate === todayKey(st.tz) && toMin(originalAp.endTime) <= clockMinutes(st.tz))
+    ) {
       return res.status(400).json({ success: false, message: "Past sessions can't be postponed." });
     }
-    
+
     const createAlternate = req.body.createAlternate === true || req.body.createAlternate === "true";
     const minutes = toMin(originalAp.endTime) - toMin(originalAp.startTime);
-    
+
     let alternate = null;
     if (createAlternate) {
       const { date, startTime, endTime } = req.body;
- 
+
       if (!TIME_REGEX.test(startTime || "") || !TIME_REGEX.test(endTime || "")) {
         return res.status(400).json({ success: false, message: "Pick a date and time for the alternate session." });
       }
@@ -4932,7 +4899,7 @@ exports.postponeBatchSession = async (req, res) => {
           message: `The alternate session must be ${minutes} minutes long.`,
         });
       }
- 
+
       const r = await freeSlotsForDate({
         batch,
         therapistId: assignment.therapistId,
@@ -4940,18 +4907,18 @@ exports.postponeBatchSession = async (req, res) => {
         minutes,
       });
       if (r.error) return res.status(400).json({ success: false, message: r.error });
- 
+
       if (!r.slots.some((s) => s.startTime === startTime && s.endTime === endTime)) {
         return res.status(409).json({
           success: false,
           message: "That time is no longer available. Pick another one.",
         });
       }
- 
+
       const childIds = originalAp
         ? (originalAp.children || []).map((c) => c.childId)
         : batch.childrenIds || [];
- 
+
       alternate = await createExtraSession({
         batch,
         assignment,
@@ -4964,12 +4931,11 @@ exports.postponeBatchSession = async (req, res) => {
       });
     }
 
- 
     await Scheduling.updateOne(
       { _id: originalDoc._id, "appointments._id": originalAp._id },
-      { $set: { "appointments.$.sessionType": createAlternate ? "postponed" : "cancel" } }
+      { $set: { "appointments.$.sessionType": createAlternate ? "postponed" : "cancel" } },
     );
-    
+
     return res.json({
       success: true,
       message: createAlternate ? "Session postponed and alternate session created." : "Session postponed.",
@@ -4990,21 +4956,21 @@ exports.deleteBatchSession = async (req, res) => {
     if (!mongoose.isValidObjectId(assignmentId) || !mongoose.isValidObjectId(sessionId)) {
       return res.status(400).json({ success: false, message: "Invalid id." });
     }
- 
+
     const doc = await Scheduling.findOne(
       { appointments: { $elemMatch: { _id: sessionId, batchAssignmentId: assignmentId } } },
-      { therapistId: 1, "appointments.$": 1 }
+      { therapistId: 1, "appointments.$": 1 },
     ).lean();
     const ap = doc?.appointments?.[0];
     if (!ap) return res.status(404).json({ success: false, message: "Session not found." });
- 
+
     const st = await loadScheduleSettings();
     const today = todayKey(st.tz);
     const date = dateKeyOf(ap.date);
     if (date < today || (date === today && toMin(ap.endTime) <= clockMinutes(st.tz))) {
       return res.status(400).json({ success: false, message: "Past sessions can't be deleted." });
     }
- 
+
     await Scheduling.updateOne({ _id: doc._id }, { $pull: { appointments: { _id: ap._id } } });
     return res.json({ success: true, message: "Session deleted." });
   } catch (error) {
@@ -5012,8 +4978,6 @@ exports.deleteBatchSession = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to delete session." });
   }
 };
-
-
 
 const loadChild = (childId) =>
   mongoose.isValidObjectId(childId)
@@ -5096,9 +5060,7 @@ exports.getChildSchedule = async (req, res) => {
       }
     }
 
-    sessions.sort((a, b) =>
-      a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date),
-    );
+    sessions.sort((a, b) => a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date));
 
     const upcoming = sessions.filter((s) => !s.isPast);
     const past = sessions.filter((s) => s.isPast).reverse();
@@ -5326,26 +5288,95 @@ exports.deleteChildCustomAppointment = async (req, res) => {
   }
 };
 
-
-
-
 exports.getAllPackages = async (req, res) => {
   try {
-    const packages = await Package.find()
-      .populate("createdBy", "fullName email")
-      .sort({ createdAt: -1 })
-      .lean();
+    const page = Math.max(
+      parseInt(req.query.page, 10) || 1,
+      1,
+    );
+
+    const limit = Math.min(
+      Math.max(
+        parseInt(req.query.limit, 10) || 5,
+        1,
+      ),
+      50,
+    );
+
+    const skip = (page - 1) * limit;
+
+    const [packages, total] = await Promise.all([
+      Package.find()
+        .populate(
+          "createdBy",
+          "fullName email",
+        )
+        .sort({
+          createdAt: -1,
+          _id: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Package.countDocuments(),
+    ]);
 
     return res.status(200).json({
       success: true,
+      page,
+      limit,
+      count: packages.length,
+      total,
+      totalPages: Math.ceil(
+        total / limit,
+      ),
+      hasMore: skip + packages.length < total,
       data: packages,
     });
   } catch (error) {
-    console.error("getAllPackages:", error);
+    console.error(
+      "getAllPackages:",
+      error,
+    );
 
     return res.status(500).json({
       success: false,
       message: "Failed to fetch packages.",
+    });
+  }
+};
+
+exports.getPackageById = async (req, res) => {
+  try {
+    const packageData = await Package.findById(
+      req.params.packageId,
+    )
+      .populate(
+        "createdBy",
+        "fullName email",
+      )
+      .lean();
+
+    if (!packageData) {
+      return res.status(404).json({
+        success: false,
+        message: "Package not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: packageData,
+    });
+  } catch (error) {
+    console.error(
+      "getPackageById:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch package.",
     });
   }
 };
@@ -5377,6 +5408,15 @@ exports.getPackageById = async (req, res) => {
 };
 exports.createPackage = async (req, res) => {
   try {
+    const userId = req.user?._id || req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized.",
+      });
+    }
+
     const {
       name,
       type,
@@ -5390,6 +5430,13 @@ exports.createPackage = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Name, type, speciality and price are required.",
+      });
+    }
+
+    if (!["per-session", "batch"].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid package type.",
       });
     }
 
@@ -5413,8 +5460,10 @@ exports.createPackage = async (req, res) => {
       specialities,
       price: Number(price),
       sessionMinutes: Number(sessionMinutes) || 60,
-      sessions: Number(sessions) || 1,
-      createdBy: req.user._id,
+      sessions: type === "per-session"
+        ? 1
+        : Number(sessions) || 1,
+      createdBy: userId,
     });
 
     return res.status(201).json({
