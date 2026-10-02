@@ -24,7 +24,11 @@ const {
   createQuarterlyReport,
   getQuarterlyReport,
   getQuarterlyReportsByChild,
+  addTherapistFeedbackReply,
+  getFeedbackReplies,
+  updateFeedbackVisibility,
 } = require("../controllers/therapistController");
+
 router.get("/dashboard-stats", protect, getDashboardStats);
 router.get("/get_therapist_user", protect, getTherapistUser);
 router.get("/get_child_programs/:childId", protect, getChildPrograms);
@@ -46,5 +50,8 @@ router.delete("/video/delete/:id", protect, deleteWeeklyVideo);
 router.post("/quarterly-reports", protect, createQuarterlyReport);
 router.get("/quarterly-reports", protect, getQuarterlyReport);
 router.get("/quarterly-reports/all", protect, getQuarterlyReportsByChild);
+router.get("/feedback/:feedbackId/replies", protect, getFeedbackReplies);
+router.post("/feedback/:feedbackId/reply", protect, addTherapistFeedbackReply);
+router.patch("/feedback/:feedbackId/visibility", protect, updateFeedbackVisibility);
 
 module.exports = router;

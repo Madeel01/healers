@@ -43,14 +43,13 @@ const to12 = (t) => {
 };
 
 const isValidDate = (s) =>
-  typeof s === "string" &&
-  DATE_REGEX.test(s) &&
-  !Number.isNaN(new Date(`${s}T00:00:00Z`).getTime());
+  typeof s === "string"
+  && DATE_REGEX.test(s)
+  && !Number.isNaN(new Date(`${s}T00:00:00Z`).getTime());
 
 const weekdayOf = (s) => JS_DAY_TO_NAME[new Date(`${s}T00:00:00Z`).getUTCDay()];
 
-const todayKey = (tz = "Asia/Karachi") =>
-  new Date().toLocaleDateString("en-CA", { timeZone: tz });
+const todayKey = (tz = "Asia/Karachi") => new Date().toLocaleDateString("en-CA", { timeZone: tz });
 
 const describe = (r) =>
   r.type === "custom"
@@ -60,8 +59,8 @@ const describe = (r) =>
       .join(", ");
 
 const timesOverlap = (a, b) =>
-  toMin(a.startTime) < toMin(b.endTime) &&
-  toMin(b.startTime) < toMin(a.endTime);
+  toMin(a.startTime) < toMin(b.endTime)
+  && toMin(b.startTime) < toMin(a.endTime);
 
 const rulesConflict = (a, b) => {
   if (a.type === "custom" && b.type === "custom") {
@@ -71,22 +70,18 @@ const rulesConflict = (a, b) => {
     const c = a.type === "custom" ? a : b;
     const r = a.type === "custom" ? b : a;
     const day = weekdayOf(c.date);
-    const inRange =
-      (!r.effectiveFrom || c.date >= r.effectiveFrom) &&
-      (!r.effectiveTo || c.date <= r.effectiveTo);
+    const inRange = (!r.effectiveFrom || c.date >= r.effectiveFrom)
+      && (!r.effectiveTo || c.date <= r.effectiveTo);
     return (
-      inRange &&
-      (r.slots || []).some((s) => s.day === day && timesOverlap(s, c))
+      inRange
+      && (r.slots || []).some((s) => s.day === day && timesOverlap(s, c))
     );
   }
-  const rangesOverlap =
-    (!a.effectiveTo || !b.effectiveFrom || a.effectiveTo >= b.effectiveFrom) &&
-    (!b.effectiveTo || !a.effectiveFrom || b.effectiveTo >= a.effectiveFrom);
+  const rangesOverlap = (!a.effectiveTo || !b.effectiveFrom || a.effectiveTo >= b.effectiveFrom)
+    && (!b.effectiveTo || !a.effectiveFrom || b.effectiveTo >= a.effectiveFrom);
   return (
-    rangesOverlap &&
-    (a.slots || []).some((sa) =>
-      (b.slots || []).some((sb) => sa.day === sb.day && timesOverlap(sa, sb)),
-    )
+    rangesOverlap
+    && (a.slots || []).some((sa) => (b.slots || []).some((sb) => sa.day === sb.day && timesOverlap(sa, sb)))
   );
 };
 
@@ -108,11 +103,13 @@ const buildRule = async (body, current) => {
       return `${prefix}End time must be after start time.`;
     }
     if (
-      settings &&
-      (toMin(startTime) < toMin(settings.clinicStartTime) ||
-        toMin(endTime) > toMin(settings.clinicEndTime))
+      settings
+      && (toMin(startTime) < toMin(settings.clinicStartTime)
+        || toMin(endTime) > toMin(settings.clinicEndTime))
     ) {
-      return `${prefix}Availability must be within clinic hours (${to12(settings.clinicStartTime)}-${to12(settings.clinicEndTime)}).`;
+      return `${prefix}Availability must be within clinic hours (${to12(settings.clinicStartTime)}-${
+        to12(settings.clinicEndTime)
+      }).`;
     }
     return null;
   };
@@ -127,13 +124,14 @@ const buildRule = async (body, current) => {
     const slots = [];
     for (const s of raw) {
       if (!WORKING_DAYS.includes(s?.day)) return { error: "Invalid weekday." };
-      if (seen.has(s.day))
+      if (seen.has(s.day)) {
         return { error: `${s.day} is added more than once.` };
+      }
       seen.add(s.day);
 
       if (
-        settings?.workingDays?.length &&
-        !settings.workingDays.includes(s.day)
+        settings?.workingDays?.length
+        && !settings.workingDays.includes(s.day)
       ) {
         return { error: `${s.day} is not a clinic working day.` };
       }
@@ -146,12 +144,12 @@ const buildRule = async (body, current) => {
       (a, b) => WORKING_DAYS.indexOf(a.day) - WORKING_DAYS.indexOf(b.day),
     );
     const effectiveFrom = body.effectiveFrom || current?.effectiveFrom || today;
-    const effectiveTo =
-      body.effectiveTo !== undefined ? body.effectiveTo : current?.effectiveTo;
+    const effectiveTo = body.effectiveTo !== undefined ? body.effectiveTo : current?.effectiveTo;
 
     if (!isValidDate(effectiveFrom)) return { error: "Invalid start date." };
-    if (effectiveTo && !isValidDate(effectiveTo))
+    if (effectiveTo && !isValidDate(effectiveTo)) {
       return { error: "Invalid end date." };
+    }
     if (effectiveTo && effectiveTo < effectiveFrom) {
       return { error: "End date cannot be before start date." };
     }
@@ -169,15 +167,14 @@ const buildRule = async (body, current) => {
   }
 
   const date = body.date !== undefined ? body.date : current?.date;
-  const startTime =
-    body.startTime !== undefined ? body.startTime : current?.startTime;
+  const startTime = body.startTime !== undefined ? body.startTime : current?.startTime;
   const endTime = body.endTime !== undefined ? body.endTime : current?.endTime;
 
   if (!isValidDate(date)) return { error: "A valid date is required." };
   if (date < today) return { error: "Date cannot be in the past." };
   if (
-    settings?.workingDays?.length &&
-    !settings.workingDays.includes(weekdayOf(date))
+    settings?.workingDays?.length
+    && !settings.workingDays.includes(weekdayOf(date))
   ) {
     return { error: `${weekdayOf(date)} is not a clinic working day.` };
   }
@@ -213,12 +210,14 @@ const validateSettingsPayload = (body, current, { partial = false } = {}) => {
   const errors = [];
   const out = {};
 
-  for (const field of [
-    "clinicStartTime",
-    "clinicEndTime",
-    "breakStartTime",
-    "breakEndTime",
-  ]) {
+  for (
+    const field of [
+      "clinicStartTime",
+      "clinicEndTime",
+      "breakStartTime",
+      "breakEndTime",
+    ]
+  ) {
     if (body[field] === undefined) {
       if (!partial && ["clinicStartTime", "clinicEndTime"].includes(field)) {
         errors.push(`${field} is required.`);
@@ -234,8 +233,8 @@ const validateSettingsPayload = (body, current, { partial = false } = {}) => {
 
   if (body.workingDays !== undefined) {
     if (
-      !Array.isArray(body.workingDays) ||
-      body.workingDays.some((d) => !WORKING_DAYS.includes(d))
+      !Array.isArray(body.workingDays)
+      || body.workingDays.some((d) => !WORKING_DAYS.includes(d))
     ) {
       errors.push(
         `workingDays must be an array using: ${WORKING_DAYS.join(", ")}.`,
@@ -248,8 +247,9 @@ const validateSettingsPayload = (body, current, { partial = false } = {}) => {
   for (const field of ["clinicName", "address", "phone", "timezone"]) {
     if (body[field] !== undefined) out[field] = String(body[field]).trim();
   }
-  if (body.email !== undefined)
+  if (body.email !== undefined) {
     out.email = String(body.email).trim().toLowerCase();
+  }
 
   const start = out.clinicStartTime ?? current?.clinicStartTime;
   const end = out.clinicEndTime ?? current?.clinicEndTime;
@@ -263,10 +263,10 @@ const validateSettingsPayload = (body, current, { partial = false } = {}) => {
     if (settingsToMinutes(breakEnd) <= settingsToMinutes(breakStart)) {
       errors.push("breakEndTime must be after breakStartTime.");
     } else if (
-      start &&
-      end &&
-      (settingsToMinutes(breakStart) < settingsToMinutes(start) ||
-        settingsToMinutes(breakEnd) > settingsToMinutes(end))
+      start
+      && end
+      && (settingsToMinutes(breakStart) < settingsToMinutes(start)
+        || settingsToMinutes(breakEnd) > settingsToMinutes(end))
     ) {
       errors.push("Break time must fall within clinic working hours.");
     }
@@ -277,9 +277,11 @@ const validateSettingsPayload = (body, current, { partial = false } = {}) => {
 const pad = (n) => String(n).padStart(2, "0");
 
 const formatDate = (date) => {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate(),
-  )}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${
+    pad(
+      date.getDate(),
+    )
+  }`;
 };
 
 const getDayName = (date) => {
@@ -301,8 +303,8 @@ const minutesToTime = (minutes) => {
 
 const overlaps = (startA, endA, startB, endB) => {
   return (
-    timeToMinutes(startA) < timeToMinutes(endB) &&
-    timeToMinutes(endA) > timeToMinutes(startB)
+    timeToMinutes(startA) < timeToMinutes(endB)
+    && timeToMinutes(endA) > timeToMinutes(startB)
   );
 };
 
@@ -331,8 +333,8 @@ const planRange = (batch, today) => {
 };
 
 const insideClinic = (a, b, st) =>
-  (st.clinicStart == null || (a >= st.clinicStart && b <= st.clinicEnd)) &&
-  !(st.breakStart != null && a < st.breakEnd && st.breakStart < b);
+  (st.clinicStart == null || (a >= st.clinicStart && b <= st.clinicEnd))
+  && !(st.breakStart != null && a < st.breakEnd && st.breakStart < b);
 
 const availableOnDate = (rules, key, a, b) => {
   const day = weekdayOf(key);
@@ -341,8 +343,8 @@ const availableOnDate = (rules, key, a, b) => {
       return r.date === key && toMin(r.startTime) <= a && toMin(r.endTime) >= b;
     }
     if (
-      (r.effectiveFrom && key < r.effectiveFrom) ||
-      (r.effectiveTo && key > r.effectiveTo)
+      (r.effectiveFrom && key < r.effectiveFrom)
+      || (r.effectiveTo && key > r.effectiveTo)
     ) {
       return false;
     }
@@ -360,10 +362,11 @@ const weeklyOptions = (rules, from, to, minutes, st) => {
   for (const r of rules) {
     if (r.type !== "recurring") continue;
     if (
-      (r.effectiveTo && r.effectiveTo < from) ||
-      (r.effectiveFrom && r.effectiveFrom > to)
-    )
+      (r.effectiveTo && r.effectiveTo < from)
+      || (r.effectiveFrom && r.effectiveFrom > to)
+    ) {
       continue;
+    }
 
     for (const s of r.slots || []) {
       if (!st.workingDays.includes(s.day)) continue;
@@ -384,9 +387,7 @@ const weeklyOptions = (rules, from, to, minutes, st) => {
       }
     }
   }
-  Object.values(out).forEach((l) =>
-    l.sort((x, y) => x.startTime.localeCompare(y.startTime)),
-  );
+  Object.values(out).forEach((l) => l.sort((x, y) => x.startTime.localeCompare(y.startTime)));
   return out;
 };
 const analyzePlan = async (batch, body) => {
@@ -431,10 +432,10 @@ const analyzePlan = async (batch, body) => {
 
     for (const s of p.slots) {
       if (
-        !WORKING_DAYS.includes(s.day) ||
-        !TIME_REGEX.test(s.startTime || "") ||
-        !TIME_REGEX.test(s.endTime || "") ||
-        toMin(s.endTime) - toMin(s.startTime) !== minutes
+        !WORKING_DAYS.includes(s.day)
+        || !TIME_REGEX.test(s.startTime || "")
+        || !TIME_REGEX.test(s.endTime || "")
+        || toMin(s.endTime) - toMin(s.startTime) !== minutes
       ) {
         return { error: "One of the selected slots is invalid." };
       }
@@ -454,8 +455,8 @@ const analyzePlan = async (batch, body) => {
     (p) =>
       !eligible.some(
         (e) =>
-          String(e.therapistId) === String(p.therapistId) &&
-          e.specialty === p.speciality,
+          String(e.therapistId) === String(p.therapistId)
+          && e.specialty === p.speciality,
       ),
   );
 
@@ -540,10 +541,9 @@ const analyzePlan = async (batch, body) => {
     const start = toMin(s.startTime);
     const end = toMin(s.endTime);
 
-    const available =
-      st.workingDays.includes(weekdayOf(s.date)) &&
-      insideClinic(start, end, st) &&
-      availableOnDate(
+    const available = st.workingDays.includes(weekdayOf(s.date))
+      && insideClinic(start, end, st)
+      && availableOnDate(
         rulesBy.get(s.therapistId) || [],
         s.date,
         start,
@@ -565,11 +565,13 @@ const analyzePlan = async (batch, body) => {
         const a = list[i];
         const b = list[j];
         if (
-          toMin(a.startTime) < toMin(b.endTime) &&
-          toMin(b.startTime) < toMin(a.endTime)
+          toMin(a.startTime) < toMin(b.endTime)
+          && toMin(b.startTime) < toMin(a.endTime)
         ) {
           return {
-            error: `${a.therapistName} (${to12(a.startTime)}) and ${b.therapistName} (${to12(b.startTime)}) overlap on ${a.date}. Pick different times.`,
+            error: `${a.therapistName} (${to12(a.startTime)}) and ${b.therapistName} (${
+              to12(b.startTime)
+            }) overlap on ${a.date}. Pick different times.`,
           };
         }
       }
@@ -584,8 +586,7 @@ const analyzePlan = async (batch, body) => {
       busy.push({
         appointmentId: String(ap._id),
         therapistId: String(sc.therapistId?._id || sc.therapistId),
-        therapistName:
-          sc.therapistId?.fullName || "another therapist",
+        therapistName: sc.therapistId?.fullName || "another therapist",
 
         children: (ap.children || []).map((child) => ({
           childId: String(child.childId?._id || child.childId),
@@ -609,8 +610,7 @@ const analyzePlan = async (batch, body) => {
   const duplicates = [];
   const toCreate = [];
 
-  const range = (a, b) =>
-    `${to12(minutesToTime(a))}-${to12(minutesToTime(b))}`;
+  const range = (a, b) => `${to12(minutesToTime(a))}-${to12(minutesToTime(b))}`;
 
   for (const s of valid) {
     const a = toMin(s.startTime);
@@ -618,9 +618,9 @@ const analyzePlan = async (batch, body) => {
 
     const hits = busy.filter(
       (x) =>
-        x.date === s.date &&
-        x.a < b &&
-        a < x.b,
+        x.date === s.date
+        && x.a < b
+        && a < x.b,
     );
 
     if (
@@ -641,31 +641,31 @@ const analyzePlan = async (batch, body) => {
 
     if (therapistConflict) {
       reasons.push(
-        `${s.therapistName} already has a session at ${range(
-          therapistConflict.a,
-          therapistConflict.b,
-        )}`,
+        `${s.therapistName} already has a session at ${
+          range(
+            therapistConflict.a,
+            therapistConflict.b,
+          )
+        }`,
       );
     }
 
     const childConflict = hits.find(
       (x) =>
-        x.therapistId !== s.therapistId &&
-        x.children?.some((child) =>
-          children.includes(child.childId),
-        ),
+        x.therapistId !== s.therapistId
+        && x.children?.some((child) => children.includes(child.childId)),
     );
 
     if (childConflict) {
-      const child = childConflict.children.find((child) =>
-        children.includes(child.childId),
-      );
+      const child = childConflict.children.find((child) => children.includes(child.childId));
 
       reasons.push(
-        `${child?.childName || "A batch child"} already has a session with ${childConflict.therapistName} (${range(
-          childConflict.a,
-          childConflict.b,
-        )})`,
+        `${child?.childName || "A batch child"} already has a session with ${childConflict.therapistName} (${
+          range(
+            childConflict.a,
+            childConflict.b,
+          )
+        })`,
       );
     }
 
@@ -995,10 +995,278 @@ exports.getTherapistsUsers = async (req, res) => {
     });
   }
 };
+
+exports.assignTherapistsUsers = async (req, res) => {
+  try {
+    const page = Math.max(
+      parseInt(req.query.page, 10) || 1,
+      1,
+    );
+
+    const limit = Math.max(
+      parseInt(req.query.limit, 10) || 10,
+      1,
+    );
+
+    const skip = (page - 1) * limit;
+
+    const {
+      search,
+      specialty,
+    } = req.query;
+
+    const matchStage = {};
+
+    if (
+      specialty
+      && specialty !== "All"
+    ) {
+      matchStage.specialty = specialty;
+    }
+
+    const pipeline = [
+      {
+        $match: matchStage,
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "therapistId",
+          foreignField: "_id",
+          as: "therapist",
+        },
+      },
+      {
+        $unwind: "$therapist",
+      },
+      {
+        $unwind: "$childIds",
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "childIds",
+          foreignField: "_id",
+          as: "child",
+        },
+      },
+      {
+        $unwind: "$child",
+      },
+      {
+        $match: {
+          "therapist.role": "Therapist",
+        },
+      },
+    ];
+
+    if (search?.trim()) {
+      const searchText = search.trim();
+
+      pipeline.push({
+        $match: {
+          $or: [
+            {
+              "child.fullName": {
+                $regex: searchText,
+                $options: "i",
+              },
+            },
+            {
+              "child.email": {
+                $regex: searchText,
+                $options: "i",
+              },
+            },
+            {
+              "therapist.fullName": {
+                $regex: searchText,
+                $options: "i",
+              },
+            },
+            {
+              "therapist.email": {
+                $regex: searchText,
+                $options: "i",
+              },
+            },
+          ],
+        },
+      });
+    }
+
+    pipeline.push(
+      {
+        $sort: {
+          "therapist.fullName": 1,
+          "child.fullName": 1,
+        },
+      },
+      {
+        $facet: {
+          metadata: [
+            {
+              $count: "total",
+            },
+          ],
+          data: [
+            {
+              $skip: skip,
+            },
+            {
+              $limit: limit,
+            },
+            {
+              $project: {
+                _id: 0,
+                assignmentId: {
+                  $toString: "$_id",
+                },
+                childId: {
+                  $toString: "$child._id",
+                },
+                childName: {
+                  $ifNull: [
+                    "$child.fullName",
+                    "$child.name",
+                  ],
+                },
+                childEmail: {
+                  $ifNull: [
+                    "$child.email",
+                    "",
+                  ],
+                },
+                childPhone: {
+                  $ifNull: [
+                    "$child.phone",
+                    "",
+                  ],
+                },
+                childProfileImage: {
+                  $ifNull: [
+                    "$child.profileImage",
+                    "",
+                  ],
+                },
+                therapistId: {
+                  $toString: "$therapist._id",
+                },
+                therapistName: {
+                  $ifNull: [
+                    "$therapist.fullName",
+                    "$therapist.name",
+                  ],
+                },
+                therapistEmail: {
+                  $ifNull: [
+                    "$therapist.email",
+                    "",
+                  ],
+                },
+                therapistPhone: {
+                  $ifNull: [
+                    "$therapist.phone",
+                    "",
+                  ],
+                },
+                therapistProfileImage: {
+                  $ifNull: [
+                    "$therapist.profileImage",
+                    "",
+                  ],
+                },
+                specialty: 1,
+                maxChildren: 1,
+                assignedChildren: {
+                  $size: {
+                    $ifNull: [
+                      "$childIdsOriginal",
+                      [],
+                    ],
+                  },
+                },
+                combinedName: {
+                  $concat: [
+                    {
+                      $ifNull: [
+                        "$child.fullName",
+                        "$child.name",
+                      ],
+                    },
+                    " - ",
+                    {
+                      $ifNull: [
+                        "$therapist.fullName",
+                        "$therapist.name",
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+    );
+
+    pipeline.splice(1, 0, {
+      $set: {
+        childIdsOriginal: {
+          $cond: [
+            {
+              $isArray: "$childIds",
+            },
+            "$childIds",
+            [],
+          ],
+        },
+      },
+    });
+
+    const result = await TherapistAssignment.aggregate(
+      pipeline,
+    );
+
+    const data = result[0]?.data || [];
+
+    const total =
+      result[0]?.metadata?.[0]?.total
+      || 0;
+
+    const specialties =
+      await TherapistAssignment.distinct(
+        "specialty",
+      );
+
+    return res.status(200).json({
+      success: true,
+      page,
+      limit,
+      total,
+      count: data.length,
+      hasMore: skip + data.length < total,
+      data,
+      specialties,
+    });
+  } catch (error) {
+    console.error(
+      "Get Therapist Users Error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Failed to get therapist users",
+      error: error.message,
+    });
+  }
+};
+
 exports.createTherapist = async (req, res) => {
   try {
-    const { name, specialty, maxChildren, email, phone, address, password } =
-      req.body;
+    const { name, specialty, maxChildren, email, phone, address, password } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -1057,8 +1325,7 @@ exports.createTherapist = async (req, res) => {
     const assignment = await TherapistAssignment.create({
       therapistId: user._id,
       specialty: specialty || "",
-      maxChildren:
-        maxChildren && maxChildren > 0 ? parseInt(maxChildren, 10) : 15,
+      maxChildren: maxChildren && maxChildren > 0 ? parseInt(maxChildren, 10) : 15,
       childIds: [],
     });
 
@@ -1087,8 +1354,7 @@ exports.createTherapist = async (req, res) => {
 exports.updateTherapist = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, specialty, maxChildren, email, phone, address, password } =
-      req.body;
+    const { name, specialty, maxChildren, email, phone, address, password } = req.body;
 
     const user = await User.findOne({ _id: id, role: "Therapist" });
     if (!user) {
@@ -1128,8 +1394,7 @@ exports.updateTherapist = async (req, res) => {
       if (!phoneRegex.test(phoneTrimmed)) {
         return res.status(400).json({
           success: false,
-          message:
-            "Phone number must be in 03011234567 or +923011234567 format.",
+          message: "Phone number must be in 03011234567 or +923011234567 format.",
         });
       }
       user.phone = phoneTrimmed.startsWith("+92")
@@ -1162,8 +1427,9 @@ exports.updateTherapist = async (req, res) => {
     let assignment = await TherapistAssignment.findOne({ therapistId: id });
     if (assignment) {
       if (specialty !== undefined) assignment.specialty = specialty;
-      if (maxChildren !== undefined)
+      if (maxChildren !== undefined) {
         assignment.maxChildren = parseInt(maxChildren, 10);
+      }
       await assignment.save();
     } else {
       assignment = await TherapistAssignment.create({
@@ -1231,13 +1497,12 @@ exports.assignChildrenToTherapist = async (req, res) => {
       : [];
 
     if (
-      !therapistId ||
-      (addChildIds.length === 0 && removeChildIds.length === 0)
+      !therapistId
+      || (addChildIds.length === 0 && removeChildIds.length === 0)
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "therapistId and at least one of addChildIds/removeChildIds are required.",
+        message: "therapistId and at least one of addChildIds/removeChildIds are required.",
       });
     }
 
@@ -1262,8 +1527,7 @@ exports.assignChildrenToTherapist = async (req, res) => {
       if (uniqueAddIds.length === 0) {
         return res.status(200).json({
           success: true,
-          message:
-            "Nothing to update — no existing assignment and no children to add.",
+          message: "Nothing to update — no existing assignment and no children to add.",
           data: {
             therapistId,
             currentLoad: 0,
@@ -1279,7 +1543,8 @@ exports.assignChildrenToTherapist = async (req, res) => {
       if (uniqueAddIds.length > maxChildren) {
         return res.status(400).json({
           success: false,
-          message: `This therapist can have a maximum of ${maxChildren} children. You tried to assign ${uniqueAddIds.length}.`,
+          message:
+            `This therapist can have a maximum of ${maxChildren} children. You tried to assign ${uniqueAddIds.length}.`,
           data: {
             therapistId,
             requestedChildren: uniqueAddIds.length,
@@ -1354,8 +1619,7 @@ exports.assignChildrenToTherapist = async (req, res) => {
     if (toAdd.length === 0 && toRemove.length === 0) {
       return res.status(200).json({
         success: true,
-        message:
-          "No changes made — selected children already reflect the current state.",
+        message: "No changes made — selected children already reflect the current state.",
         data: {
           therapistId,
           childIds: assignment.childIds,
@@ -1379,12 +1643,15 @@ exports.assignChildrenToTherapist = async (req, res) => {
 
     const messageParts = [];
     if (toAdd.length > 0) messageParts.push(`${toAdd.length} child(ren) added`);
-    if (toRemove.length > 0)
+    if (toRemove.length > 0) {
       messageParts.push(`${toRemove.length} child(ren) removed`);
-    if (alreadyAssignedIds.length > 0)
+    }
+    if (alreadyAssignedIds.length > 0) {
       messageParts.push(`${alreadyAssignedIds.length} were already assigned`);
-    if (notAssignedForRemoval.length > 0)
+    }
+    if (notAssignedForRemoval.length > 0) {
       messageParts.push(`${notAssignedForRemoval.length} were not assigned`);
+    }
 
     return res.status(200).json({
       success: true,
@@ -1552,21 +1819,19 @@ exports.childUsers = async (req, res) => {
 };
 exports.createChild = async (req, res) => {
   try {
-    const { fullName, fatherName, fatherCnic, age, email, phone, password } =
-      req.body;
+    const { fullName, fatherName, fatherCnic, age, email, phone, password } = req.body;
 
     if (
-      !fullName ||
-      !email ||
-      !phone ||
-      !password ||
-      !fatherName ||
-      !fatherCnic
+      !fullName
+      || !email
+      || !phone
+      || !password
+      || !fatherName
+      || !fatherCnic
     ) {
       return res.json({
         success: false,
-        message:
-          "fullName, email, phone, parent name, parent CNIC and password are required.",
+        message: "fullName, email, phone, parent name, parent CNIC and password are required.",
       });
     }
 
@@ -1582,13 +1847,12 @@ exports.createChild = async (req, res) => {
     }).lean();
 
     if (
-      existParent &&
-      normalizeName(existParent.fatherName) !== normalizeName(fatherName)
+      existParent
+      && normalizeName(existParent.fatherName) !== normalizeName(fatherName)
     ) {
       return res.status(409).json({
         success: false,
-        message:
-          "This parent CNIC already exists with a different parent name.",
+        message: "This parent CNIC already exists with a different parent name.",
       });
     }
 
@@ -1633,8 +1897,7 @@ exports.createChild = async (req, res) => {
 exports.updateChild = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fullName, fatherName, fatherCnic, age, email, phone, password } =
-      req.body;
+    const { fullName, fatherName, fatherCnic, age, email, phone, password } = req.body;
     if (!fullName || !email || !phone) {
       return res.json({
         success: false,
@@ -1667,17 +1930,15 @@ exports.updateChild = async (req, res) => {
       }).lean();
 
       if (
-        otherChildren.length > 0 &&
-        fatherName !== undefined &&
-        otherChildren.some(
-          (child) =>
-            normalizeName(child.fatherName) !== normalizeName(fatherName),
+        otherChildren.length > 0
+        && fatherName !== undefined
+        && otherChildren.some(
+          (child) => normalizeName(child.fatherName) !== normalizeName(fatherName),
         )
       ) {
         return res.status(409).json({
           success: false,
-          message:
-            "This parent CNIC already exists with a different parent name.",
+          message: "This parent CNIC already exists with a different parent name.",
         });
       }
     }
@@ -1802,15 +2063,14 @@ exports.getLeaveRequests = async (req, res) => {
 
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const [pendingCount, pendingSinceYesterday, onLeaveDocs] =
-      await Promise.all([
-        LeaveRequest.countDocuments({ status: "pending" }),
-        LeaveRequest.countDocuments({
-          status: "pending",
-          createdAt: { $gte: yesterday },
-        }),
-        getOnLeaveToday(),
-      ]);
+    const [pendingCount, pendingSinceYesterday, onLeaveDocs] = await Promise.all([
+      LeaveRequest.countDocuments({ status: "pending" }),
+      LeaveRequest.countDocuments({
+        status: "pending",
+        createdAt: { $gte: yesterday },
+      }),
+      getOnLeaveToday(),
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -2654,12 +2914,11 @@ exports.createBroadcast = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message:
-        status === "draft"
-          ? "Draft saved."
-          : status === "scheduled"
-            ? "Broadcast scheduled."
-            : "Broadcast sent.",
+      message: status === "draft"
+        ? "Draft saved."
+        : status === "scheduled"
+        ? "Broadcast scheduled."
+        : "Broadcast sent.",
       data: notification,
     });
   } catch (error) {
@@ -2849,7 +3108,7 @@ exports.updateBroadcast = async (req, res) => {
         "..",
         broadcast.attachment.url.replace(/^\//, ""),
       );
-      fs.unlink(oldPath, () => { });
+      fs.unlink(oldPath, () => {});
       broadcast.attachment = { url: null, name: null, type: null };
     }
 
@@ -2861,7 +3120,7 @@ exports.updateBroadcast = async (req, res) => {
           "..",
           broadcast.attachment.url.replace(/^\//, ""),
         );
-        fs.unlink(oldPath, () => { });
+        fs.unlink(oldPath, () => {});
       }
       broadcast.attachment = {
         url: `/assets/broadcasts/${req.file.filename}`,
@@ -2947,7 +3206,7 @@ exports.deleteBroadcast = async (req, res) => {
         "..",
         broadcast.attachment.url.replace(/^\//, ""),
       );
-      fs.unlink(filePath, () => { }); // best-effort cleanup, no need to block response on it
+      fs.unlink(filePath, () => {}); // best-effort cleanup, no need to block response on it
     }
     return res
       .status(200)
@@ -3551,8 +3810,9 @@ exports.updateAvailability = async (req, res) => {
 
     // TODO (sessions step): if future sessions fall outside the new window, block or warn here.
     Object.assign(existing, rule);
-    if (req.body.isActive !== undefined)
+    if (req.body.isActive !== undefined) {
       existing.isActive = !!req.body.isActive;
+    }
     await existing.save();
 
     return res
@@ -3648,9 +3908,9 @@ exports.getBatchTherapistOptions = async (req, res) => {
 
     const availability = therapistIds.length
       ? await TherapistAvailability.find({
-          therapistId: { $in: therapistIds },
-          isActive: true,
-        }).lean()
+        therapistId: { $in: therapistIds },
+        isActive: true,
+      }).lean()
       : [];
 
     const availabilityMap = new Set(
@@ -3658,8 +3918,8 @@ exports.getBatchTherapistOptions = async (req, res) => {
         .filter((r) =>
           r.type === "custom"
             ? r.date >= from && r.date <= to
-            : (!r.effectiveTo || r.effectiveTo >= from) &&
-              (!r.effectiveFrom || r.effectiveFrom <= to),
+            : (!r.effectiveTo || r.effectiveTo >= from)
+              && (!r.effectiveFrom || r.effectiveFrom <= to)
         )
         .map((r) => String(r.therapistId)),
     );
@@ -3859,8 +4119,8 @@ exports.previewBatchSchedule = async (req, res) => {
     const count = (list, plan) =>
       list.filter(
         (s) =>
-          String(s.therapistId) === String(plan.therapistId) &&
-          s.speciality === plan.speciality,
+          String(s.therapistId) === String(plan.therapistId)
+          && s.speciality === plan.speciality,
       ).length;
 
     const perTherapist = r.plans.map((plan) => ({
@@ -3925,8 +4185,7 @@ exports.saveBatchSchedule = async (req, res) => {
     if (!r.toCreate.length) {
       return res.status(400).json({
         success: false,
-        message:
-          "No new sessions to create. Every date conflicts, is outside availability, or already exists.",
+        message: "No new sessions to create. Every date conflicts, is outside availability, or already exists.",
       });
     }
 
@@ -4126,10 +4385,9 @@ exports.updateBatchChildren = async (req, res) => {
       });
     }
 
-    const newCount =
-      current.size -
-      actualRemove.length +
-      actualAdd.length;
+    const newCount = current.size
+      - actualRemove.length
+      + actualAdd.length;
 
     if (newCount > batch.maxChild) {
       return res.status(400).json({
@@ -4358,8 +4616,8 @@ exports.removeBatchAssignment = async (req, res) => {
     const { batchId, assignmentId } = req.params;
 
     if (
-      !mongoose.isValidObjectId(batchId) ||
-      !mongoose.isValidObjectId(assignmentId)
+      !mongoose.isValidObjectId(batchId)
+      || !mongoose.isValidObjectId(assignmentId)
     ) {
       return res.status(400).json({
         success: false,
