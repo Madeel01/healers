@@ -166,6 +166,31 @@ export const deleteBatchSession = (batchId, assignmentId, sessionId) =>
     .delete(`/admin/batches/${batchId}/assignments/${assignmentId}/sessions/${sessionId}`)
     .then((r) => r.data);
 
+export const getAllPackages = () =>
+  apiClient
+    .get("/admin/packages")
+    .then((res) => res.data);
+
+export const getPackageById = (packageId) =>
+  apiClient
+    .get(`/admin/packages/${packageId}`)
+    .then((res) => res.data);
+
+export const createPackage = (body) =>
+  apiClient
+    .post("/admin/packages", body)
+    .then((res) => res.data);
+
+export const updatePackage = (packageId, body) =>
+  apiClient
+    .put(`/admin/packages/${packageId}`, body)
+    .then((res) => res.data);
+
+export const deletePackage = (packageId) =>
+  apiClient
+    .delete(`/admin/packages/${packageId}`)
+    .then((res) => res.data);
+
 
 ///////////////////// BroadCast API's /////////////////////////////
 export const createBroadcast = (formData) =>

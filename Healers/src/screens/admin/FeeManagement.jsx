@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useCallback, useState } from "react";
 
 import { LinearGradient } from 'expo-linear-gradient';
 import {
+  ActivityIndicator,
+  Alert,
   ImageBackground,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
@@ -21,10 +24,77 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import { getAllPackages,deletePackage,createPackage,updatePackage,getPackageById } from "../../api/admin/api";
 
 export default function FeeManagementScreen({ navigation }) {
   // const insets = useSafeAreaInsets();
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const fetchPackages = useCallback(async () => {
+    try {
+      const response = await getAllPackages();
 
+      if (response.data?.success) {
+        setPackages(response.data.data || []);
+      }
+    } catch (error) {
+      console.error("fetchPackages:", error);
+
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Failed to load packages."
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", fetchPackages);
+
+    return unsubscribe;
+  }, [navigation, fetchPackages]);
+  const handleDeletePackage = (packageId, packageName) => {
+    Alert.alert(
+      "Delete Package",
+      `Are you sure you want to remove "${packageName}"?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const response = await deletePackage(packageId);
+
+              if (response.data?.success) {
+                setPackages((prev) =>
+                  prev.filter((item) => item._id !== packageId)
+                );
+
+                Alert.alert(
+                  "Success",
+                  "Package deleted successfully."
+                );
+              }
+            } catch (error) {
+              console.error("handleDeletePackage:", error);
+
+              Alert.alert(
+                "Error",
+                error.response?.data?.message ||
+                  "Failed to delete package."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
   const feeStructures = [
     { id: "1", name: "Behavioral Therapy", price: "PKR 3,500/session" },
     { id: "2", name: "Speech Therapy", price: "PKR 3,000/session" },
@@ -49,11 +119,11 @@ export default function FeeManagementScreen({ navigation }) {
           facility.
         </Text>
 
-        <TouchableOpacity style={styles.configureBtn} 
+        {/* <TouchableOpacity style={styles.configureBtn} 
         onPress={()=>navigation.navigate('AddNewPackage')}>
           <Feather name="plus-circle" size={18} color="#FFFFFF" style={styles.configureBtnIcon} />
           <Text style={styles.configureBtnText}>Configure Fees</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -105,32 +175,110 @@ export default function FeeManagementScreen({ navigation }) {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Fee Structures</Text>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("AllPackages")}
+          >
             <Text style={styles.viewAllText}>View All</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.feeListCard}>
-          {feeStructures.map((item, index) => (
-            <View
-              key={item.id}
-              style={[
-                styles.feeItem,
-                index < feeStructures.length - 1 && styles.feeItemBorder,
-              ]}
-            >
-              <View style={styles.feeItemContent}>
-                <Text style={styles.feeName}>{item.name}</Text>
-                <Text style={styles.feePrice}>{item.price}</Text>
-              </View>
-              <TouchableOpacity style={styles.editBtn}>
-                <Feather name="edit-2" size={16} color="#C1C7D2" />
-              </TouchableOpacity>
-            </View>
-          ))}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+              />
 
-          <TouchableOpacity style={styles.addPackageBtn}>
-            <Text style={styles.addPackageText}>Add New Package</Text>
+              <Text style={styles.loadingText}>
+                Loading packages...
+              </Text>
+            </View>
+          ) : packages.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Feather
+                name="package"
+                size={28}
+                color="#9CA3AF"
+              />
+
+              <Text style={styles.emptyTitle}>
+                No packages yet
+              </Text>
+
+              <Text style={styles.emptyText}>
+                Create your first fee package to get started.
+              </Text>
+            </View>
+          ) : (
+            packages.slice(0, 3).map((item, index) => (
+              <View
+                key={item._id}
+                style={[
+                  styles.feeItem,
+                  index < Math.min(packages.length, 3) - 1 &&
+                    styles.feeItemBorder,
+                ]}
+              >
+                <View style={styles.feeItemContent}>
+                  <Text style={styles.feeName}>
+                    {item.name}
+                  </Text>
+
+                  <Text style={styles.feePrice}>
+                    PKR {Number(item.price).toLocaleString()}
+                    {item.type === "per-session"
+                      ? "/session"
+                      : ` • ${item.sessions} sessions`}
+                  </Text>
+                </View>
+
+                <View style={styles.actionButtons}>
+                  <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={() =>
+                      navigation.navigate("AddNewPackage", {
+                        packageId: item._id,
+                        mode: "edit",
+                      })
+                    }
+                  >
+                    <Feather
+                      name="edit-2"
+                      size={16}
+                      color="#7A8494"
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() =>
+                      handleDeletePackage(
+                        item._id,
+                        item.name
+                      )
+                    }
+                  >
+                    <Feather
+                      name="trash-2"
+                      size={16}
+                      color="#BA1A1A"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
+
+          <TouchableOpacity
+            style={styles.addPackageBtn}
+            onPress={() =>
+              navigation.navigate("AddNewPackage")
+            }
+          >
+            <Text style={styles.addPackageText}>
+              Add New Package
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -423,4 +571,59 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: fonts.regular,
   },
+  actionButtons: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+},
+
+deleteBtn: {
+  padding: 6,
+},loadingContainer: {
+  paddingVertical: 35,
+  alignItems: "center",
+},
+
+loadingText: {
+  marginTop: 8,
+  fontSize: 14,
+  fontFamily: fonts.regular,
+  color: colors.blackFont,
+},
+
+emptyContainer: {
+  paddingVertical: 30,
+  paddingHorizontal: 20,
+  alignItems: "center",
+},
+
+emptyTitle: {
+  marginTop: 10,
+  fontSize: 17,
+  fontFamily: fonts.semiBold,
+  color: "#181C1E",
+},
+
+emptyText: {
+  marginTop: 5,
+  fontSize: 14,
+  lineHeight: 20,
+  textAlign: "center",
+  color: colors.blackFont,
+  fontFamily: fonts.regular,
+},
+
+emptyButton: {
+  marginTop: 15,
+  paddingHorizontal: 18,
+  paddingVertical: 10,
+  borderRadius: 10,
+  backgroundColor: colors.primary,
+},
+
+emptyButtonText: {
+  color: "#FFFFFF",
+  fontFamily: fonts.semiBold,
+  fontSize: 14,
+},
 });

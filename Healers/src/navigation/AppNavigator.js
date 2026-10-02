@@ -12,7 +12,6 @@ import { AuthContext } from '../context/AuthContext';
 import AddNewPackageScreen from '../screens/admin/AddNewPackage';
 import AdminDashboard from '../screens/admin/AdminDashboard';
 import BatchManagementScreen from '../screens/admin/BatchManagement';
-import BatchScheduleScreen from '../screens/admin/BatchSchedule';
 import BatchScheduleCreateScreen
   from '../screens/admin/Batchschedulecreatescreen';
 import BroadcastManagementScreen from '../screens/admin/BroadcastManagement';
@@ -53,14 +52,13 @@ import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
 import ChildrenScreen from '../screens/admin/Children';
-import TherapistAvailabilityScreen from '../screens/admin/TherapistAvailability';
 import BatchScheduleScreen from '../screens/admin/BatchSchedule';
-import BatchScheduleCreateScreen from '../screens/admin/Batchschedulecreatescreen';
 import BatchSessionPostponeScreen from '../screens/admin/BatchSessionPostponeScreen';
 import BatchAdditionalClassScreen from '../screens/admin/BatchAdditionalClassScreen';
 import TherapistScheduleScreen from '../screens/admin/TherapistScheduleScreen';
 import ChildScheduleScreen from '../screens/admin/ChildScheduleScreen';
 import ChildCustomAppointmentScreen from '../screens/admin/ChildCustomAppointmentScreen';
+import AllPackagesScreen from '../screens/admin/AllPackages';
 
 const Stack = createNativeStackNavigator();
 
@@ -108,6 +106,7 @@ function AdminStack() {
       <Stack.Screen name="TherapistSchedule" component={TherapistScheduleScreen} />
       <Stack.Screen name="ChildSchedule" component={ChildScheduleScreen} />
       <Stack.Screen name="ChildCustomAppointment" component={ChildCustomAppointmentScreen} />
+      <Stack.Screen name="AllPackages" component={AllPackagesScreen} />
 
       <Stack.Screen name="ProgramBuilder" component={ProgramBuilderScreen} />
     </Stack.Navigator>

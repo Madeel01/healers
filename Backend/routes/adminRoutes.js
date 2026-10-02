@@ -21,7 +21,12 @@ const {
     createChildCustomAppointment,
     deleteChildCustomAppointment,
     deleteBatchSession,
-    getTherapistsAssignUsers
+    getTherapistsAssignUsers,
+    getAllPackages,
+    getPackageById,
+    createPackage,
+    updatePackage,
+    deletePackage,
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
@@ -106,5 +111,11 @@ router.get("/scheduling/availability", protect, getAvailability);
 router.post("/scheduling/availability", protect, createAvailability);
 router.put("/scheduling/availability/:id", protect, updateAvailability);
 router.delete("/scheduling/availability/:id", protect, deleteAvailability);
+
+router.get("/packages/",  getAllPackages);
+router.get("/packages/:packageId", protect, getPackageById);
+router.post("/packages/", protect, createPackage);
+router.put("/packages/:packageId", protect, updatePackage);
+router.delete("/packages/:packageId", deletePackage);
 
 module.exports = router;
