@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 exports.protect = (req, res, next) => {
   let token = req.headers.authorization;
 
+  console.log("req.headers",req.headers)
   if (token && token.startsWith('Bearer ')) {
     try {
       token = token.split(' ')[1];

@@ -10,13 +10,15 @@ const {
     previewBatchSchedule,
     getBatchEligibleChildren,
     updateBatchChildren,
-    removeBatchAssignment
+    removeBatchAssignment,
+    getTherapistsAssignUsers
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
 
 router.get("/overview",  getAdminOverview);
 router.get("/get_therapists",  getTherapistsUsers);
+router.get("/get_therapists_users",  getTherapistsAssignUsers);
 router.get("/users",  getUsersByRole);
 
 

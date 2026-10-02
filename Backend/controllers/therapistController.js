@@ -11,108 +11,237 @@ const QuarterlyReport = require("../models/QuarterlyReport");
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const rawTherapistId = req.query.filter || req.user?._id;
+    const rawTherapistId = req.query.filter || req.user?._id || req.user?.id;
 
-    if (!rawTherapistId) {
+    if (
+      !rawTherapistId
+      || !mongoose.Types.ObjectId.isValid(rawTherapistId)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Therapist ID is required.",
+        message: "Valid therapist ID is required.",
       });
     }
 
-    const therapistId = new mongoose.Types.ObjectId(rawTherapistId);
+    const therapistId = new mongoose.Types.ObjectId(
+      rawTherapistId,
+    );
 
     const now = new Date();
-
-    const assignment = await TherapistAssignment.findOne({ therapistId }).lean();
-    const assignedChildrenList = assignment?.childIds || [];
-    const assignedChildrenCount = assignedChildrenList.length;
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
 
-    const schedules = await Scheduling.find({ therapistId, month: currentMonth, year: currentYear }).populate(
-      "childId",
-      "name fullName",
+    const assignment = await TherapistAssignment.findOne({
+      therapistId,
+    }).lean();
+
+    const assignedChildren = assignment?.childIds || [];
+
+    const assignedChildIds = new Set(
+      assignedChildren.map((id) => String(id)),
     );
 
-    let todaySessionsCount = 0;
-    let completedCount = 0;
-    let totalFeebBackCount = 0;
-    let totalPastOrCurrentSessions = 0;
-    let closestUpcomingSession = null;
-    let closestTimeDiff = Infinity;
+    const schedules = await Scheduling.find({
+      therapistId,
+      month: currentMonth,
+      year: currentYear,
+    })
+      .populate(
+        "appointments.children.childId",
+        "fullName name profileImage",
+      )
+      .lean();
+
+    let todaySessions = 0;
+    let completedSessions = 0;
+    let attendanceSessions = 0;
+    let totalSessions = 0;
+    let nextSession = null;
+    let closestTime = Infinity;
+
+    const getSessionDateTime = (
+      date,
+      time,
+    ) => {
+      if (!date) {
+        return null;
+      }
+
+      const value = new Date(date);
+
+      if (Number.isNaN(value.getTime())) {
+        return null;
+      }
+
+      if (time) {
+        const [hours, minutes] = time
+          .split(":")
+          .map(Number);
+
+        value.setHours(
+          hours || 0,
+          minutes || 0,
+          0,
+          0,
+        );
+      }
+
+      return value;
+    };
+
     schedules.forEach((schedule) => {
-      (schedule.appointments || []).forEach((appt) => {
-        const apptDate = new Date(appt.date?.$date || appt.date);
-        const fullApptDateTime = new Date(apptDate);
-        totalFeebBackCount++;
-        if (appt.startTime) {
-          const [hours, minutes] = appt.startTime.split(":").map(Number);
-          if (!isNaN(hours) && !isNaN(minutes)) {
-            fullApptDateTime.setHours(hours, minutes, 0, 0);
+      (schedule.appointments || []).forEach(
+        (appointment) => {
+          const appointmentChildren = appointment.children || [];
+
+          const children = appointmentChildren.filter(
+            (child) => {
+              const childId = child.childId?._id
+                || child.childId;
+
+              return assignedChildIds.has(
+                String(childId),
+              );
+            },
+          );
+
+          if (!children.length) {
+            return;
           }
-        }
 
-        const isToday = apptDate.getUTCFullYear() === now.getUTCFullYear()
-          && apptDate.getUTCMonth() === now.getUTCMonth()
-          && apptDate.getUTCDate() === now.getUTCDate();
+          const startDateTime = getSessionDateTime(
+            appointment.date,
+            appointment.startTime,
+          );
 
-        if (isToday) {
-          todaySessionsCount++;
-        }
+          const endDateTime = getSessionDateTime(
+            appointment.date,
+            appointment.endTime,
+          );
 
-        if (fullApptDateTime >= now) {
-          const diff = fullApptDateTime - now;
-          if (diff < closestTimeDiff) {
-            closestTimeDiff = diff;
-            const childObj = schedule.childId || {};
-            closestUpcomingSession = {
-              childName: childObj.fullName || childObj.name || "Assigned Child",
-              startTime: appt.startTime,
-              endTime: appt.endTime,
-              date: appt.date,
-            };
+          if (!startDateTime) {
+            return;
           }
-        }
 
-        const status = appt.attendance_status;
-        if (status === "Complete") {
-          completedCount++;
-          totalPastOrCurrentSessions++;
-        } else if (status === "Absent") {
-          totalPastOrCurrentSessions++;
-        } else if ((status === "Pending" || !status) && fullApptDateTime <= now) {
-          totalPastOrCurrentSessions++;
-        }
-      });
+          totalSessions++;
+
+          const isToday = startDateTime.getFullYear()
+              === now.getFullYear()
+            && startDateTime.getMonth()
+              === now.getMonth()
+            && startDateTime.getDate()
+              === now.getDate();
+
+          if (isToday) {
+            todaySessions++;
+          }
+
+          if (
+            startDateTime.getTime()
+              >= now.getTime()
+          ) {
+            const difference = startDateTime.getTime()
+              - now.getTime();
+
+            if (difference < closestTime) {
+              closestTime = difference;
+
+              const child = children[0];
+
+              nextSession = {
+                appointmentId: String(
+                  appointment._id,
+                ),
+                childId: String(
+                  child.childId?._id
+                    || child.childId,
+                ),
+                childName: child.childId?.fullName
+                  || child.childId?.name
+                  || "Assigned Child",
+                childImage: child.childId?.profileImage
+                  || "",
+                date: appointment.date,
+                startTime: appointment.startTime,
+                endTime: appointment.endTime,
+              };
+            }
+          }
+
+          if (
+            endDateTime
+            && endDateTime.getTime()
+              <= now.getTime()
+          ) {
+            children.forEach((child) => {
+              attendanceSessions++;
+
+              if (
+                child.attendance_status
+                  === "Complete"
+              ) {
+                completedSessions++;
+              }
+            });
+          }
+        },
+      );
     });
 
-    const overallAttendance = totalPastOrCurrentSessions > 0
-      ? Math.round((completedCount / totalPastOrCurrentSessions) * 100)
+    const overallAttendance = attendanceSessions > 0
+      ? Math.round(
+        (
+          completedSessions
+          / attendanceSessions
+        ) * 100,
+      )
       : 0;
 
-    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    const startOfNextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+    const startOfMonth = new Date(
+      currentYear,
+      currentMonth - 1,
+      1,
+    );
+
+    const startOfNextMonth = new Date(
+      currentYear,
+      currentMonth,
+      1,
+    );
+
     const totalSubmittedFeedback = await Feedback.countDocuments({
       therapistId,
       createdAt: {
         $gte: startOfMonth,
         $lt: startOfNextMonth,
       },
+      notes: {
+        $nin: [null, ""],
+        $regex: /\S/,
+      },
     });
 
     return res.status(200).json({
       success: true,
       data: {
-        assignedChildren: assignedChildrenCount,
-        todaySessions: todaySessionsCount,
-        monthlyFeedback: `${totalSubmittedFeedback}/${totalFeebBackCount}`,
+        assignedChildren: assignedChildren.length,
+        todaySessions,
+        monthlyFeedback: `${totalSubmittedFeedback}/${totalSessions}`,
         overallAttendance: `${overallAttendance}%`,
-        nextSession: closestUpcomingSession,
+        nextSession,
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error(
+      "getDashboardStats error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch dashboard stats",
+      error: error.message,
+    });
   }
 };
 
@@ -350,54 +479,136 @@ exports.getChildSessionStats = async (req, res) => {
     const therapistId = req.query.therapistId
       || req.user?._id
       || req.user?.id;
-    const schedules = await Scheduling.find({ therapistId, childId });
 
-    let nextSession = null;
-    let nextSessionDateTime = null;
+    if (!therapistId || !childId) {
+      return res.status(400).json({
+        success: false,
+        message: "Therapist ID and child ID are required",
+      });
+    }
 
-    let completedCount = 0;
-    let totalFinishedCount = 0;
+    if (
+      !mongoose.Types.ObjectId.isValid(therapistId)
+      || !mongoose.Types.ObjectId.isValid(childId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid therapist ID or child ID",
+      });
+    }
+
+    const schedules = await Scheduling.find({
+      therapistId,
+      "appointments.children.childId": childId,
+    }).lean();
 
     const now = new Date();
 
-    schedules.forEach((schedule) => {
-      (schedule.appointments || []).forEach((appt) => {
-        const apptDate = new Date(appt.date?.$date || appt.date);
+    let nextSession = null;
+    let nextSessionDateTime = null;
+    let completedCount = 0;
+    let totalFinishedCount = 0;
 
-        const fullApptDateTime = new Date(apptDate);
-        if (appt.startTime) {
-          const [hours, minutes] = appt.startTime.split(":").map(Number);
-          if (!isNaN(hours) && !isNaN(minutes)) {
-            fullApptDateTime.setHours(hours, minutes, 0, 0);
-          }
+    schedules.forEach((schedule) => {
+      (schedule.appointments || []).forEach((appointment) => {
+        const childEntry = (appointment.children || []).find(
+          (entry) => String(entry.childId) === String(childId),
+        );
+
+        if (!childEntry) {
+          return;
         }
 
-        if (fullApptDateTime >= now) {
-          if (!nextSessionDateTime || fullApptDateTime < nextSessionDateTime) {
-            nextSessionDateTime = fullApptDateTime;
+        const appointmentDate = new Date(
+          appointment.date,
+        );
+
+        if (
+          Number.isNaN(
+            appointmentDate.getTime(),
+          )
+        ) {
+          return;
+        }
+
+        const startDateTime = new Date(
+          appointmentDate,
+        );
+
+        if (appointment.startTime) {
+          const [hours, minutes] = appointment.startTime
+            .split(":")
+            .map(Number);
+
+          startDateTime.setHours(
+            hours || 0,
+            minutes || 0,
+            0,
+            0,
+          );
+        }
+
+        const endDateTime = new Date(
+          appointmentDate,
+        );
+
+        if (appointment.endTime) {
+          const [hours, minutes] = appointment.endTime
+            .split(":")
+            .map(Number);
+
+          endDateTime.setHours(
+            hours || 0,
+            minutes || 0,
+            0,
+            0,
+          );
+        } else {
+          endDateTime.setTime(
+            startDateTime.getTime(),
+          );
+        }
+
+        if (startDateTime >= now) {
+          if (
+            !nextSessionDateTime
+            || startDateTime < nextSessionDateTime
+          ) {
+            nextSessionDateTime = startDateTime;
+
             nextSession = {
-              date: appt.date,
-              startTime: appt.startTime,
-              endTime: appt.endTime,
+              appointmentId: String(
+                appointment._id,
+              ),
+              date: appointment.date,
+              startTime: appointment.startTime || "",
+              endTime: appointment.endTime || "",
+              attendanceStatus: childEntry.attendance_status
+                || "Pending",
             };
           }
         }
 
-        const status = appt.attendance_status;
+        if (endDateTime <= now) {
+          totalFinishedCount++;
 
-        if (status === "Complete") {
-          completedCount++;
-          totalFinishedCount++;
-        } else if (status === "Absent") {
-          totalFinishedCount++;
-        } else if ((status === "Pending" || !status) && fullApptDateTime <= now) {
-          totalFinishedCount++;
+          if (
+            childEntry.attendance_status
+              === "Complete"
+          ) {
+            completedCount++;
+          }
         }
       });
     });
 
     const attendancePercentage = totalFinishedCount > 0
-      ? Math.round((completedCount / totalFinishedCount) * 100)
+      ? Math.round(
+        (
+          completedCount
+          / totalFinishedCount
+        ) * 100,
+      )
       : 0;
 
     return res.status(200).json({
@@ -405,19 +616,42 @@ exports.getChildSessionStats = async (req, res) => {
       data: {
         nextSession,
         attendancePercentage,
+        completedSessions: completedCount,
+        totalFinishedSessions: totalFinishedCount,
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error(
+      "getChildSessionStats error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 exports.getFeedbackManagementData = async (req, res) => {
   try {
-    const rawTherapistId = req.user._id || req.user.id;
-    const therapistId = new mongoose.Types.ObjectId(rawTherapistId);
+    const rawTherapistId = req.user?._id || req.user?.id;
     const { childId } = req.params;
     const { monthRange } = req.query;
+
+    if (
+      !rawTherapistId
+      || !mongoose.Types.ObjectId.isValid(rawTherapistId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid therapist ID is required",
+      });
+    }
+
+    const therapistId = new mongoose.Types.ObjectId(
+      rawTherapistId,
+    );
 
     const monthMap = {
       january: 1,
@@ -434,286 +668,356 @@ exports.getFeedbackManagementData = async (req, res) => {
       december: 12,
     };
 
-    let targetMonthNum = null;
-    if (monthRange && monthRange !== "All Months") {
-      const firstMonthName = monthRange.split("-")[0].trim().toLowerCase();
-      targetMonthNum = monthMap[firstMonthName] || null;
-    }
+    let targetMonths = [];
 
+    if (monthRange && monthRange !== "All Months") {
+      const [startMonthName, endMonthName] = monthRange
+        .split("-")
+        .map((item) => item.trim().toLowerCase());
+
+      const startMonth = monthMap[startMonthName];
+      const endMonth = monthMap[startMonthName];
+
+      if (startMonth && endMonth) {
+        for (let month = startMonth; month <= endMonth; month++) {
+          targetMonths.push(month);
+        }
+      } else if (startMonth) {
+        targetMonths.push(startMonth);
+      }
+    }
     const currentYear = new Date().getFullYear();
 
-    const query = {
+    const scheduleQuery = {
       therapistId,
       year: currentYear,
     };
 
-    if (childId) {
-      query.childId = new mongoose.Types.ObjectId(childId);
-    }
-    if (targetMonthNum) {
-      query.month = targetMonthNum;
+    if (targetMonths.length) {
+      scheduleQuery.month = {
+        $in: targetMonths,
+      };
     }
 
-    const schedules = await Scheduling.find(query)
-      .populate("childId", "fullName email phone")
+    const schedules = await Scheduling.find(
+      scheduleQuery,
+    )
+      .populate(
+        "appointments.children.childId",
+        "fullName name email phone fatherName parentName profileImage",
+      )
       .lean();
 
-    const feedbacks = await Feedback.find({ therapistId }).lean();
-    const feedbackMap = {};
-    feedbacks.forEach((f) => {
-      if (f.appointmentId) {
-        feedbackMap[f.appointmentId.toString()] = f;
-      }
-    });
-
-    const assignedChildIds = schedules.map((s) => s.childId?._id).filter(Boolean);
-    const programs = await Program.find({
-      userId: { $in: assignedChildIds },
+    const feedbackQuery = {
       therapistId,
-    }).lean();
+    };
 
-    const programMap = {};
-    programs.forEach((p) => {
-      programMap[p.userId.toString()] = p.programName;
+    if (
+      childId
+      && mongoose.Types.ObjectId.isValid(
+        childId,
+      )
+    ) {
+      feedbackQuery.childId = new mongoose.Types.ObjectId(
+        childId,
+      );
+    }
+
+    const feedbacks = await Feedback.find(
+      feedbackQuery,
+    ).lean();
+
+    const feedbackMap = new Map();
+
+    feedbacks.forEach((feedback) => {
+      if (!feedback.appointmentId) {
+        return;
+      }
+
+      const key = `${
+        String(
+          feedback.appointmentId,
+        )
+      }-${
+        String(
+          feedback.childId,
+        )
+      }`;
+
+      feedbackMap.set(
+        key,
+        feedback,
+      );
     });
 
-    const childrenMap = {};
-    let totalSessions = 0;
-    let totalFeedbackDone = 0;
+    const allChildIds = new Set();
 
     schedules.forEach((schedule) => {
-      const child = schedule.childId;
-      if (!child) return;
+      (
+        schedule.appointments || []
+      ).forEach((appointment) => {
+        (
+          appointment.children || []
+        ).forEach((childEntry) => {
+          const id = childEntry.childId?._id
+            || childEntry.childId;
 
-      const childIdStr = child._id.toString();
-
-      if (!childrenMap[childIdStr]) {
-        childrenMap[childIdStr] = {
-          id: childIdStr,
-          name: child.fullName || "N/A",
-          email: child.email || "N/A",
-          phone: child.phone || "N/A",
-          sessions: [],
-        };
-      }
-
-      const appointments = schedule.appointments || [];
-
-      appointments.forEach((appt) => {
-        const apptIdStr = appt._id.toString();
-        const dateObj = new Date(appt.date?.$date || appt.date);
-        const formattedDate = dateObj
-          .toLocaleString("en-US", { month: "short", day: "2-digit" })
-          .toUpperCase();
-
-        const existingFeedback = feedbackMap[apptIdStr];
-        const isDone = !!existingFeedback;
-
-        totalSessions++;
-        if (isDone) totalFeedbackDone++;
-
-        const resolvedCategory = programMap[childIdStr] || appt.category || "GENERAL";
-
-        childrenMap[childIdStr].sessions.push({
-          id: apptIdStr,
-          name: child.fullName || "N/A",
-          time: appt.startTime || "",
-          endTime: appt.endTime || "",
-          rawDate: appt.date,
-          date: formattedDate,
-          attendanceStatus: appt.attendance_status || "Pending",
-          category: resolvedCategory,
-          isDone,
-          feedbackDetails: isDone
-            ? {
-              id: existingFeedback._id,
-              notes: existingFeedback.notes,
-              rating: existingFeedback.rating,
-              category: existingFeedback.category,
-              mood: existingFeedback.mood,
-              isVisibleToParent: existingFeedback.isVisibleToParent,
-            }
-            : null,
+          if (id) {
+            allChildIds.add(
+              String(id),
+            );
+          }
         });
       });
     });
 
-    const resultData = Object.values(childrenMap).map((childData) => {
-      childData.sessions.sort((a, b) => {
-        const dateA = new Date(a.rawDate?.$date || a.rawDate);
-        const dateB = new Date(b.rawDate?.$date || b.rawDate);
+    const programs = await Program.find({
+      userId: {
+        $in: Array.from(
+          allChildIds,
+        ),
+      },
+      therapistId,
+    }).lean();
 
-        if (a.time) {
-          const [hA, mA] = a.time.split(":").map(Number);
-          dateA.setHours(hA || 0, mA || 0, 0, 0);
-        }
-        if (b.time) {
-          const [hB, mB] = b.time.split(":").map(Number);
-          dateB.setHours(hB || 0, mB || 0, 0, 0);
-        }
+    const programMap = new Map();
 
-        return dateA - dateB;
+    programs.forEach((program) => {
+      programMap.set(
+        String(program.userId),
+        program.programName,
+      );
+    });
+
+    const childrenMap = new Map();
+
+    let totalSessions = 0;
+    let totalFeedbackDone = 0;
+
+    schedules.forEach((schedule) => {
+      (
+        schedule.appointments || []
+      ).forEach((appointment) => {
+        const appointmentId = String(
+          appointment._id,
+        );
+
+        (
+          appointment.children || []
+        ).forEach((childEntry) => {
+          const child = childEntry.childId;
+
+          if (!child) {
+            return;
+          }
+
+          const currentChildId = String(
+            child._id || child,
+          );
+
+          if (
+            childId
+            && currentChildId
+              !== String(childId)
+          ) {
+            return;
+          }
+
+          if (
+            !childrenMap.has(
+              currentChildId,
+            )
+          ) {
+            childrenMap.set(
+              currentChildId,
+              {
+                id: currentChildId,
+                name: child.fullName
+                  || child.name
+                  || "N/A",
+                email: child.email
+                  || "N/A",
+                phone: child.phone
+                  || "N/A",
+                fatherName: child.fatherName
+                  || child.parentName
+                  || "",
+                profileImage: child.profileImage
+                  || "",
+                sessions: [],
+              },
+            );
+          }
+
+          const feedbackKey = `${appointmentId}-${currentChildId}`;
+
+          const feedback = feedbackMap.get(
+            feedbackKey,
+          ) || null;
+
+          const isDone = typeof feedback?.notes
+              === "string"
+            && feedback.notes
+                .trim()
+                .length > 0;
+
+          const dateObj = new Date(
+            appointment.date,
+          );
+
+          const formattedDate = Number.isNaN(
+              dateObj.getTime(),
+            )
+            ? ""
+            : dateObj
+              .toLocaleString(
+                "en-US",
+                {
+                  month: "short",
+                  day: "2-digit",
+                },
+              )
+              .toUpperCase();
+
+          const category = programMap.get(
+            currentChildId,
+          )
+            || appointment.category
+            || "GENERAL";
+
+          totalSessions++;
+
+          if (isDone) {
+            totalFeedbackDone++;
+          }
+
+          childrenMap
+            .get(currentChildId)
+            .sessions.push({
+              id: appointmentId,
+              appointmentId,
+              childId: currentChildId,
+              name: child.fullName
+                || child.name
+                || "N/A",
+              time: appointment.startTime
+                || "",
+              startTime: appointment.startTime
+                || "",
+              endTime: appointment.endTime
+                || "",
+              rawDate: appointment.date,
+              date: formattedDate,
+              attendanceStatus: childEntry
+                .attendance_status
+                || "Pending",
+              category,
+              isDone,
+              feedbackDetails: isDone
+                ? {
+                  id: String(
+                    feedback._id,
+                  ),
+                  notes: feedback.notes,
+                  rating: feedback.rating
+                    || 0,
+                  category: feedback.category
+                    || category,
+                  mood: feedback.mood
+                    || "",
+                  isVisibleToParent: feedback
+                    .isVisibleToParent
+                    !== false,
+                  replies: feedback.replies
+                    || [],
+                }
+                : null,
+            });
+        });
       });
-      return childData;
+    });
+
+    const data = Array.from(
+      childrenMap.values(),
+    );
+
+    data.forEach((child) => {
+      child.sessions.sort(
+        (a, b) => {
+          const dateA = new Date(
+            a.rawDate,
+          );
+
+          const dateB = new Date(
+            b.rawDate,
+          );
+
+          if (a.startTime) {
+            const [
+              hours,
+              minutes,
+            ] = a.startTime
+              .split(":")
+              .map(Number);
+
+            dateA.setHours(
+              hours || 0,
+              minutes || 0,
+              0,
+              0,
+            );
+          }
+
+          if (b.startTime) {
+            const [
+              hours,
+              minutes,
+            ] = b.startTime
+              .split(":")
+              .map(Number);
+
+            dateB.setHours(
+              hours || 0,
+              minutes || 0,
+              0,
+              0,
+            );
+          }
+
+          return (
+            dateA.getTime()
+            - dateB.getTime()
+          );
+        },
+      );
     });
 
     return res.status(200).json({
       success: true,
       stats: {
-        totalChildren: resultData.length,
+        totalChildren: data.length,
         totalSessions,
         totalFeedbackDone,
       },
-      data: resultData,
+      data,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error(
+      "getFeedbackManagementData error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-// exports.getFeedbackManagementData = async (req, res) => {
-//   try {
-//     const rawTherapistId = req.user._id || req.user.id;
-//     const therapistId = new mongoose.Types.ObjectId(rawTherapistId);
-//     const { childId } = req.params;
-//     const { monthRange } = req.query;
-
-//     const monthMap = {
-//       january: 1,
-//       february: 2,
-//       march: 3,
-//       april: 4,
-//       may: 5,
-//       june: 6,
-//       july: 7,
-//       august: 8,
-//       september: 9,
-//       october: 10,
-//       november: 11,
-//       december: 12,
-//     };
-
-//     let targetMonthNum = null;
-//     if (monthRange && monthRange !== "All Months") {
-//       const firstMonthName = monthRange.split("-")[0].trim().toLowerCase();
-//       targetMonthNum = monthMap[firstMonthName] || null;
-//     }
-
-//     const currentYear = new Date().getFullYear();
-
-//     const query = {
-//       therapistId,
-//       year: currentYear,
-//     };
-
-//     if (childId) {
-//       query.childId = new mongoose.Types.ObjectId(childId);
-//     }
-//     if (targetMonthNum) {
-//       query.month = targetMonthNum;
-//     }
-
-//     const schedules = await Scheduling.find(query)
-//       .populate("childId", "fullName email phone")
-//       .lean();
-
-//     const feedbacks = await Feedback.find({ therapistId }).lean();
-//     const feedbackMap = {};
-//     feedbacks.forEach((f) => {
-//       if (f.appointmentId) {
-//         feedbackMap[f.appointmentId.toString()] = f;
-//       }
-//     });
-
-//     const assignedChildIds = schedules.map((s) => s.childId?._id).filter(Boolean);
-//     const programs = await Program.find({
-//       userId: { $in: assignedChildIds },
-//       therapistId,
-//     }).lean();
-
-//     const programMap = {};
-//     programs.forEach((p) => {
-//       programMap[p.userId.toString()] = p.programName;
-//     });
-
-//     const childrenMap = {};
-//     let totalSessions = 0;
-//     let totalFeedbackDone = 0;
-
-//     schedules.forEach((schedule) => {
-//       const child = schedule.childId;
-//       if (!child) return;
-
-//       const childIdStr = child._id.toString();
-
-//       if (!childrenMap[childIdStr]) {
-//         childrenMap[childIdStr] = {
-//           id: childIdStr,
-//           name: child.fullName || "N/A",
-//           email: child.email || "N/A",
-//           phone: child.phone || "N/A",
-//           sessions: [],
-//         };
-//       }
-
-//       const appointments = schedule.appointments || [];
-
-//       appointments.forEach((appt) => {
-//         const apptIdStr = appt._id.toString();
-//         const dateObj = new Date(appt.date);
-//         const formattedDate = dateObj
-//           .toLocaleString("en-US", { month: "short", day: "2-digit" })
-//           .toUpperCase();
-
-//         const existingFeedback = feedbackMap[apptIdStr];
-//         const isDone = !!existingFeedback;
-
-//         totalSessions++;
-//         if (isDone) totalFeedbackDone++;
-
-//         const resolvedCategory = programMap[childIdStr] || appt.category || "GENERAL";
-
-//         childrenMap[childIdStr].sessions.push({
-//           id: apptIdStr,
-//           name: child.fullName || "N/A",
-//           time: appt.startTime || "",
-//           endTime: appt.endTime || "",
-//           rawDate: appt.date,
-//           date: formattedDate,
-//           attendanceStatus: appt.attendance_status || "Pending",
-//           category: resolvedCategory,
-//           isDone,
-//           feedbackDetails: isDone
-//             ? {
-//               id: existingFeedback._id,
-//               notes: existingFeedback.notes,
-//               rating: existingFeedback.rating,
-//               category: existingFeedback.category,
-//               mood: existingFeedback.mood,
-//               isVisibleToParent: existingFeedback.isVisibleToParent,
-//             }
-//             : null,
-//         });
-//       });
-//     });
-
-//     return res.status(200).json({
-//       success: true,
-//       stats: {
-//         totalChildren: Object.keys(childrenMap).length,
-//         totalSessions,
-//         totalFeedbackDone,
-//       },
-//       data: Object.values(childrenMap),
-//     });
-//   } catch (error) {
-//     return res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-
 exports.createFeedback = async (req, res) => {
   try {
-    const therapistId = req.user._id || req.user.id;
+    const therapistId = req.user?._id || req.user?.id;
+
     const {
       childId,
       appointmentId,
@@ -724,15 +1028,118 @@ exports.createFeedback = async (req, res) => {
       rating,
     } = req.body;
 
-    const feedback = await Feedback.create({
+    if (
+      !therapistId
+      || !childId
+      || !appointmentId
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Therapist ID, child ID and appointment ID are required",
+      });
+    }
+
+    if (
+      !mongoose.Types.ObjectId.isValid(
+        childId,
+      )
+      || !mongoose.Types.ObjectId.isValid(
+        appointmentId,
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid child or appointment ID",
+      });
+    }
+
+    if (!notes?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Feedback notes are required",
+      });
+    }
+
+    const schedule = await Scheduling.findOne({
+      therapistId,
+      appointments: {
+        $elemMatch: {
+          _id: appointmentId,
+          "children.childId": childId,
+        },
+      },
+    }).lean();
+
+    if (!schedule) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found for this child",
+      });
+    }
+
+    let feedback = await Feedback.findOne({
       therapistId,
       childId,
-      appointmentId,
-      category,
-      notes,
+      appointmentId: String(appointmentId),
+    });
+
+    if (feedback) {
+      const hasTherapistFeedback = typeof feedback.notes
+          === "string"
+        && feedback.notes
+            .trim()
+            .length > 0;
+
+      if (hasTherapistFeedback) {
+        return res.status(409).json({
+          success: false,
+          message: "Feedback already exists for this session",
+        });
+      }
+
+      feedback.notes = notes.trim();
+
+      feedback.category = category?.trim()
+        || feedback.category
+        || "GENERAL";
+
+      feedback.mood = mood
+        || feedback.mood
+        || "Happy";
+
+      feedback.rating = Number(rating)
+        || feedback.rating
+        || 5;
+
+      feedback.isVisibleToParent = isVisibleToParent
+          !== undefined
+        ? isVisibleToParent
+        : true;
+
+      await feedback.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Feedback added successfully",
+        data: feedback,
+      });
+    }
+
+    feedback = await Feedback.create({
+      therapistId,
+      childId,
+      appointmentId: String(appointmentId),
+      category: category?.trim()
+        || "GENERAL",
+      notes: notes.trim(),
       mood: mood || "Happy",
-      isVisibleToParent: isVisibleToParent !== undefined ? isVisibleToParent : true,
-      rating: rating || 5,
+      rating: Number(rating)
+        || 5,
+      isVisibleToParent: isVisibleToParent
+          !== undefined
+        ? isVisibleToParent
+        : true,
+      replies: [],
     });
 
     return res.status(201).json({
@@ -741,68 +1148,258 @@ exports.createFeedback = async (req, res) => {
       data: feedback,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error(
+      "createFeedback error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 exports.getAttendance = async (req, res) => {
   try {
-    const therapistId = req.user._id || req.user.id;
-    const { childId, year, month, filter } = req.query;
+    const therapistId = req.user?._id || req.user?.id;
+    const {
+      childId,
+      year,
+      month,
+      filter,
+    } = req.query;
 
-    const query = { therapistId };
-    const isTodayFilter = filter === "true" || filter === true;
-
-    if (!isTodayFilter && childId) {
-      query.childId = childId;
+    if (!therapistId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
-    if (year) query.year = Number(year);
-    if (month) query.month = Number(month);
 
-    const records = await Scheduling.find(query)
-      .populate("childId", "name parentName fullName")
+    const isTodayFilter = filter === "true"
+      || filter === true;
+
+    const now = new Date();
+
+    const query = {
+      therapistId,
+    };
+
+    if (isTodayFilter) {
+      query.year = now.getFullYear();
+      query.month = now.getMonth() + 1;
+    } else {
+      if (year) {
+        query.year = Number(year);
+      }
+
+      if (month) {
+        query.month = Number(month);
+      }
+    }
+
+    const schedules = await Scheduling.find(query)
+      .populate(
+        "appointments.children.childId",
+        "fullName name fatherName parentName profileImage",
+      )
       .lean();
 
-    const sortedRecords = records.map((doc) => {
-      if (Array.isArray(doc.appointments)) {
-        doc.appointments.sort((a, b) => {
-          const dateA = new Date(a.date?.$date || a.date);
-          const dateB = new Date(b.date?.$date || b.date);
+    const data = [];
 
-          // Parse startTime ("HH:mm") into hours and minutes
-          if (a.startTime) {
-            const [hA, mA] = a.startTime.split(":").map(Number);
-            dateA.setHours(hA || 0, mA || 0, 0, 0);
+    schedules.forEach((schedule) => {
+      (schedule.appointments || []).forEach((appointment) => {
+        const appointmentDate = new Date(
+          appointment.date,
+        );
+
+        if (
+          Number.isNaN(
+            appointmentDate.getTime(),
+          )
+        ) {
+          return;
+        }
+
+        if (isTodayFilter) {
+          const isToday = appointmentDate.getFullYear()
+              === now.getFullYear()
+            && appointmentDate.getMonth()
+              === now.getMonth()
+            && appointmentDate.getDate()
+              === now.getDate();
+
+          if (!isToday) {
+            return;
           }
-          if (b.startTime) {
-            const [hB, mB] = b.startTime.split(":").map(Number);
-            dateB.setHours(hB || 0, mB || 0, 0, 0);
+        }
+
+        (appointment.children || []).forEach((childEntry) => {
+          const child = childEntry.childId;
+
+          if (!child) {
+            return;
           }
 
-          return dateA - dateB;
+          const currentChildId = String(
+            child._id || child,
+          );
+
+          if (
+            childId
+            && currentChildId !== String(childId)
+          ) {
+            return;
+          }
+
+          data.push({
+            attendanceId: String(
+              schedule._id,
+            ),
+            appointmentId: String(
+              appointment._id,
+            ),
+            childAttendanceId: childEntry._id
+              ? String(childEntry._id)
+              : null,
+            childId: currentChildId,
+            childName: child.fullName
+              || child.name
+              || "Unknown Child",
+            fatherName: child.fatherName || "",
+            parentName: child.parentName || "",
+            profileImage: child.profileImage || "",
+            date: appointment.date,
+            startTime: appointment.startTime || "",
+            endTime: appointment.endTime || "",
+            attendanceStatus: childEntry.attendance_status
+              || "Pending",
+          });
         });
-      }
-      return doc;
+      });
     });
 
-    return res.status(200).json({ success: true, data: sortedRecords });
+    data.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+
+      if (a.startTime) {
+        const [hours, minutes] = a.startTime
+          .split(":")
+          .map(Number);
+
+        dateA.setHours(
+          hours || 0,
+          minutes || 0,
+          0,
+          0,
+        );
+      }
+
+      if (b.startTime) {
+        const [hours, minutes] = b.startTime
+          .split(":")
+          .map(Number);
+
+        dateB.setHours(
+          hours || 0,
+          minutes || 0,
+          0,
+          0,
+        );
+      }
+
+      return dateA.getTime()
+        - dateB.getTime();
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error(
+      "getAttendance error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 exports.updateAttendanceStatus = async (req, res) => {
   try {
-    const { attendanceId, appointmentId, status } = req.body;
+    const therapistId = req.user?._id || req.user?.id;
 
-    console.log(attendanceId, appointmentId, status);
-    const dbStatus = status === "Present" ? "Complete" : status;
+    const {
+      attendanceId,
+      appointmentId,
+      childId,
+      status,
+    } = req.body;
+    if (
+      !attendanceId
+      || !appointmentId
+      || !childId
+      || !status
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "attendanceId, appointmentId, childId and status are required",
+      });
+    }
+
+    const dbStatus = status === "Present"
+      ? "Complete"
+      : status;
+
+    if (
+      ![
+        "Complete",
+        "Absent",
+        "Pending",
+      ].includes(dbStatus)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid attendance status",
+      });
+    }
 
     const updatedDoc = await Scheduling.findOneAndUpdate(
-      { _id: attendanceId, "appointments._id": appointmentId },
-      { $set: { "appointments.$.attendance_status": dbStatus } },
-      { returnDocument: "after" },
+      {
+        _id: attendanceId,
+        therapistId,
+      },
+      {
+        $set: {
+          "appointments.$[appointment].children.$[child].attendance_status": dbStatus,
+        },
+      },
+      {
+        arrayFilters: [
+          {
+            "appointment._id": appointmentId,
+          },
+          {
+            "child.childId": childId,
+          },
+        ],
+        returnDocument: "after",
+      },
     );
+
+    if (!updatedDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "Attendance record not found",
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -810,7 +1407,15 @@ exports.updateAttendanceStatus = async (req, res) => {
       data: updatedDoc,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error(
+      "updateAttendanceStatus error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -1405,6 +2010,211 @@ exports.getQuarterlyReportsByChild = async (req, res) => {
       success: false,
       message: "Failed to fetch quarterly reports.",
       error: error.message,
+    });
+  }
+};
+
+exports.getFeedbackReplies = async (req, res) => {
+  try {
+    const therapistId = req.user?._id || req.user?.id;
+    const { feedbackId } = req.params;
+
+    if (!feedbackId) {
+      return res.status(400).json({
+        success: false,
+        message: "Feedback ID is required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(feedbackId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid feedback ID",
+      });
+    }
+
+    const feedback = await Feedback.findOne({
+      _id: feedbackId,
+      therapistId,
+    })
+      .populate(
+        "replies.repliedBy",
+        "fullName name profileImage role",
+      )
+      .populate(
+        "childId",
+        "fullName name profileImage",
+      )
+      .populate(
+        "therapistId",
+        "fullName name profileImage",
+      )
+      .lean();
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: feedback,
+      replies: feedback.replies || [],
+    });
+  } catch (error) {
+    console.error("getFeedbackReplies error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+exports.addTherapistFeedbackReply = async (req, res) => {
+  try {
+    const therapistId = req.user?._id || req.user?.id;
+
+    const { feedbackId } = req.params;
+    const { message } = req.body;
+
+    if (!therapistId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (
+      !mongoose.Types.ObjectId.isValid(
+        feedbackId,
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid feedback ID",
+      });
+    }
+
+    if (!message?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Reply message is required",
+      });
+    }
+
+    const feedback = await Feedback.findOne({
+      _id: feedbackId,
+      therapistId,
+    });
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found",
+      });
+    }
+
+    feedback.replies.push({
+      repliedBy: therapistId,
+      repliedByRole: "Therapist",
+      message: message.trim(),
+    });
+
+    await feedback.save();
+
+    const updatedFeedback = await Feedback.findById(
+      feedback._id,
+    )
+      .populate(
+        "therapistId",
+        "fullName profileImage role",
+      )
+      .populate(
+        "childId",
+        "fullName profileImage role",
+      )
+      .populate(
+        "replies.repliedBy",
+        "fullName profileImage role",
+      )
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      message: "Reply added successfully",
+      data: updatedFeedback,
+      replies: updatedFeedback.replies || [],
+    });
+  } catch (error) {
+    console.error(
+      "addTherapistFeedbackReply error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to add reply",
+      error: error.message,
+    });
+  }
+};
+
+exports.updateFeedbackVisibility = async (req, res) => {
+  try {
+    const therapistId = req.user?._id || req.user?.id;
+    const { feedbackId } = req.params;
+    const { isVisibleToParent } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(feedbackId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid feedback ID",
+      });
+    }
+
+    if (typeof isVisibleToParent !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "Visibility value is required",
+      });
+    }
+
+    const feedback = await Feedback.findOneAndUpdate(
+      {
+        _id: feedbackId,
+        therapistId,
+      },
+      {
+        $set: {
+          isVisibleToParent,
+        },
+      },
+      {
+        returnDocument: "after",
+      },
+    );
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: isVisibleToParent
+        ? "Feedback enabled for parent and child"
+        : "Feedback disabled for parent and child",
+      data: feedback,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
