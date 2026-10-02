@@ -105,6 +105,7 @@ export const addFeedbackReply = async (feedbackId, message) => {
 };
 
 ///////////////////// Batch API's /////////////////////////////
+export const getSessions = (params) => apiClient.get("/admin/schedule", { params }).then((r) => r.data);
 export const getBatches = (params) => apiClient.get("/admin/batches", { params }).then((r) => r.data);
 
 export const createBatch = (data) => apiClient.post("/admin/batches", data).then((r) => r.data);
