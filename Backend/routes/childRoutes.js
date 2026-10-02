@@ -12,7 +12,6 @@ const {
   getAssignMembers,
   getAssignTherapist,
   getCNICRegisterSameUser,
-  getChildUpcomingSessions,
 } = require("../controllers/childController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -28,6 +27,5 @@ router.get("/video/child/:childId", protect, getVideosByChild);
 router.get("/assign_therapist", protect, getAssignMembers);
 router.get("/therapist", protect, getAssignTherapist);
 router.get("/cnic_user/:cnic", protect, getCNICRegisterSameUser);
-router.get("/upcoming-sessions", protect, getChildUpcomingSessions);
 
 module.exports = router;

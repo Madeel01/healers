@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Entypo from '@expo/vector-icons/Entypo';
 import Feather from '@expo/vector-icons/Feather';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useIsFocused } from '@react-navigation/native';
@@ -29,7 +30,6 @@ import {
   switchUserApi,
 } from '../../api/authApi';
 import {
-  getChildUpcomingSessions,
   getCNICUSERS,
   UnreadSummary,
 } from '../../api/child/api';
@@ -41,7 +41,6 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
-import { therapistSpecialities } from '../../utils/specialities';
 
 export default function ChildDashboardScreen({ navigation }) {
   const { user, logout, switchUser } = useContext(AuthContext);
@@ -61,9 +60,6 @@ export default function ChildDashboardScreen({ navigation }) {
   const [switchingUser, setSwitchingUser] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
-  const [upcomingSessions, setUpcomingSessions] = useState([]);
-  const [totalUpcomingSessions, setTotalUpcomingSessions] = useState(0);
-  const [upcomingLoading, setUpcomingLoading] = useState(true);
 
   const fetchNotificationUnreadCount = async () => {
     try {
@@ -125,42 +121,7 @@ export default function ChildDashboardScreen({ navigation }) {
       console.log("fetchUnreadSummary error:", err);
     }
   };
-  const fetchUpcomingSessions = async () => {
-    try {
-      setUpcomingLoading(true);
 
-      const response = await getChildUpcomingSessions();
-
-      if (response?.success) {
-        setUpcomingSessions(
-          response.data || [],
-        );
-
-        setTotalUpcomingSessions(
-          response.totalUpcoming || 0,
-        );
-      }
-    } catch (error) {
-      console.log(
-        "fetchUpcomingSessions error:",
-        error?.response?.data
-          || error?.message,
-      );
-    } finally {
-      setUpcomingLoading(false);
-    }
-  };
-  const getSpeciality = (specialtyId) => {
-    if (!specialtyId) {
-      return null;
-    }
-
-    const normalizedId = specialtyId;
-
-    return therapistSpecialities.find(
-      (item) => item.id === normalizedId,
-    );
-  };
   const isFocused = useIsFocused();
 
   useEffect(() => {
@@ -170,8 +131,6 @@ export default function ChildDashboardScreen({ navigation }) {
 
     fetchUnreadSummary();
     fetchNotificationUnreadCount();
-    fetchUpcomingSessions();
-
     const interval = setInterval(() => {
       fetchUnreadSummary();
     }, 5000);
@@ -187,7 +146,6 @@ export default function ChildDashboardScreen({ navigation }) {
   }, [isFocused, userId]);
 
   const latestMsg = unreadData.latestUnreadMessage;
-  const senderImage = latestMsg?.sender?.profileImage;
   const senderName = latestMsg?.sender?.fullName || "New Message";
   const senderInitials = senderName
     ? senderName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
@@ -391,20 +349,9 @@ export default function ChildDashboardScreen({ navigation }) {
             </View>
 
             <View style={styles.messageCardContent}>
-              {senderImage
-                ? (
-                  <Image
-                    source={{ uri: senderImage }}
-                    style={styles.msgAvatarImage}
-                  />
-                )
-                : (
-                  <View style={styles.msgAvatarCircle}>
-                    <Text style={styles.msgAvatarText}>
-                      {senderInitials}
-                    </Text>
-                  </View>
-                )}
+              <View style={styles.msgAvatarCircle}>
+                <Text style={styles.msgAvatarText}>{senderInitials}</Text>
+              </View>
               <View style={styles.msgTextContainer}>
                 <Text style={styles.teacherName}>{senderName}</Text>
                 <Text style={styles.messageSnippet} numberOfLines={1}>
@@ -415,6 +362,7 @@ export default function ChildDashboardScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* Quick Actions */}
         <View style={styles.quickActionsSection}>
           <Text style={[styles.sectionHeaderTitle, { marginBottom: 12 }]}>Quick Actions</Text>
           <View style={styles.quickActionsRow}>
@@ -453,124 +401,24 @@ export default function ChildDashboardScreen({ navigation }) {
           </View>
         </View>
 
+        {/* Classes Section */}
         <View style={styles.classesSection}>
           <View style={styles.classesHeaderRow}>
-            <Text style={styles.sectionHeaderTitle}>
-              Upcoming Sessions
-            </Text>
-
+            <Text style={styles.sectionHeaderTitle}>Classes</Text>
             <View style={styles.counterBadge}>
-              <Text style={styles.counterBadgeText}>
-                {totalUpcomingSessions}
-              </Text>
+              <Text style={styles.counterBadgeText}>1</Text>
             </View>
           </View>
 
-          {upcomingLoading
-            ? (
-              <View style={styles.sessionLoading}>
-                <ActivityIndicator
-                  size="small"
-                  color={colors.primary}
-                />
-              </View>
-            )
-            : upcomingSessions.length === 0
-            ? (
-              <View style={styles.noSessionsCard}>
-                <Feather
-                  name="calendar"
-                  size={24}
-                  color="#94A3B8"
-                />
-
-                <Text style={styles.noSessionsText}>
-                  No upcoming sessions
-                </Text>
-              </View>
-            )
-            : (
-              upcomingSessions.map((session) => {
-                const speciality = getSpeciality(session.specialty);
-
-                return (
-                  <View
-                    key={session.appointmentId}
-                    style={styles.classCard}
-                  >
-                    {session.therapistImage
-                      ? (
-                        <Image
-                          source={{ uri: session.therapistImage }}
-                          style={styles.sessionAvatar}
-                        />
-                      )
-                      : (
-                        <View style={styles.classIconCircle}>
-                          <Text style={styles.sessionInitial}>
-                            {(session.therapistName || "T")
-                              .charAt(0)
-                              .toUpperCase()}
-                          </Text>
-                        </View>
-                      )}
-
-                    <View style={styles.classInfoContainer}>
-                      <Text style={styles.className}>
-                        {session.therapistName}
-                      </Text>
-
-                      {speciality && (
-                        <View
-                          style={[
-                            styles.specialityBadge,
-                            { backgroundColor: speciality.bg },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.specialityBadgeText,
-                              { color: speciality.color },
-                            ]}
-                          >
-                            {speciality.label}
-                          </Text>
-                        </View>
-                      )}
-
-                      <View style={styles.sessionDetailsRow}>
-                        <Feather
-                          name="calendar"
-                          size={13}
-                          color="#64748B"
-                        />
-                        <Text style={styles.sessionDetailText}>
-                          {new Date(session.date).toLocaleDateString(
-                            "en-US",
-                            {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            },
-                          )}
-                        </Text>
-                      </View>
-
-                      <View style={styles.sessionDetailsRow}>
-                        <Feather
-                          name="clock"
-                          size={13}
-                          color="#64748B"
-                        />
-                        <Text style={styles.sessionDetailText}>
-                          {session.startTime} - {session.endTime}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                );
-              })
-            )}
+          <View style={styles.classCard}>
+            <View style={styles.classIconCircle}>
+              <Ionicons name="bulb-sharp" size={22} color="#0284C7" />
+            </View>
+            <View style={styles.classInfoContainer}>
+              <Text style={styles.className}>Sara</Text>
+              <Text style={styles.classSubtitle}>PYP1 Green Emeralds</Text>
+            </View>
+          </View>
         </View>
       </ScrollView>
 
@@ -895,11 +743,6 @@ const styles = StyleSheet.create({
     color: colors.blackFont,
     lineHeight: 20,
   },
-  msgAvatarImage: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-  },
   quickActionsSection: {
     marginBottom: 20,
   },
@@ -967,7 +810,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
-    marginBottom: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
@@ -1123,56 +965,5 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
     color: "#64748B",
-  },
-  sessionAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-  },
-  sessionInitial: {
-    fontSize: 18,
-    fontFamily: fonts.semiBold,
-    color: "#0284C7",
-  },
-  sessionDetailsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 5,
-  },
-  sessionDetailText: {
-    fontSize: 12,
-    fontFamily: fonts.regular,
-    color: "#64748B",
-  },
-  sessionLoading: {
-    paddingVertical: 30,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  noSessionsCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    paddingVertical: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  noSessionsText: {
-    marginTop: 8,
-    fontSize: 13,
-    fontFamily: fonts.regular,
-    color: "#64748B",
-  },
-  specialityBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    marginTop: 5,
-    marginBottom: 3,
-  },
-  specialityBadgeText: {
-    fontSize: 10,
-    fontFamily: fonts.semiBold,
   },
 });

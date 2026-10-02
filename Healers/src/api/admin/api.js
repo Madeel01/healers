@@ -11,11 +11,6 @@ export const therapistUsers = async (params = {}) => {
   return response.data;
 };
 
-export const AssignTheraistChild = async () => {
-  const response = await apiClient.get("/admin/get_therapists_child");
-  return response.data;
-};
-
 export const createTherapist = async (payload) => {
   const response = await apiClient.post("/admin/therapists", payload);
   return response.data;
@@ -39,6 +34,10 @@ export const assignChildrenToTherapist = async ({ therapistId, addChildIds, remo
   });
   return response.data;
 };
+   export const getTherapistSchedule = async (therapistId, params) => {
+     const res = await apiClient.get(`/admin/therapists/${therapistId}/schedule`, { params });
+     return res.data;
+   };
 
 ///////////////////// Schedule API's /////////////////////////////
 export const createSchedule = (body) => apiClient.post("/scheduling", body).then((r) => r.data);
@@ -54,11 +53,32 @@ export const deleteAppointment = (body) =>
 
 export const getTherapistSchedules = (params) => apiClient.get("/scheduling/therapist", { params }).then((r) => r.data);
 
+
 ///////////////////// Children API's /////////////////////////////
 export const childUsers = (params) => apiClient.get("/admin/children", { params });
 export const createChild = (data) => apiClient.post("/admin/children", data);
 export const updateChild = (id, data) => apiClient.put(`/admin/children/${id}`, data);
 export const deleteChild = (id) => apiClient.delete(`/admin/children/${id}`);
+export const getChildSchedule = async (childId, params) => {
+  const res = await apiClient.get(`/admin/children/${childId}/schedule`, { params });
+  return res.data;
+};
+export const getChildBatchOptions = async (childId) => {
+  const res = await apiClient.get(`/admin/children/${childId}/batch-options`);
+  return res.data;
+};
+export const getChildCustomSlotOptions = async (childId, body) => {
+  const res = await apiClient.post(`/admin/children/${childId}/custom-slot-options`, body);
+  return res.data;
+};
+export const createChildCustomAppointment = async (childId, body) => {
+  const res = await apiClient.post(`/admin/children/${childId}/custom-appointments`, body);
+  return res.data;
+};
+export const deleteChildCustomAppointment = async (childId, appointmentId) => {
+  const res = await apiClient.delete(`/admin/children/${childId}/custom-appointments/${appointmentId}`);
+  return res.data;
+};
 
 ///////////////////// Leave Request API's /////////////////////////////
 export const getLeaveRequests = (params) => apiClient.get("/admin/leave-requests", { params });
@@ -89,6 +109,10 @@ export const getBatches = (params) => apiClient.get("/admin/batches", { params }
 
 export const createBatch = (data) => apiClient.post("/admin/batches", data).then((r) => r.data);
 
+export const updateBatch = (id, data) => apiClient.put(`/admin/batches/${id}`, data).then((r) => r.data);
+
+export const deleteBatch = (id) => apiClient.delete(`/admin/batches/${id}`).then((r) => r.data);
+
 export const getBatchScheduleData = (batchId) =>
   apiClient.get(`/admin/batches/schedule/${batchId}`).then((r) => r.data);
 
@@ -116,7 +140,6 @@ export const removeBatchAssignment = (batchId, assignmentId) =>
   apiClient
     .delete(`/admin/batches/${batchId}/assignments/${assignmentId}`)
     .then((r) => r.data);
-export const updateBatch = (id, data) => apiClient.put(`/admin/batches/${id}`, data).then((r) => r.data);
 
 export const getSessionSlotOptions = async (batchId, assignmentId, body) => {
   const res = await apiClient.post(`/admin/batches/${batchId}/assignments/${assignmentId}/slot-options`, body);
@@ -140,32 +163,6 @@ export const deleteBatchSession = (batchId, assignmentId, sessionId) =>
     .delete(`/admin/batches/${batchId}/assignments/${assignmentId}/sessions/${sessionId}`)
     .then((r) => r.data);
 
-export const getAllPackages = () =>
-  apiClient
-    .get("/admin/packages")
-    .then((res) => res.data);
-
-export const getPackageById = (packageId) =>
-  apiClient
-    .get(`/admin/packages/${packageId}`)
-    .then((res) => res.data);
-
-export const createPackage = (body) =>
-  apiClient
-    .post("/admin/packages", body)
-    .then((res) => res.data);
-
-export const updatePackage = (packageId, body) =>
-  apiClient
-    .put(`/admin/packages/${packageId}`, body)
-    .then((res) => res.data);
-
-export const deletePackage = (packageId) =>
-  apiClient
-    .delete(`/admin/packages/${packageId}`)
-    .then((res) => res.data);
-
-export const deleteBatch = (id) => apiClient.delete(`/admin/batches/${id}`).then((r) => r.data);
 
 ///////////////////// BroadCast API's /////////////////////////////
 export const createBroadcast = (formData) =>
@@ -222,13 +219,18 @@ export const getAllNotifications = (params) => apiClient.get("/admin/notificatio
 export const markNotificationRead = (id) => apiClient.put(`/admin/notifications/${id}/read`).then((r) => r.data);
 export const markAllNotificationsRead = () => apiClient.put("/admin/notifications/read-all").then((r) => r.data);
 
-///////////////////// Availability API's /////////////////////////////
-export const getAvailability = (params) =>
-  apiClient.get("/admin/scheduling/availability", { params }).then((r) => r.data);
 
-export const createAvailability = (body) => apiClient.post("/admin/scheduling/availability", body).then((r) => r.data);
+
+
+///////////////////// Therapist Availability API's /////////////////////////////
+export const getAvailability = (params) =>
+  apiClient.get('/admin/scheduling/availability', { params }).then((r) => r.data);
+
+export const createAvailability = (body) =>
+  apiClient.post('/admin/scheduling/availability', body).then((r) => r.data);
 
 export const updateAvailability = (id, body) =>
   apiClient.put(`/admin/scheduling/availability/${id}`, body).then((r) => r.data);
 
-export const deleteAvailability = (id) => apiClient.delete(`/admin/scheduling/availability/${id}`).then((r) => r.data);
+export const deleteAvailability = (id) =>
+  apiClient.delete(`/admin/scheduling/availability/${id}`).then((r) => r.data);

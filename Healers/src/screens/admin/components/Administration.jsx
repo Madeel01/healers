@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 
 import AntDesign from '@expo/vector-icons/AntDesign';
-import Entypo from '@expo/vector-icons/Entypo';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -27,26 +26,8 @@ export default function Administration({ customstyles }) {
       </Text>
 
       <TouchableOpacity
-        style={[styles.adminBanner, { backgroundColor: "#DBEAFE" }]}
-        onPress={() => navigation.navigate("ProgramBuilder")}
-      >
-        <View style={[styles.adminIconBox, { backgroundColor: "#1669A9" }]}>
-          <Entypo name="plus" size={22}  color="#FFFFFF" />
-        </View>
-
-        <View style={styles.adminTextContainer}>
-          <View style={{ width: "70%" }}>
-            <Text style={styles.adminBannerTitle}>Program Builder</Text>
-            <Text style={styles.adminBannerSub}>Create and manage Programs</Text>
-          </View>
-
-          <AntDesign name="file-text" size={24} color="#717781" />
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity
         style={[styles.adminBanner, { backgroundColor: "#e6cff9" }]}
-        onPress={() => navigation.navigate("BatchManagment")}
+        onPress={() => navigation.navigate('BatchManagment')}
       >
         <View style={[styles.adminIconBox, { backgroundColor: "#dc9ee8" }]}>
           <MaterialIcons name="dynamic-feed" size={22} color="#FFFFFF" />
@@ -61,10 +42,10 @@ export default function Administration({ customstyles }) {
           <AntDesign name="file-text" size={24} color="#717781" />
         </View>
       </TouchableOpacity>
-
+      
       <TouchableOpacity
         style={[styles.adminBanner, { backgroundColor: "#F9DDCF" }]}
-        onPress={() => navigation.navigate("LeaveRequest")}
+        onPress={() => navigation.navigate('LeaveRequest')}
       >
         <View style={[styles.adminIconBox, { backgroundColor: "#E8B79E" }]}>
           <MaterialIcons name="event-note" size={22} color="#FFFFFF" />
@@ -82,7 +63,8 @@ export default function Administration({ customstyles }) {
 
       <TouchableOpacity
         style={[styles.adminBanner, { backgroundColor: "#D6EAF8" }]}
-        onPress={() => navigation.navigate("Therapist")}
+        onPress={() => navigation.navigate('Therapist')}
+
       >
         <View style={[styles.adminIconBox, { backgroundColor: colors.primary }]}>
           <MaterialIcons name="message" size={22} color="#FFFFFF" />
@@ -100,7 +82,8 @@ export default function Administration({ customstyles }) {
 
       <TouchableOpacity
         style={[styles.adminBanner, { backgroundColor: "#FDD7D7" }]}
-        onPress={() => navigation.navigate("Feedback")}
+        onPress={() => navigation.navigate('Feedback')}
+
       >
         <View style={[styles.adminIconBox, { backgroundColor: "rgba(216,82,67,.2)" }]}>
           <MaterialIcons name="message" size={22} color="#FFFFFF" />
@@ -118,7 +101,8 @@ export default function Administration({ customstyles }) {
 
       <TouchableOpacity
         style={[styles.adminBanner, { backgroundColor: "#6DDDC2" }]}
-        onPress={() => navigation.navigate("BroadcastManagement")}
+        onPress={() => navigation.navigate('BroadcastManagement')}
+
       >
         <View style={[styles.adminIconBox, { backgroundColor: "#006B58" }]}>
           <MaterialCommunityIcons name="broadcast" size={22} color="#FFFFFF" />
@@ -126,7 +110,7 @@ export default function Administration({ customstyles }) {
 
         <View style={styles.adminTextContainer}>
           <View style={{ width: "75%" }}>
-            <Text style={styles.adminBannerTitle}>Broadcast Management</Text>
+           <Text style={styles.adminBannerTitle}>Broadcast Management</Text>
             <Text style={styles.adminBannerSub}>Manage fees and payments</Text>
           </View>
 

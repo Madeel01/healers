@@ -61,7 +61,7 @@ export default function TopBar({ headerTitle }) {
 
     const intervalUnread = setInterval(() => {
       fetchNotificationUnreadCount();
-    }, 1000000);
+    }, 10000);
 
     return () => {
       clearInterval(intervalUnread);

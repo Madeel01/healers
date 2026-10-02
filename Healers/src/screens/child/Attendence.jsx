@@ -241,49 +241,16 @@ const AttendanceScreen = () => {
 
   const renderAttendanceItem = ({ item }) => {
     const status = String(
-      item?.attendance_status || "Pending",
+      item?.attendance_status
+        || "Pending",
     ).toLowerCase();
 
     const isPresent = status === "complete"
       || status === "present"
       || status === "completed";
 
-    const isAbsent = status === "absent";
-
-    const sessionType = String(item?.sessionType || "regular").toLowerCase();
-
-    // =========================
-    // SESSION MESSAGE
-    // =========================
-
-    let sessionMessage = null;
-
-    switch (sessionType) {
-      case "postponed":
-        sessionMessage = "Session Postponed";
-        break;
-
-      case "additional":
-        sessionMessage = "Additional Session";
-        break;
-
-      case "alternate":
-        sessionMessage = "Alternate Session";
-        break;
-
-      case "cancel":
-        sessionMessage = "Session Cancelled";
-        break;
-
-      default:
-        sessionMessage = null;
-    }
-
-    const isSpecialSession = sessionType !== "regular";
-
     return (
       <View style={styles.card}>
-       
         <View style={styles.cardHeader}>
           <Text style={styles.cardDate}>
             {item?.date || "--"}
@@ -294,9 +261,7 @@ const AttendanceScreen = () => {
               styles.statusBadge,
               isPresent
                 ? styles.badgePresent
-                : isAbsent
-                ? styles.badgeAbsent
-                : styles.badgePending,
+                : styles.badgeAbsent,
             ]}
           >
             <Text
@@ -304,15 +269,11 @@ const AttendanceScreen = () => {
                 styles.statusText,
                 isPresent
                   ? styles.textPresent
-                  : isAbsent
-                  ? styles.textAbsent
-                  : styles.textPending,
+                  : styles.textAbsent,
               ]}
             >
               {isPresent
                 ? "Present"
-                : isAbsent
-                ? "Absent"
                 : "Pending"}
             </Text>
           </View>
@@ -333,59 +294,6 @@ const AttendanceScreen = () => {
             )}
           </Text>
         </View>
-
-        {!!item?.therapistName && (
-          <View style={styles.infoRow}>
-            <Feather
-              name="user"
-              size={17}
-              color="#64748B"
-              style={styles.infoIcon}
-            />
-
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>
-                Therapist
-              </Text>
-
-              <Text style={styles.infoValue}>
-                {item.therapistName}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {isSpecialSession && (
-          <View style={styles.sessionMessage}>
-            <Feather
-              name={sessionType === "cancel"
-                ? "x-circle"
-                : sessionType === "postponed"
-                ? "clock"
-                : "info"}
-              size={17}
-              color="#B45309"
-            />
-
-            <View style={styles.sessionMessageContent}>
-              <Text style={styles.sessionMessageTitle}>
-                {sessionMessage}
-              </Text>
-
-              <Text style={styles.sessionMessageText}>
-                {sessionType === "postponed"
-                  ? "This session has been postponed."
-                  : sessionType === "additional"
-                  ? "This is an additional session."
-                  : sessionType === "alternate"
-                  ? "This is an alternate session."
-                  : sessionType === "cancel"
-                  ? "This session has been cancelled."
-                  : ""}
-              </Text>
-            </View>
-          </View>
-        )}
       </View>
     );
   };
@@ -545,7 +453,9 @@ const AttendanceScreen = () => {
                   <Text
                     style={styles.dateSelectorText}
                   >
-                    {formatDisplayDate(toDate)}
+                    {formatDisplayDate(
+                      toDate,
+                    )}
                   </Text>
                 </View>
 
@@ -577,11 +487,7 @@ const AttendanceScreen = () => {
                   ? "spinner"
                   : "default"}
                 minimumDate={fromDate}
-                maximumDate={new Date(
-                  new Date().getFullYear(),
-                  new Date().getMonth() + 2,
-                  0,
-                )}
+                maximumDate={new Date()}
                 onValueChange={handleToDateChange}
               />
             )}
@@ -811,9 +717,6 @@ const styles = StyleSheet.create({
   badgeAbsent: {
     backgroundColor: "#FFDAD5",
   },
-  badgePending: {
-    backgroundColor: "#E0E3E6",
-  },
 
   statusText: {
     fontSize: 12,
@@ -828,9 +731,7 @@ const styles = StyleSheet.create({
   textAbsent: {
     color: "#BA1A1A",
   },
-  textPending: {
-    color: "#717781",
-  },
+
   timeRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -845,61 +746,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: fonts.regular,
     color: "#334155",
-  },
-   infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-  },
-
-  infoIcon: {
-    marginRight: 10,
-  },
-
-  infoContent: {
-    flex: 1,
-  },
-
-  infoLabel: {
-    fontSize: 11,
-    color: "#94A3B8",
-    marginBottom: 2,
-  },
-
-  infoValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#334155",
-  },
-
-  sessionMessage: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginTop: 14,
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: "#FFFBEB",
-  },
-
-  sessionMessageContent: {
-    flex: 1,
-    marginLeft: 9,
-  },
-
-  sessionMessageTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#92400E",
-    marginBottom: 3,
-  },
-
-  sessionMessageText: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: "#A16207",
   },
 
   loadingContainer: {

@@ -256,29 +256,3 @@ export const getQuarterlyReportsByChild = async ({ userId, year }) => {
     throw error;
   }
 };
-
-export const addTherapistFeedbackReply = async (feedbackId, message) => {
-  const response = await apiClient.post(`/therapist/feedback/${feedbackId}/reply`, {
-    message,
-  });
-
-  return response.data;
-};
-
-export const getFeedbackReplies = async (feedbackId) => {
-  const response = await apiClient.get(
-    `/therapist/feedback/${feedbackId}/replies`,
-  );
-  return response.data;
-};
-
-export const updateFeedbackVisibility = async (feedbackId, isVisibleToParent) => {
-  const response = await apiClient.patch(
-    `/therapist/feedback/${feedbackId}/visibility`,
-    {
-      isVisibleToParent,
-    },
-  );
-
-  return response.data;
-};

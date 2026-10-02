@@ -138,6 +138,7 @@ exports.getUnreadSummary = async (req, res) => {
   try {
     const userId = req.user?._id || req.user?.id || req.query.userId;
     const role = req.user?.role || req.query.role;
+    console.log("userId", userId, role);
     if (!userId) {
       return res.status(400).json({
         success: false,
