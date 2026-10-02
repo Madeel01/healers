@@ -237,8 +237,21 @@ export default function FeedbackScreen({ navigation }) {
       setLoadingReplies(false);
     }
   };
+  const refreshFeedback = async () => {
+    await fetchFeedback({ isRefresh: true });
+  };
+  const handleCloseReplyModal = async () => {
+    setReplyModalVisible(false);
+    setSelectedFeedback(null);
+    setReplies([]);
+    setReplyText('');
+
+    await refreshFeedback();
+  };
+
+
+
   const handleDeleteFeedback = (item) => {
-    console.log(item,"itemmmm");
     Alert.alert(
       'Delete Feedback',
       'This will permanently remove this feedback. Continue?',
@@ -251,7 +264,8 @@ export default function FeedbackScreen({ navigation }) {
             try {
               setDeletingId(item.id);
               await deleteFeedback(item.id);
-              setFeedbackItems((prev) => prev.filter((i) => i.id !== item.id));
+              // setFeedbackItems((prev) => prev.filter((i) => i.id !== item.id));
+              await refreshFeedback();
             } catch (error) {
               console.error('Failed to delete feedback:', error);
               Alert.alert('Error', 'Could not delete this feedback. Please try again.');
@@ -538,7 +552,7 @@ export default function FeedbackScreen({ navigation }) {
         visible={replyModalVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => setReplyModalVisible(false)}
+        onRequestClose={handleCloseReplyModal}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.replyModal}>

@@ -1,13 +1,9 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-
+// src/screens/admin/ScheduleScreen.js   (REPLACES the old file)
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Modal,
   RefreshControl,
   ScrollView,
@@ -16,1192 +12,311 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import Feather from '@expo/vector-icons/Feather';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import Feather from "@expo/vector-icons/Feather";
+import { useFocusEffect } from "@react-navigation/native";
 
-import {
-  addAppointment,
-  createSchedule,
-  deleteAppointment,
-  getSchedule,
-  getTherapistSchedules,
-  getUsersByRole,
-  updateAppointment,
-} from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
+import { deleteChildCustomAppointment, getSessions, getUsersByRole } from "../../api/admin/api";
+import BottomBar from "../../components/BottomBar";
+import TopBar from "../../components/TopBar";
+import { colors, fonts } from "../../styles/theme";
+import { formatTo12Hour } from "../../utils/hoursformat";
+import { therapistSpecialities } from "../../utils/specialities";
 
-const MAX_APPOINTMENTS_PER_DAY = 2;
+const LIMIT = 15;
+
+const SCOPES = [
+  { id: "upcoming", label: "Upcoming" },
+  { id: "past", label: "Past" },
+];
+const TYPES = [
+  { id: "all", label: "All" },
+  { id: "batch", label: "Batch" },
+  { id: "custom", label: "Custom" },
+];
+
+const TYPE_META = {
+  additional: { label: "Additional", bg: "#EDE9FE", color: "#6D28D9" },
+  alternate: { label: "Alternate", bg: "#DBEAFE", color: "#1D4ED8" },
+  postponed: { label: "Postponed", bg: "#FEF3C7", color: "#B45309" },
+  cancel: { label: "Cancelled", bg: "#FEE2E2", color: "#B91C1C" },
+};
+const ATT = {
+  Complete: { label: "Attended", bg: "#DCFCE7", color: "#15803D" },
+  Absent: { label: "Absent", bg: "#FEE2E2", color: "#B91C1C" },
+  Pending: { label: "Pending", bg: "#F1F5F9", color: "#64748B" },
+};
 
 const pad = (n) => String(n).padStart(2, "0");
-
-const toTimeString = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-
-const toDateKey = (isoOrDate) => String(isoOrDate).slice(0, 10);
-
-const timeToDate = (dateKey, hhmm) => {
-  const [y, m, d] = dateKey.split("-").map(Number);
-  const [hh, mm] = String(hhmm).split(":").map(Number);
-  return new Date(y, m - 1, d, hh, mm);
-};
-
-const toUser = (u) => ({ id: u._id, name: u.fullName });
-const STATUS_STYLES = {
-  Complete: { bg: "#E6F4EA", text: "#1E8E3E" },
-  Absent: { bg: "#FCE8E6", text: "#D93025" },
-  Pending: { bg: "#fdf2cd", text: "#B06000" },
-};
-
-const StatusBadge = ({ status }) => {
-  const s = STATUS_STYLES[status] || STATUS_STYLES.Pending;
-  return (
-    <View style={[styles.statusBadge, { backgroundColor: s.bg }]}>
-      <Text style={[styles.statusBadgeText, { color: s.text }]}>{status}</Text>
-    </View>
-  );
-};
-const mapAppointment = (raw, meta = {}) => {
-  const dateKey = toDateKey(raw.date);
-  return {
-    id: raw._id || raw.id,
-    date: dateKey,
-    startTime:
-      typeof raw.startTime === "string"
-        ? timeToDate(dateKey, raw.startTime)
-        : raw.startTime,
-    endTime:
-      typeof raw.endTime === "string"
-        ? timeToDate(dateKey, raw.endTime)
-        : raw.endTime,
-    attendanceStatus: raw.attendance_status || "Pending",
-    childName:
-      meta.childName ||
-      raw.childId?.fullName ||
-      raw.childId?.name ||
-      "Unknown Child",
-    therapistName:
-      meta.therapistName ||
-      raw.therapistId?.fullName ||
-      raw.therapistId?.name ||
-      "Unknown Therapist",
-    ...meta,
-  };
-};
-const useUserSearch = (role, search, enabled = true,child="") => {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!enabled) {
-      setItems([]);
-      return undefined;
-    }
-
-    let alive = true;
-    setLoading(true);
-
-    const timer = setTimeout(async () => {
-      try {
-        const res = await getUsersByRole({ role, search,child });
-        if (alive) {
-          if (res?.data?.length > 0) {
-            setItems(res.data.map(toUser));
-          } else {
-            setItems([]);
-          }
-          setLoading(false);
-        }
-      } catch (e) {
-        if (alive) {
-          setItems([]);
-          setLoading(false);
-        }
-      } finally {
-        setLoading(false);
-      }
-    }, 250);
-
-    return () => {
-      alive = false;
-      clearTimeout(timer);
-    };
-  }, [role, search, enabled]);
-
-  return { items, loading };
-};
-
-const getInitials = (name) =>
-  name
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
-const parseDateKey = (dateKey) => {
-  const [y, m, d] = dateKey.split("-").map(Number);
+const dateToKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const keyToDate = (k) => {
+  const [y, m, d] = k.split("-").map(Number);
   return new Date(y, m - 1, d);
 };
-
-const combineDateAndTime = (date, time) =>
-  new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    time.getHours(),
-    time.getMinutes(),
-  );
-
-export default function ScheduleScreen({ navigation }) {
-  const today = new Date();
-  const insets = useSafeAreaInsets();
-  const todayStart = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
-
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [activeBottomTab, setActiveBottomTab] = useState("Scheduling");
-
-  const [currentMonth, setCurrentMonth] = useState(
-    new Date(today.getFullYear(), today.getMonth(), 1),
-  );
-  const [selectedDate, setSelectedDate] = useState(today);
-  const [showDaySheet, setShowDaySheet] = useState(false);
-  const [daySheetDate, setDaySheetDate] = useState(null);
-
-  const [appointments, setAppointments] = useState([]);
-  const [loadingSchedule, setLoadingSchedule] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const [screenMode, setScreenMode] = useState("main");
-
-  const [showPickerModal, setShowPickerModal] = useState(false);
-  const [pickerStep, setPickerStep] = useState(1);
-  const [pickerChildSearch, setPickerChildSearch] = useState("");
-  const [pickerTherapistSearch, setPickerTherapistSearch] = useState("");
-  const [bookingChild, setBookingChild] = useState(null);
-  const [bookingTherapist, setBookingTherapist] = useState(null);
-
-  const [showTimeModal, setShowTimeModal] = useState(false);
-  const [timeModalDate, setTimeModalDate] = useState(null);
-  const [apptStartTime, setApptStartTime] = useState(new Date());
-  const [apptEndTime, setApptEndTime] = useState(
-    new Date(Date.now() + 60 * 60 * 1000),
-  );
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [timePickerTarget, setTimePickerTarget] = useState("start");
-
-  const [editingAppointment, setEditingAppointment] = useState(null);
-
-  const [therapistSearch, setTherapistSearch] = useState("");
-  const [mainAppointments, setMainAppointments] = useState([]);
-  const [loadingMain, setLoadingMain] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
-
-  const getDateKey = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  const isPastDate = (date) => {
-    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    return d < todayStart;
-  };
-
-  const isPastAppointment = (appointment) =>
-    appointment ? isPastDate(parseDateKey(appointment.date)) : false;
-
-  const calendarDays = useMemo(() => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startDay = firstDay.getDay();
-    const days = [];
-
-    for (let i = startDay - 1; i >= 0; i--) {
-      days.push({ date: new Date(year, month, -i), currentMonth: false });
-    }
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push({ date: new Date(year, month, day), currentMonth: true });
-    }
-    while (days.length < 42) {
-      const nextDay = days.length - startDay - daysInMonth + 1;
-      days.push({
-        date: new Date(year, month + 1, nextDay),
-        currentMonth: false,
-      });
-    }
-    return days;
-  }, [currentMonth]);
-
-  const monthName = currentMonth.toLocaleString("en-US", { month: "long" });
-
-  const previousMonth = () =>
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1),
-    );
-
-  const nextMonth = () =>
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
-    );
-
-  const goToday = () => {
-    setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-    setSelectedDate(today);
-  };
-  const handleDeleteAppointment = (appointment) => {
-    if (isPastAppointment(appointment)) {
-      Alert.alert("Action Not Allowed", "Past appointments cannot be deleted.");
-      return;
-    }
-
-    Alert.alert(
-      "Delete Appointment",
-      `Are you sure you want to delete this appointment for ${appointment.childName}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setDeletingId(appointment.id);
-            try {
-              const dateObj = parseDateKey(appointment.date);
-              await deleteAppointment({
-                appointmentId: appointment.id,
-                therapistId: appointment.therapistId,
-                childId: appointment.childId,
-                year: dateObj.getFullYear(),
-                month: dateObj.getMonth() + 1,
-              });
-
-              if (screenMode === "booking") {
-                await loadMonthSchedule();
-              }
-              await loadAllAppointments();
-            } catch (e) {
-              Alert.alert(
-                "Could not delete",
-                e?.response?.data?.message || "Please try again."
-              );
-            } finally {
-              setDeletingId(null);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const selectDate = (date) => {
-    setSelectedDate(date);
-    if (
-      date.getMonth() !== currentMonth.getMonth() ||
-      date.getFullYear() !== currentMonth.getFullYear()
-    ) {
-      setCurrentMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-    }
-  };
-
-  const isToday = (date) =>
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear();
-
-  const isSelected = (date) =>
-    date.getDate() === selectedDate.getDate() &&
-    date.getMonth() === selectedDate.getMonth() &&
-    date.getFullYear() === selectedDate.getFullYear();
-
-  const { items: filteredPickerChildren, loading: pickerChildLoading } =
-    useUserSearch(
-      "Child",
-      pickerChildSearch,
-      showPickerModal && pickerStep === 1,
-    );
-
-  const { items: filteredPickerTherapists, loading: pickerTherapistLoading } =
-    useUserSearch(
-      "Therapist",
-      pickerTherapistSearch,
-      showPickerModal && pickerStep === 2,
-      bookingChild?.id
-    );
-
-  const sortedAppointments = useMemo(() => {
-    return [...mainAppointments]
-      .filter((a) => {
-        if (!therapistSearch.trim()) return true;
-        const query = therapistSearch.toLowerCase().trim();
-
-        const tName = (a.therapistName || "").toLowerCase();
-        const cName = (a.childName || "").toLowerCase();
-
-        return tName.includes(query) || cName.includes(query);
-      })
-      .sort((a, b) =>
-        a.date !== b.date
-          ? a.date.localeCompare(b.date)
-          : a.startTime - b.startTime,
-      );
-  }, [mainAppointments, therapistSearch]);
-
-  const daySheetAppointments = useMemo(() => {
-    if (!daySheetDate || !bookingChild) return [];
-
-    const key = getDateKey(daySheetDate);
-    return appointments
-      .filter((a) => a.date === key && a.childId === bookingChild.id)
-      .sort((a, b) => a.startTime - b.startTime);
-  }, [appointments, daySheetDate, bookingChild]);
-
-  const openPickerFlow = () => {
-    setPickerStep(1);
-    setBookingChild(null);
-    setBookingTherapist(null);
-    setPickerChildSearch("");
-    setPickerTherapistSearch("");
-    setShowPickerModal(true);
-  };
-
-  const handlePickChild = (child) => {
-    setBookingChild(child);
-    setPickerStep(2);
-  };
-
-  const handlePickTherapist = (therapist) => {
-    setBookingTherapist(therapist);
-    setShowPickerModal(false);
-    setScreenMode("booking");
-  };
-
-  const goBackToMain = () => {
-    setScreenMode("main");
-    setBookingChild(null);
-    setBookingTherapist(null);
-    setEditingAppointment(null);
-  };
-
-  const openTimeModalForDate = (date) => {
-    setEditingAppointment(null);
-    setTimeModalDate(date);
-    const start = combineDateAndTime(date, new Date());
-    setApptStartTime(start);
-    setApptEndTime(new Date(start.getTime() + 60 * 60 * 1000));
-    setShowTimeModal(true);
-  };
-
-  const openTimeModalForEdit = (appointment) => {
-    const date = parseDateKey(appointment.date);
-    setEditingAppointment(appointment);
-    setTimeModalDate(date);
-    setApptStartTime(appointment.startTime);
-    setApptEndTime(appointment.endTime);
-    setShowTimeModal(true);
-  };
-
-  const closeTimeModal = () => {
-    setShowTimePicker(false);
-    setShowTimeModal(false);
-    setEditingAppointment(null);
-  };
-  const loadMonthSchedule = useCallback(async () => {
-    if (!bookingChild || !bookingTherapist) return;
-
-    const params = {
-      therapistId: bookingTherapist.id,
-      childId: bookingChild.id,
-      year: currentMonth.getFullYear(),
-      month: currentMonth.getMonth() + 1,
-    };
-
-    setLoadingSchedule(true);
-    try {
-      const res = await getSchedule(params);
-      const list = res?.data?.appointments ?? [];
-      setAppointments(
-        list.map((raw) =>
-          mapAppointment(raw, {
-            childId: bookingChild.id,
-            therapistId: bookingTherapist.id,
-            childName: bookingChild.name,
-            therapistName: bookingTherapist.name,
-          }),
-        ),
-      );
-    } catch (e) {
-      // 404 just means no schedule document for this month yet
-      if (e?.response?.status === 404) setAppointments([]);
-      else
-        Alert.alert(
-          "Could not load schedule",
-          e?.response?.data?.message || "Please try again.",
-        );
-    } finally {
-      setLoadingSchedule(false);
-    }
-  }, [bookingChild, bookingTherapist, currentMonth]);
-
-  useEffect(() => {
-    loadMonthSchedule();
-  }, [loadMonthSchedule]);
-  const saveTimeAppointment = async () => {
-    if (!timeModalDate || !bookingChild || !bookingTherapist) return;
-
-    const start = combineDateAndTime(timeModalDate, apptStartTime);
-    const end = combineDateAndTime(timeModalDate, apptEndTime);
-
-    if (end <= start) {
-      Alert.alert("Check the time", "End time must be after start time.");
-      return;
-    }
-
-    const dateKey = getDateKey(timeModalDate);
-    const base = {
-      therapistId: bookingTherapist.id,
-      childId: bookingChild.id,
-      year: timeModalDate.getFullYear(),
-      month: timeModalDate.getMonth() + 1,
-    };
-    if (editingAppointment && isPastAppointment(editingAppointment)) {
-      return;
-    }
-    setSaving(true);
-    try {
-      if (editingAppointment) {
-        if (isPastAppointment(editingAppointment)) return;
-
-        await updateAppointment({
-          ...base,
-          appointmentId: editingAppointment.id,
-          date: dateKey,
-          startTime: toTimeString(start),
-          endTime: toTimeString(end),
-        });
-      } else {
-        if (
-          appointments.filter((a) => a.date === dateKey).length >=
-          MAX_APPOINTMENTS_PER_DAY
-        ) {
-          Alert.alert(
-            "Day is full",
-            `Only ${MAX_APPOINTMENTS_PER_DAY} appointments are allowed per day.`,
-          );
-          return;
-        }
-
-        await createSchedule(base);
-
-        await addAppointment({
-          ...base,
-          date: dateKey,
-          startTime: toTimeString(start),
-          endTime: toTimeString(end),
-        });
-      }
-
-      await loadMonthSchedule();
-      closeTimeModal();
-    } catch (e) {
-      Alert.alert(
-        "Could not save",
-        e?.response?.data?.message || "Please try again.",
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const loadAllAppointments = useCallback(async () => {
-    setLoadingMain(true);
-
-    try {
-      const res = await getTherapistSchedules();
-
-      const schedules = res?.data ?? [];
-
-      const flat = schedules.flatMap((schedule) =>
-        (schedule.appointments ?? []).map((raw) =>
-          mapAppointment(raw, {
-            childId: schedule.childId?._id ?? schedule.childId,
-            therapistId: schedule.therapistId?._id ?? schedule.therapistId,
-            childName: schedule.childId?.fullName ?? "Unknown Child",
-            therapistName:
-              schedule.therapistId?.fullName ?? "Unknown Therapist",
-          }),
-        ),
-      );
-
-      setMainAppointments(flat);
-    } catch (e) {
-      console.error("Load all appointments error:", e);
-      setMainAppointments([]);
-    } finally {
-      setLoadingMain(false);
-    }
-  }, []);
-  useEffect(() => {
-    loadAllAppointments();
-  }, [loadAllAppointments]);
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadAllAppointments();
-    setRefreshing(false);
-  }, [loadAllAppointments]);
-
-  const openAppointmentInCalendar = (appointment) => {
-    const date = parseDateKey(appointment.date);
-
-    setBookingChild({ id: appointment.childId, name: appointment.childName });
-    setBookingTherapist({
-      id: appointment.therapistId,
-      name: appointment.therapistName,
-    });
-    setCurrentMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-    setSelectedDate(date);
-    setScreenMode("booking");
-    openTimeModalForEdit(appointment);
-  };
-
-  const handleBookingDatePress = (
-    date,
-    dayPairAppointments,
-    dayAllAppointments,
-  ) => {
-    if (dayPairAppointments.length > 0) {
-      selectDate(date);
-      setDaySheetDate(date);
-      setShowDaySheet(true);
-      return;
-    }
-
-    if (isPastDate(date)) return;
-
-    if (dayAllAppointments.length >= MAX_APPOINTMENTS_PER_DAY) {
-      Alert.alert(
-        "Day is full",
-        `Only ${MAX_APPOINTMENTS_PER_DAY} appointments are allowed per day.`,
-      );
-      return;
-    }
-
-    selectDate(date);
-    openTimeModalForDate(date);
-  };
-  const openFromDaySheet = (fn) => {
-    setShowDaySheet(false);
-    setTimeout(fn, 250);
-  };
-
-  const editFromDaySheet = (appointment) =>
-    openFromDaySheet(() => openTimeModalForEdit(appointment));
-
-  const addFromDaySheet = () => {
-    if (!daySheetDate) return;
-    const key = getDateKey(daySheetDate);
-    const count = appointments.filter((a) => a.date === key).length;
-
-    if (count >= MAX_APPOINTMENTS_PER_DAY) {
-      Alert.alert(
-        "Day is full",
-        `Only ${MAX_APPOINTMENTS_PER_DAY} appointments are allowed per day.`,
-      );
-      return;
-    }
-    openFromDaySheet(() => openTimeModalForDate(daySheetDate));
-  };
-
-  const renderTimeModal = () => {
-    const isUpdate = !!editingAppointment;
-    const isLocked = isUpdate && isPastAppointment(editingAppointment);
-
-    return (
-      <Modal
-        visible={showTimeModal}
-        transparent
-        animationType="slide"
-        onRequestClose={closeTimeModal}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>
-                  {isUpdate ? "Update Appointment" : "Appointment Time"}
-                </Text>
-                <Text style={styles.modalDate}>
-                  {bookingChild?.name} with {bookingTherapist?.name}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={closeTimeModal}>
-                <Feather name="x" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.label}>Date</Text>
-            <View style={styles.dateDisplayBox}>
-              <Feather name="calendar" size={16} color="#4285F4" />
-              <Text style={styles.dateDisplayText}>
-                {timeModalDate
-                  ? timeModalDate.toLocaleDateString("en-US", {
-                      weekday: "long",
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    })
-                  : ""}
-              </Text>
-            </View>
-
-            <Text style={styles.label}>Time</Text>
-            <View style={styles.dateTimeRow}>
-              <TouchableOpacity
-                style={[
-                  styles.dateTimeCard,
-                  isLocked && styles.dateTimeCardLocked,
-                ]}
-                disabled={isLocked}
-                onPress={() => {
-                  setTimePickerTarget("start");
-                  setShowTimePicker(true);
-                }}
-              >
-                <Feather
-                  name="clock"
-                  size={16}
-                  color={isLocked ? "#A0A6B0" : "#4285F4"}
-                />
-                <View>
-                  <Text style={styles.dateTimeLabel}>Start</Text>
-                  <Text style={styles.dateTimeValue}>
-                    {apptStartTime.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.dateTimeCard,
-                  isLocked && styles.dateTimeCardLocked,
-                ]}
-                disabled={isLocked}
-                onPress={() => {
-                  setTimePickerTarget("end");
-                  setShowTimePicker(true);
-                }}
-              >
-                <Feather
-                  name="clock"
-                  size={16}
-                  color={isLocked ? "#A0A6B0" : "#4285F4"}
-                />
-                <View>
-                  <Text style={styles.dateTimeLabel}>End</Text>
-                  <Text style={styles.dateTimeValue}>
-                    {apptEndTime.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            {showTimePicker && !isLocked && (
-              <DateTimePicker
-                value={
-                  timePickerTarget === "start" ? apptStartTime : apptEndTime
-                }
-                mode="time"
-                display="default"
-                onValueChange={(event, selected) => {
-                  setShowTimePicker(false);
-                  if (selected) {
-                    if (timePickerTarget === "start")
-                      setApptStartTime(selected);
-                    else setApptEndTime(selected);
-                  }
-                }}
-              />
-            )}
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[
-                  styles.saveButton,
-                  (isLocked || saving) && styles.saveButtonDisabled,
-                ]}
-                disabled={isLocked || saving}
-                onPress={saveTimeAppointment}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color="#9AA2AE" />
-                ) : (
-                  <Text
-                    style={[
-                      styles.saveText,
-                      isLocked && styles.saveTextDisabled,
-                    ]}
-                  >
-                    {isUpdate ? "Update" : "Save"}
-                  </Text>
-                )}
-              </TouchableOpacity>
-
-              {isLocked && (
-                <View style={styles.lockedNotice}>
-                  <Feather name="lock" size={13} color="#94A3B8" />
-                  <Text style={styles.lockedNoticeText}>
-                    This date has passed, so the time can no longer be changed.
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-      </Modal>
-    );
-  };
-  const renderDaySheet = () => {
-    const dayIsPast = daySheetDate ? isPastDate(daySheetDate) : false;
-    const dayKey = daySheetDate ? getDateKey(daySheetDate) : null;
-    const dayTotal = dayKey
-      ? appointments.filter((a) => a.date === dayKey).length
-      : 0;
-    const canAdd = !dayIsPast && dayTotal < MAX_APPOINTMENTS_PER_DAY;
-
-    return (
-      <Modal
-        visible={showDaySheet}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowDaySheet(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>
-                  {daySheetDate
-                    ? daySheetDate.toLocaleDateString("en-US", {
-                        weekday: "long",
-                        month: "long",
-                        day: "numeric",
-                      })
-                    : ""}
-                </Text>
-                <Text style={styles.modalDate}>
-                  {daySheetAppointments.length} of {MAX_APPOINTMENTS_PER_DAY}{" "}
-                  booked
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => setShowDaySheet(false)}>
-                <Feather name="x" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
-
-            {daySheetAppointments.map((a) => (
-              <TouchableOpacity
-                key={a.id}
-                style={styles.daySheetItem}
-                onPress={() => editFromDaySheet(a)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.daySheetTimeBox}>
-                  <Feather name="clock" size={15} color="#4285F4" />
-                </View>
-
-                <View style={styles.daySheetInfo}>
-                  <Text style={styles.daySheetTime}>
-                    {a.startTime.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}{" "}
-                    -{" "}
-                    {a.endTime.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-
-                  <Text style={styles.daySheetName} numberOfLines={1}>
-                    {a.childName} with {a.therapistName}
-                  </Text>
-                </View>
-
-                {isPastAppointment(a) ? (
-                  <Feather name="lock" size={15} color="#B0B6C0" />
-                ) : (
-                  <>
-                    {/* EDIT */}
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        editFromDaySheet(a);
-                      }}
-                      hitSlop={8}
-                    >
-                      <Feather name="edit-2" size={15} color="#4285F4" />
-                    </TouchableOpacity>
-
-                    {/* DELETE */}
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleDeleteAppointment(a);
-                      }}
-                      disabled={deletingId === a.id}
-                      hitSlop={8}
-                    >
-                      {deletingId === a.id ? (
-                        <ActivityIndicator size="small" color="#f03029" />
-                      ) : (
-                        <Feather name="trash-2" size={15} color="#f03029" />
-                      )}
-                    </TouchableOpacity>
-                  </>
-                )}
-              </TouchableOpacity>
-            ))}
-
-            {canAdd && (
-              <TouchableOpacity
-                style={styles.daySheetAdd}
-                onPress={addFromDaySheet}
-              >
-                <Feather name="plus" size={16} color="#4285F4" />
-                <Text style={styles.daySheetAddText}>
-                  Add another appointment
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {dayIsPast && (
-              <View style={styles.lockedNotice}>
-                <Feather name="lock" size={13} color="#94A3B8" />
-                <Text style={styles.lockedNoticeText}>
-                  This date has passed. Appointments can be opened but not
-                  changed.
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
-    );
-  };
-
-  const renderPickerModal = () => (
-    <Modal
-      visible={showPickerModal}
-      transparent
-      animationType="slide"
-      onRequestClose={() => setShowPickerModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modal}>
-          <View style={styles.modalHeader}>
-            <View style={styles.pickerHeaderLeft}>
-              {pickerStep === 2 && (
-                <TouchableOpacity
-                  onPress={() => setPickerStep(1)}
-                  style={styles.pickerBackIcon}
-                >
-                  <Feather name="arrow-left" size={20} color="#333" />
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalTitle}>
-                {pickerStep === 1 ? "Select Child" : "Select Therapist"}
-              </Text>
-            </View>
-            <TouchableOpacity onPress={() => setShowPickerModal(false)}>
-              <Feather name="x" size={24} color="#333" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.stepDots}>
-            <View style={[styles.stepDot, styles.stepDotActive]} />
-            <View
-              style={[styles.stepDot, pickerStep === 2 && styles.stepDotActive]}
-            />
-          </View>
-
-          {pickerStep === 1 ? (
-            <View>
-              <View style={styles.searchBox}>
-                <Feather name="search" size={16} color="#94A3B8" />
-                <TextInput
-                  style={styles.searchBoxInput}
-                  placeholder="Search child..."
-                  value={pickerChildSearch}
-                  onChangeText={setPickerChildSearch}
-                />
-              </View>
-              {pickerChildLoading && (
-                <ActivityIndicator
-                  size="small"
-                  color="#4285F4"
-                  style={{ marginVertical: 8 }}
-                />
-              )}
-              <ScrollView
-                style={styles.pickList}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
-                {filteredPickerChildren.length === 0 ? (
-                  <View style={styles.emptyStateContainer}>
-                    <Text style={styles.emptyStateText}>No children found</Text>
-                  </View>
-                ) : (
-                  filteredPickerChildren.map((c) => (
-                    <TouchableOpacity
-                      key={c.id}
-                      style={styles.pickItem}
-                      onPress={() => handlePickChild(c)}
-                    >
-                      <View style={styles.therapistAvatarCircle}>
-                        <Text style={styles.therapistAvatarText}>
-                          {getInitials(c.name)}
-                        </Text>
-                      </View>
-                      <Text style={styles.pickItemText}>{c.name}</Text>
-                      <Feather name="chevron-right" size={18} color="#94A3B8" />
-                    </TouchableOpacity>
-                  ))
-                )}
-              </ScrollView>
-            </View>
-          ) : (
-            <View>
-              <View style={styles.searchBox}>
-                <Feather name="search" size={16} color="#94A3B8" />
-                <TextInput
-                  style={styles.searchBoxInput}
-                  placeholder="Search therapist..."
-                  value={pickerTherapistSearch}
-                  onChangeText={setPickerTherapistSearch}
-                />
-              </View>
-              {pickerTherapistLoading && (
-                <ActivityIndicator
-                  size="small"
-                  color="#4285F4"
-                  style={{ marginVertical: 8 }}
-                />
-              )}
-
-              <ScrollView
-                style={styles.pickList}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
-                {filteredPickerTherapists.length === 0 ? (
-                  <View style={styles.emptyStateContainer}>
-                    <Text style={styles.emptyStateText}>No therapists found</Text>
-                  </View>
-                ) : (
-                  filteredPickerTherapists.map((t) => (
-                    <TouchableOpacity
-                      key={t.id}
-                      style={styles.pickItem}
-                      onPress={() => handlePickTherapist(t)}
-                    >
-                      <View style={styles.therapistAvatarCircle}>
-                        <Text style={styles.therapistAvatarText}>
-                          {getInitials(t.name)}
-                        </Text>
-                      </View>
-                      <Text style={styles.pickItemText}>{t.name}</Text>
-                      <Feather name="chevron-right" size={18} color="#94A3B8" />
-                    </TouchableOpacity>
-                  ))
-                )}
-              </ScrollView>
-            </View>
-          )}
-        </View>
-      </View>
-    </Modal>
-  );
-
-  if (screenMode === "booking" && bookingChild && bookingTherapist) {
-    const pairAppointments = appointments.filter(
-      (a) =>
-        a.childId === bookingChild.id && a.therapistId === bookingTherapist.id,
-    );
-
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.bookingHeader}>
-          <TouchableOpacity
-            onPress={goBackToMain}
-            style={styles.bookingHeaderIcon}
-          >
-            <Feather name="arrow-left" size={22} color="#222" />
-          </TouchableOpacity>
-
-          <View style={styles.bookingHeaderTitleWrap}>
-            <Text style={styles.bookingHeaderTitle} numberOfLines={1}>
-              {bookingChild.name}
-            </Text>
-            <Text style={styles.bookingHeaderSubtitle} numberOfLines={1}>
-              with {bookingTherapist.name}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={goBackToMain}
-            style={styles.bookingHeaderIcon}
-          >
-            <Feather name="x" size={22} color="#222" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.calendarContainer}>
-          <View style={styles.monthHeader}>
-            <View>
-              <Text style={styles.monthTitle}>{monthName}</Text>
-              <Text style={styles.yearText}>{currentMonth.getFullYear()}</Text>
-            </View>
-
-            <View style={styles.headerRight}>
-              <TouchableOpacity style={styles.todayButton} onPress={goToday}>
-                <Text style={styles.todayText}>Today</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.arrowButton}
-                onPress={previousMonth}
-              >
-                <Feather name="chevron-left" size={22} color="#333" />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.arrowButton} onPress={nextMonth}>
-                <Feather name="chevron-right" size={22} color="#333" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.weekRow}>
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-              <View key={day} style={styles.weekDay}>
-                <Text style={styles.weekDayText}>{day}</Text>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.calendarGrid}>
-            {calendarDays.map((item, index) => {
-              const date = item.date;
-              const dateKey = getDateKey(date);
-              const dayPairAppointments = pairAppointments.filter(
-                (a) => a.date === dateKey,
-              );
-              const dayAllAppointments = appointments.filter(
-                (a) => a.date === dateKey,
-              );
-              const todayDate = isToday(date);
-              const selected = isSelected(date);
-              const pastNoAppt =
-                isPastDate(date) && dayPairAppointments.length === 0;
-
-              return (
-                <TouchableOpacity
-                  key={`${dateKey}-${index}`}
-                  style={[
-                    styles.dayCell,
-                    !item.currentMonth && styles.otherMonthCell,
-                    selected && styles.selectedCell,
-                    pastNoAppt && styles.disabledDayCell,
-                  ]}
-                  onPress={() =>
-                    handleBookingDatePress(
-                      date,
-                      dayPairAppointments,
-                      dayAllAppointments,
-                    )
-                  }
-                  activeOpacity={pastNoAppt ? 1 : 0.7}
-                >
-                  <View
-                    style={[
-                      styles.dateCircle,
-                      todayDate && styles.todayCircle,
-                      selected && !todayDate && styles.selectedDateCircle,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.dateText,
-                        !item.currentMonth && styles.otherMonthText,
-                        todayDate && styles.todayDateText,
-                        selected && !todayDate && styles.selectedDateText,
-                        pastNoAppt && styles.disabledDateText,
-                      ]}
-                    >
-                      {date.getDate()}
-                    </Text>
-                  </View>
-
-                  {dayPairAppointments.length > 0 && (
-                    <View style={styles.eventsContainer}>
-                      {dayPairAppointments.slice(0, 2).map((a) => (
-                        <View
-                          key={a.id}
-                          style={[
-                            styles.eventChip,
-                            selected && styles.selectedEventChip,
-                            isPastAppointment(a) && styles.pastEventChip,
-                          ]}
-                        >
-                          <Text
-                            numberOfLines={1}
-                            style={[
-                              styles.eventText,
-                              selected && styles.selectedEventText,
-                            ]}
-                          >
-                            {a.startTime.toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {renderTimeModal()}
-        {renderDaySheet()}
-      </SafeAreaView>
-    );
+const prettyDay = (k) =>
+  keyToDate(k).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+const prettyFull = (k) =>
+  keyToDate(k).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const mins = (t) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+const timeRange = (s) => formatTo12Hour(`${s.startTime}-${s.endTime}`);
+const specMeta = (id) =>
+  therapistSpecialities.find((s) => s.id === id) || { label: id, bg: "#E0F2FE", color: "#0B4A6F" };
+
+const isInactive = (s) => s.sessionType === "cancel" || s.sessionType === "postponed";
+
+const attendanceSummary = (children = []) => {
+  const present = children.filter((c) => c.attendance === "Complete").length;
+  const absent = children.filter((c) => c.attendance === "Absent").length;
+  return { present, absent, pending: children.length - present - absent };
+};
+
+// ---------- card (declared outside the screen so it never remounts) ----------
+function SessionCard({ s, onPress }) {
+  const isCustom = s.type === "custom";
+  const spec = !isCustom && s.speciality ? specMeta(s.speciality) : null;
+  const tm = TYPE_META[s.sessionType];
+  const kids = s.children || [];
+  const att = attendanceSummary(kids);
+  const showAttendance = s.isPast && !isInactive(s);
+
+  const title = isCustom ? kids[0]?.fullName || "Custom appointment" : s.batchName;
+  const meta = isCustom
+    ? `Custom · with ${s.therapistName}`
+    : `with ${s.therapistName} · ${kids.length} ${kids.length === 1 ? "child" : "children"}`;
+
+  let attLine = null;
+  let attChip = null;
+  if (showAttendance) {
+    if (isCustom) attChip = ATT[kids[0]?.attendance] || ATT.Pending;
+    else attLine = `${att.present} attended · ${att.absent} absent${att.pending ? ` · ${att.pending} not marked` : ""}`;
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <TouchableOpacity activeOpacity={0.75} onPress={() => onPress(s)}>
+      <View style={[styles.card, s.sessionType === "cancel" && styles.cardCancelled]}>
+        <View
+          style={[
+            styles.bar,
+            { backgroundColor: isCustom ? "#8B5CF6" : s.sessionType === "cancel" ? "#EF4444" : spec?.color || "#0B4A6F" },
+          ]}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.time, isInactive(s) && styles.struck]}>{timeRange(s)}</Text>
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
+          </Text>
+          <Text style={styles.meta} numberOfLines={1}>
+            {meta}
+          </Text>
+          {!!attLine && <Text style={styles.attLine}>{attLine}</Text>}
+        </View>
+
+        <View style={{ alignItems: "flex-end", gap: 4 }}>
+          {isCustom ? (
+            <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
+              <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom</Text>
+            </View>
+          ) : (
+            spec && (
+              <View style={[styles.chip, { backgroundColor: spec.bg }]}>
+                <Text style={[styles.chipText, { color: spec.color }]}>{spec.label}</Text>
+              </View>
+            )
+          )}
+          {tm && (
+            <View style={[styles.chip, { backgroundColor: tm.bg }]}>
+              <Text style={[styles.chipText, { color: tm.color }]}>{tm.label}</Text>
+            </View>
+          )}
+          {attChip && (
+            <View style={[styles.chip, { backgroundColor: attChip.bg }]}>
+              <Text style={[styles.chipText, { color: attChip.color }]}>{attChip.label}</Text>
+            </View>
+          )}
+        </View>
+        <Feather name="chevron-right" size={18} color="#94A3B8" />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+export default function ScheduleScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
+
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+
+  const [scope, setScope] = useState("upcoming");
+  const [type, setType] = useState("all");
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+
+  const [items, setItems] = useState([]);
+  const [today, setToday] = useState(dateToKey(new Date()));
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const [detail, setDetail] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  // child picker for "new custom appointment"
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerItems, setPickerItems] = useState([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+
+  const requestRef = useRef(0);
+
+  // debounce the search box
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(search.trim()), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const load = useCallback(
+    async (pageNum = 1, mode = "reset") => {
+      const id = ++requestRef.current;
+      if (mode === "refresh") setRefreshing(true);
+      else if (mode === "reset") setLoading(true);
+      else setLoadingMore(true);
+
+      try {
+        const res = await getSessions({ scope, type, search: query, page: pageNum, limit: LIMIT });
+        if (id !== requestRef.current) return;
+
+        if (!res?.success) {
+          Alert.alert("Error", res?.message || "Could not load the schedule.");
+          return;
+        }
+
+        if (res.today) setToday(res.today);
+        setHasMore(!!res.hasMore);
+        setPage(pageNum);
+        setItems((prev) => {
+          if (mode !== "more") return res.data || [];
+          const seen = new Set(prev.map((x) => x.id));
+          return [...prev, ...(res.data || []).filter((x) => !seen.has(x.id))];
+        });
+      } catch (e) {
+        if (id === requestRef.current) {
+          Alert.alert("Error", e?.response?.data?.message || "Could not load the schedule.");
+        }
+      } finally {
+        if (id === requestRef.current) {
+          setLoading(false);
+          setRefreshing(false);
+          setLoadingMore(false);
+        }
+      }
+    },
+    [scope, type, query],
+  );
+
+  // runs on mount, whenever a filter changes, and when coming back from the create screen
+  useFocusEffect(
+    useCallback(() => {
+      load(1, "reset");
+    }, [load]),
+  );
+
+  const onEndReached = () => {
+    if (hasMore && !loading && !loadingMore && !refreshing) load(page + 1, "more");
+  };
+
+  // children list for the picker
+  useEffect(() => {
+    if (!pickerOpen) return undefined;
+    let alive = true;
+    setPickerLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await getUsersByRole({ role: "Child", search: pickerSearch.trim() });
+        if (alive) setPickerItems(res?.data || []);
+      } catch (e) {
+        if (alive) setPickerItems([]);
+      } finally {
+        if (alive) setPickerLoading(false);
+      }
+    }, 250);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [pickerOpen, pickerSearch]);
+
+  const openPicker = () => {
+    setPickerSearch("");
+    setPickerItems([]);
+    setPickerOpen(true);
+  };
+
+  const pickChild = (c) => {
+    setPickerOpen(false);
+    navigation.navigate("ChildCustomAppointment", {
+      childId: c._id || c.id,
+      childName: c.fullName || c.name,
+    });
+  };
+
+  const relLabel = (key) => {
+    if (key === today) return "Today";
+    const t = keyToDate(today);
+    t.setDate(t.getDate() + 1);
+    return key === dateToKey(t) ? "Tomorrow" : null;
+  };
+
+  const cancelAppointment = (s) => {
+    const childId = s.children?.[0]?.childId;
+    if (!childId) return;
+    Alert.alert("Cancel appointment", `Cancel the appointment on ${prettyFull(s.date)}?`, [
+      { text: "Keep", style: "cancel" },
+      {
+        text: "Cancel appointment",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setCancelling(true);
+            const res = await deleteChildCustomAppointment(childId, s.id);
+            if (!res?.success) return Alert.alert("Could not cancel", res?.message || "Please try again.");
+            setDetail(null);
+            await load(1, "reset");
+          } catch (e) {
+            Alert.alert("Could not cancel", e?.response?.data?.message || "Please try again.");
+          } finally {
+            setCancelling(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const renderItem = ({ item, index }) => {
+    const showHeader = index === 0 || items[index - 1].date !== item.date;
+    const rel = scope === "upcoming" ? relLabel(item.date) : null;
+    return (
+      <View>
+        {showHeader && (
+          <View style={styles.dayHeader}>
+            <Text style={styles.dayTitle}>{prettyDay(item.date)}</Text>
+            {!!rel && <Text style={styles.dayRel}>{rel}</Text>}
+          </View>
+        )}
+        <SessionCard s={item} onPress={setDetail} />
+      </View>
+    );
+  };
+
+  const detailKids = detail?.children || [];
+
+  return (
+    <SafeAreaView style={styles.main}>
       <TopBar
         navigation={navigation}
         isNotificationOpen={isNotificationOpen}
@@ -1209,694 +324,387 @@ export default function ScheduleScreen({ navigation }) {
         headerTitle="Manage Schedule"
       />
 
-      <View style={styles.searchContainer}>
-        <Feather name="search" size={20} color="#777" />
-        <TextInput
-          value={therapistSearch}
-          onChangeText={setTherapistSearch}
-          placeholder="Search therapist..."
-          placeholderTextColor="#999"
-          style={styles.searchInput}
-        />
-        {therapistSearch.length > 0 && (
-          <TouchableOpacity onPress={() => setTherapistSearch("")}>
-            <Feather name="x" size={18} color="#777" />
-          </TouchableOpacity>
-        )}
+      {/* search + filters */}
+      <View style={styles.filters}>
+        <View style={styles.searchBox}>
+          <Feather name="search" size={18} color="#94A3B8" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search child, therapist or batch..."
+            placeholderTextColor="#94A3B8"
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")}>
+              <Feather name="x" size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.tabs}>
+          {SCOPES.map((t) => (
+            <TouchableOpacity
+              key={t.id}
+              style={[styles.tab, scope === t.id && styles.tabActive]}
+              onPress={() => setScope(t.id)}
+            >
+              <Text style={[styles.tabText, scope === t.id && styles.tabTextActive]}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.typeRow}>
+          {TYPES.map((t) => (
+            <TouchableOpacity
+              key={t.id}
+              style={[styles.typeChip, type === t.id && styles.typeChipActive]}
+              onPress={() => setType(t.id)}
+            >
+              <Text style={[styles.typeText, type === t.id && styles.typeTextActive]}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
-      <ScrollView
-        style={styles.apptListScroll}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing || loadingMain}
-            onRefresh={onRefresh}
-            colors={["#4285F4"]}
-            tintColor="#4285F4"
-          />
-        }
+      {loading ? (
+        <View style={styles.centerFill}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.4}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => load(1, "refresh")} colors={[colors.primary]} />
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Feather name={query ? "search" : "calendar"} size={34} color="#94A3B8" />
+              <Text style={styles.emptyTitle}>
+                {query ? "No matches found" : scope === "upcoming" ? "No upcoming sessions" : "No past sessions"}
+              </Text>
+              <Text style={styles.emptySub}>
+                {query
+                  ? `Nothing matches "${query}".`
+                  : scope === "upcoming"
+                    ? "Tap + to create a custom appointment."
+                    : "Showing the last 12 months."}
+              </Text>
+            </View>
+          }
+          ListFooterComponent={
+            loadingMore ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 14 }} /> : null
+          }
+        />
+      )}
+
+      <TouchableOpacity
+        style={[styles.fab, { bottom: insets.bottom + 90 }]}
+        activeOpacity={0.85}
+        onPress={openPicker}
       >
-        {sortedAppointments.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Feather
-              name={therapistSearch.trim() ? "search" : "calendar"}
-              size={30}
-              color="#C4C4C4"
-            />
+        <Feather name="plus" size={20} color="#FFFFFF" />
+        <Text style={styles.fabText}>New appointment</Text>
+      </TouchableOpacity>
 
-            <Text style={styles.emptyStateTitle}>
-              {therapistSearch.trim()
-                ? "No matches found"
-                : "No appointments yet"}
-            </Text>
+      <BottomBar activeTab="Schedule" onOpenNotifications={setIsNotificationOpen} />
 
-            <Text style={styles.emptyStateText}>
-              {therapistSearch.trim()
-                ? `Nothing matches "${therapistSearch.trim()}"`
-                : "Tap + to book one"}
-            </Text>
-          </View>
-        ) : (
-          sortedAppointments.map((a) => {
-            const d = parseDateKey(a.date);
-            const past = isPastAppointment(a);
-
-            return (
-              <TouchableOpacity
-                key={a.id}
-                style={[styles.apptCard, past && styles.apptCardPast]}
-                onPress={() => openAppointmentInCalendar(a)}
-              >
-                <View
-                  style={[
-                    styles.apptCardDateBox,
-                    past && styles.apptCardDateBoxPast,
-                  ]}
-                >
-                  <Text style={styles.apptCardDay}>{d.getDate()}</Text>
-                  <Text style={styles.apptCardMonth}>
-                    {d.toLocaleDateString("en-US", { month: "short" })}
-                  </Text>
+      {/* ---------- session details ---------- */}
+      <Modal visible={!!detail} transparent animationType="slide" onRequestClose={() => setDetail(null)}>
+        <View style={styles.overlay}>
+          <View style={styles.sheet}>
+            {detail && (
+              <>
+                <View style={styles.sheetHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.sheetTitle}>{prettyFull(detail.date)}</Text>
+                    <Text style={styles.sheetSub}>
+                      {timeRange(detail)} · {mins(detail.endTime) - mins(detail.startTime)} min
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setDetail(null)}>
+                    <Feather name="x" size={22} color="#64748B" />
+                  </TouchableOpacity>
                 </View>
 
-                <View style={styles.apptCardInfo}>
-                  <Text style={styles.apptCardTitle} numberOfLines={1}>
-                    {a.childName} with {a.therapistName}
-                  </Text>
-
-                  <View style={styles.apptCardTimeRow}>
-                    <Text style={styles.apptCardTime}>
-                      {a.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      {" - "}
-                      {a.endTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                <View style={styles.chipRow}>
+                  {detail.type === "custom" ? (
+                    <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
+                      <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom appointment</Text>
+                    </View>
+                  ) : (
+                    detail.speciality && (
+                      <View style={[styles.chip, { backgroundColor: specMeta(detail.speciality).bg }]}>
+                        <Text style={[styles.chipText, { color: specMeta(detail.speciality).color }]}>
+                          {specMeta(detail.speciality).label}
+                        </Text>
+                      </View>
+                    )
+                  )}
+                  <View style={[styles.chip, { backgroundColor: TYPE_META[detail.sessionType]?.bg || "#F1F5F9" }]}>
+                    <Text style={[styles.chipText, { color: TYPE_META[detail.sessionType]?.color || "#475569" }]}>
+                      {TYPE_META[detail.sessionType]?.label || "Regular"}
                     </Text>
-
-                    <StatusBadge status={a.attendanceStatus} />
                   </View>
                 </View>
 
-                {past && <Feather name="lock" size={14} color="#B0B6C0" />}
-                <Feather name="chevron-right" size={18} color="#C4C4C4" />
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Therapist</Text>
+                  <Text style={styles.detailValue}>{detail.therapistName}</Text>
+                </View>
+                {detail.type !== "custom" && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Batch</Text>
+                    <Text style={styles.detailValue}>{detail.batchName}</Text>
+                  </View>
+                )}
+
+                <Text style={styles.sheetSection}>Children ({detailKids.length})</Text>
+                <ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={false}>
+                  {detailKids.length === 0 ? (
+                    <Text style={styles.muted}>No children in this session.</Text>
+                  ) : (
+                    detailKids.map((c) => {
+                      const a = ATT[c.attendance] || ATT.Pending;
+                      const showChip = detail.isPast || c.attendance !== "Pending";
+                      return (
+                        <View key={c.childId} style={styles.childRow}>
+                          <View style={styles.avatar}>
+                            <Text style={styles.avatarText}>{(c.fullName || "?").slice(0, 1).toUpperCase()}</Text>
+                          </View>
+                          <Text style={[styles.childName, { flex: 1 }]}>{c.fullName}</Text>
+                          {showChip && (
+                            <View style={[styles.chip, { backgroundColor: a.bg }]}>
+                              <Text style={[styles.chipText, { color: a.color }]}>
+                                {c.attendance === "Pending" ? "Not marked" : a.label}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })
+                  )}
+                </ScrollView>
+
+                {detail.canCancel && (
+                  <TouchableOpacity
+                    style={[styles.dangerBtn, cancelling && { opacity: 0.6 }]}
+                    disabled={cancelling}
+                    onPress={() => cancelAppointment(detail)}
+                  >
+                    {cancelling ? (
+                      <ActivityIndicator color="#EF4444" />
+                    ) : (
+                      <Text style={styles.dangerText}>Cancel appointment</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ---------- pick a child for a custom appointment ---------- */}
+      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
+        <View style={styles.overlay}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetTitle}>New appointment</Text>
+                <Text style={styles.sheetSub}>Select the child first</Text>
+              </View>
+              <TouchableOpacity onPress={() => setPickerOpen(false)}>
+                <Feather name="x" size={22} color="#64748B" />
               </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+            </View>
 
-      <TouchableOpacity
-        style={[styles.floatingButton, { bottom: insets.bottom + 90 }]}
-        activeOpacity={0.8}
-        onPress={openPickerFlow}
-      >
-        <Feather name="plus" size={30} color="#fff" />
-      </TouchableOpacity>
+            <View style={[styles.searchBox, { marginTop: 8 }]}>
+              <Feather name="search" size={18} color="#94A3B8" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search child..."
+                placeholderTextColor="#94A3B8"
+                value={pickerSearch}
+                onChangeText={setPickerSearch}
+              />
+            </View>
 
-      {renderPickerModal()}
+            {pickerLoading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 10 }} />}
 
-      <BottomBar
-        activeTab="Schedule"
-        setActiveTab={setActiveBottomTab}
-        onOpenNotifications={setIsNotificationOpen}
-      />
+            <ScrollView style={{ maxHeight: 340, marginTop: 6 }} keyboardShouldPersistTaps="handled">
+              {!pickerLoading && pickerItems.length === 0 && <Text style={styles.muted}>No children found.</Text>}
+              {pickerItems.map((c) => (
+                <TouchableOpacity key={c._id || c.id} style={styles.pickRow} onPress={() => pickChild(c)}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{(c.fullName || c.name || "?").slice(0, 1).toUpperCase()}</Text>
+                  </View>
+                  <Text style={[styles.childName, { flex: 1 }]}>{c.fullName || c.name}</Text>
+                  <Feather name="chevron-right" size={18} color="#94A3B8" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 12,
-    marginTop: 8,
-    paddingHorizontal: 12,
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    backgroundColor: "#FAFAFA",
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: "#222",
-  },
-  therapistResults: {
-    marginHorizontal: 12,
-    marginTop: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    backgroundColor: "#FFFFFF",
-    maxHeight: 220,
-    overflow: "hidden",
-  },
-  therapistItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F1F1",
-  },
-  therapistAvatarCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#4285F4",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  therapistAvatarText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  therapistName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#222",
-  },
-  apptListScroll: {
-    flex: 1,
-    paddingHorizontal: 12,
-    marginTop: 10,
-  },
-  apptCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8F9FA",
-    borderWidth: 1,
-    borderColor: "#E8E8E8",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-    gap: 12,
-  },
-  apptCardPast: {
-    backgroundColor: "#FAFAFA",
-    borderColor: "#EDEDED",
-  },
-  apptCardDateBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 8,
-    backgroundColor: "#4285F4",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  apptCardDateBoxPast: {
-    backgroundColor: "#A9B4C2",
-  },
-  apptCardDay: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  apptCardMonth: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#DCE8FF",
-    textTransform: "uppercase",
-  },
-  apptCardInfo: {
-    flex: 1,
-  },
-  apptCardTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#222",
-  },
-  apptCardTimeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 3,
-    gap: 8,
-  },
-  apptCardTime: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 3,
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 60,
-  },
-  emptyStateTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#777",
-    marginTop: 8,
-  },
-  emptyStateText: {
-    fontSize: 12,
-    color: "#A0A0A0",
-    marginTop: 3,
-  },
-  calendarContainer: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 6,
-  },
-  monthHeader: {
-    height: 62,
-    paddingHorizontal: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  monthTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#202124",
-  },
-  yearText: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 1,
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  todayButton: {
-    height: 34,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  todayText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#333",
-  },
-  arrowButton: {
-    width: 34,
-    height: 34,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  weekRow: {
-    flexDirection: "row",
-    height: 38,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
-  },
-  weekDay: {
-    width: "14.2857%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  weekDayText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#6B6B6B",
-  },
-  calendarGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    borderLeftWidth: 1,
-    borderTopWidth: 1,
-    borderColor: "#E4E6EA",
-  },
-  dayCell: {
-    width: "14.2857%",
-    height: 82,
-    backgroundColor: "#FFFFFF",
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "#E4E6EA",
-    paddingTop: 6,
-    alignItems: "center",
-  },
-  otherMonthCell: {
-    backgroundColor: "#FAFAFA",
-  },
-  selectedCell: {
-    backgroundColor: "#F8FAFF",
-  },
-  disabledDayCell: {
-    backgroundColor: "#FAFAFA",
-    opacity: 0.45,
-  },
-  dateCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  dateText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#30343B",
-  },
-  otherMonthText: {
-    color: "#A9ADB3",
-  },
-  disabledDateText: {
-    color: "#C4C4C4",
-  },
-  todayCircle: {
-    backgroundColor: "#4285F4",
-  },
-  todayDateText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-  },
-  selectedDateCircle: {
-    backgroundColor: "#DCE8FF",
-  },
-  selectedDateText: {
-    color: "#1A73E8",
-    fontWeight: "700",
-  },
-  eventsContainer: {
-    width: "100%",
-    paddingHorizontal: 3,
-    marginTop: 2,
-  },
-  eventChip: {
-    height: 20,
-    backgroundColor: "#35AFA0",
-    borderRadius: 5,
-    paddingHorizontal: 5,
-    justifyContent: "center",
-    marginBottom: 2,
-  },
-  pastEventChip: {
-    backgroundColor: "#AEB8C2",
-  },
-  eventText: {
-    fontSize: 9,
-    color: "#FFFFFF",
-    fontWeight: "500",
-  },
-  selectedEventChip: {
-    backgroundColor: "#EEF1FF",
-    borderWidth: 1,
-    borderColor: "#7584D8",
-  },
-  selectedEventText: {
-    color: "#3949AB",
-  },
-  floatingButton: {
-    position: "absolute",
-    right: 18,
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: "#4285F4",
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.22,
-    shadowRadius: 5,
-  },
-  bookingHeader: {
-    height: 56,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
-  },
-  bookingHeaderIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bookingHeaderTitleWrap: {
-    flex: 1,
-    alignItems: "center",
-  },
-  bookingHeaderTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#222",
-  },
-  bookingHeaderSubtitle: {
-    fontSize: 11,
-    color: "#888",
-    marginTop: 1,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
-  modal: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    padding: 20,
-    paddingBottom: 30,
-    maxHeight: "85%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  pickerHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  pickerBackIcon: {
-    padding: 2,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#222",
-  },
-  modalDate: {
-    fontSize: 12,
-    color: "#888",
-    marginTop: 3,
-  },
-  stepDots: {
-    flexDirection: "row",
-    gap: 6,
-    marginBottom: 18,
-  },
-  stepDot: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#E5E5E5",
-  },
-  stepDotActive: {
-    backgroundColor: "#4285F4",
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#444",
-    marginBottom: 6,
-  },
-  dateDisplayBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    height: 46,
-    borderWidth: 1,
-    borderColor: "#DDD",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    backgroundColor: "#FAFAFA",
-    marginBottom: 15,
-  },
-  dateDisplayText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#222",
-  },
-  dateTimeRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 15,
-  },
-  dateTimeCard: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 10,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-  },
-  dateTimeCardLocked: {
-    backgroundColor: "#F1F3F6",
-    borderColor: "#E0E3E8",
-  },
-  dateTimeLabel: {
-    fontSize: 10,
-    color: "#64748B",
-  },
-  dateTimeValue: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#222",
-  },
+  main: { flex: 1, backgroundColor: "#F8FAFC" },
+  centerFill: { flex: 1, alignItems: "center", justifyContent: "center" },
+
+  filters: { paddingHorizontal: 16, paddingTop: 8 },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    paddingHorizontal: 10,
-    height: 42,
     gap: 8,
-    marginBottom: 10,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 46,
   },
-  searchBoxInput: {
-    flex: 1,
-    fontSize: 14,
-    color: "#222",
+  searchInput: { flex: 1, fontSize: 14, color: "#0F172A" },
+
+  tabs: { flexDirection: "row", backgroundColor: "#E2E8F0", borderRadius: 12, padding: 4, marginTop: 10 },
+  tab: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: "center" },
+  tabActive: { backgroundColor: "#FFFFFF" },
+  tabText: { fontSize: 13, fontFamily: fonts.semiBold, color: "#64748B" },
+  tabTextActive: { color: "#0B4A6F" },
+
+  typeRow: { flexDirection: "row", gap: 8, marginTop: 10, marginBottom: 4 },
+  typeChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
-  pickList: {
-    maxHeight: 320,
+  typeChipActive: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
+  typeText: { fontSize: 12, fontFamily: fonts.semiBold, color: "#475569" },
+  typeTextActive: { color: "#FFFFFF" },
+
+  listContent: { padding: 16, paddingBottom: 170, flexGrow: 1 },
+  dayHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, marginBottom: 6, paddingHorizontal: 2 },
+  dayTitle: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
+  dayRel: { fontSize: 11, fontFamily: fonts.semiBold, color: colors.primary },
+
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 6,
+    gap: 12,
   },
-  pickItem: {
+  cardCancelled: { backgroundColor: "#FFF7F7" },
+  bar: { width: 4, alignSelf: "stretch", borderRadius: 2 },
+  time: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
+  struck: { textDecorationLine: "line-through", color: "#94A3B8" },
+  title: { fontSize: 13, fontFamily: fonts.semiBold, color: "#334155", marginTop: 2 },
+  meta: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  attLine: { fontSize: 11, fontFamily: fonts.regular, color: "#94A3B8", marginTop: 3 },
+
+  chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start" },
+  chipText: { fontSize: 11, fontFamily: fonts.semiBold },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
+
+  empty: { alignItems: "center", paddingVertical: 60, gap: 6 },
+  emptyTitle: { fontSize: 15, fontFamily: fonts.semiBold, color: "#334155", marginTop: 6 },
+  emptySub: { fontSize: 12, fontFamily: fonts.regular, color: "#94A3B8", textAlign: "center", paddingHorizontal: 30 },
+
+  fab: {
+    position: "absolute",
+    right: 20,
+    height: 50,
+    paddingHorizontal: 18,
+    borderRadius: 25,
+    backgroundColor: colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+  },
+  fabText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#FFFFFF" },
+
+  overlay: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.4)", justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    padding: 20,
+    paddingBottom: 28,
+    maxHeight: "88%",
+  },
+  sheetHeader: { flexDirection: "row", alignItems: "flex-start" },
+  sheetTitle: { fontSize: 19, fontFamily: fonts.semiBold, color: "#0F172A" },
+  sheetSub: { fontSize: 13, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  sheetSection: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 16, marginBottom: 4 },
+  muted: { fontSize: 13, fontFamily: fonts.regular, color: "#94A3B8", marginVertical: 12 },
+
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+    marginTop: 4,
+  },
+  detailLabel: { fontSize: 13, fontFamily: fonts.regular, color: "#64748B" },
+  detailValue: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A", maxWidth: "65%", textAlign: "right" },
+
+  childRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: "#F8FAFC",
-    marginBottom: 6,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
   },
-  pickItemText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#222",
+  pickRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
-  modalActions: {
-    marginTop: 4,
+  childName: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#E0F2FE",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  saveButton: {
+  avatarText: { fontSize: 13, fontFamily: fonts.semiBold, color: "#0B4A6F" },
+
+  dangerBtn: {
+    marginTop: 14,
     height: 46,
-    backgroundColor: "#4285F4",
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  saveButtonDisabled: {
-    backgroundColor: "#E3E6EB",
-  },
-  saveText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  saveTextDisabled: {
-    color: "#9AA2AE",
-  },
-  lockedNotice: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 10,
-  },
-  lockedNoticeText: {
-    flex: 1,
-    fontSize: 11,
-    color: "#94A3B8",
-  },
-  daySheetItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    backgroundColor: "#F8FAFC",
-    marginBottom: 8,
-  },
-  daySheetTimeBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#DCE8FF",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#EF4444",
     alignItems: "center",
     justifyContent: "center",
   },
-  daySheetInfo: {
-    flex: 1,
-  },
-  daySheetTime: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#222",
-  },
-  daySheetName: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 2,
-  },
-  daySheetAdd: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    height: 46,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: "#4285F4",
-    marginTop: 2,
-  },
-  daySheetAddText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#4285F4",
-  },
-  emptyStateContainer: {
-    paddingVertical: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: '#94A3B8',
-  },
-  statusBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginTop: 7,
-  },
-  statusBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
+  dangerText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#EF4444" },
 });

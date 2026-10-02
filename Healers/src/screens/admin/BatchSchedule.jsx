@@ -18,6 +18,7 @@ import Feather from "@expo/vector-icons/Feather";
 import { useFocusEffect } from "@react-navigation/native";
 
 import {
+  deleteBatchSession,
   getBatchEligibleChildren,
   getBatchScheduleData,
   removeBatchAssignment,
@@ -28,7 +29,24 @@ import TopBar from "../../components/TopBar";
 import { colors, fonts } from "../../styles/theme";
 import { formatTo12Hour } from "../../utils/hoursformat";
 import { therapistSpecialities } from "../../utils/specialities";
+const sessionTypeLabel = (type) => {
+  switch (type) {
+    case "postponed":
+      return "Postponed";
 
+    case "additional":
+      return "Additional";
+
+    case "alternate":
+      return "Alternate";
+
+    case "cancel":
+      return "Cancelled";
+
+    default:
+      return "Regular";
+  }
+};
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const FULL_DAY = {
   Mon: "Monday",
@@ -69,10 +87,18 @@ const groupByDate = (list) => {
   });
   return out;
 };
+const today = dateToKey(new Date());
+const isPastSession = (s) => s.date < today;
+const isEditableSession = (s) => s.date >= today;
+const isBatchEnded = (batch) => {
+  if (!batch?.dateTo) return false;
+  return batch.dateTo.slice(0, 10) < today;
+};
 
 export default function BatchScheduleScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const batchId = route?.params?.batchId;
+  const [fabOpen, setFabOpen] = useState(false);
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [data, setData] = useState(null);
@@ -91,6 +117,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
   const [picked, setPicked] = useState([]);
   const [busy, setBusy] = useState(false);
   const [removingChildId, setRemovingChildId] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const today = dateToKey(new Date());
 
@@ -119,7 +146,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
 
   // opened from "Add Children" on the batch card
   useEffect(() => {
-    if (route?.params?.openAddChildren && data) {
+    if (route?.params?.openAddChildren && data && !isBatchEnded(data.batch)) {
       setTab("people");
       setPicked([]);
       setSearch("");
@@ -164,7 +191,6 @@ export default function BatchScheduleScreen({ navigation, route }) {
       assignments
         .flatMap((a) =>
           (a.sessions || [])
-            .filter((s) => s.status !== "cancelled")
             .map((s) => ({
               ...s,
               assignmentId: a._id,
@@ -179,12 +205,22 @@ export default function BatchScheduleScreen({ navigation, route }) {
     [assignments],
   );
 
-  const upcomingAll = useMemo(() => sessions.filter((s) => s.date >= today), [sessions, today]);
+  const upcomingAll = useMemo(
+    () =>
+      sessions.filter(
+        (s) =>
+          s.date >= today &&
+          s.status !== "cancelled"
+      ),
+    [sessions, today]
+  );
 
   const timetable = useMemo(() => {
     const map = {};
     DAYS.forEach((d) => (map[d] = []));
-    upcomingAll.forEach((s) => {
+    upcomingAll
+      .filter((s) => s.sessionType !== "additional" && s.sessionType !== "alternate")
+      .forEach((s) => {
       const d = weekdayOf(s.date);
       if (!map[d].some((x) => x.assignmentId === s.assignmentId && x.startTime === s.startTime)) {
         map[d].push(s);
@@ -291,23 +327,314 @@ export default function BatchScheduleScreen({ navigation, route }) {
       ],
     );
 
-  const SessionRow = ({ s }) => {
+  const SessionRow = ({ s, readOnly = false }) => {
     const meta = specMeta(s.speciality);
+    const editable = !readOnly && isEditableSession(s) && s.status !== "cancelled";;
+
+    const [actionModal, setActionModal] = useState(false);
+
+    const openActions = () => {
+      setActionModal(true);
+    };
+
+    const closeActions = () => {
+      setActionModal(false);
+    };
+
+    const handleDelete = () => {
+      closeActions();
+
+      Alert.alert(
+        "Delete Session",
+        `Delete this session on ${prettyFull(s.date)}?`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                setActionLoading(true);
+
+                const res = await deleteBatchSession(
+                  batchId,
+                  s.assignmentId,
+                  s._id
+                );
+
+                if (!res?.success) {
+                  Alert.alert(
+                    "Could not delete",
+                    res?.message ||
+                      "Could not delete session."
+                  );
+                  return;
+                }
+
+                await load();
+
+                Alert.alert(
+                  "Deleted",
+                  "Session deleted successfully."
+                );
+              } catch (e) {
+                Alert.alert(
+                  "Could not delete",
+                  e?.response?.data?.message ||
+                    "Could not delete session."
+                );
+              } finally {
+                setActionLoading(false);
+              }
+            },
+          },
+        ]
+      );
+    };
+    const handlePostpone = (s) => {
+      closeActions();
+
+      navigation.navigate("BatchSessionPostpone", {
+        batchId,
+        assignmentId: s.assignmentId,
+        sessionId: s._id,
+        date: s.date,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        therapistId: s.therapistId,
+        therapistName: s.therapistName,
+        speciality: s.speciality,
+        batchStart: batch?.dateFrom?.slice(0, 10),
+        batchEnd: batch?.dateTo ? batch.dateTo.slice(0, 10) : undefined,
+      });
+    };
     return (
-      <View style={styles.sessionRow}>
-        <View style={[styles.sessionBar, { backgroundColor: meta.color }]} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.sessionTime}>{timeRange(s)}</Text>
-          <Text style={styles.sessionSub}>{s.therapistName}</Text>
-        </View>
-        <View style={[styles.chip, { backgroundColor: meta.bg }]}>
-          <Text style={[styles.chipText, { color: meta.color }]}>{meta.label}</Text>
-        </View>
-      </View>
+      <>
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={openActions}
+          disabled={actionLoading}
+        >
+          <View
+            style={[
+              styles.sessionRow,
+              readOnly && styles.sessionRowPast,
+              s.sessionType === "cancel" &&
+                styles.sessionRowCancelled,
+            ]}
+          >
+            <View
+              style={[
+                styles.sessionBar,
+                {
+                  backgroundColor:
+                    s.sessionType === "cancel"
+                      ? "#EF4444"
+                      : meta.color,
+                },
+              ]}
+            />
+
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sessionTime}>
+                {timeRange(s)}
+              </Text>
+
+              <Text style={styles.sessionSub}>
+                {s.therapistName}
+              </Text>
+
+              <Text
+                style={[
+                  styles.sessionStatus,
+                  s.sessionType === "cancel" &&
+                    styles.sessionStatusCancelled,
+                ]}
+              >
+                {sessionTypeLabel(s.sessionType)}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.chip,
+                {
+                  backgroundColor:
+                    s.sessionType === "cancel"
+                      ? "#FEE2E2"
+                      : meta.bg,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  {
+                    color:
+                      s.sessionType === "cancel"
+                        ? "#B91C1C"
+                        : meta.color,
+                  },
+                ]}
+              >
+                {meta.label}
+              </Text>
+            </View>
+
+            <Feather
+              name="chevron-right"
+              size={18}
+              color="#94A3B8"
+            />
+          </View>
+        </TouchableOpacity>
+
+        {/* Session actions modal */}
+        <Modal
+          visible={actionModal}
+          transparent
+          animationType="fade"
+          onRequestClose={closeActions}
+        >
+          <View style={styles.actionOverlay}>
+            <View style={styles.actionModal}>
+              <View style={styles.actionHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.actionTitle}>
+                    Session
+                  </Text>
+
+                  <Text style={styles.actionSub}>
+                    {prettyFull(s.date)} · {timeRange(s)}
+                  </Text>
+
+                  <Text style={styles.actionTherapist}>
+                    {s.therapistName}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={closeActions}
+                  style={styles.actionClose}
+                >
+                  <Feather
+                    name="x"
+                    size={20}
+                    color="#64748B"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {editable ? (
+                <>
+                  <TouchableOpacity
+                    style={styles.actionItem}
+                    onPress={() => handlePostpone(s)}
+                  >
+                    <View
+                      style={[
+                        styles.actionIcon,
+                        { backgroundColor: "#F3E8FF" },
+                      ]}
+                    >
+                      <Feather
+                        name="calendar"
+                        size={18}
+                        color="#7E22CE"
+                      />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.actionItemTitle}>
+                        Postpone Session
+                      </Text>
+
+                      <Text style={styles.actionItemSub}>
+                        Choose a new date and available time
+                      </Text>
+                    </View>
+
+                    <Feather
+                      name="chevron-right"
+                      size={18}
+                      color="#94A3B8"
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionItem}
+                    onPress={handleDelete}
+                  >
+                    <View
+                      style={[
+                        styles.actionIcon,
+                        { backgroundColor: "#FEE2E2" },
+                      ]}
+                    >
+                      <Feather
+                        name="trash-2"
+                        size={18}
+                        color="#DC2626"
+                      />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          styles.actionItemTitle,
+                          { color: "#DC2626" },
+                        ]}
+                      >
+                        Delete
+                      </Text>
+                      <Text style={styles.actionItemSub}>
+                        Remove this session
+                      </Text>
+                    </View>
+
+                    <Feather
+                      name="chevron-right"
+                      size={18}
+                      color="#94A3B8"
+                    />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <View style={styles.pastInfo}>
+                  <Feather
+                    name="lock"
+                    size={18}
+                    color="#64748B"
+                  />
+
+                  <Text style={styles.pastInfoText}>
+                    {s.status === "cancelled"
+                      ? "This session was postponed or cancelled."
+                      : "This is a past session and can no longer be edited."}
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={styles.cancelAction}
+                onPress={closeActions}
+              >
+                <Text style={styles.cancelActionText}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </>
     );
   };
 
   const goCreate = () => navigation.navigate("BatchScheduleCreate", { batchId });
+  const goAdditional = () => navigation.navigate("BatchAdditionalClass", { batchId });
+
 
   if (loading) {
     return (
@@ -400,11 +727,15 @@ export default function BatchScheduleScreen({ navigation, route }) {
               <Feather name="calendar" size={34} color="#94A3B8" />
               <Text style={styles.emptyTitle}>No schedule yet</Text>
               <Text style={styles.emptySub}>
-                Pick a session length, choose therapists and their weekly times.
+                {isBatchEnded(batch)
+                  ? "This batch has ended. No new schedule can be created."
+                  : "Pick a session length, choose therapists and their weekly times."}
               </Text>
-              <TouchableOpacity style={styles.primaryBtn} onPress={goCreate}>
-                <Text style={styles.primaryBtnText}>Create schedule</Text>
-              </TouchableOpacity>
+              {!isBatchEnded(batch) && (
+                <TouchableOpacity style={styles.primaryBtn} onPress={goCreate}>
+                  <Text style={styles.primaryBtnText}>Create schedule</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             <View style={styles.card}>
@@ -475,7 +806,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
                     {relLabel(g.date) && <Text style={styles.dayRel}>{relLabel(g.date)}</Text>}
                   </View>
                   {g.items.map((s) => (
-                    <SessionRow key={`${s.assignmentId}-${s._id}`} s={s} />
+                    <SessionRow key={`${s.assignmentId}-${s._id}`} s={s} readOnly={false} />
                   ))}
                 </View>
               ))
@@ -496,7 +827,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
                         <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
                       </View>
                       {g.items.map((s) => (
-                        <SessionRow key={`${s.assignmentId}-${s._id}`} s={s} />
+                        <SessionRow key={`${s.assignmentId}-${s._id}`} s={s} readOnly/>
                       ))}
                     </View>
                   ))}
@@ -511,9 +842,15 @@ export default function BatchScheduleScreen({ navigation, route }) {
             <View style={styles.card}>
               <View style={styles.cardHeadRow}>
                 <Text style={styles.cardTitle}>Therapists</Text>
-                <TouchableOpacity onPress={goCreate}>
-                  <Text style={styles.linkText}>Add schedule</Text>
-                </TouchableOpacity>
+                {!isBatchEnded(batch) ? (
+                  <TouchableOpacity onPress={goCreate}>
+                    <Text style={styles.linkText}>Add schedule</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={[styles.linkText, { color: "#94A3B8" }]}>
+                    Batch ended
+                  </Text>
+                )}
               </View>
               {assignments.length === 0 ? (
                 <Text style={styles.muted}>No therapist assigned yet.</Text>
@@ -549,16 +886,22 @@ export default function BatchScheduleScreen({ navigation, route }) {
                 <Text style={styles.cardTitle}>
                   Children ({children.length}/{batch?.maxChild})
                 </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setPicked([]);
-                    setOptions([]);
-                    setSearch("");
-                    setChildModal(true);
-                  }}
-                >
-                  <Text style={styles.linkText}>Add children</Text>
-                </TouchableOpacity>
+                {!isBatchEnded(batch) ? (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setPicked([]);
+                      setOptions([]);
+                      setSearch("");
+                      setChildModal(true);
+                    }}
+                  >
+                    <Text style={styles.linkText}>Add children</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={[styles.linkText, { color: "#94A3B8" }]}>
+                    Batch ended
+                  </Text>
+                )}
               </View>
               {children.length === 0 ? (
                 <Text style={styles.muted}>No children yet. New children join every upcoming session automatically.</Text>
@@ -584,15 +927,50 @@ export default function BatchScheduleScreen({ navigation, route }) {
         )}
       </ScrollView>
 
-      {tab !== "people" && upcomingAll.length > 0 && (
-        <TouchableOpacity
-          style={[styles.fab, { bottom: insets.bottom + 90 }]}
-          onPress={goCreate}
-          activeOpacity={0.85}
-        >
-          <Feather name="plus" size={20} color="#FFFFFF" />
-          <Text style={styles.fabText}>Add schedule</Text>
-        </TouchableOpacity>
+      {tab !== "people" && upcomingAll.length > 0 && !isBatchEnded(batch) && (
+        <>
+          {fabOpen && (
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setFabOpen(false)}
+            />
+          )}
+
+          <View style={[styles.fabWrap, { bottom: insets.bottom + 90 }]} pointerEvents="box-none">
+            {fabOpen && (
+              <>
+                <TouchableOpacity
+                  style={styles.fabMini}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    setFabOpen(false);
+                    goAdditional();
+                  }}
+                >
+                  <Feather name="clock" size={18} color="#FFFFFF" />
+                  <Text style={styles.fabText}>Add additional session</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.fabMini}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    setFabOpen(false);
+                    goCreate();
+                  }}
+                >
+                  <Feather name="calendar" size={18} color="#FFFFFF" />
+                  <Text style={styles.fabText}>Add schedule</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            <TouchableOpacity style={styles.fabRound} activeOpacity={0.85} onPress={() => setFabOpen((v) => !v)}>
+              <Feather name={fabOpen ? "x" : "plus"} size={26} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </>
       )}
 
       <BottomBar activeTab="BatchManagment" onOpenNotifications={setIsNotificationOpen} />
@@ -847,4 +1225,161 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   checkboxOn: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
+  sessionRowPast: {
+    opacity: 0.65,
+  },
+
+  sessionRowCancelled: {
+    backgroundColor: "#FFF7F7",
+  },
+
+  sessionStatus: {
+    fontSize: 11,
+    fontFamily: fonts.semiBold,
+    color: "#64748B",
+    marginTop: 4,
+  },
+
+  sessionStatusCancelled: {
+    color: "#DC2626",
+  },
+
+  actionOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    justifyContent: "flex-end",
+  },
+
+  actionModal: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 28,
+  },
+
+  actionHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+
+  actionTitle: {
+    fontSize: 18,
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
+
+  actionSub: {
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    marginTop: 3,
+  },
+
+  actionTherapist: {
+    fontSize: 12,
+    fontFamily: fonts.semiBold,
+    color: "#334155",
+    marginTop: 3,
+  },
+
+  actionClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  actionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 13,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+    gap: 12,
+  },
+
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  actionItemTitle: {
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
+
+  actionItemSub: {
+    fontSize: 11,
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    marginTop: 2,
+  },
+
+  cancelAction: {
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+
+  cancelActionText: {
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
+    color: "#475569",
+  },
+
+  pastInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 4,
+  },
+
+  pastInfoText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: "#64748B",
+  },
+  fabWrap: { position: "absolute", right: 20, alignItems: "flex-end", gap: 10 },
+  fabRound: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+  },
+  fabMini: {
+    height: 46,
+    paddingHorizontal: 16,
+    borderRadius: 23,
+    backgroundColor: colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+  },
 });

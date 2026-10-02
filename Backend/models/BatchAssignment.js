@@ -1,12 +1,5 @@
 const mongoose = require("mongoose");
 
-const sessionSchema = new mongoose.Schema({
-  date: { type: String, required: true }, // YYYY-MM-DD
-  startTime: { type: String, required: true },
-  endTime: { type: String, required: true },
-  status: { type: String, enum: ["scheduled", "cancelled"], default: "scheduled" },
-});
-
 const batchAssignmentSchema = new mongoose.Schema(
   {
     batchId: {
@@ -40,7 +33,6 @@ const batchAssignmentSchema = new mongoose.Schema(
       default: 1,
       min: 1,
     },
-    sessions: { type: [sessionSchema], default: [] },
     sessionMinutes: { type: Number, default: 60 },
   },
   { timestamps: true }

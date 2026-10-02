@@ -14,6 +14,7 @@ const Complaint = require("../models/Complaint");
 const SystemSetting = require("../models/SystemSetting");
 const TherapistAvailability = require("../models/TherapistAvailability");
 const BatchAssignment = require("../models/BatchAssignment");
+const Package = require("../models/Package");
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
@@ -401,7 +402,6 @@ const analyzePlan = async (batch, body) => {
     return { error: "Select at least one therapist and slot." };
   }
 
-  // Validate plans
   const seenPlan = new Set();
 
   for (const p of plans) {
@@ -445,7 +445,6 @@ const analyzePlan = async (batch, body) => {
     ...new Set(plans.map((p) => String(p.therapistId))),
   ];
 
-  // Verify therapist speciality eligibility
   const eligible = await TherapistAssignment.find({
     therapistId: { $in: therapistIds },
     specialty: { $in: batch.speciality },
@@ -474,8 +473,7 @@ const analyzePlan = async (batch, body) => {
     return { error: "This batch has already ended." };
   }
 
-  // Load everything needed in parallel
-  const [rules, users, batchAssignments, schedules] = await Promise.all([
+  const [rules, users, schedules] = await Promise.all([
     TherapistAvailability.find({
       therapistId: { $in: therapistIds },
       isActive: true,
@@ -488,12 +486,6 @@ const analyzePlan = async (batch, body) => {
       },
       "fullName",
     ).lean(),
-
-    BatchAssignment.find({
-      batchId: batch._id,
-      therapistId: { $in: therapistIds },
-      speciality: { $in: batch.speciality },
-    }).lean(),
 
     Scheduling.find({
       therapistId: { $in: therapistIds },
@@ -518,24 +510,6 @@ const analyzePlan = async (batch, body) => {
     ]),
   );
 
-  // Existing BatchAssignment sessions
-  const batchSessionMap = new Map();
-
-  for (const assignment of batchAssignments) {
-    for (const session of assignment.sessions || []) {
-      const key = [
-        String(assignment.therapistId),
-        assignment.speciality,
-        session.date,
-        session.startTime,
-        session.endTime,
-      ].join("|");
-
-      batchSessionMap.set(key, String(session._id));
-    }
-  }
-
-  // Expand weekly slots into actual dates
   const all = [];
 
   for (const p of plans) {
@@ -559,7 +533,6 @@ const analyzePlan = async (batch, body) => {
     }
   }
 
-  // Check availability
   const valid = [];
   const unavailable = [];
 
@@ -580,7 +553,6 @@ const analyzePlan = async (batch, body) => {
     (available ? valid : unavailable).push(s);
   }
 
-  // Prevent selected therapists from overlapping each other
   const byDate = {};
 
   for (const s of valid) {
@@ -592,7 +564,6 @@ const analyzePlan = async (batch, body) => {
       for (let j = i + 1; j < list.length; j++) {
         const a = list[i];
         const b = list[j];
-
         if (
           toMin(a.startTime) < toMin(b.endTime) &&
           toMin(b.startTime) < toMin(a.endTime)
@@ -607,9 +578,7 @@ const analyzePlan = async (batch, body) => {
 
   const children = (batch.childrenIds || []).map(String);
 
-  // Existing appointments
   const busy = [];
-
   for (const sc of schedules) {
     for (const ap of sc.appointments || []) {
       busy.push({
@@ -631,9 +600,6 @@ const analyzePlan = async (batch, body) => {
         batchId: ap.batchId ? String(ap.batchId) : null,
         batchAssignmentId: ap.batchAssignmentId
           ? String(ap.batchAssignmentId)
-          : null,
-        batchSessionId: ap.batchSessionId
-          ? String(ap.batchSessionId)
           : null,
       });
     }
@@ -657,35 +623,18 @@ const analyzePlan = async (batch, body) => {
         a < x.b,
     );
 
-    const sessionKey = [
-      s.therapistId,
-      s.speciality,
-      s.date,
-      s.startTime,
-      s.endTime,
-    ].join("|");
-
-    const batchSessionId = batchSessionMap.get(sessionKey);
-
-    // Already created by this batch
     if (
-      batchSessionId &&
       hits.some(
-        (x) =>
-          x.batchId === String(batch._id) &&
-          x.batchSessionId === batchSessionId &&
-          x.therapistId === s.therapistId &&
-          x.a === a &&
-          x.b === b,
+        (x) => x.batchId === String(batch._id) && x.therapistId === s.therapistId && x.a === a && x.b === b
       )
     ) {
       duplicates.push(s);
       continue;
     }
 
+
     const reasons = [];
 
-    // Therapist already has another appointment
     const therapistConflict = hits.find(
       (x) => x.therapistId === s.therapistId,
     );
@@ -699,7 +648,6 @@ const analyzePlan = async (batch, body) => {
       );
     }
 
-    // One of the batch children already has another appointment
     const childConflict = hits.find(
       (x) =>
         x.therapistId !== s.therapistId &&
@@ -742,6 +690,196 @@ const analyzePlan = async (batch, body) => {
     duplicates,
     toCreate,
   };
+};
+const clockMinutes = (tz) => {
+  const hhmm = new Date().toLocaleTimeString("en-GB", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  return toMin(hhmm);
+};
+const SLOT_STEP = 15; 
+const INACTIVE_TYPES = ["cancel", "postponed"]; 
+const loadBatchAppointments = (batchId, extraMatch = {}) => {
+  const id = new mongoose.Types.ObjectId(String(batchId));
+  return Scheduling.aggregate([
+    { $match: { "appointments.batchId": id } },
+    { $unwind: "$appointments" },
+    { $match: { "appointments.batchId": id, ...extraMatch } },
+    {
+      $replaceRoot: {
+        newRoot: { $mergeObjects: ["$appointments", { therapistId: "$therapistId" }] },
+      },
+    },
+  ]);
+};
+const computeFreeSlots = async ({
+  therapistId,
+  childIds = [],
+  date,
+  minutes,
+  minDate = null,
+  maxDate = null,
+}) => {
+  const st = await loadScheduleSettings();
+  const today = todayKey(st.tz);
+
+  if (!isValidDate(date)) return { error: "A valid date is required." };
+  if (date < today) return { error: "Date cannot be in the past." };
+  if ((minDate && date < minDate) || (maxDate && date > maxDate)) {
+    return { error: "Date must be within the batch period." };
+  }
+
+  const day = weekdayOf(date);
+  if (!st.workingDays.includes(day)) {
+    return { slots: [], reason: `${day} is not a clinic working day.` };
+  }
+
+  const children = childIds.map(String);
+
+  const [rules, schedules] = await Promise.all([
+    TherapistAvailability.find({ therapistId, isActive: true }).lean(),
+    Scheduling.find({
+      "appointments.date": utcMidnight(date),
+      $or: [
+        { therapistId },
+        ...(children.length ? [{ "appointments.children.childId": { $in: children } }] : []),
+      ],
+    }).lean(),
+  ]);
+
+  const busy = [];
+  for (const sc of schedules) {
+    const mine = String(sc.therapistId) === String(therapistId);
+    for (const ap of sc.appointments || []) {
+      if (dateKeyOf(ap.date) !== date) continue;
+      const hasChild = (ap.children || []).some((c) => children.includes(String(c.childId)));
+      const inactive = INACTIVE_TYPES.includes(ap.sessionType);
+      if (mine || (hasChild && !inactive)) {
+        busy.push({ a: toMin(ap.startTime), b: toMin(ap.endTime) });
+      }
+    }
+  }
+
+  let nowMin = -1;
+  if (date === today) nowMin = clockMinutes(st.tz);
+
+  const slots = [];
+  const seen = new Set();
+
+  for (const r of rules) {
+    let windows;
+    if (r.type === "custom") {
+      if (r.date !== date) continue;
+      windows = [r];
+    } else {
+      if ((r.effectiveFrom && date < r.effectiveFrom) || (r.effectiveTo && date > r.effectiveTo)) {
+        continue;
+      }
+      windows = (r.slots || []).filter((s) => s.day === day);
+    }
+
+    for (const w of windows) {
+      for (let a = toMin(w.startTime); a + minutes <= toMin(w.endTime); a += SLOT_STEP) {
+        const b = a + minutes;
+        if (seen.has(a)) continue;
+        if (a <= nowMin) continue;
+        if (!insideClinic(a, b, st)) continue;
+        if (busy.some((x) => x.a < b && a < x.b)) continue;
+        seen.add(a);
+        slots.push({ startTime: minutesToTime(a), endTime: minutesToTime(b) });
+      }
+    }
+  }
+
+  slots.sort((x, y) => x.startTime.localeCompare(y.startTime));
+
+  return {
+    slots,
+    reason: slots.length ? "" : "No free time on this date. Try another day.",
+  };
+};
+const freeSlotsForDate = ({ batch, therapistId, date, minutes }) =>
+  computeFreeSlots({
+    therapistId,
+    childIds: batch.childrenIds || [],
+    date,
+    minutes,
+    minDate: dateKeyOf(batch.dateFrom),
+    maxDate: dateKeyOf(batch.dateTo),
+  });
+const loadBatchAndAssignment = async (batchId, assignmentId) => {
+  if (!mongoose.isValidObjectId(batchId) || !mongoose.isValidObjectId(assignmentId)) {
+    return { status: 400, message: "Invalid batchId or assignmentId." };
+  }
+  const [batch, assignment] = await Promise.all([
+    Batch.findById(batchId).lean(),
+    BatchAssignment.findOne({ _id: assignmentId, batchId }).lean(),
+  ]);
+  if (!batch || !assignment) {
+    return { status: 404, message: "Batch or assignment not found." };
+  }
+  return { batch, assignment };
+};
+ const addBatchAppointment = async ({
+  therapistId,
+  date,
+  startTime,
+  endTime,
+  batchId,
+  assignmentId,
+  sessionType,
+  originalAppointmentId = null,
+  childIds,
+}) => {
+  const d = utcMidnight(date);
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth() + 1;
+ 
+  let schedule = await Scheduling.findOne({ therapistId, year, month });
+  if (!schedule) {
+    schedule = new Scheduling({ therapistId, year, month, appointments: [] });
+  }
+ 
+  schedule.appointments.push({
+    date: d,
+    startTime,
+    endTime,
+    type: "batch",
+    batchId,
+    batchAssignmentId: assignmentId,
+    sessionType,
+    originalAppointmentId,
+    children: childIds.map((childId) => ({ childId, attendance_status: "Pending" })),
+  });
+ 
+  await schedule.save(); // runs the overlap validation hook
+  return schedule.appointments[schedule.appointments.length - 1];
+};
+const createExtraSession = async ({
+  batch,
+  assignment,
+  date,
+  startTime,
+  endTime,
+  sessionType,
+  originalAppointmentId = null,
+  childIds,
+}) => {
+  const appointment = await addBatchAppointment({
+    therapistId: assignment.therapistId,
+    date,
+    startTime,
+    endTime,
+    batchId: batch._id,
+    assignmentId: assignment._id,
+    sessionType,
+    originalAppointmentId,
+    childIds,
+  });
+  return { appointmentId: appointment._id };
 };
 
 exports.getAdminOverview = async (req, res) => {
@@ -1272,6 +1410,105 @@ exports.assignChildrenToTherapist = async (req, res) => {
     });
   }
 };
+exports.getTherapistSchedule = async (req, res) => {
+  try {
+    const { therapistId } = req.params;
+ 
+    if (!mongoose.isValidObjectId(therapistId)) {
+      return res.status(400).json({ success: false, message: "Invalid therapistId." });
+    }
+ 
+    const therapist = await User.findOne(
+      { _id: therapistId, role: "Therapist" },
+      "fullName email phone",
+    ).lean();
+ 
+    if (!therapist) {
+      return res.status(404).json({ success: false, message: "Therapist not found." });
+    }
+ 
+    const pastDays = Math.min(Math.max(parseInt(req.query.pastDays, 10) || 90, 1), 365);
+ 
+    const st = await loadScheduleSettings();
+    const today = todayKey(st.tz);
+    const nowMin = clockMinutes(st.tz);
+    const cutoff = addDays(today, -pastDays);
+ 
+    const [availability, assignments, schedules] = await Promise.all([
+      TherapistAvailability.find({ therapistId, isActive: true })
+        .sort({ type: -1, date: 1, createdAt: 1 })
+        .lean(),
+ 
+      TherapistAssignment.find({ therapistId }, "specialty").lean(),
+ 
+      Scheduling.find({ therapistId })
+        .populate("appointments.batchId", "batchName")
+        .populate("appointments.batchAssignmentId", "speciality")
+        .populate("appointments.children.childId", "fullName")
+        .lean(),
+    ]);
+ 
+    const sessions = [];
+ 
+    for (const sc of schedules) {
+      for (const ap of sc.appointments || []) {
+        const date = dateKeyOf(ap.date);
+        if (date < cutoff) continue;
+        const isCustom = ap.type === "custom";
+        sessions.push({
+          id: String(ap._id),
+          date,
+          startTime: ap.startTime,
+          endTime: ap.endTime,
+          type: ap.type, // "batch" or "custom"
+          sessionType: ap.sessionType || "regular",
+          batchId: ap.batchId?._id ? String(ap.batchId._id) : ap.batchId ? String(ap.batchId) : null,
+          batchName: isCustom ? "Custom Appointment" : (ap.batchId?.batchName || "Batch Session"),
+          speciality: ap.batchAssignmentId?.speciality || assignments[0]?.specialty || null,
+          children: (ap.children || []).map((c) => ({
+            childId: String(c.childId?._id || c.childId),
+            fullName: c.childId?.fullName || "Child",
+            attendance: c.attendance_status || "Pending",
+          })),
+          isPast: date < today || (date === today && toMin(ap.endTime) <= nowMin),
+        });
+      }
+    }
+ 
+    sessions.sort((a, b) =>
+      a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date),
+    );
+ 
+    const upcoming = sessions.filter((s) => !s.isPast);
+    const past = sessions.filter((s) => s.isPast).reverse();
+ 
+    return res.json({
+      success: true,
+      data: {
+        today,
+        pastDays,
+        therapist: {
+          _id: therapist._id,
+          fullName: therapist.fullName,
+          email: therapist.email,
+          phone: therapist.phone,
+          specialties: [...new Set(assignments.map((a) => a.specialty).filter(Boolean))],
+        },
+        availability,
+        upcoming,
+        past,
+      },
+    });
+  } catch (error) {
+    console.error("getTherapistSchedule:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load therapist schedule.",
+      error: error.message,
+    });
+  }
+};
+
 
 exports.childUsers = async (req, res) => {
   try {
@@ -1717,180 +1954,312 @@ exports.getAdminFeedbackManagement = async (req, res) => {
 
     const now = new Date();
 
+    // =========================================================
+    // 1. STATS
+    // =========================================================
+
     const startOfYesterday = new Date();
     startOfYesterday.setDate(startOfYesterday.getDate() - 1);
     startOfYesterday.setHours(0, 0, 0, 0);
 
-    const ratingResult = await Feedback.aggregate([
-      {
-        $group: {
-          _id: null,
-          averageRating: {
-            $avg: "$rating",
+    const [ratingResult, sinceYesterdayFeedback] =
+      await Promise.all([
+        Feedback.aggregate([
+          {
+            $group: {
+              _id: null,
+              averageRating: {
+                $avg: "$rating",
+              },
+            },
           },
-        },
-      },
-    ]);
+        ]),
+
+        Feedback.countDocuments({
+          createdAt: {
+            $gte: startOfYesterday,
+          },
+          notes: {
+            $nin: [null, ""],
+          },
+        }),
+      ]);
 
     const averageSatisfaction = ratingResult.length
       ? Number(ratingResult[0].averageRating.toFixed(1))
       : 0;
 
-    const sinceYesterdayFeedback = await Feedback.countDocuments({
-      createdAt: {
-        $gte: startOfYesterday,
-      },
-    });
+    // =========================================================
+    // 2. FETCH FEEDBACK ONCE
+    // =========================================================
+    //
+    // We don't add any appointmentId index.
+    // We simply load the fields we actually need.
+    //
+    // =========================================================
 
-    const existingFeedbacks = await Feedback.find(
-      {},
+    const feedbacks = await Feedback.find(
+      {
+        notes: {
+          $nin: [null, ""],
+        },
+      },
       {
         appointmentId: 1,
+        therapistId: 1,
+        rating: 1,
         notes: 1,
-      },
-    ).lean();
+        replies: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      }
+    )
+      .populate("therapistId", "fullName email role")
+      .lean()
+      .sort({ createdAt: -1 });
 
-    const feedbackMap = new Map(
-      existingFeedbacks.map((feedback) => [
-        feedback.appointmentId?.toString(),
-        feedback,
-      ]),
-    );
+    // =========================================================
+    // 3. CREATE FEEDBACK MAP
+    // =========================================================
+
+    const feedbackMap = new Map();
+
+    for (const feedback of feedbacks) {
+      if (!feedback.appointmentId) continue;
+
+      feedbackMap.set(
+        feedback.appointmentId.toString(),
+        feedback
+      );
+    }
+
+    // =========================================================
+    // 4. FETCH SCHEDULES
+    // =========================================================
+    //
+    // We need schedules because appointment data is embedded
+    // inside Scheduling.
+    //
+    // =========================================================
 
     const schedules = await Scheduling.find({})
       .populate("therapistId", "fullName email role")
-      .populate("childId", "fullName email role")
+      .populate("appointments.children.childId", "fullName")
       .lean();
+
+    // =========================================================
+    // 5. BUILD APPOINTMENT MAP ONCE
+    // =========================================================
+
+    const appointmentMap = new Map();
+
+    for (const schedule of schedules) {
+      for (const appointment of schedule.appointments || []) {
+        appointmentMap.set(
+          appointment._id.toString(),
+          {
+            appointment,
+            therapistId: schedule.therapistId,
+          }
+        );
+      }
+    }
+
+    // =========================================================
+    // 6. FIND PENDING FEEDBACK
+    // =========================================================
 
     const pendingFeedback = [];
 
     for (const schedule of schedules) {
-      if (!schedule.appointments?.length) {
-        continue;
-      }
-
-      for (const appointment of schedule.appointments) {
-        const appointmentDate = new Date(appointment.date);
-        const alreadyHappened = appointmentDate < now;
-        // const hasFeedback = feedbackAppointmentIds.has(
-        //   appointment._id.toString()
-        // );
-        const feedback = feedbackMap.get(appointment._id.toString());
-        const hasPendingFeedback =
-          !feedback || feedback.notes == null || feedback.notes.trim() === "";
-
-        if (alreadyHappened && hasPendingFeedback) {
-          pendingFeedback.push({
-            appointmentId: appointment._id,
-            therapistId: schedule.therapistId,
-            childId: schedule.childId,
-            session: {
-              date: appointment.date,
-              startTime: appointment.startTime,
-              endTime: appointment.endTime,
-              attendanceStatus: appointment.attendance_status,
-            },
-          });
+      for (const appointment of schedule.appointments || []) {
+        // Don't ask feedback for cancelled appointments
+        if (appointment.sessionType === "cancel") {
+          continue;
         }
+
+        // -----------------------------------------------------
+        // Calculate actual appointment END datetime
+        // -----------------------------------------------------
+
+        const appointmentEnd = new Date(appointment.date);
+
+        const [hours, minutes] = appointment.endTime
+          .split(":")
+          .map(Number);
+
+        appointmentEnd.setHours(hours, minutes, 0, 0);
+
+        // Appointment hasn't finished yet
+        if (appointmentEnd >= now) {
+          continue;
+        }
+
+        // -----------------------------------------------------
+        // Check feedback
+        // -----------------------------------------------------
+
+        const feedback = feedbackMap.get(
+          appointment._id.toString()
+        );
+
+        // Feedback already exists
+        if (feedback) {
+          continue;
+        }
+
+        // -----------------------------------------------------
+        // KEEP YOUR EXISTING FRONTEND STRUCTURE
+        // -----------------------------------------------------
+
+        pendingFeedback.push({
+          appointmentId: appointment._id,
+
+          therapistId: schedule.therapistId,
+
+          childId:
+            appointment.children?.length > 0
+              ? appointment.children[0].childId
+              : null,
+
+          session: {
+            date: appointment.date,
+            startTime: appointment.startTime,
+            endTime: appointment.endTime,
+
+            attendanceStatus:
+              appointment.children?.length > 0
+                ? appointment.children[0].attendance_status
+                : null,
+          },
+        });
       }
     }
+
+    // =========================================================
+    // 7. RESPONSE DATA
+    // =========================================================
 
     let data = [];
 
-    if (status === "all") {
-      data = await Feedback.find({
-        notes: {
-          $nin: [null, ""],
-        },
-      })
-        .populate("therapistId", "fullName email role")
-        .populate("childId", "fullName email role")
-        .lean()
-        .sort({ createdAt: -1 });
+    // =========================================================
+    // ALL
+    // =========================================================
 
-      data = data.map((feedback) => {
-        const appointment = schedules
-          .flatMap((schedule) => schedule.appointments || [])
-          .find(
-            (appointment) =>
-              appointment._id.toString() === feedback.appointmentId?.toString(),
-          );
+    if (status === "all") {
+      data = feedbacks.map((feedback) => {
+        const appointmentData = feedback.appointmentId
+          ? appointmentMap.get(
+              feedback.appointmentId.toString()
+            )
+          : null;
+
         const { replies, ...feedbackData } = feedback;
+
         return {
           ...feedbackData,
-          isRespond: Array.isArray(replies) && replies.length > 0,
-          appointment: appointment
+
+          isRespond:
+            Array.isArray(replies) &&
+            replies.length > 0,
+
+          appointment: appointmentData
             ? {
-              startTime: appointment.startTime,
-            }
+                startTime:
+                  appointmentData.appointment.startTime,
+              }
             : null,
         };
       });
     }
+
+    // =========================================================
+    // NEW
+    // =========================================================
 
     if (status === "new") {
       const threeDaysAgo = new Date();
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
-      data = await Feedback.find({
-        notes: {
-          $nin: [null, ""],
-        },
-        createdAt: {
-          $gte: threeDaysAgo,
-        },
-      })
-        .populate("therapistId", "fullName email role")
-        .populate("childId", "fullName email role")
-        .lean()
-        .sort({ createdAt: -1 });
+      threeDaysAgo.setDate(
+        threeDaysAgo.getDate() - 3
+      );
 
-      data = data.map((feedback) => {
-        const appointment = schedules
-          .flatMap((schedule) => schedule.appointments || [])
-          .find(
-            (appointment) =>
-              appointment._id.toString() === feedback.appointmentId?.toString(),
-          );
+      data = feedbacks
+        .filter(
+          (feedback) =>
+            feedback.createdAt >= threeDaysAgo
+        )
+        .map((feedback) => {
+          const appointmentData =
+            feedback.appointmentId
+              ? appointmentMap.get(
+                  feedback.appointmentId.toString()
+                )
+              : null;
 
-        return {
-          ...feedback,
-          appointment: appointment
-            ? {
-              startTime: appointment.startTime,
-            }
-            : null,
-        };
-      });
+          return {
+            ...feedback,
+
+            appointment: appointmentData
+              ? {
+                  startTime:
+                    appointmentData.appointment
+                      .startTime,
+                }
+              : null,
+          };
+        });
     }
+
+    // =========================================================
+    // PENDING
+    // =========================================================
 
     if (status === "pending") {
       data = pendingFeedback;
 
-      data.sort((a, b) => new Date(b.session.date) - new Date(a.session.date));
+      data.sort(
+        (a, b) =>
+          new Date(b.session.date) -
+          new Date(a.session.date)
+      );
     }
+
+    // =========================================================
+    // RESPONSE
+    // =========================================================
 
     return res.status(200).json({
       success: true,
+
       status,
+
       stats: {
         pendingFeedback: pendingFeedback.length,
         sinceYesterdayFeedback,
         averageSatisfaction,
       },
+
       count: data.length,
+
       data,
     });
   } catch (error) {
-    console.error("Admin Feedback Management Error:", error);
+    console.error(
+      "Admin Feedback Management Error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch feedback management data.",
+      message:
+        "Failed to fetch feedback management data.",
       error: error.message,
     });
   }
 };
+
+
 exports.getFeedbackReplies = async (req, res) => {
   try {
     const { feedbackId } = req.params;
@@ -2528,24 +2897,6 @@ exports.updateBroadcast = async (req, res) => {
       });
   }
 };
-
-// exports.deleteBroadcast = async (req, res) => {
-//   try {
-//     const { broadcastId, IsHide = false, userID = null } = req.params;
-//     const broadcast = await Notification.findByIdAndDelete(broadcastId);
-//     if (!broadcast) {
-//       return res.status(404).json({ success: false, message: "Broadcast not found." });
-//     }
-//     if (broadcast.attachment?.url) {
-//       const filePath = path.join(__dirname, "..", broadcast.attachment.url.replace(/^\//, ""));
-//       fs.unlink(filePath, () => {}); // best-effort cleanup, no need to block response on it
-//     }
-//     return res.status(200).json({ success: true, message: "Broadcast deleted." });
-//   } catch (error) {
-//     return res.status(500).json({ success: false, message: "Failed to delete broadcast.", error: error.message });
-//   }
-// };
-
 exports.deleteBroadcast = async (req, res) => {
   try {
     const { broadcastId } = req.params;
@@ -2915,7 +3266,6 @@ exports.getMyNotifications = async (req, res) => {
     });
   }
 };
-
 exports.markNotificationRead = async (req, res) => {
   try {
     const { id } = req.params;
@@ -3254,52 +3604,6 @@ exports.deleteAvailability = async (req, res) => {
 
 
 
-exports.getBatchScheduleData = async (req, res) => {
-  try {
-    const { batchId } = req.params;
-
-    if (!mongoose.isValidObjectId(batchId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid batchId.",
-      });
-    }
-
-    const [batch, assignments] = await Promise.all([
-      Batch.findById(batchId)
-        .populate("therapistIds", "fullName email")
-        .populate("childrenIds", "fullName")
-        .lean(),
-
-      BatchAssignment.find({ batchId })
-        .populate("therapistId", "fullName email")
-        .populate("childIds", "fullName")
-        .lean(),
-    ]);
-
-    if (!batch) {
-      return res.status(404).json({
-        success: false,
-        message: "Batch not found.",
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: {
-        batch,
-        assignments,
-      },
-    });
-  } catch (error) {
-    console.error("getBatchScheduleData:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to load batch schedule data.",
-    });
-  }
-};
 exports.getBatchTherapistOptions = async (req, res) => {
   try {
     const batch = await Batch.findById(req.params.batchId).lean();
@@ -3485,41 +3789,38 @@ exports.getBatchSlotOptions = async (req, res) => {
       };
     });
 
-    // Existing batch sessions are returned as blocked slots.
     const blocked = {};
 
     WORKING_DAYS.forEach((day) => {
       blocked[day] = [];
     });
 
-    for (const assignment of existing) {
-      const therapistName =
-        assignment.therapistId?.fullName || "Therapist";
-
-      for (const session of assignment.sessions || []) {
-        if (session.status === "cancelled") continue;
-        if (session.date < today) continue;
-
-        const day = weekdayOf(session.date);
-
-        const exists = blocked[day].some(
-          (x) =>
-            x.therapistId === String(assignment.therapistId?._id) &&
-            x.startTime === session.startTime &&
-            x.endTime === session.endTime,
-        );
-
-        if (!exists) {
-          blocked[day].push({
-            therapistId: String(assignment.therapistId?._id),
-            speciality: assignment.speciality,
-            startTime: session.startTime,
-            endTime: session.endTime,
-            therapistName,
-          });
-        }
+    const nameById = new Map(
+      existing.map((a) => [String(a.therapistId?._id), a.therapistId?.fullName || "Therapist"])
+    );
+    const specByAssignment = new Map(existing.map((a) => [String(a._id), a.speciality]));
+    
+    const batchAps = await loadBatchAppointments(batch._id);
+    for (const ap of batchAps) {
+      const tid = String(ap.therapistId);
+      const date = dateKeyOf(ap.date);
+      if (!ids.includes(tid) || INACTIVE_TYPES.includes(ap.sessionType) || date < today) continue;
+    
+      const day = weekdayOf(date);
+      const exists = blocked[day].some(
+        (x) => x.therapistId === tid && x.startTime === ap.startTime && x.endTime === ap.endTime
+      );
+      if (!exists) {
+        blocked[day].push({
+          therapistId: tid,
+          speciality: specByAssignment.get(String(ap.batchAssignmentId)),
+          startTime: ap.startTime,
+          endTime: ap.endTime,
+          therapistName: nameById.get(tid) || "Therapist",
+        });
       }
     }
+
 
     return res.json({
       success: true,
@@ -3633,108 +3934,63 @@ exports.saveBatchSchedule = async (req, res) => {
 
     for (const plan of r.plans) {
       const therapistId = String(plan.therapistId);
-
       const sessions = r.toCreate.filter(
-        (s) =>
-          s.therapistId === therapistId &&
-          s.speciality === plan.speciality,
+        (s) => s.therapistId === therapistId && s.speciality === plan.speciality
       );
-
       if (!sessions.length) continue;
-
-      let assignment = await BatchAssignment.findOne({
-        batchId: batch._id,
-        therapistId,
-        speciality: plan.speciality,
-      });
-
-      if (!assignment) {
-        assignment = new BatchAssignment({
-          batchId: batch._id,
-          therapistId,
-          speciality: plan.speciality,
-          maxChildren: batch.maxChild,
-          childIds: r.children,
-          sessions: [],
-        });
-      }
-
-      assignment.sessionMinutes = r.minutes;
-      assignment.childIds = r.children;
-
-      const newSessions = [];
-
+    
+      const key = { batchId: batch._id, therapistId, speciality: plan.speciality };
+      await BatchAssignment.updateOne(
+        key,
+        {
+          $set: { childIds: r.children, sessionMinutes: r.minutes },
+          $setOnInsert: { maxChildren: batch.maxChild },
+        },
+        { upsert: true }
+      );
+      const assignment = await BatchAssignment.findOne(key).select("_id").lean();
+    
+      const byMonth = new Map();
       for (const s of sessions) {
-        const session = assignment.sessions.create({
-          date: s.date,
-          startTime: s.startTime,
-          endTime: s.endTime,
-          status: "scheduled",
-        });
-
-        assignment.sessions.push(session);
-        newSessions.push(session);
+        const k = s.date.slice(0, 7);
+        if (!byMonth.has(k)) byMonth.set(k, []);
+        byMonth.get(k).push(s);
       }
-
-      await assignment.save();
-
-      // Create therapist-month Scheduling documents
-      for (const session of newSessions) {
-        const date = utcMidnight(session.date);
-
-        const year = date.getUTCFullYear();
-        const month = date.getUTCMonth() + 1;
-
-        let schedule = await Scheduling.findOne({
-          therapistId,
-          year,
-          month,
-        });
-
-        if (!schedule) {
-          schedule = new Scheduling({
-            therapistId,
-            year,
-            month,
-            appointments: [],
+    
+      for (const [k, list] of byMonth) {
+        const [year, month] = k.split("-").map(Number);
+        const schedule =
+          (await Scheduling.findOne({ therapistId, year, month })) ||
+          new Scheduling({ therapistId, year, month, appointments: [] });
+    
+        for (const s of list) {
+          const exists = schedule.appointments.some(
+            (ap) =>
+              ap.type === "batch" &&
+              String(ap.batchAssignmentId) === String(assignment._id) &&
+              dateKeyOf(ap.date) === s.date &&
+              ap.startTime === s.startTime
+          );
+          if (exists) continue;
+    
+          schedule.appointments.push({
+            date: utcMidnight(s.date),
+            startTime: s.startTime,
+            endTime: s.endTime,
+            type: "batch",
+            batchId: batch._id,
+            batchAssignmentId: assignment._id,
+            sessionType: "regular",
+            originalAppointmentId: null,
+            children: r.children.map((childId) => ({ childId, attendance_status: "Pending" })),
           });
+          created++;
         }
-
-        const exists = schedule.appointments.some(
-          (ap) =>
-            ap.type === "batch" &&
-            String(ap.batchSessionId) === String(session._id),
-        );
-
-        if (exists) continue;
-
-        schedule.appointments.push({
-          date,
-
-          startTime: session.startTime,
-          endTime: session.endTime,
-
-          type: "batch",
-
-          batchSessionId: session._id,
-          batchId: batch._id,
-          batchAssignmentId: assignment._id,
-
-          sessionType: "regular",
-          originalAppointmentId: null,
-
-          children: r.children.map((childId) => ({
-            childId,
-            attendance_status: "Pending",
-          })),
-        });
-
         await schedule.save();
-        created++;
       }
     }
 
-    // Update batch therapist list
+
     await Batch.updateOne(
       { _id: batch._id },
       {
@@ -3828,7 +4084,10 @@ exports.getBatchEligibleChildren = async (req, res) => {
 };
 exports.updateBatchChildren = async (req, res) => {
   try {
-    const batch = await Batch.findById(req.params.batchId);
+
+    const batch = await Batch.findById(req.params.batchId)
+      .select("childrenIds maxChild dateTo")
+      .lean();
 
     if (!batch) {
       return res.status(404).json({
@@ -3841,7 +4100,7 @@ exports.updateBatchChildren = async (req, res) => {
       ...new Set(
         (Array.isArray(value) ? value : [])
           .filter((id) => mongoose.isValidObjectId(id))
-          .map(String),
+          .map(String)
       ),
     ];
 
@@ -3849,11 +4108,16 @@ exports.updateBatchChildren = async (req, res) => {
     const add = normalizeIds(req.body.addChildIds);
 
     const current = new Set(
-      (batch.childrenIds || []).map(String),
+      (batch.childrenIds || []).map(String)
     );
 
-    const actualRemove = remove.filter((id) => current.has(id));
-    const actualAdd = add.filter((id) => !current.has(id));
+    const actualRemove = remove.filter((id) =>
+      current.has(id)
+    );
+
+    const actualAdd = add.filter((id) =>
+      !current.has(id)
+    );
 
     if (!actualRemove.length && !actualAdd.length) {
       return res.status(400).json({
@@ -3873,7 +4137,6 @@ exports.updateBatchChildren = async (req, res) => {
         message: `This batch can hold ${batch.maxChild} children.`,
       });
     }
-
     if (actualAdd.length) {
       const validCount = await User.countDocuments({
         _id: { $in: actualAdd },
@@ -3893,12 +4156,20 @@ exports.updateBatchChildren = async (req, res) => {
 
     const finalChildren = [...current];
 
-    batch.childrenIds = finalChildren;
-    await batch.save();
+    await Batch.updateOne(
+      { _id: batch._id },
+      {
+        $set: {
+          childrenIds: finalChildren,
+        },
+      }
+    );
 
     const assignments = await BatchAssignment.find({
       batchId: batch._id,
-    });
+    })
+      .select("_id therapistId sessions")
+      .lean();
 
     if (!assignments.length) {
       return res.json({
@@ -3913,164 +4184,152 @@ exports.updateBatchChildren = async (req, res) => {
       });
     }
 
+    await BatchAssignment.updateMany(
+      { batchId: batch._id },
+      {
+        $set: {
+          childIds: finalChildren,
+        },
+      }
+    );
+
     const st = await loadScheduleSettings();
+
     const today = todayKey(st.tz);
     const batchEnd = dateKeyOf(batch.dateTo);
 
+
     if (actualRemove.length) {
-      const schedules = await Scheduling.find({
-        "appointments.batchId": batch._id,
-      });
-
-      for (const schedule of schedules) {
-        let changed = false;
-
-        for (const appointment of schedule.appointments) {
-          if (
-            appointment.type !== "batch" ||
-            String(appointment.batchId) !== String(batch._id) ||
-            dateKeyOf(appointment.date) < today
-          ) {
-            continue;
-          }
-
-          const before = appointment.children.length;
-
-          appointment.children = appointment.children.filter(
-            (child) =>
-              !(
-                actualRemove.includes(String(child.childId)) &&
-                child.attendance_status === "Pending"
-              ),
-          );
-
-          if (appointment.children.length !== before) {
-            changed = true;
-          }
-        }
-
-        if (changed) {
-          await schedule.save();
-        }
-      }
-    }
-
-    const skipped = [];
-
-    const childBusy = new Map(
-      actualAdd.map((id) => [id, []]),
-    );
-
-    if (actualAdd.length) {
-      const schedules = await Scheduling.find({
-        "appointments.date": {
-          $gte: utcMidnight(today),
-          $lte: utcMidnight(batchEnd),
+      await Scheduling.updateMany(
+        {
+          appointments: {
+            $elemMatch: {
+              type: "batch",
+              batchId: batch._id,
+              date: {
+                $gte: utcMidnight(today),
+                $lte: utcMidnight(batchEnd),
+              },
+              children: {
+                $elemMatch: {
+                  childId: {
+                    $in: actualRemove,
+                  },
+                  attendance_status: "Pending",
+                },
+              },
+            },
+          },
         },
-        "appointments.children.childId": {
-          $in: actualAdd,
-        },
-      }).lean();
-
-      for (const schedule of schedules) {
-        for (const appointment of schedule.appointments || []) {
-          const date = dateKeyOf(appointment.date);
-
-          if (date < today || date > batchEnd) continue;
-
-          for (const child of appointment.children || []) {
-            const childId = String(child.childId);
-
-            if (!childBusy.has(childId)) continue;
-
-            childBusy.get(childId).push({
-              date,
-              startTime: appointment.startTime,
-              endTime: appointment.endTime,
-            });
-          }
-        }
-      }
-    }
-
-    for (const assignment of assignments) {
-      assignment.childIds = finalChildren;
-      await assignment.save();
-
-      if (!actualAdd.length) continue;
-
-      const upcomingSessions = (assignment.sessions || []).filter(
-        (session) =>
-          session.status === "scheduled" &&
-          session.date >= today &&
-          session.date <= batchEnd,
-      );
-
-      if (!upcomingSessions.length) continue;
-
-      for (const childId of actualAdd) {
-        const busy = childBusy.get(childId) || [];
-
-        for (const session of upcomingSessions) {
-          const hasConflict = busy.some(
-            (b) =>
-              b.date === session.date &&
-              toMin(b.startTime) < toMin(session.endTime) &&
-              toMin(session.startTime) < toMin(b.endTime),
-          );
-
-          if (hasConflict) {
-            skipped.push({
-              childId,
-              date: session.date,
-              startTime: session.startTime,
-              endTime: session.endTime,
-              reason: "Child already has another appointment.",
-            });
-
-            continue;
-          }
-
-          const sessionDate = utcMidnight(session.date);
-
-          const year = sessionDate.getUTCFullYear();
-          const month = sessionDate.getUTCMonth() + 1;
-
-          const schedule = await Scheduling.findOne({
-            therapistId: assignment.therapistId,
-            year,
-            month,
-          });
-
-          if (!schedule) continue;
-
-          const appointment = schedule.appointments.find(
-            (ap) =>
-              ap.type === "batch" &&
-              String(ap.batchId) === String(batch._id) &&
-              String(ap.batchAssignmentId) === String(assignment._id) &&
-              String(ap.batchSessionId) === String(session._id),
-          );
-
-          if (!appointment) continue;
-
-          const alreadyAdded = appointment.children.some(
-            (child) =>
-              String(child.childId) === String(childId),
-          );
-
-          if (!alreadyAdded) {
-            appointment.children.push({
-              childId,
+        {
+          $pull: {
+            "appointments.$[appointment].children": {
+              childId: {
+                $in: actualRemove,
+              },
               attendance_status: "Pending",
-            });
-
-            await schedule.save();
-          }
+            },
+          },
+        },
+        {
+          arrayFilters: [
+            {
+              "appointment.type": "batch",
+              "appointment.batchId": batch._id,
+              "appointment.date": {
+                $gte: utcMidnight(today),
+                $lte: utcMidnight(batchEnd),
+              },
+            },
+          ],
         }
-      }
+      );
     }
 
+    if (!actualAdd.length) {
+      return res.json({
+        success: true,
+        message: "Batch children updated.",
+        data: {
+          added: 0,
+          removed: actualRemove.length,
+          skippedSessions: 0,
+          skipped: [],
+        },
+      });
+    }
+
+    const addObjIds = actualAdd.map((id) => new mongoose.Types.ObjectId(id));
+ 
+    const busyRows = await Scheduling.aggregate([
+      { $match: { "appointments.children.childId": { $in: addObjIds } } },
+      { $unwind: "$appointments" },
+      {
+        $match: {
+          "appointments.children.childId": { $in: addObjIds },
+          "appointments.date": { $gte: utcMidnight(today) },
+          "appointments.sessionType": { $nin: INACTIVE_TYPES },
+        },
+      },
+      { $replaceRoot: { newRoot: "$appointments" } },
+    ]);
+    
+    const childBusy = new Map(actualAdd.map((id) => [id, []]));
+    for (const ap of busyRows) {
+      for (const c of ap.children || []) {
+        const list = childBusy.get(String(c.childId));
+        if (list) list.push({ date: dateKeyOf(ap.date), startTime: ap.startTime, endTime: ap.endTime });
+      }
+    }
+    
+    const upcomingAps = await loadBatchAppointments(batch._id, {
+      "appointments.sessionType": { $nin: INACTIVE_TYPES },
+      "appointments.date": { $gte: utcMidnight(today) },
+    });
+    
+    const skipped = [];
+    const ops = [];
+    
+    for (const ap of upcomingAps) {
+      const date = dateKeyOf(ap.date);
+      const already = new Set((ap.children || []).map((c) => String(c.childId)));
+      const toAdd = [];
+    
+      for (const childId of actualAdd) {
+        if (already.has(childId)) continue;
+        const clash = (childBusy.get(childId) || []).some(
+          (b) =>
+            b.date === date &&
+            toMin(b.startTime) < toMin(ap.endTime) &&
+            toMin(ap.startTime) < toMin(b.endTime)
+        );
+        if (clash) {
+          skipped.push({
+            childId,
+            date,
+            startTime: ap.startTime,
+            endTime: ap.endTime,
+            reason: "Child already has another appointment.",
+          });
+        } else {
+          toAdd.push({ childId, attendance_status: "Pending" });
+        }
+      }
+    
+      if (toAdd.length) {
+        ops.push({
+          updateOne: {
+            filter: { "appointments._id": ap._id },
+            update: { $push: { "appointments.$.children": { $each: toAdd } } },
+          },
+        });
+      }
+    }
+    
+    for (let i = 0; i < ops.length; i += 500) {
+      await Scheduling.bulkWrite(ops.slice(i, i + 500), { ordered: false });
+    }
+    
     return res.json({
       success: true,
       message: "Batch children updated.",
@@ -4082,11 +4341,15 @@ exports.updateBatchChildren = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("updateBatchChildren:", error);
+    console.error(
+      "updateBatchChildren:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Failed to update batch children.",
+      message:
+        "Failed to update batch children.",
     });
   }
 };
@@ -4107,7 +4370,9 @@ exports.removeBatchAssignment = async (req, res) => {
     const assignment = await BatchAssignment.findOne({
       _id: assignmentId,
       batchId,
-    });
+    })
+      .select("_id therapistId batchId")
+      .lean();
 
     if (!assignment) {
       return res.status(404).json({
@@ -4119,43 +4384,66 @@ exports.removeBatchAssignment = async (req, res) => {
     const st = await loadScheduleSettings();
     const today = todayKey(st.tz);
 
-    // Remove future appointments belonging to this assignment.
     const schedules = await Scheduling.find({
       "appointments.batchAssignmentId": assignment._id,
-    });
+    })
+      .select("_id appointments._id appointments.date appointments.batchAssignmentId")
+      .lean();
 
-    let removedAppointments = 0;
+    const futureAppointmentIds = [];
 
     for (const schedule of schedules) {
-      const before = schedule.appointments.length;
+      for (const appointment of schedule.appointments || []) {
+        if (
+          String(appointment.batchAssignmentId) !==
+          String(assignment._id)
+        ) {
+          continue;
+        }
 
-      schedule.appointments = schedule.appointments.filter(
-        (appointment) =>
-          !(
-            String(appointment.batchAssignmentId) ===
-              String(assignment._id) &&
-            dateKeyOf(appointment.date) >= today
-          ),
-      );
+        if (dateKeyOf(appointment.date) < today) {
+          continue;
+        }
 
-      const removed =
-        before - schedule.appointments.length;
-
-      if (removed > 0) {
-        removedAppointments += removed;
-        await schedule.save();
+        futureAppointmentIds.push(
+          appointment._id
+        );
       }
     }
+    let removedAppointments = 0;
 
-    const therapistId = String(assignment.therapistId);
+    if (futureAppointmentIds.length) {
+      removedAppointments =
+        futureAppointmentIds.length;
 
-    // Delete assignment
-    await BatchAssignment.deleteOne({
-      _id: assignment._id,
-    });
+      await Scheduling.updateMany(
+        {},
+        {
+          $pull: {
+            appointments: {
+              _id: {
+                $in: futureAppointmentIds,
+              },
+            },
+          },
+        }
+      );
+      await Scheduling.deleteMany({
+        appointments: { $size: 0 },
+      });
+    }
 
-    // Check whether therapist still has another assignment
-    // for this batch.
+    const hasPast = await Scheduling.exists({ "appointments.batchAssignmentId": assignment._id });
+    if (hasPast) {
+      return res.json({
+        success: true,
+        message: "Upcoming sessions removed. Past sessions were kept for history.",
+        data: { removedAppointments },
+      });
+    }
+    await BatchAssignment.deleteOne({ _id: assignment._id });
+
+
     const therapistStillAssigned =
       await BatchAssignment.exists({
         batchId,
@@ -4167,9 +4455,10 @@ exports.removeBatchAssignment = async (req, res) => {
         { _id: batchId },
         {
           $pull: {
-            therapistIds: assignment.therapistId,
+            therapistIds:
+              assignment.therapistId,
           },
-        },
+        }
       );
     }
 
@@ -4177,17 +4466,814 @@ exports.removeBatchAssignment = async (req, res) => {
       success: true,
       message: "Batch assignment removed.",
       data: {
-        assignmentId: String(assignment._id),
-        therapistId,
+        assignmentId: String(
+          assignment._id
+        ),
+        therapistId: String(
+          assignment.therapistId
+        ),
         removedAppointments,
       },
     });
   } catch (error) {
-    console.error("removeBatchAssignment:", error);
+    console.error(
+      "removeBatchAssignment:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Failed to remove batch assignment.",
+      message:
+        "Failed to remove batch assignment.",
+    });
+  }
+};
+exports.getBatchScheduleData = async (req, res) => {
+  try {
+    const { batchId } = req.params;
+ 
+    if (!mongoose.isValidObjectId(batchId)) {
+      return res.status(400).json({ success: false, message: "Invalid batchId." });
+    }
+ 
+    const [batch, assignments] = await Promise.all([
+      Batch.findById(batchId)
+        .populate("therapistIds", "fullName email")
+        .populate("childrenIds", "fullName")
+        .lean(),
+      BatchAssignment.find({ batchId })
+        .populate("therapistId", "fullName email")
+        .populate("childIds", "fullName")
+        .lean(),
+    ]);
+ 
+    if (!batch) {
+      return res.status(404).json({ success: false, message: "Batch not found." });
+    }
+ 
+    const aps = await loadBatchAppointments(batch._id);
+    const byAssignment = new Map();
+    for (const ap of aps) {
+      const key = String(ap.batchAssignmentId);
+      if (!byAssignment.has(key)) byAssignment.set(key, []);
+      byAssignment.get(key).push({
+        _id: ap._id,
+        date: dateKeyOf(ap.date),
+        startTime: ap.startTime,
+        endTime: ap.endTime,
+        sessionType: ap.sessionType || "regular",
+        status: INACTIVE_TYPES.includes(ap.sessionType) ? "cancelled" : "scheduled",
+      });
+    }
+    for (const a of assignments) {
+      a.sessions = (byAssignment.get(String(a._id)) || []).sort((x, y) =>
+        x.date === y.date ? x.startTime.localeCompare(y.startTime) : x.date.localeCompare(y.date)
+      );
+    }
+    return res.json({ success: true, data: { batch, assignments } });
+
+  } catch (error) {
+    console.error("getBatchScheduleData:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load batch schedule data.",
+    });
+  }
+};
+exports.getSessionSlotOptions = async (req, res) => {
+  try {
+    const loaded = await loadBatchAndAssignment(req.params.batchId, req.params.assignmentId);
+    if (loaded.status) {
+      return res.status(loaded.status).json({ success: false, message: loaded.message });
+    }
+ 
+    const minutes = Number(req.body.sessionMinutes);
+    if (!SESSION_TIMES.includes(minutes)) {
+      return res.status(400).json({
+        success: false,
+        message: "Session time must be 45, 60, 90 or 120 minutes.",
+      });
+    }
+ 
+    const r = await freeSlotsForDate({
+      batch: loaded.batch,
+      therapistId: loaded.assignment.therapistId,
+      date: req.body.date,
+      minutes,
+    });
+ 
+    if (r.error) return res.status(400).json({ success: false, message: r.error });
+ 
+    return res.json({ success: true, data: { slots: r.slots, reason: r.reason } });
+  } catch (error) {
+    console.error("getSessionSlotOptions:", error);
+    return res.status(500).json({ success: false, message: "Failed to load available times." });
+  }
+};
+exports.createAdditionalSession = async (req, res) => {
+  try {
+    const loaded = await loadBatchAndAssignment(req.params.batchId, req.params.assignmentId);
+    if (loaded.status) {
+      return res.status(loaded.status).json({ success: false, message: loaded.message });
+    }
+    const { batch, assignment } = loaded;
+    const { date, startTime, endTime } = req.body;
+ 
+    if (!TIME_REGEX.test(startTime || "") || !TIME_REGEX.test(endTime || "")) {
+      return res.status(400).json({ success: false, message: "Start and end time must be HH:mm." });
+    }
+    const minutes = toMin(endTime) - toMin(startTime);
+    if (!SESSION_TIMES.includes(minutes)) {
+      return res.status(400).json({
+        success: false,
+        message: "Session time must be 45, 60, 90 or 120 minutes.",
+      });
+    }
+ 
+    const r = await freeSlotsForDate({
+      batch,
+      therapistId: assignment.therapistId,
+      date,
+      minutes,
+    });
+    if (r.error) return res.status(400).json({ success: false, message: r.error });
+ 
+    if (!r.slots.some((s) => s.startTime === startTime && s.endTime === endTime)) {
+      return res.status(409).json({
+        success: false,
+        message: "That time is no longer available. Pick another one.",
+      });
+    }
+ 
+    await createExtraSession({
+      batch,
+      assignment,
+      date,
+      startTime,
+      endTime,
+      sessionType: "additional",
+      childIds: batch.childrenIds || [],
+    });
+ 
+    return res.status(201).json({
+      success: true,
+      message: "Additional class created.",
+      data: { date, startTime, endTime, children: (batch.childrenIds || []).length },
+    });
+  } catch (error) {
+    console.error("createAdditionalSession:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create additional class.",
+      error: error.message,
+    });
+  }
+};
+exports.postponeBatchSession = async (req, res) => {
+  try {
+    const { batchId, assignmentId, sessionId } = req.params;
+    const loaded = await loadBatchAndAssignment(batchId, assignmentId);
+    if (loaded.status) {
+      return res.status(loaded.status).json({ success: false, message: loaded.message });
+    }
+    const { batch, assignment } = loaded;
+ 
+    const { sessionId: appointmentId } = req.params;
+ 
+    const originalDoc = await Scheduling.findOne(
+      { appointments: { $elemMatch: { _id: appointmentId, batchAssignmentId: assignment._id } } },
+      { therapistId: 1, "appointments.$": 1 }
+    ).lean();
+    const originalAp = originalDoc?.appointments?.[0];
+    if (!originalAp) {
+      return res.status(404).json({ success: false, message: "Session not found." });
+    }
+    if (INACTIVE_TYPES.includes(originalAp.sessionType)) {
+      return res.status(400).json({ success: false, message: "This session was already postponed or cancelled." });
+    }
+    
+    const st = await loadScheduleSettings();
+    const origDate = dateKeyOf(originalAp.date);
+    if (origDate < todayKey(st.tz) || (origDate === todayKey(st.tz) && toMin(originalAp.endTime) <= clockMinutes(st.tz))) {
+      return res.status(400).json({ success: false, message: "Past sessions can't be postponed." });
+    }
+    
+    const createAlternate = req.body.createAlternate === true || req.body.createAlternate === "true";
+    const minutes = toMin(originalAp.endTime) - toMin(originalAp.startTime);
+    
+    let alternate = null;
+    if (createAlternate) {
+      const { date, startTime, endTime } = req.body;
+ 
+      if (!TIME_REGEX.test(startTime || "") || !TIME_REGEX.test(endTime || "")) {
+        return res.status(400).json({ success: false, message: "Pick a date and time for the alternate session." });
+      }
+      if (toMin(endTime) - toMin(startTime) !== minutes) {
+        return res.status(400).json({
+          success: false,
+          message: `The alternate session must be ${minutes} minutes long.`,
+        });
+      }
+ 
+      const r = await freeSlotsForDate({
+        batch,
+        therapistId: assignment.therapistId,
+        date,
+        minutes,
+      });
+      if (r.error) return res.status(400).json({ success: false, message: r.error });
+ 
+      if (!r.slots.some((s) => s.startTime === startTime && s.endTime === endTime)) {
+        return res.status(409).json({
+          success: false,
+          message: "That time is no longer available. Pick another one.",
+        });
+      }
+ 
+      const childIds = originalAp
+        ? (originalAp.children || []).map((c) => c.childId)
+        : batch.childrenIds || [];
+ 
+      alternate = await createExtraSession({
+        batch,
+        assignment,
+        date: req.body.date,
+        startTime: req.body.startTime,
+        endTime: req.body.endTime,
+        sessionType: "alternate",
+        originalAppointmentId: originalAp._id,
+        childIds: (originalAp.children || []).map((c) => c.childId),
+      });
+    }
+
+ 
+    await Scheduling.updateOne(
+      { _id: originalDoc._id, "appointments._id": originalAp._id },
+      { $set: { "appointments.$.sessionType": createAlternate ? "postponed" : "cancel" } }
+    );
+    
+    return res.json({
+      success: true,
+      message: createAlternate ? "Session postponed and alternate session created." : "Session postponed.",
+      data: { alternateSessionId: alternate ? String(alternate.appointmentId) : null },
+    });
+  } catch (error) {
+    console.error("postponeBatchSession:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to postpone session.",
+      error: error.message,
+    });
+  }
+};
+exports.deleteBatchSession = async (req, res) => {
+  try {
+    const { assignmentId, sessionId } = req.params;
+    if (!mongoose.isValidObjectId(assignmentId) || !mongoose.isValidObjectId(sessionId)) {
+      return res.status(400).json({ success: false, message: "Invalid id." });
+    }
+ 
+    const doc = await Scheduling.findOne(
+      { appointments: { $elemMatch: { _id: sessionId, batchAssignmentId: assignmentId } } },
+      { therapistId: 1, "appointments.$": 1 }
+    ).lean();
+    const ap = doc?.appointments?.[0];
+    if (!ap) return res.status(404).json({ success: false, message: "Session not found." });
+ 
+    const st = await loadScheduleSettings();
+    const today = todayKey(st.tz);
+    const date = dateKeyOf(ap.date);
+    if (date < today || (date === today && toMin(ap.endTime) <= clockMinutes(st.tz))) {
+      return res.status(400).json({ success: false, message: "Past sessions can't be deleted." });
+    }
+ 
+    await Scheduling.updateOne({ _id: doc._id }, { $pull: { appointments: { _id: ap._id } } });
+    return res.json({ success: true, message: "Session deleted." });
+  } catch (error) {
+    console.error("deleteBatchSession:", error);
+    return res.status(500).json({ success: false, message: "Failed to delete session." });
+  }
+};
+
+
+
+const loadChild = (childId) =>
+  mongoose.isValidObjectId(childId)
+    ? User.findOne({ _id: childId, role: "Child" }, "fullName email phone fatherName age").lean()
+    : null;
+
+exports.getChildSchedule = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const child = await loadChild(childId);
+    if (!child) {
+      return res.status(404).json({ success: false, message: "Child not found." });
+    }
+
+    const pastDays = Math.min(Math.max(parseInt(req.query.pastDays, 10) || 90, 1), 365);
+
+    const st = await loadScheduleSettings();
+    const today = todayKey(st.tz);
+    const nowMin = clockMinutes(st.tz);
+    const cutoff = addDays(today, -pastDays);
+
+    const [schedules, batches] = await Promise.all([
+      Scheduling.find({ "appointments.children.childId": childId })
+        .populate("therapistId", "fullName")
+        .populate("appointments.batchId", "batchName")
+        .populate("appointments.batchAssignmentId", "speciality")
+        .lean(),
+
+      Batch.find({ childrenIds: childId })
+        .select("batchName speciality dateFrom dateTo maxChild childrenIds")
+        .sort({ dateFrom: -1 })
+        .lean(),
+    ]);
+
+    const therapistIds = [
+      ...new Set(schedules.map((s) => String(s.therapistId?._id || s.therapistId))),
+    ];
+    const therapistAssignments = therapistIds.length
+      ? await TherapistAssignment.find({ therapistId: { $in: therapistIds } }, "therapistId specialty").lean()
+      : [];
+    const specByTherapist = new Map();
+    for (const a of therapistAssignments) {
+      if (a.specialty && !specByTherapist.has(String(a.therapistId))) {
+        specByTherapist.set(String(a.therapistId), a.specialty);
+      }
+    }
+
+    const sessions = [];
+
+    for (const sc of schedules) {
+      const therapistKey = String(sc.therapistId?._id || sc.therapistId);
+
+      for (const ap of sc.appointments || []) {
+        const mine = (ap.children || []).find((c) => String(c.childId) === String(childId));
+        if (!mine) continue;
+
+        const date = dateKeyOf(ap.date);
+        if (date < cutoff) continue;
+
+        const isCustom = ap.type === "custom";
+        const sessionType = ap.sessionType || "regular";
+        const isPast = date < today || (date === today && toMin(ap.endTime) <= nowMin);
+
+        sessions.push({
+          id: String(ap._id),
+          date,
+          startTime: ap.startTime,
+          endTime: ap.endTime,
+          type: ap.type,
+          sessionType,
+          batchId: ap.batchId?._id ? String(ap.batchId._id) : ap.batchId ? String(ap.batchId) : null,
+          batchName: isCustom ? null : ap.batchId?.batchName || "Batch Session",
+          speciality: ap.batchAssignmentId?.speciality || specByTherapist.get(therapistKey) || null,
+          therapistId: therapistKey,
+          therapistName: sc.therapistId?.fullName || "Therapist",
+          attendance: mine.attendance_status || "Pending",
+          isPast,
+          canCancel: isCustom && !isPast && sessionType !== "cancel",
+        });
+      }
+    }
+
+    sessions.sort((a, b) =>
+      a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date),
+    );
+
+    const upcoming = sessions.filter((s) => !s.isPast);
+    const past = sessions.filter((s) => s.isPast).reverse();
+
+    const counted = past.filter((s) => !INACTIVE_TYPES.includes(s.sessionType));
+    const stats = {
+      present: counted.filter((s) => s.attendance === "Complete").length,
+      absent: counted.filter((s) => s.attendance === "Absent").length,
+      notMarked: counted.filter((s) => s.attendance === "Pending").length,
+      total: counted.length,
+    };
+
+    return res.json({
+      success: true,
+      data: {
+        today,
+        pastDays,
+        child,
+        stats,
+        batches: batches.map((b) => ({
+          _id: b._id,
+          batchName: b.batchName,
+          speciality: b.speciality,
+          dateFrom: b.dateFrom,
+          dateTo: b.dateTo,
+          maxChild: b.maxChild,
+          childCount: (b.childrenIds || []).length,
+        })),
+        upcoming,
+        past,
+      },
+    });
+  } catch (error) {
+    console.error("getChildSchedule:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load child schedule.",
+      error: error.message,
+    });
+  }
+};
+exports.getChildBatchOptions = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const child = await loadChild(childId);
+    if (!child) {
+      return res.status(404).json({ success: false, message: "Child not found." });
+    }
+
+    const st = await loadScheduleSettings();
+    const today = todayKey(st.tz);
+
+    const batches = await Batch.find({
+      childrenIds: { $ne: childId },
+      dateTo: { $gte: utcMidnight(today) },
+      $expr: { $lt: [{ $size: { $ifNull: ["$childrenIds", []] } }, "$maxChild"] },
+    })
+      .select("batchName speciality dateFrom dateTo maxChild childrenIds")
+      .sort({ dateFrom: 1 })
+      .lean();
+
+    return res.json({
+      success: true,
+      data: batches.map((b) => {
+        const count = (b.childrenIds || []).length;
+        return {
+          _id: b._id,
+          batchName: b.batchName,
+          speciality: b.speciality,
+          dateFrom: b.dateFrom,
+          dateTo: b.dateTo,
+          maxChild: b.maxChild,
+          childCount: count,
+          remaining: Math.max(b.maxChild - count, 0),
+        };
+      }),
+    });
+  } catch (error) {
+    console.error("getChildBatchOptions:", error);
+    return res.status(500).json({ success: false, message: "Failed to load batches." });
+  }
+};
+exports.getChildCustomSlotOptions = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const { therapistId, date } = req.body;
+    const minutes = Number(req.body.sessionMinutes);
+
+    if (!(await loadChild(childId))) {
+      return res.status(404).json({ success: false, message: "Child not found." });
+    }
+    if (!mongoose.isValidObjectId(therapistId)) {
+      return res.status(400).json({ success: false, message: "Select a therapist." });
+    }
+    if (!SESSION_TIMES.includes(minutes)) {
+      return res.status(400).json({
+        success: false,
+        message: "Session time must be 45, 60, 90 or 120 minutes.",
+      });
+    }
+
+    const r = await computeFreeSlots({ therapistId, childIds: [childId], date, minutes });
+    if (r.error) return res.status(400).json({ success: false, message: r.error });
+
+    return res.json({ success: true, data: { slots: r.slots, reason: r.reason } });
+  } catch (error) {
+    console.error("getChildCustomSlotOptions:", error);
+    return res.status(500).json({ success: false, message: "Failed to load available times." });
+  }
+};
+exports.createChildCustomAppointment = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const { therapistId, date, startTime, endTime } = req.body;
+
+    if (!(await loadChild(childId))) {
+      return res.status(404).json({ success: false, message: "Child not found." });
+    }
+    if (!mongoose.isValidObjectId(therapistId)) {
+      return res.status(400).json({ success: false, message: "Select a therapist." });
+    }
+    const therapist = await User.findOne({ _id: therapistId, role: "Therapist" }, "_id").lean();
+    if (!therapist) {
+      return res.status(404).json({ success: false, message: "Therapist not found." });
+    }
+    if (!TIME_REGEX.test(startTime || "") || !TIME_REGEX.test(endTime || "")) {
+      return res.status(400).json({ success: false, message: "Start and end time must be HH:mm." });
+    }
+    const minutes = toMin(endTime) - toMin(startTime);
+    if (!SESSION_TIMES.includes(minutes)) {
+      return res.status(400).json({
+        success: false,
+        message: "Session time must be 45, 60, 90 or 120 minutes.",
+      });
+    }
+
+    const r = await computeFreeSlots({ therapistId, childIds: [childId], date, minutes });
+    if (r.error) return res.status(400).json({ success: false, message: r.error });
+    if (!r.slots.some((s) => s.startTime === startTime && s.endTime === endTime)) {
+      return res.status(409).json({
+        success: false,
+        message: "That time is no longer available. Pick another one.",
+      });
+    }
+
+    const d = utcMidnight(date);
+    const year = d.getUTCFullYear();
+    const month = d.getUTCMonth() + 1;
+
+    let schedule = await Scheduling.findOne({ therapistId, year, month });
+    if (!schedule) {
+      schedule = new Scheduling({ therapistId, year, month, appointments: [] });
+    }
+
+    schedule.appointments.push({
+      date: d,
+      startTime,
+      endTime,
+      type: "custom",
+      sessionType: "regular",
+      children: [{ childId, attendance_status: "Pending" }],
+    });
+
+    await schedule.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Appointment created.",
+      data: { date, startTime, endTime },
+    });
+  } catch (error) {
+    console.error("createChildCustomAppointment:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create appointment.",
+      error: error.message,
+    });
+  }
+};
+exports.deleteChildCustomAppointment = async (req, res) => {
+  try {
+    const { childId, appointmentId } = req.params;
+
+    if (!mongoose.isValidObjectId(childId) || !mongoose.isValidObjectId(appointmentId)) {
+      return res.status(400).json({ success: false, message: "Invalid id." });
+    }
+
+    const doc = await Scheduling.findOne({
+      appointments: {
+        $elemMatch: { _id: appointmentId, type: "custom", "children.childId": childId },
+      },
+    });
+    const ap = doc?.appointments.id(appointmentId);
+
+    if (!ap) {
+      return res.status(404).json({ success: false, message: "Appointment not found." });
+    }
+
+    const st = await loadScheduleSettings();
+    const today = todayKey(st.tz);
+    const date = dateKeyOf(ap.date);
+    if (date < today || (date === today && toMin(ap.endTime) <= clockMinutes(st.tz))) {
+      return res.status(400).json({
+        success: false,
+        message: "Past appointments can't be cancelled.",
+      });
+    }
+
+    if ((ap.children || []).length > 1) {
+      ap.children = ap.children.filter((c) => String(c.childId) !== String(childId));
+    } else {
+      doc.appointments.pull(ap._id);
+    }
+
+    await doc.save();
+
+    return res.json({ success: true, message: "Appointment cancelled." });
+  } catch (error) {
+    console.error("deleteChildCustomAppointment:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to cancel appointment.",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+exports.getAllPackages = async (req, res) => {
+  try {
+    const packages = await Package.find()
+      .populate("createdBy", "fullName email")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      data: packages,
+    });
+  } catch (error) {
+    console.error("getAllPackages:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch packages.",
+    });
+  }
+};
+exports.getPackageById = async (req, res) => {
+  try {
+    const packageData = await Package.findById(req.params.packageId)
+      .populate("createdBy", "fullName email")
+      .lean();
+
+    if (!packageData) {
+      return res.status(404).json({
+        success: false,
+        message: "Package not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: packageData,
+    });
+  } catch (error) {
+    console.error("getPackageById:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch package.",
+    });
+  }
+};
+exports.createPackage = async (req, res) => {
+  try {
+    const {
+      name,
+      type,
+      specialities,
+      price,
+      sessionMinutes,
+      sessions,
+    } = req.body;
+
+    if (!name || !type || !specialities || !price) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, type, speciality and price are required.",
+      });
+    }
+
+    if (!Array.isArray(specialities) || specialities.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one speciality is required.",
+      });
+    }
+
+    if (type === "per-session" && specialities.length !== 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Per-session package must have exactly one speciality.",
+      });
+    }
+
+    const packageData = await Package.create({
+      name: name.trim(),
+      type,
+      specialities,
+      price: Number(price),
+      sessionMinutes: Number(sessionMinutes) || 60,
+      sessions: Number(sessions) || 1,
+      createdBy: req.user._id,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Package created successfully.",
+      data: packageData,
+    });
+  } catch (error) {
+    console.error("createPackage:", error);
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create package.",
+    });
+  }
+};
+exports.updatePackage = async (req, res) => {
+  try {
+    const {
+      name,
+      type,
+      specialities,
+      price,
+      sessionMinutes,
+      sessions,
+    } = req.body;
+
+    const packageData = await Package.findById(req.params.packageId);
+
+    if (!packageData) {
+      return res.status(404).json({
+        success: false,
+        message: "Package not found.",
+      });
+    }
+
+    if (!name || !type || !specialities || !price) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, type, speciality and price are required.",
+      });
+    }
+
+    if (!Array.isArray(specialities) || specialities.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one speciality is required.",
+      });
+    }
+
+    if (type === "per-session" && specialities.length !== 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Per-session package must have exactly one speciality.",
+      });
+    }
+
+    packageData.name = name.trim();
+    packageData.type = type;
+    packageData.specialities = specialities;
+    packageData.price = Number(price);
+    packageData.sessionMinutes = Number(sessionMinutes) || 60;
+    packageData.sessions = Number(sessions) || 1;
+
+    await packageData.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Package updated successfully.",
+      data: packageData,
+    });
+  } catch (error) {
+    console.error("updatePackage:", error);
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update package.",
+    });
+  }
+};
+exports.deletePackage = async (req, res) => {
+  try {
+    const packageData = await Package.findById(req.params.packageId);
+
+    if (!packageData) {
+      return res.status(404).json({
+        success: false,
+        message: "Package not found.",
+      });
+    }
+
+    await Package.findByIdAndDelete(req.params.packageId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Package deleted successfully.",
+    });
+  } catch (error) {
+    console.error("deletePackage:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete package.",
     });
   }
 };

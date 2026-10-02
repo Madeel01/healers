@@ -55,17 +55,17 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
   const [step, setStep] = useState(1);
   const [minutes, setMinutes] = useState(null);
 
-  const [groups, setGroups] = useState([]); // [{ speciality, therapists:[...] }]
+  const [groups, setGroups] = useState([]); 
   const [loadingGroups, setLoadingGroups] = useState(true);
-  const [team, setTeam] = useState([]); // [{ key, therapistId, speciality, name }]
+  const [team, setTeam] = useState([]); 
 
-  const [options, setOptions] = useState({}); // key -> { Mon:[{startTime,endTime}] }
-  const [blocked, setBlocked] = useState({}); // day -> [{startTime,endTime,therapistName}]
-  const [picked, setPicked] = useState({}); // key -> { Mon:[slot] }
+  const [options, setOptions] = useState({}); 
+  const [blocked, setBlocked] = useState({});
+  const [picked, setPicked] = useState({}); 
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   const [review, setReview] = useState(null);
-  const [resolution, setResolution] = useState({}); // key -> "skip" | "remove"
+  const [resolution, setResolution] = useState({}); 
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -81,7 +81,6 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
     })();
   }, [batchId]);
 
-  // ---------- step 1 ----------
   const toggleTherapist = (speciality, t) => {
     const key = `${t._id}|${speciality}`;
     setTeam((cur) =>
@@ -118,9 +117,6 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
     }
   };
 
-  // ---------- step 2 ----------
-  // why a slot can't be used (null = free). Covers times already used by the
-  // batch and times picked for any other therapist / speciality.
   const takenReason = (key, day, slot) => {
     const b = (blocked[day] || []).find((x) => overlaps(x, slot));
     if (b) return `Already used by ${b.therapistName} in this batch.`;
@@ -172,7 +168,6 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
         ),
       }));
 
-  // ---------- review ----------
   const startReview = async () => {
     const missing = team.find((t) => pickedCount(t.key) === 0);
     if (missing) {
@@ -224,7 +219,6 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
     }
   };
 
-  // ---------- render ----------
   return (
     <SafeAreaView style={styles.main}>
       <View style={styles.header}>
@@ -307,7 +301,7 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={styles.hint}>
             {minutes} minute sessions. A time picked for one therapist is locked for everyone else, so
-            the children never have two classes at once.
+            the children never have two sessions at once.
           </Text>
 
           {team.map((t) => {

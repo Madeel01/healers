@@ -17093,3 +17093,9 @@
 {"_e":"metro:client_log","_t":1790862382890,"level":"log","data":["fetchNotificationUnreadCount error:","[ReferenceError: Property 'getUnreadNotificationCountApi' doesn't exist]"]}
 {"_e":"metro:client_log","_t":1790862392905,"level":"log","data":["fetchNotificationUnreadCount error:","[ReferenceError: Property 'getUnreadNotificationCountApi' doesn't exist]"]}
 {"_e":"metro:client_log","_t":1790862467977,"level":"error","data":["[ReferenceError: Property 'Animated' doesn't exist]"]}
+{"_e":"root:init","_t":1790923701167,"format":"v0-jsonl","version":"57.0.26"}
+{"_e":"env:mode","_t":1790923701217,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1790923701258,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1790923726954,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1790923743637,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1790923751701,"plugins":[]}

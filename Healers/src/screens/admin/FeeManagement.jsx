@@ -3,14 +3,13 @@ import React from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   ImageBackground,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -24,7 +23,7 @@ import {
 } from '../../styles/theme';
 
 export default function FeeManagementScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
+  // const insets = useSafeAreaInsets();
 
   const feeStructures = [
     { id: "1", name: "Behavioral Therapy", price: "PKR 3,500/session" },
@@ -33,7 +32,7 @@ export default function FeeManagementScreen({ navigation }) {
   ];
 
   return (
-    <SafeAreaView style={[styles.container, commonStyles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={[styles.container, commonStyles.container]}>
       <TopBar
         navigation={navigation}
         headerTitle={"Back to dashboard"}

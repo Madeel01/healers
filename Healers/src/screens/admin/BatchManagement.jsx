@@ -115,8 +115,9 @@ export default function BatchManagementScreen({ navigation }) {
   );
 
   useEffect(() => {
-    fetchBatches();
-  }, [fetchBatches]);
+  const unsub = navigation.addListener("focus", () => fetchBatches());
+  return unsub;
+}, [navigation, fetchBatches]);
 
   const openCreateModal = () => {
     setEditingBatchId(null);
@@ -984,7 +985,12 @@ export default function BatchManagementScreen({ navigation }) {
                       : "-"}
                   </Text>
                 </View>
-
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Children</Text>
+                  <Text style={styles.detailValue}>
+                    {selectedBatch.childrenIds?.length || 0} / {selectedBatch.maxChild || 0}
+                  </Text>
+                </View>
                 <View style={styles.detailSection}>
                   <Text style={styles.detailLabel}>Speciality</Text>
                   <View style={styles.selectedTagsContainer}>
@@ -1035,9 +1041,23 @@ export default function BatchManagementScreen({ navigation }) {
 
             <View style={styles.detailActionsRow}>
               <TouchableOpacity
-                style={styles.addChildrenBtn}
+                style={[
+                  styles.addChildrenBtn,
+                  selectedBatch?.childrenIds?.length >= selectedBatch?.maxChild && { opacity: 0.5 },
+                ]}
                 onPress={() => {
+                  const count = selectedBatch?.childrenIds?.length || 0;
+
+                  if (count >= selectedBatch?.maxChild) {
+                    Alert.alert("Batch full", `This batch already has ${count} of ${selectedBatch.maxChild} children.`);
+                    return;
+                  }
+
                   setIsDetailModalOpen(false);
+                  navigation.navigate("BatchSchedule", {
+                    batchId: selectedBatch?._id,
+                    openAddChildren: true,
+                  });
                 }}
               >
                 <Feather

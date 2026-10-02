@@ -68,7 +68,7 @@ const prettyDate = (k) =>
 
 const summarizeDays = (days = []) => {
   if (days.length === 7) return "Every day";
-  if (days.length === 5 && WEEKDAYS.every((d) => days.includes(d))) return "Mon – Fri";
+  if (days.length === 5 && WEEKDAYS.every((d) => days.includes(d))) return "Mon - Fri";
   return days.join(", ");
 };
 
@@ -104,7 +104,7 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
   const [editingRule, setEditingRule] = useState(null); // full rule being edited (type is locked)
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
-  const [picker, setPicker] = useState(null); // { field: 'date'|'startTime'|'endTime', day?: 'Mon' }
+  const [picker, setPicker] = useState(null);
 
   const [detailRule, setDetailRule] = useState(null);
 

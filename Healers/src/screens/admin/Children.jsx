@@ -628,6 +628,19 @@ export default function ChildrenScreen({ navigation }) {
                     )}
                   </View>
                 </View>
+                <TouchableOpacity
+                  style={styles.scheduleButton}
+                  activeOpacity={0.85}
+                  onPress={() =>
+                    navigation.navigate("ChildSchedule", {
+                      childId: child.id,
+                      childName: child.name,
+                    })
+                  }
+                >
+                  <Feather name="calendar" size={16} color="#FFFFFF" />
+                  <Text style={styles.scheduleButtonText}>View Schedule</Text>
+                </TouchableOpacity>
               </View>
             );
           })}
@@ -1075,4 +1088,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#0F172A",
   },
+  scheduleButton: {
+    marginTop: 4,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  scheduleButtonText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#FFFFFF" },
 });

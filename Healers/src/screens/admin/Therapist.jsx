@@ -714,7 +714,7 @@ export default function TherapistsScreen({ navigation }) {
 
               <View style={styles.cardActionsRow}>
                 <TouchableOpacity style={styles.scheduleButton} onPress={() =>
-                  navigation.navigate("TherapistAvailability", {
+                  navigation.navigate("TherapistSchedule", {
                     therapistId: therapist.id,
                     therapistName: therapist.name,
                   })

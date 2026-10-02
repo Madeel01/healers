@@ -51,6 +51,11 @@ import ChildrenScreen from '../screens/admin/Children';
 import TherapistAvailabilityScreen from '../screens/admin/TherapistAvailability';
 import BatchScheduleScreen from '../screens/admin/BatchSchedule';
 import BatchScheduleCreateScreen from '../screens/admin/Batchschedulecreatescreen';
+import BatchSessionPostponeScreen from '../screens/admin/BatchSessionPostponeScreen';
+import BatchAdditionalClassScreen from '../screens/admin/BatchAdditionalClassScreen';
+import TherapistScheduleScreen from '../screens/admin/TherapistScheduleScreen';
+import ChildScheduleScreen from '../screens/admin/ChildScheduleScreen';
+import ChildCustomAppointmentScreen from '../screens/admin/ChildCustomAppointmentScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -93,6 +98,11 @@ function AdminStack() {
       <Stack.Screen name="ChildMessages" component={MessagingScreen} />
       <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
       <Stack.Screen name="ChildProfile" component={ChildProfileScreen} />
+      <Stack.Screen name="BatchSessionPostpone" component={BatchSessionPostponeScreen} />
+      <Stack.Screen name="BatchAdditionalClass" component={BatchAdditionalClassScreen} />
+      <Stack.Screen name="TherapistSchedule" component={TherapistScheduleScreen} />
+      <Stack.Screen name="ChildSchedule" component={ChildScheduleScreen} />
+      <Stack.Screen name="ChildCustomAppointment" component={ChildCustomAppointmentScreen} />
 
     </Stack.Navigator>
   );

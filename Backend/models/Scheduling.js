@@ -49,8 +49,9 @@ const appointmentSchema = new mongoose.Schema(
       required: true,
     },
 
-    batchSessionId: {
+    batchAssignmentId: {
       type: mongoose.Schema.Types.ObjectId,
+      ref: "BatchAssignment",
       default: null,
     },
 
@@ -60,15 +61,9 @@ const appointmentSchema = new mongoose.Schema(
       default: null,
     },
 
-    batchAssignmentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "BatchAssignment",
-      default: null,
-    },
-
     sessionType: {
       type: String,
-      enum: ["regular", "postponed", "additional", "alternate"],
+      enum: ["regular", "postponed", "additional", "alternate","cancel"],
       default: "regular",
     },
 
@@ -134,7 +129,7 @@ schedulingSchema.pre("validate", function () {
 
     const start = toMin(ap.startTime);
     const end = toMin(ap.endTime);
-
+    if (["cancel", "postponed"].includes(ap.sessionType)) continue;
     if (end <= start) {
       this.invalidate(
         "appointments",
@@ -159,5 +154,9 @@ schedulingSchema.pre("validate", function () {
     });
   }
 });
+schedulingSchema.index({ "appointments.batchId": 1 });
+schedulingSchema.index({ "appointments.batchAssignmentId": 1 });
+schedulingSchema.index({ "appointments.children.childId": 1 });
+
 
 module.exports = mongoose.model("Scheduling", schedulingSchema);
