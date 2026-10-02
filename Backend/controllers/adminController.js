@@ -16,6 +16,7 @@ const TherapistAvailability = require("../models/TherapistAvailability");
 const BatchAssignment = require("../models/BatchAssignment");
 const Package = require("../models/Package");
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const PAST_DAYS = 365; 
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
   { path: "resolvedBy", select: "fullName" },
@@ -5581,6 +5582,120 @@ exports.deletePackage = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to delete package.",
+    });
+  }
+};
+
+exports.getSessions = async (req, res) => {
+  try {
+    const scope = req.query.scope === "past" ? "past" : "upcoming";
+    const type = ["batch", "custom"].includes(req.query.type) ? req.query.type : "all";
+    const search = String(req.query.search || "").trim().toLowerCase();
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 15, 1), 50);
+ 
+    const settings = await SystemSetting.findOne().lean();
+    const tz = settings?.timezone || "Asia/Karachi";
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+    const nowMin = clockMinutes(tz);
+    const cutoff = new Date(Date.parse(`${today}T00:00:00Z`) - PAST_DAYS * DAY_MS)
+      .toISOString()
+      .slice(0, 10);
+ 
+    const [ty, tm] = today.split("-").map(Number);
+    const [cy, cm] = cutoff.split("-").map(Number);
+ 
+    // only load the month documents that can contain what we need
+    const monthFilter =
+      scope === "upcoming"
+        ? { $or: [{ year: { $gt: ty } }, { year: ty, month: { $gte: tm } }] }
+        : {
+            $and: [
+              { $or: [{ year: { $lt: ty } }, { year: ty, month: { $lte: tm } }] },
+              { $or: [{ year: { $gt: cy } }, { year: cy, month: { $gte: cm } }] },
+            ],
+          };
+ 
+    const schedules = await Scheduling.find(monthFilter)
+      .populate("therapistId", "fullName")
+      .populate("appointments.batchId", "batchName")
+      .populate("appointments.batchAssignmentId", "speciality")
+      .populate("appointments.children.childId", "fullName")
+      .lean();
+ 
+    const items = [];
+ 
+    for (const sc of schedules) {
+      const therapistId = String(sc.therapistId?._id || sc.therapistId);
+      const therapistName = sc.therapistId?.fullName || "Therapist";
+ 
+      for (const ap of sc.appointments || []) {
+        if (type !== "all" && ap.type !== type) continue;
+ 
+        const date = dateKeyOf(ap.date);
+        const isPast = date < today || (date === today && toMin(ap.endTime) <= nowMin);
+ 
+        if ((scope === "past") !== isPast) continue;
+        if (scope === "past" && date < cutoff) continue;
+ 
+        const isCustom = ap.type === "custom";
+        const sessionType = ap.sessionType || "regular";
+ 
+        const children = (ap.children || []).map((c) => ({
+          childId: String(c.childId?._id || c.childId),
+          fullName: c.childId?.fullName || "Child",
+          attendance: c.attendance_status || "Pending",
+        }));
+ 
+        const batchName = isCustom ? null : ap.batchId?.batchName || "Batch Session";
+ 
+        if (search) {
+          const hay = [therapistName, batchName || "custom", ...children.map((c) => c.fullName)]
+            .join(" ")
+            .toLowerCase();
+          if (!hay.includes(search)) continue;
+        }
+ 
+        items.push({
+          id: String(ap._id),
+          date,
+          startTime: ap.startTime,
+          endTime: ap.endTime,
+          type: ap.type,
+          sessionType,
+          batchId: ap.batchId?._id ? String(ap.batchId._id) : ap.batchId ? String(ap.batchId) : null,
+          batchName,
+          speciality: isCustom ? null : ap.batchAssignmentId?.speciality || null,
+          therapistId,
+          therapistName,
+          children,
+          isPast,
+          canCancel: isCustom && !isPast && sessionType !== "cancel",
+        });
+      }
+    }
+ 
+    items.sort((a, b) => {
+      const cmp = a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date);
+      return scope === "past" ? -cmp : cmp;
+    });
+ 
+    const start = (page - 1) * limit;
+ 
+    return res.json({
+      success: true,
+      today,
+      page,
+      totalCount: items.length,
+      hasMore: start + limit < items.length,
+      data: items.slice(start, start + limit),
+    });
+  } catch (error) {
+    console.error("getSessions:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load schedule.",
+      error: error.message,
     });
   }
 };

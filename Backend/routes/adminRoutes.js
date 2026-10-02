@@ -59,10 +59,29 @@ const {
   updatePackage,
   deletePackage,
   assignTherapistsUsers,
+  getTherapistSchedule,
+  getChildSchedule,
+  getChildBatchOptions,
+  getChildCustomSlotOptions,
+  createChildCustomAppointment,
+  deleteChildCustomAppointment,
+  deleteBatchSession,
+  getSessions
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
 
+router.get("/children/:childId/schedule", protect, getChildSchedule);
+router.get("/children/:childId/batch-options", protect, getChildBatchOptions);
+router.post("/children/:childId/custom-slot-options", protect, getChildCustomSlotOptions);
+router.post("/children/:childId/custom-appointments", protect, createChildCustomAppointment);
+router.delete("/children/:childId/custom-appointments/:appointmentId", protect, deleteChildCustomAppointment);
+router.delete(
+  "/batches/:batchId/assignments/:assignmentId/sessions/:sessionId",
+  protect,
+  deleteBatchSession,
+);
+router.get("/schedule", protect, getSessions);
 router.get("/overview", getAdminOverview);
 router.get("/get_therapists", getTherapistsUsers);
 router.get("/get_therapists_child", assignTherapistsUsers);
@@ -72,7 +91,7 @@ router.post("/therapists", protect, createTherapist);
 router.put("/therapists/:id", protect, updateTherapist);
 router.delete("/therapists/:id", protect, deleteTherapist);
 router.post("/therapists/assign", protect, assignChildrenToTherapist);
-
+router.get("/therapists/:therapistId/schedule", protect, getTherapistSchedule);
 router.get("/children", protect, childUsers);
 router.post("/children", protect, createChild);
 router.put("/children/:id", protect, updateChild);

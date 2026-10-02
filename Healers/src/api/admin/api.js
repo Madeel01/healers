@@ -4,7 +4,35 @@ export const Overview = async () => {
   const response = await apiClient.get("/admin/overview");
   return response.data;
 };
-
+export const getTherapistSchedule = async (therapistId, params) => {
+  const res = await apiClient.get(`/admin/therapists/${therapistId}/schedule`, { params });
+  return res.data;
+};
+export const childUsers = (params) => apiClient.get("/admin/children", { params });
+export const createChild = (data) => apiClient.post("/admin/children", data);
+export const updateChild = (id, data) => apiClient.put(`/admin/children/${id}`, data);
+export const deleteChild = (id) => apiClient.delete(`/admin/children/${id}`);
+export const getChildSchedule = async (childId, params) => {
+  const res = await apiClient.get(`/admin/children/${childId}/schedule`, { params });
+  return res.data;
+};
+export const getChildBatchOptions = async (childId) => {
+  const res = await apiClient.get(`/admin/children/${childId}/batch-options`);
+  return res.data;
+};
+export const getChildCustomSlotOptions = async (childId, body) => {
+  const res = await apiClient.post(`/admin/children/${childId}/custom-slot-options`, body);
+  return res.data;
+};
+export const createChildCustomAppointment = async (childId, body) => {
+  const res = await apiClient.post(`/admin/children/${childId}/custom-appointments`, body);
+  return res.data;
+};
+export const deleteChildCustomAppointment = async (childId, appointmentId) => {
+  const res = await apiClient.delete(`/admin/children/${childId}/custom-appointments/${appointmentId}`);
+  return res.data;
+};
+export const getSessions = (params) => apiClient.get("/admin/schedule", { params }).then((r) => r.data);
 ///////////////////// Therapist API's /////////////////////////////
 export const therapistUsers = async (params = {}) => {
   const response = await apiClient.get("/admin/get_therapists", { params });
@@ -54,11 +82,6 @@ export const deleteAppointment = (body) =>
 
 export const getTherapistSchedules = (params) => apiClient.get("/scheduling/therapist", { params }).then((r) => r.data);
 
-///////////////////// Children API's /////////////////////////////
-export const childUsers = (params) => apiClient.get("/admin/children", { params });
-export const createChild = (data) => apiClient.post("/admin/children", data);
-export const updateChild = (id, data) => apiClient.put(`/admin/children/${id}`, data);
-export const deleteChild = (id) => apiClient.delete(`/admin/children/${id}`);
 
 ///////////////////// Leave Request API's /////////////////////////////
 export const getLeaveRequests = (params) => apiClient.get("/admin/leave-requests", { params });
