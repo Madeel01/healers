@@ -11,10 +11,18 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthContext } from '../context/AuthContext';
 import AddNewPackageScreen from '../screens/admin/AddNewPackage';
 import AdminDashboard from '../screens/admin/AdminDashboard';
+import BatchAdditionalClassScreen
+  from '../screens/admin/BatchAdditionalClassScreen';
 import BatchManagementScreen from '../screens/admin/BatchManagement';
 import BatchScheduleCreateScreen
   from '../screens/admin/Batchschedulecreatescreen';
+import BatchSessionPostponeScreen
+  from '../screens/admin/BatchSessionPostponeScreen';
 import BroadcastManagementScreen from '../screens/admin/BroadcastManagement';
+import ChildCustomAppointmentScreen
+  from '../screens/admin/ChildCustomAppointmentScreen';
+import ChildrenScreen from '../screens/admin/Children';
+import ChildScheduleScreen from '../screens/admin/ChildScheduleScreen';
 import ComplainManagementScreen from '../screens/admin/ComplainManagement';
 import CreateNewInvoiceScreen from '../screens/admin/CreateNewInvoice';
 import FeedbackScreen from '../screens/admin/Feedback';
@@ -29,6 +37,7 @@ import StaffOnLeaveScreen from '../screens/admin/StaffOnLeave';
 import TherapistsScreen from '../screens/admin/Therapist';
 import TherapistAvailabilityScreen
   from '../screens/admin/TherapistAvailability';
+import TherapistScheduleScreen from '../screens/admin/TherapistScheduleScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import OnboardingScreen from '../screens/auth/OnboardingScreen';
 import ChildProfileScreen from '../screens/auth/ProfileScreen';

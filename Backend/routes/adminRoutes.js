@@ -27,13 +27,14 @@ const {
     createPackage,
     updatePackage,
     deletePackage,
+    assignTherapistsUsers
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
 
 router.get("/overview",  getAdminOverview);
 router.get("/get_therapists",  getTherapistsUsers);
-router.get("/get_therapists_users",  getTherapistsAssignUsers);
+router.get("/get_therapists_child",  assignTherapistsUsers);
 router.get("/users",  getUsersByRole);
 
 
@@ -41,17 +42,11 @@ router.post("/therapists", protect, createTherapist);
 router.put("/therapists/:id", protect, updateTherapist);
 router.delete("/therapists/:id", protect , deleteTherapist);
 router.post("/therapists/assign", protect, assignChildrenToTherapist);
-router.get("/therapists/:therapistId/schedule", protect, getTherapistSchedule);
 
 router.get("/children", protect, childUsers);
 router.post("/children", protect, createChild);
 router.put("/children/:id", protect, updateChild);
 router.delete("/children/:id", protect ,deleteChild);
-router.get("/children/:childId/schedule",protect, getChildSchedule);
-router.get("/children/:childId/batch-options", protect, getChildBatchOptions);
-router.post("/children/:childId/custom-slot-options", protect, getChildCustomSlotOptions);
-router.post("/children/:childId/custom-appointments", protect, createChildCustomAppointment);
-router.delete("/children/:childId/custom-appointments/:appointmentId", protect, deleteChildCustomAppointment);
 
 router.get("/leave-requests", protect,getLeaveRequests);
 router.put("/leave-requests/:id/approve", protect,approveLeaveRequest);
@@ -76,14 +71,6 @@ router.post("/batches/:batchId/schedule", protect, saveBatchSchedule);
 router.get("/batches/:batchId/eligible-children", protect, getBatchEligibleChildren);
 router.put("/batches/:batchId/children", protect, updateBatchChildren);
 router.delete("/batches/:batchId/assignments/:assignmentId", protect, removeBatchAssignment);
-router.post("/batches/:batchId/assignments/:assignmentId/slot-options",protect, getSessionSlotOptions);
-router.post("/batches/:batchId/assignments/:assignmentId/additional", protect,createAdditionalSession);
-router.post("/batches/:batchId/assignments/:assignmentId/sessions/:sessionId/postpone", protect,postponeBatchSession);
-router.delete(
-  "/batches/:batchId/assignments/:assignmentId/sessions/:sessionId",
-  protect,
-  deleteBatchSession
-);
 
 router.post("/broadcast", protect,uploadBroadcastAttachment, createBroadcast);
 router.get("/broadcast", protect, getAllBroadcasts);
