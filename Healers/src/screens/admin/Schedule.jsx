@@ -1,5 +1,10 @@
-// src/screens/admin/ScheduleScreen.js   (REPLACES the old file)
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+
 import {
   ActivityIndicator,
   Alert,
@@ -12,18 +17,28 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
-import Feather from "@expo/vector-icons/Feather";
-import { useFocusEffect } from "@react-navigation/native";
+import Feather from '@expo/vector-icons/Feather';
+import { useFocusEffect } from '@react-navigation/native';
 
-import { deleteChildCustomAppointment, getSessions, getUsersByRole } from "../../api/admin/api";
-import BottomBar from "../../components/BottomBar";
-import TopBar from "../../components/TopBar";
-import { colors, fonts } from "../../styles/theme";
-import { formatTo12Hour } from "../../utils/hoursformat";
-import { therapistSpecialities } from "../../utils/specialities";
+import {
+  deleteChildCustomAppointment,
+  getSessions,
+  getUsersByRole,
+} from '../../api/admin/api';
+import BottomBar from '../../components/BottomBar';
+import TopBar from '../../components/TopBar';
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
+import { formatTo12Hour } from '../../utils/hoursformat';
+import { therapistSpecialities } from '../../utils/specialities';
 
 const LIMIT = 15;
 
@@ -55,10 +70,8 @@ const keyToDate = (k) => {
   const [y, m, d] = k.split("-").map(Number);
   return new Date(y, m - 1, d);
 };
-const prettyDay = (k) =>
-  keyToDate(k).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-const prettyFull = (k) =>
-  keyToDate(k).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const prettyDay = (k) => keyToDate(k).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+const prettyFull = (k) => keyToDate(k).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const mins = (t) => {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -102,7 +115,9 @@ function SessionCard({ s, onPress }) {
         <View
           style={[
             styles.bar,
-            { backgroundColor: isCustom ? "#8B5CF6" : s.sessionType === "cancel" ? "#EF4444" : spec?.color || "#0B4A6F" },
+            {
+              backgroundColor: isCustom ? "#8B5CF6" : s.sessionType === "cancel" ? "#EF4444" : spec?.color || "#0B4A6F",
+            },
           ]}
         />
         <View style={{ flex: 1 }}>
@@ -117,17 +132,19 @@ function SessionCard({ s, onPress }) {
         </View>
 
         <View style={{ alignItems: "flex-end", gap: 4 }}>
-          {isCustom ? (
-            <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
-              <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom</Text>
-            </View>
-          ) : (
-            spec && (
-              <View style={[styles.chip, { backgroundColor: spec.bg }]}>
-                <Text style={[styles.chipText, { color: spec.color }]}>{spec.label}</Text>
+          {isCustom
+            ? (
+              <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
+                <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom</Text>
               </View>
             )
-          )}
+            : (
+              spec && (
+                <View style={[styles.chip, { backgroundColor: spec.bg }]}>
+                  <Text style={[styles.chipText, { color: spec.color }]}>{spec.label}</Text>
+                </View>
+              )
+            )}
           {tm && (
             <View style={[styles.chip, { backgroundColor: tm.bg }]}>
               <Text style={[styles.chipText, { color: tm.color }]}>{tm.label}</Text>
@@ -367,43 +384,49 @@ export default function ScheduleScreen({ navigation }) {
         </View>
       </View>
 
-      {loading ? (
-        <View style={styles.centerFill}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          onEndReached={onEndReached}
-          onEndReachedThreshold={0.4}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => load(1, "refresh")} colors={[colors.primary]} />
-          }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Feather name={query ? "search" : "calendar"} size={34} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>
-                {query ? "No matches found" : scope === "upcoming" ? "No upcoming sessions" : "No past sessions"}
-              </Text>
-              <Text style={styles.emptySub}>
-                {query
-                  ? `Nothing matches "${query}".`
-                  : scope === "upcoming"
+      {loading
+        ? (
+          <View style={styles.centerFill}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        )
+        : (
+          <FlatList
+            data={items}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            onEndReached={onEndReached}
+            onEndReachedThreshold={0.4}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => load(1, "refresh")}
+                colors={[colors.primary]}
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.empty}>
+                <Feather name={query ? "search" : "calendar"} size={34} color="#94A3B8" />
+                <Text style={styles.emptyTitle}>
+                  {query ? "No matches found" : scope === "upcoming" ? "No upcoming sessions" : "No past sessions"}
+                </Text>
+                <Text style={styles.emptySub}>
+                  {query
+                    ? `Nothing matches "${query}".`
+                    : scope === "upcoming"
                     ? "Tap + to create a custom appointment."
                     : "Showing the last 12 months."}
-              </Text>
-            </View>
-          }
-          ListFooterComponent={
-            loadingMore ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 14 }} /> : null
-          }
-        />
-      )}
+                </Text>
+              </View>
+            }
+            ListFooterComponent={loadingMore
+              ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 14 }} />
+              : null}
+          />
+        )}
 
       <TouchableOpacity
         style={[styles.fab, { bottom: insets.bottom + 90 }]}
@@ -435,19 +458,21 @@ export default function ScheduleScreen({ navigation }) {
                 </View>
 
                 <View style={styles.chipRow}>
-                  {detail.type === "custom" ? (
-                    <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
-                      <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom appointment</Text>
-                    </View>
-                  ) : (
-                    detail.speciality && (
-                      <View style={[styles.chip, { backgroundColor: specMeta(detail.speciality).bg }]}>
-                        <Text style={[styles.chipText, { color: specMeta(detail.speciality).color }]}>
-                          {specMeta(detail.speciality).label}
-                        </Text>
+                  {detail.type === "custom"
+                    ? (
+                      <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
+                        <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom appointment</Text>
                       </View>
                     )
-                  )}
+                    : (
+                      detail.speciality && (
+                        <View style={[styles.chip, { backgroundColor: specMeta(detail.speciality).bg }]}>
+                          <Text style={[styles.chipText, { color: specMeta(detail.speciality).color }]}>
+                            {specMeta(detail.speciality).label}
+                          </Text>
+                        </View>
+                      )
+                    )}
                   <View style={[styles.chip, { backgroundColor: TYPE_META[detail.sessionType]?.bg || "#F1F5F9" }]}>
                     <Text style={[styles.chipText, { color: TYPE_META[detail.sessionType]?.color || "#475569" }]}>
                       {TYPE_META[detail.sessionType]?.label || "Regular"}
@@ -468,9 +493,7 @@ export default function ScheduleScreen({ navigation }) {
 
                 <Text style={styles.sheetSection}>Children ({detailKids.length})</Text>
                 <ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={false}>
-                  {detailKids.length === 0 ? (
-                    <Text style={styles.muted}>No children in this session.</Text>
-                  ) : (
+                  {detailKids.length === 0 ? <Text style={styles.muted}>No children in this session.</Text> : (
                     detailKids.map((c) => {
                       const a = ATT[c.attendance] || ATT.Pending;
                       const showChip = detail.isPast || c.attendance !== "Pending";
@@ -499,11 +522,9 @@ export default function ScheduleScreen({ navigation }) {
                     disabled={cancelling}
                     onPress={() => cancelAppointment(detail)}
                   >
-                    {cancelling ? (
-                      <ActivityIndicator color="#EF4444" />
-                    ) : (
-                      <Text style={styles.dangerText}>Cancel appointment</Text>
-                    )}
+                    {cancelling
+                      ? <ActivityIndicator color="#EF4444" />
+                      : <Text style={styles.dangerText}>Cancel appointment</Text>}
                   </TouchableOpacity>
                 )}
               </>
@@ -542,7 +563,11 @@ export default function ScheduleScreen({ navigation }) {
             <ScrollView style={{ maxHeight: 340, marginTop: 6 }} keyboardShouldPersistTaps="handled">
               {!pickerLoading && pickerItems.length === 0 && <Text style={styles.muted}>No children found.</Text>}
               {pickerItems.map((c) => (
-                <TouchableOpacity key={c._id || c.id} style={styles.pickRow} onPress={() => pickChild(c)}>
+                <TouchableOpacity
+                  key={c._id || c.id}
+                  style={styles.pickRow}
+                  onPress={() => pickChild(c)}
+                >
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>{(c.fullName || c.name || "?").slice(0, 1).toUpperCase()}</Text>
                   </View>
@@ -596,7 +621,14 @@ const styles = StyleSheet.create({
   typeTextActive: { color: "#FFFFFF" },
 
   listContent: { padding: 16, paddingBottom: 170, flexGrow: 1 },
-  dayHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, marginBottom: 6, paddingHorizontal: 2 },
+  dayHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 6,
+    paddingHorizontal: 2,
+  },
   dayTitle: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
   dayRel: { fontSize: 11, fontFamily: fonts.semiBold, color: colors.primary },
 

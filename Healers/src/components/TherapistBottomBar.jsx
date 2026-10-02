@@ -23,7 +23,7 @@ export default function TherapistBottomBar({ activeTab = "TherapistDashboard" })
     { id: "AssignedChildren", label: "Children", iconType: "FontAwesome5", iconName: "child", iconSize: 18 },
     { id: "FeedbackManagement", label: "Feedback", iconType: "MaterialIcons", iconName: "feedback", iconSize: 22 },
     { id: "AttendanceTracking", label: "Scheduling", iconType: "MaterialIcons", iconName: "event", iconSize: 22 },
-    { id: "Alert", label: "Alerts", iconType: "MaterialIcons", iconName: "notifications", iconSize: 22 },
+    { id: "Notifications", label: "Alerts", iconType: "MaterialIcons", iconName: "notifications", iconSize: 22 },
   ];
 
 

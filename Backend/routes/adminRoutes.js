@@ -1,59 +1,110 @@
 const express = require("express");
 const router = express.Router();
 const { protect, checkRole } = require("../middleware/authMiddleware");
-const { 
-    getAdminOverview, getTherapistsUsers, createTherapist, updateTherapist, deleteTherapist, assignChildrenToTherapist, childUsers, createChild, updateChild, deleteChild, getLeaveRequests, approveLeaveRequest, rejectLeaveRequest, getStaffOnLeaveToday, getAdminFeedbackManagement, getFeedbackReplies, addFeedbackReply, getBatches, createBatch, updateBatch, deleteBatch, deleteFeedback, createBroadcast, getAllBroadcasts, deleteBroadcast, getBroadcastById, updateBroadcast, getComplaints, resolveComplaint, updateComplaintPriority, getComplaintMessages, sendComplaintMessage, getMyNotifications, markNotificationRead, markAllNotificationsRead, getSettings, createSettings, updateSettings, deleteSettings, getAvailability, createAvailability, updateAvailability, deleteAvailability, 
-    getBatchScheduleData,
-    saveBatchSchedule,
-    getBatchTherapistOptions,
-    getBatchSlotOptions,
-    previewBatchSchedule,
-    getBatchEligibleChildren,
-    updateBatchChildren,
-    removeBatchAssignment,
-    getSessionSlotOptions,
-    createAdditionalSession,
-    postponeBatchSession,
-    getTherapistSchedule,
-    getChildSchedule,
-    getChildBatchOptions,
-    getChildCustomSlotOptions,
-    createChildCustomAppointment,
-    deleteChildCustomAppointment,
-    deleteBatchSession,
+const {
+  getAdminOverview,
+  getTherapistsUsers,
+  createTherapist,
+  updateTherapist,
+  deleteTherapist,
+  assignChildrenToTherapist,
+  childUsers,
+  createChild,
+  updateChild,
+  deleteChild,
+  getLeaveRequests,
+  approveLeaveRequest,
+  rejectLeaveRequest,
+  getStaffOnLeaveToday,
+  getAdminFeedbackManagement,
+  getFeedbackReplies,
+  addFeedbackReply,
+  getBatches,
+  createBatch,
+  updateBatch,
+  deleteBatch,
+  deleteFeedback,
+  createBroadcast,
+  getAllBroadcasts,
+  deleteBroadcast,
+  getBroadcastById,
+  updateBroadcast,
+  getComplaints,
+  resolveComplaint,
+  updateComplaintPriority,
+  getComplaintMessages,
+  sendComplaintMessage,
+  getMyNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  getSettings,
+  createSettings,
+  updateSettings,
+  deleteSettings,
+  getAvailability,
+  createAvailability,
+  updateAvailability,
+  deleteAvailability,
+  getBatchScheduleData,
+  saveBatchSchedule,
+  getBatchTherapistOptions,
+  getBatchSlotOptions,
+  previewBatchSchedule,
+  getBatchEligibleChildren,
+  updateBatchChildren,
+  removeBatchAssignment,
+  getAllPackages,
+  getPackageById,
+  createPackage,
+  updatePackage,
+  deletePackage,
+  assignTherapistsUsers,
+  getTherapistSchedule,
+  getChildSchedule,
+  getChildBatchOptions,
+  getChildCustomSlotOptions,
+  createChildCustomAppointment,
+  deleteChildCustomAppointment,
+  deleteBatchSession,
+  getSessions
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
 
-router.get("/overview",  getAdminOverview);
-router.get("/get_therapists",  getTherapistsUsers);
-router.get("/users",  getUsersByRole);
-
-
-router.post("/therapists", protect, createTherapist);
-router.put("/therapists/:id", protect, updateTherapist);
-router.delete("/therapists/:id", protect , deleteTherapist);
-router.post("/therapists/assign", protect, assignChildrenToTherapist);
-router.get("/therapists/:therapistId/schedule", protect, getTherapistSchedule);
-
-router.get("/children", protect, childUsers);
-router.post("/children", protect, createChild);
-router.put("/children/:id", protect, updateChild);
-router.delete("/children/:id", protect ,deleteChild);
-router.get("/children/:childId/schedule",protect, getChildSchedule);
+router.get("/children/:childId/schedule", protect, getChildSchedule);
 router.get("/children/:childId/batch-options", protect, getChildBatchOptions);
 router.post("/children/:childId/custom-slot-options", protect, getChildCustomSlotOptions);
 router.post("/children/:childId/custom-appointments", protect, createChildCustomAppointment);
 router.delete("/children/:childId/custom-appointments/:appointmentId", protect, deleteChildCustomAppointment);
+router.delete(
+  "/batches/:batchId/assignments/:assignmentId/sessions/:sessionId",
+  protect,
+  deleteBatchSession,
+);
+router.get("/schedule", protect, getSessions);
+router.get("/overview", getAdminOverview);
+router.get("/get_therapists", getTherapistsUsers);
+router.get("/get_therapists_child", assignTherapistsUsers);
+router.get("/users", getUsersByRole);
 
-router.get("/leave-requests", protect,getLeaveRequests);
-router.put("/leave-requests/:id/approve", protect,approveLeaveRequest);
-router.put("/leave-requests/:id/reject", protect,rejectLeaveRequest);
-router.get("/leave-requests/on-leave-today", protect,getStaffOnLeaveToday);
+router.post("/therapists", protect, createTherapist);
+router.put("/therapists/:id", protect, updateTherapist);
+router.delete("/therapists/:id", protect, deleteTherapist);
+router.post("/therapists/assign", protect, assignChildrenToTherapist);
+router.get("/therapists/:therapistId/schedule", protect, getTherapistSchedule);
+router.get("/children", protect, childUsers);
+router.post("/children", protect, createChild);
+router.put("/children/:id", protect, updateChild);
+router.delete("/children/:id", protect, deleteChild);
+
+router.get("/leave-requests", protect, getLeaveRequests);
+router.put("/leave-requests/:id/approve", protect, approveLeaveRequest);
+router.put("/leave-requests/:id/reject", protect, rejectLeaveRequest);
+router.get("/leave-requests/on-leave-today", protect, getStaffOnLeaveToday);
 
 router.get("/feedback/:status", getAdminFeedbackManagement);
-router.get("/feedback/:feedbackId/replies",protect,getFeedbackReplies);
-router.post("/feedback/:feedbackId/replies",protect,addFeedbackReply);
+router.get("/feedback/:feedbackId/replies", protect, getFeedbackReplies);
+router.post("/feedback/:feedbackId/replies", protect, addFeedbackReply);
 router.delete("/feedback/:feedbackId", deleteFeedback);
 
 router.get("/batches", protect, getBatches);
@@ -69,20 +120,12 @@ router.post("/batches/:batchId/schedule", protect, saveBatchSchedule);
 router.get("/batches/:batchId/eligible-children", protect, getBatchEligibleChildren);
 router.put("/batches/:batchId/children", protect, updateBatchChildren);
 router.delete("/batches/:batchId/assignments/:assignmentId", protect, removeBatchAssignment);
-router.post("/batches/:batchId/assignments/:assignmentId/slot-options",protect, getSessionSlotOptions);
-router.post("/batches/:batchId/assignments/:assignmentId/additional", protect,createAdditionalSession);
-router.post("/batches/:batchId/assignments/:assignmentId/sessions/:sessionId/postpone", protect,postponeBatchSession);
-router.delete(
-  "/batches/:batchId/assignments/:assignmentId/sessions/:sessionId",
-  protect,
-  deleteBatchSession
-);
 
-router.post("/broadcast", protect,uploadBroadcastAttachment, createBroadcast);
+router.post("/broadcast", protect, uploadBroadcastAttachment, createBroadcast);
 router.get("/broadcast", protect, getAllBroadcasts);
 router.get("/broadcast/:broadcastId", getBroadcastById);
 router.put("/broadcast/:broadcastId", uploadBroadcastAttachment, updateBroadcast);
-router.delete("/broadcast/:broadcastId",protect, deleteBroadcast);
+router.delete("/broadcast/:broadcastId", protect, deleteBroadcast);
 
 router.get("/complaints", protect, getComplaints);
 router.put("/complaints/:id/resolve", protect, resolveComplaint);
@@ -104,5 +147,11 @@ router.get("/scheduling/availability", protect, getAvailability);
 router.post("/scheduling/availability", protect, createAvailability);
 router.put("/scheduling/availability/:id", protect, updateAvailability);
 router.delete("/scheduling/availability/:id", protect, deleteAvailability);
+
+router.get("/packages/", getAllPackages);
+router.get("/packages/:packageId", protect, getPackageById);
+router.post("/packages/", protect, createPackage);
+router.put("/packages/:packageId", protect, updatePackage);
+router.delete("/packages/:packageId", deletePackage);
 
 module.exports = router;

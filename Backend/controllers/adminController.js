@@ -16,6 +16,7 @@ const TherapistAvailability = require("../models/TherapistAvailability");
 const BatchAssignment = require("../models/BatchAssignment");
 const Package = require("../models/Package");
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const PAST_DAYS = 365; 
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
   { path: "resolvedBy", select: "fullName" },
@@ -43,14 +44,13 @@ const to12 = (t) => {
 };
 
 const isValidDate = (s) =>
-  typeof s === "string" &&
-  DATE_REGEX.test(s) &&
-  !Number.isNaN(new Date(`${s}T00:00:00Z`).getTime());
+  typeof s === "string"
+  && DATE_REGEX.test(s)
+  && !Number.isNaN(new Date(`${s}T00:00:00Z`).getTime());
 
 const weekdayOf = (s) => JS_DAY_TO_NAME[new Date(`${s}T00:00:00Z`).getUTCDay()];
 
-const todayKey = (tz = "Asia/Karachi") =>
-  new Date().toLocaleDateString("en-CA", { timeZone: tz });
+const todayKey = (tz = "Asia/Karachi") => new Date().toLocaleDateString("en-CA", { timeZone: tz });
 
 const describe = (r) =>
   r.type === "custom"
@@ -60,8 +60,8 @@ const describe = (r) =>
       .join(", ");
 
 const timesOverlap = (a, b) =>
-  toMin(a.startTime) < toMin(b.endTime) &&
-  toMin(b.startTime) < toMin(a.endTime);
+  toMin(a.startTime) < toMin(b.endTime)
+  && toMin(b.startTime) < toMin(a.endTime);
 
 const rulesConflict = (a, b) => {
   if (a.type === "custom" && b.type === "custom") {
@@ -71,22 +71,18 @@ const rulesConflict = (a, b) => {
     const c = a.type === "custom" ? a : b;
     const r = a.type === "custom" ? b : a;
     const day = weekdayOf(c.date);
-    const inRange =
-      (!r.effectiveFrom || c.date >= r.effectiveFrom) &&
-      (!r.effectiveTo || c.date <= r.effectiveTo);
+    const inRange = (!r.effectiveFrom || c.date >= r.effectiveFrom)
+      && (!r.effectiveTo || c.date <= r.effectiveTo);
     return (
-      inRange &&
-      (r.slots || []).some((s) => s.day === day && timesOverlap(s, c))
+      inRange
+      && (r.slots || []).some((s) => s.day === day && timesOverlap(s, c))
     );
   }
-  const rangesOverlap =
-    (!a.effectiveTo || !b.effectiveFrom || a.effectiveTo >= b.effectiveFrom) &&
-    (!b.effectiveTo || !a.effectiveFrom || b.effectiveTo >= a.effectiveFrom);
+  const rangesOverlap = (!a.effectiveTo || !b.effectiveFrom || a.effectiveTo >= b.effectiveFrom)
+    && (!b.effectiveTo || !a.effectiveFrom || b.effectiveTo >= a.effectiveFrom);
   return (
-    rangesOverlap &&
-    (a.slots || []).some((sa) =>
-      (b.slots || []).some((sb) => sa.day === sb.day && timesOverlap(sa, sb)),
-    )
+    rangesOverlap
+    && (a.slots || []).some((sa) => (b.slots || []).some((sb) => sa.day === sb.day && timesOverlap(sa, sb)))
   );
 };
 
@@ -108,11 +104,13 @@ const buildRule = async (body, current) => {
       return `${prefix}End time must be after start time.`;
     }
     if (
-      settings &&
-      (toMin(startTime) < toMin(settings.clinicStartTime) ||
-        toMin(endTime) > toMin(settings.clinicEndTime))
+      settings
+      && (toMin(startTime) < toMin(settings.clinicStartTime)
+        || toMin(endTime) > toMin(settings.clinicEndTime))
     ) {
-      return `${prefix}Availability must be within clinic hours (${to12(settings.clinicStartTime)}-${to12(settings.clinicEndTime)}).`;
+      return `${prefix}Availability must be within clinic hours (${to12(settings.clinicStartTime)}-${
+        to12(settings.clinicEndTime)
+      }).`;
     }
     return null;
   };
@@ -127,13 +125,14 @@ const buildRule = async (body, current) => {
     const slots = [];
     for (const s of raw) {
       if (!WORKING_DAYS.includes(s?.day)) return { error: "Invalid weekday." };
-      if (seen.has(s.day))
+      if (seen.has(s.day)) {
         return { error: `${s.day} is added more than once.` };
+      }
       seen.add(s.day);
 
       if (
-        settings?.workingDays?.length &&
-        !settings.workingDays.includes(s.day)
+        settings?.workingDays?.length
+        && !settings.workingDays.includes(s.day)
       ) {
         return { error: `${s.day} is not a clinic working day.` };
       }
@@ -146,12 +145,12 @@ const buildRule = async (body, current) => {
       (a, b) => WORKING_DAYS.indexOf(a.day) - WORKING_DAYS.indexOf(b.day),
     );
     const effectiveFrom = body.effectiveFrom || current?.effectiveFrom || today;
-    const effectiveTo =
-      body.effectiveTo !== undefined ? body.effectiveTo : current?.effectiveTo;
+    const effectiveTo = body.effectiveTo !== undefined ? body.effectiveTo : current?.effectiveTo;
 
     if (!isValidDate(effectiveFrom)) return { error: "Invalid start date." };
-    if (effectiveTo && !isValidDate(effectiveTo))
+    if (effectiveTo && !isValidDate(effectiveTo)) {
       return { error: "Invalid end date." };
+    }
     if (effectiveTo && effectiveTo < effectiveFrom) {
       return { error: "End date cannot be before start date." };
     }
@@ -169,15 +168,14 @@ const buildRule = async (body, current) => {
   }
 
   const date = body.date !== undefined ? body.date : current?.date;
-  const startTime =
-    body.startTime !== undefined ? body.startTime : current?.startTime;
+  const startTime = body.startTime !== undefined ? body.startTime : current?.startTime;
   const endTime = body.endTime !== undefined ? body.endTime : current?.endTime;
 
   if (!isValidDate(date)) return { error: "A valid date is required." };
   if (date < today) return { error: "Date cannot be in the past." };
   if (
-    settings?.workingDays?.length &&
-    !settings.workingDays.includes(weekdayOf(date))
+    settings?.workingDays?.length
+    && !settings.workingDays.includes(weekdayOf(date))
   ) {
     return { error: `${weekdayOf(date)} is not a clinic working day.` };
   }
@@ -213,12 +211,14 @@ const validateSettingsPayload = (body, current, { partial = false } = {}) => {
   const errors = [];
   const out = {};
 
-  for (const field of [
-    "clinicStartTime",
-    "clinicEndTime",
-    "breakStartTime",
-    "breakEndTime",
-  ]) {
+  for (
+    const field of [
+      "clinicStartTime",
+      "clinicEndTime",
+      "breakStartTime",
+      "breakEndTime",
+    ]
+  ) {
     if (body[field] === undefined) {
       if (!partial && ["clinicStartTime", "clinicEndTime"].includes(field)) {
         errors.push(`${field} is required.`);
@@ -234,8 +234,8 @@ const validateSettingsPayload = (body, current, { partial = false } = {}) => {
 
   if (body.workingDays !== undefined) {
     if (
-      !Array.isArray(body.workingDays) ||
-      body.workingDays.some((d) => !WORKING_DAYS.includes(d))
+      !Array.isArray(body.workingDays)
+      || body.workingDays.some((d) => !WORKING_DAYS.includes(d))
     ) {
       errors.push(
         `workingDays must be an array using: ${WORKING_DAYS.join(", ")}.`,
@@ -248,8 +248,9 @@ const validateSettingsPayload = (body, current, { partial = false } = {}) => {
   for (const field of ["clinicName", "address", "phone", "timezone"]) {
     if (body[field] !== undefined) out[field] = String(body[field]).trim();
   }
-  if (body.email !== undefined)
+  if (body.email !== undefined) {
     out.email = String(body.email).trim().toLowerCase();
+  }
 
   const start = out.clinicStartTime ?? current?.clinicStartTime;
   const end = out.clinicEndTime ?? current?.clinicEndTime;
@@ -263,10 +264,10 @@ const validateSettingsPayload = (body, current, { partial = false } = {}) => {
     if (settingsToMinutes(breakEnd) <= settingsToMinutes(breakStart)) {
       errors.push("breakEndTime must be after breakStartTime.");
     } else if (
-      start &&
-      end &&
-      (settingsToMinutes(breakStart) < settingsToMinutes(start) ||
-        settingsToMinutes(breakEnd) > settingsToMinutes(end))
+      start
+      && end
+      && (settingsToMinutes(breakStart) < settingsToMinutes(start)
+        || settingsToMinutes(breakEnd) > settingsToMinutes(end))
     ) {
       errors.push("Break time must fall within clinic working hours.");
     }
@@ -277,9 +278,11 @@ const validateSettingsPayload = (body, current, { partial = false } = {}) => {
 const pad = (n) => String(n).padStart(2, "0");
 
 const formatDate = (date) => {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate(),
-  )}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${
+    pad(
+      date.getDate(),
+    )
+  }`;
 };
 
 const getDayName = (date) => {
@@ -301,8 +304,8 @@ const minutesToTime = (minutes) => {
 
 const overlaps = (startA, endA, startB, endB) => {
   return (
-    timeToMinutes(startA) < timeToMinutes(endB) &&
-    timeToMinutes(endA) > timeToMinutes(startB)
+    timeToMinutes(startA) < timeToMinutes(endB)
+    && timeToMinutes(endA) > timeToMinutes(startB)
   );
 };
 
@@ -331,8 +334,8 @@ const planRange = (batch, today) => {
 };
 
 const insideClinic = (a, b, st) =>
-  (st.clinicStart == null || (a >= st.clinicStart && b <= st.clinicEnd)) &&
-  !(st.breakStart != null && a < st.breakEnd && st.breakStart < b);
+  (st.clinicStart == null || (a >= st.clinicStart && b <= st.clinicEnd))
+  && !(st.breakStart != null && a < st.breakEnd && st.breakStart < b);
 
 const availableOnDate = (rules, key, a, b) => {
   const day = weekdayOf(key);
@@ -341,8 +344,8 @@ const availableOnDate = (rules, key, a, b) => {
       return r.date === key && toMin(r.startTime) <= a && toMin(r.endTime) >= b;
     }
     if (
-      (r.effectiveFrom && key < r.effectiveFrom) ||
-      (r.effectiveTo && key > r.effectiveTo)
+      (r.effectiveFrom && key < r.effectiveFrom)
+      || (r.effectiveTo && key > r.effectiveTo)
     ) {
       return false;
     }
@@ -360,10 +363,11 @@ const weeklyOptions = (rules, from, to, minutes, st) => {
   for (const r of rules) {
     if (r.type !== "recurring") continue;
     if (
-      (r.effectiveTo && r.effectiveTo < from) ||
-      (r.effectiveFrom && r.effectiveFrom > to)
-    )
+      (r.effectiveTo && r.effectiveTo < from)
+      || (r.effectiveFrom && r.effectiveFrom > to)
+    ) {
       continue;
+    }
 
     for (const s of r.slots || []) {
       if (!st.workingDays.includes(s.day)) continue;
@@ -384,9 +388,7 @@ const weeklyOptions = (rules, from, to, minutes, st) => {
       }
     }
   }
-  Object.values(out).forEach((l) =>
-    l.sort((x, y) => x.startTime.localeCompare(y.startTime)),
-  );
+  Object.values(out).forEach((l) => l.sort((x, y) => x.startTime.localeCompare(y.startTime)));
   return out;
 };
 const analyzePlan = async (batch, body) => {
@@ -431,10 +433,10 @@ const analyzePlan = async (batch, body) => {
 
     for (const s of p.slots) {
       if (
-        !WORKING_DAYS.includes(s.day) ||
-        !TIME_REGEX.test(s.startTime || "") ||
-        !TIME_REGEX.test(s.endTime || "") ||
-        toMin(s.endTime) - toMin(s.startTime) !== minutes
+        !WORKING_DAYS.includes(s.day)
+        || !TIME_REGEX.test(s.startTime || "")
+        || !TIME_REGEX.test(s.endTime || "")
+        || toMin(s.endTime) - toMin(s.startTime) !== minutes
       ) {
         return { error: "One of the selected slots is invalid." };
       }
@@ -454,8 +456,8 @@ const analyzePlan = async (batch, body) => {
     (p) =>
       !eligible.some(
         (e) =>
-          String(e.therapistId) === String(p.therapistId) &&
-          e.specialty === p.speciality,
+          String(e.therapistId) === String(p.therapistId)
+          && e.specialty === p.speciality,
       ),
   );
 
@@ -540,10 +542,9 @@ const analyzePlan = async (batch, body) => {
     const start = toMin(s.startTime);
     const end = toMin(s.endTime);
 
-    const available =
-      st.workingDays.includes(weekdayOf(s.date)) &&
-      insideClinic(start, end, st) &&
-      availableOnDate(
+    const available = st.workingDays.includes(weekdayOf(s.date))
+      && insideClinic(start, end, st)
+      && availableOnDate(
         rulesBy.get(s.therapistId) || [],
         s.date,
         start,
@@ -565,11 +566,13 @@ const analyzePlan = async (batch, body) => {
         const a = list[i];
         const b = list[j];
         if (
-          toMin(a.startTime) < toMin(b.endTime) &&
-          toMin(b.startTime) < toMin(a.endTime)
+          toMin(a.startTime) < toMin(b.endTime)
+          && toMin(b.startTime) < toMin(a.endTime)
         ) {
           return {
-            error: `${a.therapistName} (${to12(a.startTime)}) and ${b.therapistName} (${to12(b.startTime)}) overlap on ${a.date}. Pick different times.`,
+            error: `${a.therapistName} (${to12(a.startTime)}) and ${b.therapistName} (${
+              to12(b.startTime)
+            }) overlap on ${a.date}. Pick different times.`,
           };
         }
       }
@@ -584,8 +587,7 @@ const analyzePlan = async (batch, body) => {
       busy.push({
         appointmentId: String(ap._id),
         therapistId: String(sc.therapistId?._id || sc.therapistId),
-        therapistName:
-          sc.therapistId?.fullName || "another therapist",
+        therapistName: sc.therapistId?.fullName || "another therapist",
 
         children: (ap.children || []).map((child) => ({
           childId: String(child.childId?._id || child.childId),
@@ -609,8 +611,7 @@ const analyzePlan = async (batch, body) => {
   const duplicates = [];
   const toCreate = [];
 
-  const range = (a, b) =>
-    `${to12(minutesToTime(a))}-${to12(minutesToTime(b))}`;
+  const range = (a, b) => `${to12(minutesToTime(a))}-${to12(minutesToTime(b))}`;
 
   for (const s of valid) {
     const a = toMin(s.startTime);
@@ -618,20 +619,19 @@ const analyzePlan = async (batch, body) => {
 
     const hits = busy.filter(
       (x) =>
-        x.date === s.date &&
-        x.a < b &&
-        a < x.b,
+        x.date === s.date
+        && x.a < b
+        && a < x.b,
     );
 
     if (
       hits.some(
-        (x) => x.batchId === String(batch._id) && x.therapistId === s.therapistId && x.a === a && x.b === b
+        (x) => x.batchId === String(batch._id) && x.therapistId === s.therapistId && x.a === a && x.b === b,
       )
     ) {
       duplicates.push(s);
       continue;
     }
-
 
     const reasons = [];
 
@@ -641,31 +641,31 @@ const analyzePlan = async (batch, body) => {
 
     if (therapistConflict) {
       reasons.push(
-        `${s.therapistName} already has a session at ${range(
-          therapistConflict.a,
-          therapistConflict.b,
-        )}`,
+        `${s.therapistName} already has a session at ${
+          range(
+            therapistConflict.a,
+            therapistConflict.b,
+          )
+        }`,
       );
     }
 
     const childConflict = hits.find(
       (x) =>
-        x.therapistId !== s.therapistId &&
-        x.children?.some((child) =>
-          children.includes(child.childId),
-        ),
+        x.therapistId !== s.therapistId
+        && x.children?.some((child) => children.includes(child.childId)),
     );
 
     if (childConflict) {
-      const child = childConflict.children.find((child) =>
-        children.includes(child.childId),
-      );
+      const child = childConflict.children.find((child) => children.includes(child.childId));
 
       reasons.push(
-        `${child?.childName || "A batch child"} already has a session with ${childConflict.therapistName} (${range(
-          childConflict.a,
-          childConflict.b,
-        )})`,
+        `${child?.childName || "A batch child"} already has a session with ${childConflict.therapistName} (${
+          range(
+            childConflict.a,
+            childConflict.b,
+          )
+        })`,
       );
     }
 
@@ -700,8 +700,8 @@ const clockMinutes = (tz) => {
   });
   return toMin(hhmm);
 };
-const SLOT_STEP = 15; 
-const INACTIVE_TYPES = ["cancel", "postponed"]; 
+const SLOT_STEP = 15;
+const INACTIVE_TYPES = ["cancel", "postponed"];
 const loadBatchAppointments = (batchId, extraMatch = {}) => {
   const id = new mongoose.Types.ObjectId(String(batchId));
   return Scheduling.aggregate([
@@ -823,7 +823,7 @@ const loadBatchAndAssignment = async (batchId, assignmentId) => {
   }
   return { batch, assignment };
 };
- const addBatchAppointment = async ({
+const addBatchAppointment = async ({
   therapistId,
   date,
   startTime,
@@ -837,12 +837,12 @@ const loadBatchAndAssignment = async (batchId, assignmentId) => {
   const d = utcMidnight(date);
   const year = d.getUTCFullYear();
   const month = d.getUTCMonth() + 1;
- 
+
   let schedule = await Scheduling.findOne({ therapistId, year, month });
   if (!schedule) {
     schedule = new Scheduling({ therapistId, year, month, appointments: [] });
   }
- 
+
   schedule.appointments.push({
     date: d,
     startTime,
@@ -854,7 +854,7 @@ const loadBatchAndAssignment = async (batchId, assignmentId) => {
     originalAppointmentId,
     children: childIds.map((childId) => ({ childId, attendance_status: "Pending" })),
   });
- 
+
   await schedule.save(); // runs the overlap validation hook
   return schedule.appointments[schedule.appointments.length - 1];
 };
@@ -995,10 +995,275 @@ exports.getTherapistsUsers = async (req, res) => {
     });
   }
 };
+
+exports.assignTherapistsUsers = async (req, res) => {
+  try {
+    const page = Math.max(
+      parseInt(req.query.page, 10) || 1,
+      1,
+    );
+
+    const limit = Math.max(
+      parseInt(req.query.limit, 10) || 10,
+      1,
+    );
+
+    const skip = (page - 1) * limit;
+
+    const {
+      search,
+      specialty,
+    } = req.query;
+
+    const matchStage = {};
+
+    if (
+      specialty
+      && specialty !== "All"
+    ) {
+      matchStage.specialty = specialty;
+    }
+
+    const pipeline = [
+      {
+        $match: matchStage,
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "therapistId",
+          foreignField: "_id",
+          as: "therapist",
+        },
+      },
+      {
+        $unwind: "$therapist",
+      },
+      {
+        $unwind: "$childIds",
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "childIds",
+          foreignField: "_id",
+          as: "child",
+        },
+      },
+      {
+        $unwind: "$child",
+      },
+      {
+        $match: {
+          "therapist.role": "Therapist",
+        },
+      },
+    ];
+
+    if (search?.trim()) {
+      const searchText = search.trim();
+
+      pipeline.push({
+        $match: {
+          $or: [
+            {
+              "child.fullName": {
+                $regex: searchText,
+                $options: "i",
+              },
+            },
+            {
+              "child.email": {
+                $regex: searchText,
+                $options: "i",
+              },
+            },
+            {
+              "therapist.fullName": {
+                $regex: searchText,
+                $options: "i",
+              },
+            },
+            {
+              "therapist.email": {
+                $regex: searchText,
+                $options: "i",
+              },
+            },
+          ],
+        },
+      });
+    }
+
+    pipeline.push(
+      {
+        $sort: {
+          "therapist.fullName": 1,
+          "child.fullName": 1,
+        },
+      },
+      {
+        $facet: {
+          metadata: [
+            {
+              $count: "total",
+            },
+          ],
+          data: [
+            {
+              $skip: skip,
+            },
+            {
+              $limit: limit,
+            },
+            {
+              $project: {
+                _id: 0,
+                assignmentId: {
+                  $toString: "$_id",
+                },
+                childId: {
+                  $toString: "$child._id",
+                },
+                childName: {
+                  $ifNull: [
+                    "$child.fullName",
+                    "$child.name",
+                  ],
+                },
+                childEmail: {
+                  $ifNull: [
+                    "$child.email",
+                    "",
+                  ],
+                },
+                childPhone: {
+                  $ifNull: [
+                    "$child.phone",
+                    "",
+                  ],
+                },
+                childProfileImage: {
+                  $ifNull: [
+                    "$child.profileImage",
+                    "",
+                  ],
+                },
+                therapistId: {
+                  $toString: "$therapist._id",
+                },
+                therapistName: {
+                  $ifNull: [
+                    "$therapist.fullName",
+                    "$therapist.name",
+                  ],
+                },
+                therapistEmail: {
+                  $ifNull: [
+                    "$therapist.email",
+                    "",
+                  ],
+                },
+                therapistPhone: {
+                  $ifNull: [
+                    "$therapist.phone",
+                    "",
+                  ],
+                },
+                therapistProfileImage: {
+                  $ifNull: [
+                    "$therapist.profileImage",
+                    "",
+                  ],
+                },
+                specialty: 1,
+                maxChildren: 1,
+                assignedChildren: {
+                  $size: {
+                    $ifNull: [
+                      "$childIdsOriginal",
+                      [],
+                    ],
+                  },
+                },
+                combinedName: {
+                  $concat: [
+                    {
+                      $ifNull: [
+                        "$child.fullName",
+                        "$child.name",
+                      ],
+                    },
+                    " - ",
+                    {
+                      $ifNull: [
+                        "$therapist.fullName",
+                        "$therapist.name",
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+    );
+
+    pipeline.splice(1, 0, {
+      $set: {
+        childIdsOriginal: {
+          $cond: [
+            {
+              $isArray: "$childIds",
+            },
+            "$childIds",
+            [],
+          ],
+        },
+      },
+    });
+
+    const result = await TherapistAssignment.aggregate(
+      pipeline,
+    );
+
+    const data = result[0]?.data || [];
+
+    const total = result[0]?.metadata?.[0]?.total
+      || 0;
+
+    const specialties = await TherapistAssignment.distinct(
+      "specialty",
+    );
+
+    return res.status(200).json({
+      success: true,
+      page,
+      limit,
+      total,
+      count: data.length,
+      hasMore: skip + data.length < total,
+      data,
+      specialties,
+    });
+  } catch (error) {
+    console.error(
+      "Get Therapist Users Error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get therapist users",
+      error: error.message,
+    });
+  }
+};
+
 exports.createTherapist = async (req, res) => {
   try {
-    const { name, specialty, maxChildren, email, phone, address, password } =
-      req.body;
+    const { name, specialty, maxChildren, email, phone, address, password } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -1057,8 +1322,7 @@ exports.createTherapist = async (req, res) => {
     const assignment = await TherapistAssignment.create({
       therapistId: user._id,
       specialty: specialty || "",
-      maxChildren:
-        maxChildren && maxChildren > 0 ? parseInt(maxChildren, 10) : 15,
+      maxChildren: maxChildren && maxChildren > 0 ? parseInt(maxChildren, 10) : 15,
       childIds: [],
     });
 
@@ -1087,8 +1351,7 @@ exports.createTherapist = async (req, res) => {
 exports.updateTherapist = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, specialty, maxChildren, email, phone, address, password } =
-      req.body;
+    const { name, specialty, maxChildren, email, phone, address, password } = req.body;
 
     const user = await User.findOne({ _id: id, role: "Therapist" });
     if (!user) {
@@ -1128,8 +1391,7 @@ exports.updateTherapist = async (req, res) => {
       if (!phoneRegex.test(phoneTrimmed)) {
         return res.status(400).json({
           success: false,
-          message:
-            "Phone number must be in 03011234567 or +923011234567 format.",
+          message: "Phone number must be in 03011234567 or +923011234567 format.",
         });
       }
       user.phone = phoneTrimmed.startsWith("+92")
@@ -1162,8 +1424,9 @@ exports.updateTherapist = async (req, res) => {
     let assignment = await TherapistAssignment.findOne({ therapistId: id });
     if (assignment) {
       if (specialty !== undefined) assignment.specialty = specialty;
-      if (maxChildren !== undefined)
+      if (maxChildren !== undefined) {
         assignment.maxChildren = parseInt(maxChildren, 10);
+      }
       await assignment.save();
     } else {
       assignment = await TherapistAssignment.create({
@@ -1231,13 +1494,12 @@ exports.assignChildrenToTherapist = async (req, res) => {
       : [];
 
     if (
-      !therapistId ||
-      (addChildIds.length === 0 && removeChildIds.length === 0)
+      !therapistId
+      || (addChildIds.length === 0 && removeChildIds.length === 0)
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "therapistId and at least one of addChildIds/removeChildIds are required.",
+        message: "therapistId and at least one of addChildIds/removeChildIds are required.",
       });
     }
 
@@ -1262,8 +1524,7 @@ exports.assignChildrenToTherapist = async (req, res) => {
       if (uniqueAddIds.length === 0) {
         return res.status(200).json({
           success: true,
-          message:
-            "Nothing to update — no existing assignment and no children to add.",
+          message: "Nothing to update — no existing assignment and no children to add.",
           data: {
             therapistId,
             currentLoad: 0,
@@ -1279,7 +1540,8 @@ exports.assignChildrenToTherapist = async (req, res) => {
       if (uniqueAddIds.length > maxChildren) {
         return res.status(400).json({
           success: false,
-          message: `This therapist can have a maximum of ${maxChildren} children. You tried to assign ${uniqueAddIds.length}.`,
+          message:
+            `This therapist can have a maximum of ${maxChildren} children. You tried to assign ${uniqueAddIds.length}.`,
           data: {
             therapistId,
             requestedChildren: uniqueAddIds.length,
@@ -1354,8 +1616,7 @@ exports.assignChildrenToTherapist = async (req, res) => {
     if (toAdd.length === 0 && toRemove.length === 0) {
       return res.status(200).json({
         success: true,
-        message:
-          "No changes made — selected children already reflect the current state.",
+        message: "No changes made — selected children already reflect the current state.",
         data: {
           therapistId,
           childIds: assignment.childIds,
@@ -1379,12 +1640,15 @@ exports.assignChildrenToTherapist = async (req, res) => {
 
     const messageParts = [];
     if (toAdd.length > 0) messageParts.push(`${toAdd.length} child(ren) added`);
-    if (toRemove.length > 0)
+    if (toRemove.length > 0) {
       messageParts.push(`${toRemove.length} child(ren) removed`);
-    if (alreadyAssignedIds.length > 0)
+    }
+    if (alreadyAssignedIds.length > 0) {
       messageParts.push(`${alreadyAssignedIds.length} were already assigned`);
-    if (notAssignedForRemoval.length > 0)
+    }
+    if (notAssignedForRemoval.length > 0) {
       messageParts.push(`${notAssignedForRemoval.length} were not assigned`);
+    }
 
     return res.status(200).json({
       success: true,
@@ -1413,43 +1677,43 @@ exports.assignChildrenToTherapist = async (req, res) => {
 exports.getTherapistSchedule = async (req, res) => {
   try {
     const { therapistId } = req.params;
- 
+
     if (!mongoose.isValidObjectId(therapistId)) {
       return res.status(400).json({ success: false, message: "Invalid therapistId." });
     }
- 
+
     const therapist = await User.findOne(
       { _id: therapistId, role: "Therapist" },
       "fullName email phone",
     ).lean();
- 
+
     if (!therapist) {
       return res.status(404).json({ success: false, message: "Therapist not found." });
     }
- 
+
     const pastDays = Math.min(Math.max(parseInt(req.query.pastDays, 10) || 90, 1), 365);
- 
+
     const st = await loadScheduleSettings();
     const today = todayKey(st.tz);
     const nowMin = clockMinutes(st.tz);
     const cutoff = addDays(today, -pastDays);
- 
+
     const [availability, assignments, schedules] = await Promise.all([
       TherapistAvailability.find({ therapistId, isActive: true })
         .sort({ type: -1, date: 1, createdAt: 1 })
         .lean(),
- 
+
       TherapistAssignment.find({ therapistId }, "specialty").lean(),
- 
+
       Scheduling.find({ therapistId })
         .populate("appointments.batchId", "batchName")
         .populate("appointments.batchAssignmentId", "speciality")
         .populate("appointments.children.childId", "fullName")
         .lean(),
     ]);
- 
+
     const sessions = [];
- 
+
     for (const sc of schedules) {
       for (const ap of sc.appointments || []) {
         const date = dateKeyOf(ap.date);
@@ -1474,14 +1738,12 @@ exports.getTherapistSchedule = async (req, res) => {
         });
       }
     }
- 
-    sessions.sort((a, b) =>
-      a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date),
-    );
- 
+
+    sessions.sort((a, b) => a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date));
+
     const upcoming = sessions.filter((s) => !s.isPast);
     const past = sessions.filter((s) => s.isPast).reverse();
- 
+
     return res.json({
       success: true,
       data: {
@@ -1508,7 +1770,6 @@ exports.getTherapistSchedule = async (req, res) => {
     });
   }
 };
-
 
 exports.childUsers = async (req, res) => {
   try {
@@ -1552,21 +1813,19 @@ exports.childUsers = async (req, res) => {
 };
 exports.createChild = async (req, res) => {
   try {
-    const { fullName, fatherName, fatherCnic, age, email, phone, password } =
-      req.body;
+    const { fullName, fatherName, fatherCnic, age, email, phone, password } = req.body;
 
     if (
-      !fullName ||
-      !email ||
-      !phone ||
-      !password ||
-      !fatherName ||
-      !fatherCnic
+      !fullName
+      || !email
+      || !phone
+      || !password
+      || !fatherName
+      || !fatherCnic
     ) {
       return res.json({
         success: false,
-        message:
-          "fullName, email, phone, parent name, parent CNIC and password are required.",
+        message: "fullName, email, phone, parent name, parent CNIC and password are required.",
       });
     }
 
@@ -1582,13 +1841,12 @@ exports.createChild = async (req, res) => {
     }).lean();
 
     if (
-      existParent &&
-      normalizeName(existParent.fatherName) !== normalizeName(fatherName)
+      existParent
+      && normalizeName(existParent.fatherName) !== normalizeName(fatherName)
     ) {
       return res.status(409).json({
         success: false,
-        message:
-          "This parent CNIC already exists with a different parent name.",
+        message: "This parent CNIC already exists with a different parent name.",
       });
     }
 
@@ -1633,8 +1891,7 @@ exports.createChild = async (req, res) => {
 exports.updateChild = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fullName, fatherName, fatherCnic, age, email, phone, password } =
-      req.body;
+    const { fullName, fatherName, fatherCnic, age, email, phone, password } = req.body;
     if (!fullName || !email || !phone) {
       return res.json({
         success: false,
@@ -1667,17 +1924,15 @@ exports.updateChild = async (req, res) => {
       }).lean();
 
       if (
-        otherChildren.length > 0 &&
-        fatherName !== undefined &&
-        otherChildren.some(
-          (child) =>
-            normalizeName(child.fatherName) !== normalizeName(fatherName),
+        otherChildren.length > 0
+        && fatherName !== undefined
+        && otherChildren.some(
+          (child) => normalizeName(child.fatherName) !== normalizeName(fatherName),
         )
       ) {
         return res.status(409).json({
           success: false,
-          message:
-            "This parent CNIC already exists with a different parent name.",
+          message: "This parent CNIC already exists with a different parent name.",
         });
       }
     }
@@ -1802,15 +2057,14 @@ exports.getLeaveRequests = async (req, res) => {
 
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const [pendingCount, pendingSinceYesterday, onLeaveDocs] =
-      await Promise.all([
-        LeaveRequest.countDocuments({ status: "pending" }),
-        LeaveRequest.countDocuments({
-          status: "pending",
-          createdAt: { $gte: yesterday },
-        }),
-        getOnLeaveToday(),
-      ]);
+    const [pendingCount, pendingSinceYesterday, onLeaveDocs] = await Promise.all([
+      LeaveRequest.countDocuments({ status: "pending" }),
+      LeaveRequest.countDocuments({
+        status: "pending",
+        createdAt: { $gte: yesterday },
+      }),
+      getOnLeaveToday(),
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -1962,28 +2216,27 @@ exports.getAdminFeedbackManagement = async (req, res) => {
     startOfYesterday.setDate(startOfYesterday.getDate() - 1);
     startOfYesterday.setHours(0, 0, 0, 0);
 
-    const [ratingResult, sinceYesterdayFeedback] =
-      await Promise.all([
-        Feedback.aggregate([
-          {
-            $group: {
-              _id: null,
-              averageRating: {
-                $avg: "$rating",
-              },
+    const [ratingResult, sinceYesterdayFeedback] = await Promise.all([
+      Feedback.aggregate([
+        {
+          $group: {
+            _id: null,
+            averageRating: {
+              $avg: "$rating",
             },
           },
-        ]),
+        },
+      ]),
 
-        Feedback.countDocuments({
-          createdAt: {
-            $gte: startOfYesterday,
-          },
-          notes: {
-            $nin: [null, ""],
-          },
-        }),
-      ]);
+      Feedback.countDocuments({
+        createdAt: {
+          $gte: startOfYesterday,
+        },
+        notes: {
+          $nin: [null, ""],
+        },
+      }),
+    ]);
 
     const averageSatisfaction = ratingResult.length
       ? Number(ratingResult[0].averageRating.toFixed(1))
@@ -2012,7 +2265,7 @@ exports.getAdminFeedbackManagement = async (req, res) => {
         replies: 1,
         createdAt: 1,
         updatedAt: 1,
-      }
+      },
     )
       .populate("therapistId", "fullName email role")
       .lean()
@@ -2029,7 +2282,7 @@ exports.getAdminFeedbackManagement = async (req, res) => {
 
       feedbackMap.set(
         feedback.appointmentId.toString(),
-        feedback
+        feedback,
       );
     }
 
@@ -2060,7 +2313,7 @@ exports.getAdminFeedbackManagement = async (req, res) => {
           {
             appointment,
             therapistId: schedule.therapistId,
-          }
+          },
         );
       }
     }
@@ -2100,7 +2353,7 @@ exports.getAdminFeedbackManagement = async (req, res) => {
         // -----------------------------------------------------
 
         const feedback = feedbackMap.get(
-          appointment._id.toString()
+          appointment._id.toString(),
         );
 
         // Feedback already exists
@@ -2117,20 +2370,18 @@ exports.getAdminFeedbackManagement = async (req, res) => {
 
           therapistId: schedule.therapistId,
 
-          childId:
-            appointment.children?.length > 0
-              ? appointment.children[0].childId
-              : null,
+          childId: appointment.children?.length > 0
+            ? appointment.children[0].childId
+            : null,
 
           session: {
             date: appointment.date,
             startTime: appointment.startTime,
             endTime: appointment.endTime,
 
-            attendanceStatus:
-              appointment.children?.length > 0
-                ? appointment.children[0].attendance_status
-                : null,
+            attendanceStatus: appointment.children?.length > 0
+              ? appointment.children[0].attendance_status
+              : null,
           },
         });
       }
@@ -2150,8 +2401,8 @@ exports.getAdminFeedbackManagement = async (req, res) => {
       data = feedbacks.map((feedback) => {
         const appointmentData = feedback.appointmentId
           ? appointmentMap.get(
-              feedback.appointmentId.toString()
-            )
+            feedback.appointmentId.toString(),
+          )
           : null;
 
         const { replies, ...feedbackData } = feedback;
@@ -2159,15 +2410,13 @@ exports.getAdminFeedbackManagement = async (req, res) => {
         return {
           ...feedbackData,
 
-          isRespond:
-            Array.isArray(replies) &&
-            replies.length > 0,
+          isRespond: Array.isArray(replies)
+            && replies.length > 0,
 
           appointment: appointmentData
             ? {
-                startTime:
-                  appointmentData.appointment.startTime,
-              }
+              startTime: appointmentData.appointment.startTime,
+            }
             : null,
         };
       });
@@ -2181,31 +2430,28 @@ exports.getAdminFeedbackManagement = async (req, res) => {
       const threeDaysAgo = new Date();
 
       threeDaysAgo.setDate(
-        threeDaysAgo.getDate() - 3
+        threeDaysAgo.getDate() - 3,
       );
 
       data = feedbacks
         .filter(
-          (feedback) =>
-            feedback.createdAt >= threeDaysAgo
+          (feedback) => feedback.createdAt >= threeDaysAgo,
         )
         .map((feedback) => {
-          const appointmentData =
-            feedback.appointmentId
-              ? appointmentMap.get(
-                  feedback.appointmentId.toString()
-                )
-              : null;
+          const appointmentData = feedback.appointmentId
+            ? appointmentMap.get(
+              feedback.appointmentId.toString(),
+            )
+            : null;
 
           return {
             ...feedback,
 
             appointment: appointmentData
               ? {
-                  startTime:
-                    appointmentData.appointment
-                      .startTime,
-                }
+                startTime: appointmentData.appointment
+                  .startTime,
+              }
               : null,
           };
         });
@@ -2220,8 +2466,8 @@ exports.getAdminFeedbackManagement = async (req, res) => {
 
       data.sort(
         (a, b) =>
-          new Date(b.session.date) -
-          new Date(a.session.date)
+          new Date(b.session.date)
+          - new Date(a.session.date),
       );
     }
 
@@ -2247,18 +2493,16 @@ exports.getAdminFeedbackManagement = async (req, res) => {
   } catch (error) {
     console.error(
       "Admin Feedback Management Error:",
-      error
+      error,
     );
 
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to fetch feedback management data.",
+      message: "Failed to fetch feedback management data.",
       error: error.message,
     });
   }
 };
-
 
 exports.getFeedbackReplies = async (req, res) => {
   try {
@@ -2654,12 +2898,11 @@ exports.createBroadcast = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message:
-        status === "draft"
-          ? "Draft saved."
-          : status === "scheduled"
-            ? "Broadcast scheduled."
-            : "Broadcast sent.",
+      message: status === "draft"
+        ? "Draft saved."
+        : status === "scheduled"
+        ? "Broadcast scheduled."
+        : "Broadcast sent.",
       data: notification,
     });
   } catch (error) {
@@ -2849,7 +3092,7 @@ exports.updateBroadcast = async (req, res) => {
         "..",
         broadcast.attachment.url.replace(/^\//, ""),
       );
-      fs.unlink(oldPath, () => { });
+      fs.unlink(oldPath, () => {});
       broadcast.attachment = { url: null, name: null, type: null };
     }
 
@@ -2861,7 +3104,7 @@ exports.updateBroadcast = async (req, res) => {
           "..",
           broadcast.attachment.url.replace(/^\//, ""),
         );
-        fs.unlink(oldPath, () => { });
+        fs.unlink(oldPath, () => {});
       }
       broadcast.attachment = {
         url: `/assets/broadcasts/${req.file.filename}`,
@@ -2947,7 +3190,7 @@ exports.deleteBroadcast = async (req, res) => {
         "..",
         broadcast.attachment.url.replace(/^\//, ""),
       );
-      fs.unlink(filePath, () => { }); // best-effort cleanup, no need to block response on it
+      fs.unlink(filePath, () => {}); // best-effort cleanup, no need to block response on it
     }
     return res
       .status(200)
@@ -3551,8 +3794,9 @@ exports.updateAvailability = async (req, res) => {
 
     // TODO (sessions step): if future sessions fall outside the new window, block or warn here.
     Object.assign(existing, rule);
-    if (req.body.isActive !== undefined)
+    if (req.body.isActive !== undefined) {
       existing.isActive = !!req.body.isActive;
+    }
     await existing.save();
 
     return res
@@ -3602,8 +3846,6 @@ exports.deleteAvailability = async (req, res) => {
   }
 };
 
-
-
 exports.getBatchTherapistOptions = async (req, res) => {
   try {
     const batch = await Batch.findById(req.params.batchId).lean();
@@ -3648,9 +3890,9 @@ exports.getBatchTherapistOptions = async (req, res) => {
 
     const availability = therapistIds.length
       ? await TherapistAvailability.find({
-          therapistId: { $in: therapistIds },
-          isActive: true,
-        }).lean()
+        therapistId: { $in: therapistIds },
+        isActive: true,
+      }).lean()
       : [];
 
     const availabilityMap = new Set(
@@ -3658,8 +3900,8 @@ exports.getBatchTherapistOptions = async (req, res) => {
         .filter((r) =>
           r.type === "custom"
             ? r.date >= from && r.date <= to
-            : (!r.effectiveTo || r.effectiveTo >= from) &&
-              (!r.effectiveFrom || r.effectiveFrom <= to),
+            : (!r.effectiveTo || r.effectiveTo >= from)
+              && (!r.effectiveFrom || r.effectiveFrom <= to)
         )
         .map((r) => String(r.therapistId)),
     );
@@ -3796,19 +4038,19 @@ exports.getBatchSlotOptions = async (req, res) => {
     });
 
     const nameById = new Map(
-      existing.map((a) => [String(a.therapistId?._id), a.therapistId?.fullName || "Therapist"])
+      existing.map((a) => [String(a.therapistId?._id), a.therapistId?.fullName || "Therapist"]),
     );
     const specByAssignment = new Map(existing.map((a) => [String(a._id), a.speciality]));
-    
+
     const batchAps = await loadBatchAppointments(batch._id);
     for (const ap of batchAps) {
       const tid = String(ap.therapistId);
       const date = dateKeyOf(ap.date);
       if (!ids.includes(tid) || INACTIVE_TYPES.includes(ap.sessionType) || date < today) continue;
-    
+
       const day = weekdayOf(date);
       const exists = blocked[day].some(
-        (x) => x.therapistId === tid && x.startTime === ap.startTime && x.endTime === ap.endTime
+        (x) => x.therapistId === tid && x.startTime === ap.startTime && x.endTime === ap.endTime,
       );
       if (!exists) {
         blocked[day].push({
@@ -3820,7 +4062,6 @@ exports.getBatchSlotOptions = async (req, res) => {
         });
       }
     }
-
 
     return res.json({
       success: true,
@@ -3859,8 +4100,8 @@ exports.previewBatchSchedule = async (req, res) => {
     const count = (list, plan) =>
       list.filter(
         (s) =>
-          String(s.therapistId) === String(plan.therapistId) &&
-          s.speciality === plan.speciality,
+          String(s.therapistId) === String(plan.therapistId)
+          && s.speciality === plan.speciality,
       ).length;
 
     const perTherapist = r.plans.map((plan) => ({
@@ -3925,8 +4166,7 @@ exports.saveBatchSchedule = async (req, res) => {
     if (!r.toCreate.length) {
       return res.status(400).json({
         success: false,
-        message:
-          "No new sessions to create. Every date conflicts, is outside availability, or already exists.",
+        message: "No new sessions to create. Every date conflicts, is outside availability, or already exists.",
       });
     }
 
@@ -3935,10 +4175,10 @@ exports.saveBatchSchedule = async (req, res) => {
     for (const plan of r.plans) {
       const therapistId = String(plan.therapistId);
       const sessions = r.toCreate.filter(
-        (s) => s.therapistId === therapistId && s.speciality === plan.speciality
+        (s) => s.therapistId === therapistId && s.speciality === plan.speciality,
       );
       if (!sessions.length) continue;
-    
+
       const key = { batchId: batch._id, therapistId, speciality: plan.speciality };
       await BatchAssignment.updateOne(
         key,
@@ -3946,33 +4186,32 @@ exports.saveBatchSchedule = async (req, res) => {
           $set: { childIds: r.children, sessionMinutes: r.minutes },
           $setOnInsert: { maxChildren: batch.maxChild },
         },
-        { upsert: true }
+        { upsert: true },
       );
       const assignment = await BatchAssignment.findOne(key).select("_id").lean();
-    
+
       const byMonth = new Map();
       for (const s of sessions) {
         const k = s.date.slice(0, 7);
         if (!byMonth.has(k)) byMonth.set(k, []);
         byMonth.get(k).push(s);
       }
-    
+
       for (const [k, list] of byMonth) {
         const [year, month] = k.split("-").map(Number);
-        const schedule =
-          (await Scheduling.findOne({ therapistId, year, month })) ||
-          new Scheduling({ therapistId, year, month, appointments: [] });
-    
+        const schedule = (await Scheduling.findOne({ therapistId, year, month }))
+          || new Scheduling({ therapistId, year, month, appointments: [] });
+
         for (const s of list) {
           const exists = schedule.appointments.some(
             (ap) =>
-              ap.type === "batch" &&
-              String(ap.batchAssignmentId) === String(assignment._id) &&
-              dateKeyOf(ap.date) === s.date &&
-              ap.startTime === s.startTime
+              ap.type === "batch"
+              && String(ap.batchAssignmentId) === String(assignment._id)
+              && dateKeyOf(ap.date) === s.date
+              && ap.startTime === s.startTime,
           );
           if (exists) continue;
-    
+
           schedule.appointments.push({
             date: utcMidnight(s.date),
             startTime: s.startTime,
@@ -3989,7 +4228,6 @@ exports.saveBatchSchedule = async (req, res) => {
         await schedule.save();
       }
     }
-
 
     await Batch.updateOne(
       { _id: batch._id },
@@ -4084,7 +4322,6 @@ exports.getBatchEligibleChildren = async (req, res) => {
 };
 exports.updateBatchChildren = async (req, res) => {
   try {
-
     const batch = await Batch.findById(req.params.batchId)
       .select("childrenIds maxChild dateTo")
       .lean();
@@ -4100,7 +4337,7 @@ exports.updateBatchChildren = async (req, res) => {
       ...new Set(
         (Array.isArray(value) ? value : [])
           .filter((id) => mongoose.isValidObjectId(id))
-          .map(String)
+          .map(String),
       ),
     ];
 
@@ -4108,16 +4345,12 @@ exports.updateBatchChildren = async (req, res) => {
     const add = normalizeIds(req.body.addChildIds);
 
     const current = new Set(
-      (batch.childrenIds || []).map(String)
+      (batch.childrenIds || []).map(String),
     );
 
-    const actualRemove = remove.filter((id) =>
-      current.has(id)
-    );
+    const actualRemove = remove.filter((id) => current.has(id));
 
-    const actualAdd = add.filter((id) =>
-      !current.has(id)
-    );
+    const actualAdd = add.filter((id) => !current.has(id));
 
     if (!actualRemove.length && !actualAdd.length) {
       return res.status(400).json({
@@ -4126,10 +4359,9 @@ exports.updateBatchChildren = async (req, res) => {
       });
     }
 
-    const newCount =
-      current.size -
-      actualRemove.length +
-      actualAdd.length;
+    const newCount = current.size
+      - actualRemove.length
+      + actualAdd.length;
 
     if (newCount > batch.maxChild) {
       return res.status(400).json({
@@ -4162,7 +4394,7 @@ exports.updateBatchChildren = async (req, res) => {
         $set: {
           childrenIds: finalChildren,
         },
-      }
+      },
     );
 
     const assignments = await BatchAssignment.find({
@@ -4190,14 +4422,13 @@ exports.updateBatchChildren = async (req, res) => {
         $set: {
           childIds: finalChildren,
         },
-      }
+      },
     );
 
     const st = await loadScheduleSettings();
 
     const today = todayKey(st.tz);
     const batchEnd = dateKeyOf(batch.dateTo);
-
 
     if (actualRemove.length) {
       await Scheduling.updateMany(
@@ -4242,7 +4473,7 @@ exports.updateBatchChildren = async (req, res) => {
               },
             },
           ],
-        }
+        },
       );
     }
 
@@ -4260,7 +4491,7 @@ exports.updateBatchChildren = async (req, res) => {
     }
 
     const addObjIds = actualAdd.map((id) => new mongoose.Types.ObjectId(id));
- 
+
     const busyRows = await Scheduling.aggregate([
       { $match: { "appointments.children.childId": { $in: addObjIds } } },
       { $unwind: "$appointments" },
@@ -4273,7 +4504,7 @@ exports.updateBatchChildren = async (req, res) => {
       },
       { $replaceRoot: { newRoot: "$appointments" } },
     ]);
-    
+
     const childBusy = new Map(actualAdd.map((id) => [id, []]));
     for (const ap of busyRows) {
       for (const c of ap.children || []) {
@@ -4281,27 +4512,27 @@ exports.updateBatchChildren = async (req, res) => {
         if (list) list.push({ date: dateKeyOf(ap.date), startTime: ap.startTime, endTime: ap.endTime });
       }
     }
-    
+
     const upcomingAps = await loadBatchAppointments(batch._id, {
       "appointments.sessionType": { $nin: INACTIVE_TYPES },
       "appointments.date": { $gte: utcMidnight(today) },
     });
-    
+
     const skipped = [];
     const ops = [];
-    
+
     for (const ap of upcomingAps) {
       const date = dateKeyOf(ap.date);
       const already = new Set((ap.children || []).map((c) => String(c.childId)));
       const toAdd = [];
-    
+
       for (const childId of actualAdd) {
         if (already.has(childId)) continue;
         const clash = (childBusy.get(childId) || []).some(
           (b) =>
-            b.date === date &&
-            toMin(b.startTime) < toMin(ap.endTime) &&
-            toMin(ap.startTime) < toMin(b.endTime)
+            b.date === date
+            && toMin(b.startTime) < toMin(ap.endTime)
+            && toMin(ap.startTime) < toMin(b.endTime),
         );
         if (clash) {
           skipped.push({
@@ -4315,7 +4546,7 @@ exports.updateBatchChildren = async (req, res) => {
           toAdd.push({ childId, attendance_status: "Pending" });
         }
       }
-    
+
       if (toAdd.length) {
         ops.push({
           updateOne: {
@@ -4325,11 +4556,11 @@ exports.updateBatchChildren = async (req, res) => {
         });
       }
     }
-    
+
     for (let i = 0; i < ops.length; i += 500) {
       await Scheduling.bulkWrite(ops.slice(i, i + 500), { ordered: false });
     }
-    
+
     return res.json({
       success: true,
       message: "Batch children updated.",
@@ -4343,13 +4574,12 @@ exports.updateBatchChildren = async (req, res) => {
   } catch (error) {
     console.error(
       "updateBatchChildren:",
-      error
+      error,
     );
 
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to update batch children.",
+      message: "Failed to update batch children.",
     });
   }
 };
@@ -4358,8 +4588,8 @@ exports.removeBatchAssignment = async (req, res) => {
     const { batchId, assignmentId } = req.params;
 
     if (
-      !mongoose.isValidObjectId(batchId) ||
-      !mongoose.isValidObjectId(assignmentId)
+      !mongoose.isValidObjectId(batchId)
+      || !mongoose.isValidObjectId(assignmentId)
     ) {
       return res.status(400).json({
         success: false,
@@ -4395,8 +4625,8 @@ exports.removeBatchAssignment = async (req, res) => {
     for (const schedule of schedules) {
       for (const appointment of schedule.appointments || []) {
         if (
-          String(appointment.batchAssignmentId) !==
-          String(assignment._id)
+          String(appointment.batchAssignmentId)
+            !== String(assignment._id)
         ) {
           continue;
         }
@@ -4406,15 +4636,14 @@ exports.removeBatchAssignment = async (req, res) => {
         }
 
         futureAppointmentIds.push(
-          appointment._id
+          appointment._id,
         );
       }
     }
     let removedAppointments = 0;
 
     if (futureAppointmentIds.length) {
-      removedAppointments =
-        futureAppointmentIds.length;
+      removedAppointments = futureAppointmentIds.length;
 
       await Scheduling.updateMany(
         {},
@@ -4426,7 +4655,7 @@ exports.removeBatchAssignment = async (req, res) => {
               },
             },
           },
-        }
+        },
       );
       await Scheduling.deleteMany({
         appointments: { $size: 0 },
@@ -4443,22 +4672,19 @@ exports.removeBatchAssignment = async (req, res) => {
     }
     await BatchAssignment.deleteOne({ _id: assignment._id });
 
-
-    const therapistStillAssigned =
-      await BatchAssignment.exists({
-        batchId,
-        therapistId: assignment.therapistId,
-      });
+    const therapistStillAssigned = await BatchAssignment.exists({
+      batchId,
+      therapistId: assignment.therapistId,
+    });
 
     if (!therapistStillAssigned) {
       await Batch.updateOne(
         { _id: batchId },
         {
           $pull: {
-            therapistIds:
-              assignment.therapistId,
+            therapistIds: assignment.therapistId,
           },
-        }
+        },
       );
     }
 
@@ -4467,10 +4693,10 @@ exports.removeBatchAssignment = async (req, res) => {
       message: "Batch assignment removed.",
       data: {
         assignmentId: String(
-          assignment._id
+          assignment._id,
         ),
         therapistId: String(
-          assignment.therapistId
+          assignment.therapistId,
         ),
         removedAppointments,
       },
@@ -4478,24 +4704,23 @@ exports.removeBatchAssignment = async (req, res) => {
   } catch (error) {
     console.error(
       "removeBatchAssignment:",
-      error
+      error,
     );
 
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to remove batch assignment.",
+      message: "Failed to remove batch assignment.",
     });
   }
 };
 exports.getBatchScheduleData = async (req, res) => {
   try {
     const { batchId } = req.params;
- 
+
     if (!mongoose.isValidObjectId(batchId)) {
       return res.status(400).json({ success: false, message: "Invalid batchId." });
     }
- 
+
     const [batch, assignments] = await Promise.all([
       Batch.findById(batchId)
         .populate("therapistIds", "fullName email")
@@ -4506,11 +4731,11 @@ exports.getBatchScheduleData = async (req, res) => {
         .populate("childIds", "fullName")
         .lean(),
     ]);
- 
+
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
- 
+
     const aps = await loadBatchAppointments(batch._id);
     const byAssignment = new Map();
     for (const ap of aps) {
@@ -4531,7 +4756,6 @@ exports.getBatchScheduleData = async (req, res) => {
       );
     }
     return res.json({ success: true, data: { batch, assignments } });
-
   } catch (error) {
     console.error("getBatchScheduleData:", error);
     return res.status(500).json({
@@ -4546,7 +4770,7 @@ exports.getSessionSlotOptions = async (req, res) => {
     if (loaded.status) {
       return res.status(loaded.status).json({ success: false, message: loaded.message });
     }
- 
+
     const minutes = Number(req.body.sessionMinutes);
     if (!SESSION_TIMES.includes(minutes)) {
       return res.status(400).json({
@@ -4554,16 +4778,16 @@ exports.getSessionSlotOptions = async (req, res) => {
         message: "Session time must be 45, 60, 90 or 120 minutes.",
       });
     }
- 
+
     const r = await freeSlotsForDate({
       batch: loaded.batch,
       therapistId: loaded.assignment.therapistId,
       date: req.body.date,
       minutes,
     });
- 
+
     if (r.error) return res.status(400).json({ success: false, message: r.error });
- 
+
     return res.json({ success: true, data: { slots: r.slots, reason: r.reason } });
   } catch (error) {
     console.error("getSessionSlotOptions:", error);
@@ -4578,7 +4802,7 @@ exports.createAdditionalSession = async (req, res) => {
     }
     const { batch, assignment } = loaded;
     const { date, startTime, endTime } = req.body;
- 
+
     if (!TIME_REGEX.test(startTime || "") || !TIME_REGEX.test(endTime || "")) {
       return res.status(400).json({ success: false, message: "Start and end time must be HH:mm." });
     }
@@ -4589,7 +4813,7 @@ exports.createAdditionalSession = async (req, res) => {
         message: "Session time must be 45, 60, 90 or 120 minutes.",
       });
     }
- 
+
     const r = await freeSlotsForDate({
       batch,
       therapistId: assignment.therapistId,
@@ -4597,14 +4821,14 @@ exports.createAdditionalSession = async (req, res) => {
       minutes,
     });
     if (r.error) return res.status(400).json({ success: false, message: r.error });
- 
+
     if (!r.slots.some((s) => s.startTime === startTime && s.endTime === endTime)) {
       return res.status(409).json({
         success: false,
         message: "That time is no longer available. Pick another one.",
       });
     }
- 
+
     await createExtraSession({
       batch,
       assignment,
@@ -4614,7 +4838,7 @@ exports.createAdditionalSession = async (req, res) => {
       sessionType: "additional",
       childIds: batch.childrenIds || [],
     });
- 
+
     return res.status(201).json({
       success: true,
       message: "Additional class created.",
@@ -4637,12 +4861,12 @@ exports.postponeBatchSession = async (req, res) => {
       return res.status(loaded.status).json({ success: false, message: loaded.message });
     }
     const { batch, assignment } = loaded;
- 
+
     const { sessionId: appointmentId } = req.params;
- 
+
     const originalDoc = await Scheduling.findOne(
       { appointments: { $elemMatch: { _id: appointmentId, batchAssignmentId: assignment._id } } },
-      { therapistId: 1, "appointments.$": 1 }
+      { therapistId: 1, "appointments.$": 1 },
     ).lean();
     const originalAp = originalDoc?.appointments?.[0];
     if (!originalAp) {
@@ -4651,20 +4875,22 @@ exports.postponeBatchSession = async (req, res) => {
     if (INACTIVE_TYPES.includes(originalAp.sessionType)) {
       return res.status(400).json({ success: false, message: "This session was already postponed or cancelled." });
     }
-    
+
     const st = await loadScheduleSettings();
     const origDate = dateKeyOf(originalAp.date);
-    if (origDate < todayKey(st.tz) || (origDate === todayKey(st.tz) && toMin(originalAp.endTime) <= clockMinutes(st.tz))) {
+    if (
+      origDate < todayKey(st.tz) || (origDate === todayKey(st.tz) && toMin(originalAp.endTime) <= clockMinutes(st.tz))
+    ) {
       return res.status(400).json({ success: false, message: "Past sessions can't be postponed." });
     }
-    
+
     const createAlternate = req.body.createAlternate === true || req.body.createAlternate === "true";
     const minutes = toMin(originalAp.endTime) - toMin(originalAp.startTime);
-    
+
     let alternate = null;
     if (createAlternate) {
       const { date, startTime, endTime } = req.body;
- 
+
       if (!TIME_REGEX.test(startTime || "") || !TIME_REGEX.test(endTime || "")) {
         return res.status(400).json({ success: false, message: "Pick a date and time for the alternate session." });
       }
@@ -4674,7 +4900,7 @@ exports.postponeBatchSession = async (req, res) => {
           message: `The alternate session must be ${minutes} minutes long.`,
         });
       }
- 
+
       const r = await freeSlotsForDate({
         batch,
         therapistId: assignment.therapistId,
@@ -4682,18 +4908,18 @@ exports.postponeBatchSession = async (req, res) => {
         minutes,
       });
       if (r.error) return res.status(400).json({ success: false, message: r.error });
- 
+
       if (!r.slots.some((s) => s.startTime === startTime && s.endTime === endTime)) {
         return res.status(409).json({
           success: false,
           message: "That time is no longer available. Pick another one.",
         });
       }
- 
+
       const childIds = originalAp
         ? (originalAp.children || []).map((c) => c.childId)
         : batch.childrenIds || [];
- 
+
       alternate = await createExtraSession({
         batch,
         assignment,
@@ -4706,12 +4932,11 @@ exports.postponeBatchSession = async (req, res) => {
       });
     }
 
- 
     await Scheduling.updateOne(
       { _id: originalDoc._id, "appointments._id": originalAp._id },
-      { $set: { "appointments.$.sessionType": createAlternate ? "postponed" : "cancel" } }
+      { $set: { "appointments.$.sessionType": createAlternate ? "postponed" : "cancel" } },
     );
-    
+
     return res.json({
       success: true,
       message: createAlternate ? "Session postponed and alternate session created." : "Session postponed.",
@@ -4732,21 +4957,21 @@ exports.deleteBatchSession = async (req, res) => {
     if (!mongoose.isValidObjectId(assignmentId) || !mongoose.isValidObjectId(sessionId)) {
       return res.status(400).json({ success: false, message: "Invalid id." });
     }
- 
+
     const doc = await Scheduling.findOne(
       { appointments: { $elemMatch: { _id: sessionId, batchAssignmentId: assignmentId } } },
-      { therapistId: 1, "appointments.$": 1 }
+      { therapistId: 1, "appointments.$": 1 },
     ).lean();
     const ap = doc?.appointments?.[0];
     if (!ap) return res.status(404).json({ success: false, message: "Session not found." });
- 
+
     const st = await loadScheduleSettings();
     const today = todayKey(st.tz);
     const date = dateKeyOf(ap.date);
     if (date < today || (date === today && toMin(ap.endTime) <= clockMinutes(st.tz))) {
       return res.status(400).json({ success: false, message: "Past sessions can't be deleted." });
     }
- 
+
     await Scheduling.updateOne({ _id: doc._id }, { $pull: { appointments: { _id: ap._id } } });
     return res.json({ success: true, message: "Session deleted." });
   } catch (error) {
@@ -4754,8 +4979,6 @@ exports.deleteBatchSession = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to delete session." });
   }
 };
-
-
 
 const loadChild = (childId) =>
   mongoose.isValidObjectId(childId)
@@ -4838,9 +5061,7 @@ exports.getChildSchedule = async (req, res) => {
       }
     }
 
-    sessions.sort((a, b) =>
-      a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date),
-    );
+    sessions.sort((a, b) => a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date));
 
     const upcoming = sessions.filter((s) => !s.isPast);
     const past = sessions.filter((s) => s.isPast).reverse();
@@ -5068,26 +5289,95 @@ exports.deleteChildCustomAppointment = async (req, res) => {
   }
 };
 
-
-
-
 exports.getAllPackages = async (req, res) => {
   try {
-    const packages = await Package.find()
-      .populate("createdBy", "fullName email")
-      .sort({ createdAt: -1 })
-      .lean();
+    const page = Math.max(
+      parseInt(req.query.page, 10) || 1,
+      1,
+    );
+
+    const limit = Math.min(
+      Math.max(
+        parseInt(req.query.limit, 10) || 5,
+        1,
+      ),
+      50,
+    );
+
+    const skip = (page - 1) * limit;
+
+    const [packages, total] = await Promise.all([
+      Package.find()
+        .populate(
+          "createdBy",
+          "fullName email",
+        )
+        .sort({
+          createdAt: -1,
+          _id: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Package.countDocuments(),
+    ]);
 
     return res.status(200).json({
       success: true,
+      page,
+      limit,
+      count: packages.length,
+      total,
+      totalPages: Math.ceil(
+        total / limit,
+      ),
+      hasMore: skip + packages.length < total,
       data: packages,
     });
   } catch (error) {
-    console.error("getAllPackages:", error);
+    console.error(
+      "getAllPackages:",
+      error,
+    );
 
     return res.status(500).json({
       success: false,
       message: "Failed to fetch packages.",
+    });
+  }
+};
+
+exports.getPackageById = async (req, res) => {
+  try {
+    const packageData = await Package.findById(
+      req.params.packageId,
+    )
+      .populate(
+        "createdBy",
+        "fullName email",
+      )
+      .lean();
+
+    if (!packageData) {
+      return res.status(404).json({
+        success: false,
+        message: "Package not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: packageData,
+    });
+  } catch (error) {
+    console.error(
+      "getPackageById:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch package.",
     });
   }
 };
@@ -5119,6 +5409,15 @@ exports.getPackageById = async (req, res) => {
 };
 exports.createPackage = async (req, res) => {
   try {
+    const userId = req.user?._id || req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized.",
+      });
+    }
+
     const {
       name,
       type,
@@ -5132,6 +5431,13 @@ exports.createPackage = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Name, type, speciality and price are required.",
+      });
+    }
+
+    if (!["per-session", "batch"].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid package type.",
       });
     }
 
@@ -5155,8 +5461,10 @@ exports.createPackage = async (req, res) => {
       specialities,
       price: Number(price),
       sessionMinutes: Number(sessionMinutes) || 60,
-      sessions: Number(sessions) || 1,
-      createdBy: req.user._id,
+      sessions: type === "per-session"
+        ? 1
+        : Number(sessions) || 1,
+      createdBy: userId,
     });
 
     return res.status(201).json({
@@ -5274,6 +5582,120 @@ exports.deletePackage = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to delete package.",
+    });
+  }
+};
+
+exports.getSessions = async (req, res) => {
+  try {
+    const scope = req.query.scope === "past" ? "past" : "upcoming";
+    const type = ["batch", "custom"].includes(req.query.type) ? req.query.type : "all";
+    const search = String(req.query.search || "").trim().toLowerCase();
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 15, 1), 50);
+ 
+    const settings = await SystemSetting.findOne().lean();
+    const tz = settings?.timezone || "Asia/Karachi";
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+    const nowMin = clockMinutes(tz);
+    const cutoff = new Date(Date.parse(`${today}T00:00:00Z`) - PAST_DAYS * DAY_MS)
+      .toISOString()
+      .slice(0, 10);
+ 
+    const [ty, tm] = today.split("-").map(Number);
+    const [cy, cm] = cutoff.split("-").map(Number);
+ 
+    // only load the month documents that can contain what we need
+    const monthFilter =
+      scope === "upcoming"
+        ? { $or: [{ year: { $gt: ty } }, { year: ty, month: { $gte: tm } }] }
+        : {
+            $and: [
+              { $or: [{ year: { $lt: ty } }, { year: ty, month: { $lte: tm } }] },
+              { $or: [{ year: { $gt: cy } }, { year: cy, month: { $gte: cm } }] },
+            ],
+          };
+ 
+    const schedules = await Scheduling.find(monthFilter)
+      .populate("therapistId", "fullName")
+      .populate("appointments.batchId", "batchName")
+      .populate("appointments.batchAssignmentId", "speciality")
+      .populate("appointments.children.childId", "fullName")
+      .lean();
+ 
+    const items = [];
+ 
+    for (const sc of schedules) {
+      const therapistId = String(sc.therapistId?._id || sc.therapistId);
+      const therapistName = sc.therapistId?.fullName || "Therapist";
+ 
+      for (const ap of sc.appointments || []) {
+        if (type !== "all" && ap.type !== type) continue;
+ 
+        const date = dateKeyOf(ap.date);
+        const isPast = date < today || (date === today && toMin(ap.endTime) <= nowMin);
+ 
+        if ((scope === "past") !== isPast) continue;
+        if (scope === "past" && date < cutoff) continue;
+ 
+        const isCustom = ap.type === "custom";
+        const sessionType = ap.sessionType || "regular";
+ 
+        const children = (ap.children || []).map((c) => ({
+          childId: String(c.childId?._id || c.childId),
+          fullName: c.childId?.fullName || "Child",
+          attendance: c.attendance_status || "Pending",
+        }));
+ 
+        const batchName = isCustom ? null : ap.batchId?.batchName || "Batch Session";
+ 
+        if (search) {
+          const hay = [therapistName, batchName || "custom", ...children.map((c) => c.fullName)]
+            .join(" ")
+            .toLowerCase();
+          if (!hay.includes(search)) continue;
+        }
+ 
+        items.push({
+          id: String(ap._id),
+          date,
+          startTime: ap.startTime,
+          endTime: ap.endTime,
+          type: ap.type,
+          sessionType,
+          batchId: ap.batchId?._id ? String(ap.batchId._id) : ap.batchId ? String(ap.batchId) : null,
+          batchName,
+          speciality: isCustom ? null : ap.batchAssignmentId?.speciality || null,
+          therapistId,
+          therapistName,
+          children,
+          isPast,
+          canCancel: isCustom && !isPast && sessionType !== "cancel",
+        });
+      }
+    }
+ 
+    items.sort((a, b) => {
+      const cmp = a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date);
+      return scope === "past" ? -cmp : cmp;
+    });
+ 
+    const start = (page - 1) * limit;
+ 
+    return res.json({
+      success: true,
+      today,
+      page,
+      totalCount: items.length,
+      hasMore: start + limit < items.length,
+      data: items.slice(start, start + limit),
+    });
+  } catch (error) {
+    console.error("getSessions:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load schedule.",
+      error: error.message,
     });
   }
 };

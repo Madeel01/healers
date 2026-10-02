@@ -70,3 +70,8 @@ export const getCNICUSERS = async (cnic) => {
   const response = await apiClient.get(`/child/cnic_user/${cnic}`);
   return response.data;
 };
+
+export const getChildUpcomingSessions = async () => {
+  const response = await apiClient.get("/child/upcoming-sessions");
+  return response.data;
+};

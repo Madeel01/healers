@@ -20,9 +20,13 @@ import Feather from '@expo/vector-icons/Feather';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
+import {
+  useIsFocused,
+  useNavigation,
+} from '@react-navigation/native';
 
 import { Overview } from '../../api/admin/api';
+import { UnreadSummary } from '../../api/child/api';
 import BottomBar from '../../components/BottomBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
@@ -42,8 +46,16 @@ export default function AdminDashboard() {
     totalUsers: 0,
     sessionCount: 0,
   });
+  const [unreadData, setUnreadData] = useState({
+    hasUnread: false,
+    totalUnreadCount: 0,
+    latestUnreadMessage: null,
+  });
   const userName = user?.fullName || user?.name || "";
   const profileImage = user?.profileImage || "";
+  const userId = user?.id || user?._id;
+  const role = user?.role;
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     fetchOverviewData();
@@ -68,7 +80,37 @@ export default function AdminDashboard() {
     const options = { weekday: "long", month: "short", day: "numeric" };
     return new Date().toLocaleDateString("en-US", options);
   };
+  const fetchUnreadSummary = async () => {
+    try {
+      if (!userId) return;
+      const response = await UnreadSummary(userId, role);
+      if (response?.success) {
+        setUnreadData(response.data);
+      }
+    } catch (err) {
+      console.log("fetchUnreadSummary error:", err);
+    }
+  };
 
+  useEffect(() => {
+    if (!isFocused || !userId) {
+      return;
+    }
+    fetchUnreadSummary();
+    const interval = setInterval(() => {
+      fetchUnreadSummary();
+    }, 5000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isFocused, userId]);
+  const latestMsg = unreadData.latestUnreadMessage;
+  const senderImage = latestMsg?.sender?.profileImage;
+  const senderName = latestMsg?.sender?.fullName || "New Message";
+  const senderInitials = senderName
+    ? senderName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+    : "MSG";
   return (
     <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <ScrollView
@@ -78,7 +120,10 @@ export default function AdminDashboard() {
       >
         <View style={styles.headerRow}>
           <View style={styles.profileContainer}>
-            <View style={styles.avatarContainer}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate("ChildProfile")}
+            >
               {profileImage
                 ? (
                   <Image
@@ -100,7 +145,7 @@ export default function AdminDashboard() {
                     </Text>
                   </View>
                 )}
-            </View>
+            </TouchableOpacity>
 
             <View>
               <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
@@ -171,7 +216,6 @@ export default function AdminDashboard() {
               <View style={styles.cardBadgeDot} />
             </View>
             <Text style={styles.gridCardTitle}>Messages</Text>
-           
           </TouchableOpacity>
 
           {
@@ -190,6 +234,51 @@ export default function AdminDashboard() {
         </LinearGradient>
 
         <Fee customstyles={styles} />
+
+        {unreadData.hasUnread && (
+          <TouchableOpacity
+            style={styles.messageBanner}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate("ChildMessages")}
+          >
+            <View style={styles.messageBannerHeader}>
+              <View style={styles.messageBannerTitleRow}>
+                <View style={styles.bannerIconBox}>
+                  <Feather name="message-square" size={16} color="#7CB342" />
+                </View>
+                <Text style={styles.messageBannerTitle}>Messages</Text>
+              </View>
+              <View style={styles.badgeNew}>
+                <Text style={styles.badgeNewText}>
+                  {unreadData.totalUnreadCount} {unreadData.totalUnreadCount === 1 ? "New" : "New Messages"}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.messageCardContent}>
+              {senderImage
+                ? (
+                  <Image
+                    source={{ uri: senderImage }}
+                    style={styles.msgAvatarImage}
+                  />
+                )
+                : (
+                  <View style={styles.msgAvatarCircle}>
+                    <Text style={styles.msgAvatarText}>
+                      {senderInitials}
+                    </Text>
+                  </View>
+                )}
+              <View style={styles.msgTextContainer}>
+                <Text style={styles.teacherName}>{senderName}</Text>
+                <Text style={styles.messageSnippet} numberOfLines={1}>
+                  {latestMsg?.text || "You have a new message!"}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
 
         <Administration customstyles={styles} />
 
@@ -265,8 +354,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatar: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 999,
   },
   headerTitle: {
@@ -392,9 +481,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
   avatarFallback: {
-    width: 32,
-    height: 32,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 999,
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -431,5 +520,89 @@ const styles = StyleSheet.create({
     color: "#191C20",
     textAlign: "center",
     lineHeight: 18,
+  },
+  messageBanner: {
+    backgroundColor: "#E1F3D8",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+  },
+  messageBannerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  messageBannerTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  bannerIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  messageBannerTitle: {
+    fontSize: 16,
+    fontFamily: fonts.regular,
+    color: "#191C20",
+    lineHeight: 24,
+  },
+  badgeNew: {
+    backgroundColor: "#7CB342",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  badgeNewText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  messageCardContent: {
+    backgroundColor: "rgba(255,255,255,.6)",
+    borderRadius: 20,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  msgAvatarCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 999,
+    backgroundColor: "#E1F3D8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  msgAvatarText: {
+    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    color: "#7CB342",
+    lineHeight: 24,
+  },
+  msgTextContainer: {
+    flex: 1,
+  },
+  teacherName: {
+    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    color: "#191C20",
+    lineHeight: 24,
+  },
+  messageSnippet: {
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    color: colors.blackFont,
+    lineHeight: 20,
+  },
+  msgAvatarImage: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
   },
 });

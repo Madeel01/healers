@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
   Modal,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Feather } from '@expo/vector-icons';
 
+import { createPackage } from '../../api/admin/api';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
 import {
@@ -24,37 +25,207 @@ import {
   fonts,
 } from '../../styles/theme';
 
-const DURATION_OPTIONS = ["30 min", "45 min", "60 min"];
-
-const CATEGORY_OPTIONS = [
-  "Behavioral Therapy",
-  "Speech Therapy",
-  "Occupational Therapy",
-  "Physical Therapy",
-  "Psychological Evaluation",
+const DURATION_OPTIONS = [
+  "30 min",
+  "45 min",
+  "60 min",
 ];
 
-export default function AddNewPackageScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
+const CATEGORY_OPTIONS = [
+  {
+    id: "speech_therapy_department",
+    label: "Speech Therapy Department",
+  },
+  {
+    id: "aba_therapy",
+    label: "ABA Therapy",
+  },
+  {
+    id: "occupational_therapy",
+    label: "Occupational Therapy",
+  },
+  {
+    id: "physiotherapy",
+    label: "Physiotherapy",
+  },
+  {
+    id: "inclusive_education",
+    label: "Inclusive Education",
+  },
+];
 
+export default function AddNewPackageScreen({
+  navigation,
+}) {
   const [packageName, setPackageName] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [pricingModel, setPricingModel] = useState("perSession");
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
-  const [pricingModel, setPricingModel] = useState("perSession"); // 'perSession' | 'monthly'
   const [rate, setRate] = useState("");
   const [sessionDuration, setSessionDuration] = useState("45 min");
-  const [isPublic, setIsPublic] = useState(false);
+  const [sessions, setSessions] = useState("");
+  const [saving, setSaving] = useState(false);
+  
+  const handlePricingModelChange = (type) => {
+    setPricingModel(type);
+
+    if (type === "perSession") {
+      setSelectedCategories((prev) =>
+        prev.length > 0
+          ? [prev[0]]
+          : []
+      );
+
+      setSessions("");
+    }
+  };
 
   const handleSelectCategory = (category) => {
-    setSelectedCategory(category);
+    if (pricingModel === "batch") {
+      setSelectedCategories((prev) => {
+        const exists = prev.some(
+          (item) => item.id === category.id,
+        );
+
+        if (exists) {
+          return prev.filter(
+            (item) => item.id !== category.id,
+          );
+        }
+
+        return [
+          ...prev,
+          category,
+        ];
+      });
+
+      return;
+    }
+
+    setSelectedCategories([category]);
     setIsCategoryModalVisible(false);
   };
 
+  const validateForm = () => {
+    if (!packageName.trim()) {
+      Alert.alert(
+        "Validation",
+        "Package name is required.",
+      );
+      return false;
+    }
+
+    if (selectedCategories.length === 0) {
+      Alert.alert(
+        "Validation",
+        "Please select a service category.",
+      );
+      return false;
+    }
+
+    if (
+      pricingModel === "perSession"
+      && selectedCategories.length !== 1
+    ) {
+      Alert.alert(
+        "Validation",
+        "Per Session package requires one service category.",
+      );
+      return false;
+    }
+
+    const price = Number(rate);
+
+    if (
+      !rate.trim()
+      || Number.isNaN(price)
+      || price <= 0
+    ) {
+      Alert.alert(
+        "Validation",
+        "Please enter a valid rate.",
+      );
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSavePackage = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const payload = {
+        name: packageName.trim(),
+        type: pricingModel === "perSession"
+          ? "per-session"
+          : "batch",
+        specialities: selectedCategories.map(
+          (item) => item.id,
+        ),
+        price: Number(rate),
+        sessionMinutes: parseInt(sessionDuration, 10) || 60,
+        sessions: pricingModel === "batch"
+          ? Number(sessions)
+          : 1,
+      };
+
+      const response = await createPackage(
+        payload,
+      );
+
+      if (response?.success) {
+        Alert.alert(
+          "Success",
+          response.message
+            || "Package created successfully.",
+          [
+            {
+              text: "OK",
+              onPress: () => navigation.goBack(),
+            },
+          ],
+        );
+      }
+    } catch (error) {
+      console.log(
+        "createPackage error:",
+        error?.response?.data
+          || error?.message,
+      );
+
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message
+          || "Failed to create package.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedCategoryText = selectedCategories.length > 0
+    ? selectedCategories
+      .map((item) => item.label)
+      .join(", ")
+    : pricingModel === "batch"
+    ? "Select Categories"
+    : "Select Category";
+
   return (
-    <SafeAreaView style={[styles.container,commonStyles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        commonStyles.container,
+      ]}
+    >
       <TopBar
         navigation={navigation}
-        headerTitle={"Add New Package"}
+        headerTitle="Add New Package"
       />
 
       <ScrollView
@@ -69,11 +240,21 @@ export default function AddNewPackageScreen({ navigation }) {
 
         <View style={styles.card}>
           <View style={styles.cardTitleRow}>
-            <Feather name="settings" size={20} color={colors.primary} />
-            <Text style={styles.cardTitle}>Core Configuration</Text>
+            <Feather
+              name="settings"
+              size={20}
+              color={colors.primary}
+            />
+
+            <Text style={styles.cardTitle}>
+              Core Configuration
+            </Text>
           </View>
 
-          <Text style={styles.inputLabel}>Package Name</Text>
+          <Text style={styles.inputLabel}>
+            Package Name
+          </Text>
+
           <TextInput
             style={styles.textInput}
             placeholder="e.g., Behavioral Therapy Basic"
@@ -82,36 +263,27 @@ export default function AddNewPackageScreen({ navigation }) {
             onChangeText={setPackageName}
           />
 
-          <Text style={styles.inputLabel}>Service Category</Text>
-          <TouchableOpacity
-            style={styles.dropdownBtn}
-            onPress={() => setIsCategoryModalVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.dropdownPlaceholder,
-                selectedCategory ? styles.selectedDropdownText : null,
-              ]}
-            >
-              {selectedCategory || "Select Category"}
-            </Text>
-            <Feather name="chevron-down" size={20} color="#64748B" />
-          </TouchableOpacity>
+          <Text style={styles.inputLabel}>
+            Pricing Model
+          </Text>
 
-          <Text style={styles.inputLabel}>Pricing Model</Text>
           <View style={styles.segmentContainer}>
             <TouchableOpacity
               style={[
                 styles.segmentBtn,
-                pricingModel === "perSession" && styles.segmentBtnActive,
+                pricingModel === "perSession"
+                && styles.segmentBtnActive,
               ]}
-              onPress={() => setPricingModel("perSession")}
+              onPress={() =>
+                handlePricingModelChange(
+                  "perSession",
+                )}
             >
               <Text
                 style={[
                   styles.segmentText,
-                  pricingModel === "perSession" && styles.segmentTextActive,
+                  pricingModel === "perSession"
+                  && styles.segmentTextActive,
                 ]}
               >
                 Per Session
@@ -121,24 +293,97 @@ export default function AddNewPackageScreen({ navigation }) {
             <TouchableOpacity
               style={[
                 styles.segmentBtn,
-                pricingModel === "monthly" && styles.segmentBtnActive,
+                pricingModel === "batch"
+                && styles.segmentBtnActive,
               ]}
-              onPress={() => setPricingModel("monthly")}
+              onPress={() =>
+                handlePricingModelChange(
+                  "batch",
+                )}
             >
               <Text
                 style={[
                   styles.segmentText,
-                  pricingModel === "monthly" && styles.segmentTextActive,
+                  pricingModel === "batch"
+                  && styles.segmentTextActive,
                 ]}
               >
-                Monthly Subscription
+                Batch Subscription
               </Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.inputLabel}>Rate (PKR)</Text>
-          <View style={styles.rateInputContainer}>
-            <Text style={styles.currencyPrefix}>Rs.</Text>
+          <Text style={styles.inputLabel}>
+            Service Category
+          </Text>
+
+          <TouchableOpacity
+            style={styles.dropdownBtn}
+            onPress={() => setIsCategoryModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.dropdownPlaceholder,
+                selectedCategories.length > 0
+                && styles.selectedDropdownText,
+              ]}
+              numberOfLines={1}
+            >
+              {selectedCategoryText}
+            </Text>
+
+            <Feather
+              name="chevron-down"
+              size={20}
+              color="#64748B"
+            />
+          </TouchableOpacity>
+
+          {pricingModel === "batch"
+            && selectedCategories.length > 0 && (
+            <View style={styles.selectedList}>
+              {selectedCategories.map(
+                (category) => (
+                  <View
+                    key={category.id}
+                    style={styles.selectedBadge}
+                  >
+                    <Text
+                      style={styles.selectedBadgeText}
+                    >
+                      {category.label}
+                    </Text>
+
+                    <TouchableOpacity
+                      onPress={() =>
+                        handleSelectCategory(
+                          category,
+                        )}
+                    >
+                      <Feather
+                        name="x"
+                        size={14}
+                        color="#1669A9"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ),
+              )}
+            </View>
+          )}
+
+          <Text style={styles.inputLabel}>
+            Rate (PKR)
+          </Text>
+
+          <View
+            style={styles.rateInputContainer}
+          >
+            <Text style={styles.currencyPrefix}>
+              Rs.
+            </Text>
+
             <TextInput
               style={styles.rateTextInput}
               placeholder="0.00"
@@ -149,23 +394,29 @@ export default function AddNewPackageScreen({ navigation }) {
             />
           </View>
 
-          <Text style={styles.inputLabel}>Session Duration</Text>
+          <Text style={styles.inputLabel}>
+            Session Duration
+          </Text>
+
           <View style={styles.durationRow}>
             {DURATION_OPTIONS.map((item) => {
               const isActive = sessionDuration === item;
+
               return (
                 <TouchableOpacity
                   key={item}
                   style={[
                     styles.durationBtn,
-                    isActive && styles.durationBtnActive,
+                    isActive
+                    && styles.durationBtnActive,
                   ]}
                   onPress={() => setSessionDuration(item)}
                 >
                   <Text
                     style={[
                       styles.durationText,
-                      isActive && styles.durationTextActive,
+                      isActive
+                      && styles.durationTextActive,
                     ]}
                   >
                     {item}
@@ -177,33 +428,53 @@ export default function AddNewPackageScreen({ navigation }) {
         </View>
 
         <View style={styles.card}>
-          <View style={styles.switchRow}>
-            <View style={styles.switchLabelContainer}>
-              <Feather name="eye" size={20} color="#334155" style={{ marginRight: 10 }} />
-              <Text style={styles.switchTitle}>Make{"\n"}Public</Text>
-            </View>
-
-            <Switch
-              trackColor={{ false: "#E2E8F0", true: "#0B4A6F" }}
-              thumbColor="#FFFFFF"
-              ios_backgroundColor="#E2E8F0"
-              onValueChange={setIsPublic}
-              value={isPublic}
-            />
-
-            <Text style={styles.switchHelpText}>
-              Package will be visible to parents on their appportal.
-            </Text>
-          </View>
-
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.cancelBtn}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              disabled={saving}
+              onPress={() => navigation.goBack()}
+            >
+              <Text
+                style={styles.cancelBtnText}
+              >
+                Cancel
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.saveBtn}>
-              <Feather name="save" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.saveBtnText}>Save Package</Text>
+            <TouchableOpacity
+              style={[
+                styles.saveBtn,
+                saving
+                && styles.saveBtnDisabled,
+              ]}
+              disabled={saving}
+              onPress={handleSavePackage}
+            >
+              {saving
+                ? (
+                  <ActivityIndicator
+                    size="small"
+                    color="#FFFFFF"
+                  />
+                )
+                : (
+                  <>
+                    <Feather
+                      name="save"
+                      size={16}
+                      color="#FFFFFF"
+                      style={{
+                        marginRight: 6,
+                      }}
+                    />
+
+                    <Text
+                      style={styles.saveBtnText}
+                    >
+                      Save Package
+                    </Text>
+                  </>
+                )}
             </TouchableOpacity>
           </View>
         </View>
@@ -211,41 +482,83 @@ export default function AddNewPackageScreen({ navigation }) {
 
       <Modal
         visible={isCategoryModalVisible}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={() => setIsCategoryModalVisible(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setIsCategoryModalVisible(false)}>
+        <TouchableWithoutFeedback
+          onPress={() => setIsCategoryModalVisible(false)}
+        >
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Select Service Category</Text>
-                {CATEGORY_OPTIONS.map((category) => (
+                <Text style={styles.modalTitle}>
+                  {pricingModel === "batch"
+                    ? "Select Service Categories"
+                    : "Select Service Category"}
+                </Text>
+
+                {CATEGORY_OPTIONS.map(
+                  (category) => {
+                    const isSelected = selectedCategories.some(
+                      (item) =>
+                        item.id
+                          === category.id,
+                    );
+
+                    return (
+                      <TouchableOpacity
+                        key={category.id}
+                        style={styles.modalOption}
+                        onPress={() =>
+                          handleSelectCategory(
+                            category,
+                          )}
+                      >
+                        <Text
+                          style={[
+                            styles.modalOptionText,
+                            isSelected
+                            && styles.modalOptionTextSelected,
+                          ]}
+                        >
+                          {category.label}
+                        </Text>
+
+                        {isSelected && (
+                          <Feather
+                            name="check"
+                            size={18}
+                            color="#0B4A6F"
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  },
+                )}
+
+                {pricingModel === "batch" && (
                   <TouchableOpacity
-                    key={category}
-                    style={styles.modalOption}
-                    onPress={() => handleSelectCategory(category)}
+                    style={styles.categoryDoneBtn}
+                    onPress={() =>
+                      setIsCategoryModalVisible(
+                        false,
+                      )}
                   >
                     <Text
-                      style={[
-                        styles.modalOptionText,
-                        selectedCategory === category && styles.modalOptionTextSelected,
-                      ]}
+                      style={styles.categoryDoneText}
                     >
-                      {category}
+                      Done
                     </Text>
-                    {selectedCategory === category && <Feather name="check" size={18} color="#0B4A6F" />}
                   </TouchableOpacity>
-                ))}
+                )}
               </View>
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
 
-      <BottomBar
-        activeTab={""}
-      />
+      <BottomBar activeTab="" />
     </SafeAreaView>
   );
 }
@@ -255,7 +568,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
-
   scrollArea: {
     flex: 1,
   },
@@ -264,7 +576,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 24,
   },
-
   introDescription: {
     fontSize: 16,
     color: colors.blackFont,
@@ -272,7 +583,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     marginBottom: 20,
   },
-
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -293,7 +603,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     color: "#181C1E",
   },
-
   inputLabel: {
     fontSize: 16,
     fontFamily: fonts.semiBold,
@@ -314,7 +623,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     height: 50,
   },
-
   dropdownBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -329,14 +637,15 @@ const styles = StyleSheet.create({
     height: 50,
   },
   dropdownPlaceholder: {
+    flex: 1,
     fontSize: 14,
     color: "#94A3B8",
     fontFamily: fonts.regular,
+    marginRight: 8,
   },
   selectedDropdownText: {
     color: "#0F172A",
   },
-
   segmentContainer: {
     flexDirection: "row",
     backgroundColor: "#F8FAFC",
@@ -367,7 +676,26 @@ const styles = StyleSheet.create({
   segmentTextActive: {
     color: "#D3E6FF",
   },
-
+  selectedList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 10,
+  },
+  selectedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#E8F2FC",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  selectedBadgeText: {
+    fontSize: 11,
+    fontFamily: fonts.medium,
+    color: "#1669A9",
+  },
   rateInputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -392,7 +720,6 @@ const styles = StyleSheet.create({
     padding: 0,
     fontFamily: fonts.regular,
   },
-
   durationRow: {
     flexDirection: "row",
     gap: 8,
@@ -419,32 +746,9 @@ const styles = StyleSheet.create({
   durationTextActive: {
     color: "#FFFFFF",
   },
-
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
+  sessionsLabel: {
+    marginTop: 14,
   },
-  switchLabelContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  switchTitle: {
-    fontSize: 16,
-    fontFamily: fonts.regular,
-    color: "#181C1E",
-    lineHeight: 22,
-  },
-  switchHelpText: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: fonts.regular,
-    color: colors.blackFont,
-    lineHeight: 16,
-    marginLeft: 12,
-  },
-
   buttonRow: {
     flexDirection: "row",
     gap: 12,
@@ -460,9 +764,9 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     fontSize: 16,
-   fontFamily: fonts.regular,
+    fontFamily: fonts.regular,
     color: colors.primary,
-    lineHeight:24,
+    lineHeight: 24,
   },
   saveBtn: {
     flex: 1,
@@ -473,14 +777,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  saveBtnDisabled: {
+    opacity: 0.6,
+  },
   saveBtnText: {
     fontSize: 12,
     fontFamily: fonts.regular,
     color: "#FFFFFF",
-    lineHeight:24,
-
+    lineHeight: 24,
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(15, 23, 42, 0.4)",
@@ -495,7 +800,10 @@ const styles = StyleSheet.create({
     padding: 20,
     elevation: 5,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.25,
     shadowRadius: 4,
   },
@@ -521,5 +829,17 @@ const styles = StyleSheet.create({
   modalOptionTextSelected: {
     fontFamily: fonts.semiBold,
     color: "#0B4A6F",
+  },
+  categoryDoneBtn: {
+    marginTop: 16,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  categoryDoneText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
   },
 });
