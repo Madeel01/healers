@@ -66,7 +66,8 @@ const {
   createChildCustomAppointment,
   deleteChildCustomAppointment,
   deleteBatchSession,
-  getSessions
+  getSessions,
+  getSessionSlotOptions,
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
@@ -120,7 +121,7 @@ router.post("/batches/:batchId/schedule", protect, saveBatchSchedule);
 router.get("/batches/:batchId/eligible-children", protect, getBatchEligibleChildren);
 router.put("/batches/:batchId/children", protect, updateBatchChildren);
 router.delete("/batches/:batchId/assignments/:assignmentId", protect, removeBatchAssignment);
-
+router.post("/batches/:batchId/assignments/:assignmentId/slot-options", protect, getSessionSlotOptions);
 router.post("/broadcast", protect, uploadBroadcastAttachment, createBroadcast);
 router.get("/broadcast", protect, getAllBroadcasts);
 router.get("/broadcast/:broadcastId", getBroadcastById);
@@ -149,8 +150,6 @@ router.put("/scheduling/availability/:id", protect, updateAvailability);
 router.delete("/scheduling/availability/:id", protect, deleteAvailability);
 
 router.get("/packages", getAllPackages);
-router.get("/packages/22", getAllPackages);
-router.get("/packages/333", getAllPackages);
 router.get("/packages/:packageId", protect, getPackageById);
 router.post("/packages/", protect, createPackage);
 router.put("/packages/:packageId", protect, updatePackage);
