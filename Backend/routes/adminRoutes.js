@@ -149,12 +149,10 @@ router.put("/scheduling/availability/:id", protect, updateAvailability);
 router.delete("/scheduling/availability/:id", protect, deleteAvailability);
 
 router.get("/packages", getAllPackages);
-router.get("/packages/22", getAllPackages);
 router.get("/packages/:packageId", protect, getPackageById);
 router.post("/packages/", protect, createPackage);
 router.put("/packages/:packageId", protect, updatePackage);
 router.delete("/packages/:packageId", deletePackage);
-router.get("/bilal")
-router.get("/test")
+
 
 module.exports = router;
