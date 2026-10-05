@@ -5346,7 +5346,6 @@ exports.getAllPackages = async (req, res) => {
     });
   }
 };
-
 exports.getPackageById = async (req, res) => {
   try {
     const packageData = await Package.findById(
@@ -5374,32 +5373,6 @@ exports.getPackageById = async (req, res) => {
       "getPackageById:",
       error,
     );
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch package.",
-    });
-  }
-};
-exports.getPackageById = async (req, res) => {
-  try {
-    const packageData = await Package.findById(req.params.packageId)
-      .populate("createdBy", "fullName email")
-      .lean();
-
-    if (!packageData) {
-      return res.status(404).json({
-        success: false,
-        message: "Package not found.",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: packageData,
-    });
-  } catch (error) {
-    console.error("getPackageById:", error);
 
     return res.status(500).json({
       success: false,

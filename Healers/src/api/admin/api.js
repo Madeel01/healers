@@ -82,7 +82,6 @@ export const deleteAppointment = (body) =>
 
 export const getTherapistSchedules = (params) => apiClient.get("/scheduling/therapist", { params }).then((r) => r.data);
 
-
 ///////////////////// Leave Request API's /////////////////////////////
 export const getLeaveRequests = (params) => apiClient.get("/admin/leave-requests", { params });
 export const approveLeaveRequest = (id) => apiClient.put(`/admin/leave-requests/${id}/approve`);

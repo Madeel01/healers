@@ -75,3 +75,39 @@ export const getChildUpcomingSessions = async () => {
   const response = await apiClient.get("/child/upcoming-sessions");
   return response.data;
 };
+
+export const getMyComplaintsApi = async (page = 1, limit = 5) => {
+  const response = await apiClient.get("/child/complaints", {
+    params: {
+      page,
+      limit,
+    },
+  });
+  return response.data;
+};
+
+export const createComplaintApi = async (payload) => {
+  const response = await apiClient.post(
+    "/child/complaints",
+    payload,
+  );
+  return response.data;
+};
+
+export const getComplaintByIdApi = async (complaintId) => {
+  const response = await apiClient.get(
+    `/child/complaints/${complaintId}`,
+  );
+  return response.data;
+};
+
+export const replyComplaintApi = async (complaintId, message) => {
+  const response = await apiClient.post(
+    `/child/complaints/${complaintId}/reply`,
+    {
+      text: message,
+    },
+  );
+
+  return response.data;
+};

@@ -13,10 +13,14 @@ const {
   getAssignTherapist,
   getCNICRegisterSameUser,
   getChildUpcomingSessions,
+  getMyComplaints,
+  createComplaint,
+  getComplaintById,
+  addComplaintReply,
+  replyComplaint,
 } = require("../controllers/childController");
 
 const { protect } = require("../middleware/authMiddleware");
-const { switchUser } = require("../controllers/authController");
 
 router.get("/feedback/:status", protect, getChildFeedbackManagement);
 router.delete("/feedback/:feedbackId/reply", protect, deleteChildFeedback);
@@ -29,5 +33,8 @@ router.get("/assign_therapist", protect, getAssignMembers);
 router.get("/therapist", protect, getAssignTherapist);
 router.get("/cnic_user/:cnic", protect, getCNICRegisterSameUser);
 router.get("/upcoming-sessions", protect, getChildUpcomingSessions);
-
+router.get("/complaints", protect, getMyComplaints);
+router.post("/complaints", protect, createComplaint);
+router.get("/complaints/:complaintId", protect, getComplaintById);
+router.post("/complaints/:complaintId/reply", protect, replyComplaint);
 module.exports = router;

@@ -1,60 +1,167 @@
-import React, { useCallback, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import Feather from "@expo/vector-icons/Feather";
+import Feather from '@expo/vector-icons/Feather';
 
-import BottomBar from "../../components/BottomBar";
-import TopBar from "../../components/TopBar";
-
-import { colors, commonStyles, fonts } from "../../styles/theme";
-import { getAllPackages,deletePackage,createPackage,updatePackagegetPackageById } from "../../api/admin/api";
-
+import {
+  deletePackage,
+  getAllPackages,
+} from '../../api/admin/api';
+import BottomBar from '../../components/BottomBar';
+import TopBar from '../../components/TopBar';
+import {
+  colors,
+  commonStyles,
+  fonts,
+} from '../../styles/theme';
+import { therapistSpecialities } from '../../utils/specialities';
 
 export default function AllPackagesScreen({ navigation }) {
+  const { height } = useWindowDimensions();
+
+  const PAGE_LIMIT = height < 800 ? 3 : 5;
   const [packages, setPackages] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const loadingMoreRef = useRef(false);
 
-  const fetchPackages = useCallback(async () => {
-    try {
-      const response = await getAllPackages();
+  const fetchPackages = useCallback(
+    async (
+      pageNumber = 1,
+      loadMore = false,
+      showInitialLoader = true,
+    ) => {
+      try {
+        if (loadMore) {
+          if (loadingMoreRef.current) {
+            return;
+          }
 
-      if (response.data?.success) {
-        setPackages(response.data.data || []);
+          loadingMoreRef.current = true;
+          setLoadingMore(true);
+        } else if (showInitialLoader) {
+          setLoading(true);
+        }
+
+        const response = await getAllPackages(
+          pageNumber,
+          PAGE_LIMIT,
+        );
+
+        if (response?.success) {
+          const newPackages = response.data || [];
+          setTotal(response.total);
+          if (pageNumber === 1) {
+            setPackages(newPackages);
+          } else {
+            setPackages((prev) => {
+              const existingIds = new Set(
+                prev.map((item) => String(item._id)),
+              );
+
+              const uniquePackages = newPackages.filter(
+                (item) => !existingIds.has(String(item._id)),
+              );
+
+              return [
+                ...prev,
+                ...uniquePackages,
+              ];
+            });
+          }
+
+          setPage(pageNumber);
+          setHasMore(Boolean(response.hasMore));
+        }
+      } catch (error) {
+        console.error(
+          "fetchPackages:",
+          error,
+        );
+
+        Alert.alert(
+          "Error",
+          error.response?.data?.message
+            || "Failed to load packages.",
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+        setLoadingMore(false);
+        loadingMoreRef.current = false;
       }
-    } catch (error) {
-      console.error("fetchPackages:", error);
+    },
+    [PAGE_LIMIT],
+  );
 
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Failed to load packages."
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  useEffect(() => {
+    const unsubscribe = navigation.addListener(
+      "focus",
+      () => {
+        setPage(1);
+        setHasMore(true);
 
-  React.useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", fetchPackages);
+        fetchPackages(
+          1,
+          false,
+          true,
+        );
+      },
+    );
 
     return unsubscribe;
-  }, [navigation, fetchPackages]);
+  }, [
+    navigation,
+    fetchPackages,
+  ]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
+    if (refreshing || loadingMoreRef.current) {
+      return;
+    }
+
     setRefreshing(true);
-    fetchPackages();
-  };
+    setPage(1);
+    setHasMore(true);
+
+    fetchPackages(
+      1,
+      false,
+      false,
+    );
+  }, [
+    refreshing,
+    fetchPackages,
+  ]);
+
+  const handleLoadMore = useCallback(() => {
+    if (loading || refreshing || loadingMoreRef.current || !hasMore) {
+      return;
+    }
+
+    fetchPackages(page + 1, true, false);
+  }, [loading, refreshing, hasMore, page, fetchPackages]);
 
   const handleDeletePackage = (packageId, packageName) => {
     Alert.alert(
@@ -70,35 +177,45 @@ export default function AllPackagesScreen({ navigation }) {
           style: "destructive",
           onPress: async () => {
             try {
-              const response = await deletePackage(packageId)
-
-              if (response.data?.success) {
+              const response = await deletePackage(
+                packageId,
+              );
+              if (response?.success) {
                 setPackages((prev) =>
-                  prev.filter((item) => item._id !== packageId)
+                  prev.filter(
+                    (item) => item._id !== packageId,
+                  )
                 );
 
                 Alert.alert(
                   "Success",
-                  "Package deleted successfully."
+                  "Package deleted successfully.",
                 );
               }
             } catch (error) {
-              console.error("deletePackage:", error);
+              console.error(
+                "deletePackage:",
+                error,
+              );
 
               Alert.alert(
                 "Error",
-                error.response?.data?.message ||
-                  "Failed to delete package."
+                error.response?.data?.message
+                  || "Failed to delete package.",
               );
             }
           },
         },
-      ]
+      ],
     );
   };
 
   const formatPrice = (price) => {
-    return `PKR ${Number(price || 0).toLocaleString()}`;
+    return `PKR ${
+      Number(
+        price || 0,
+      ).toLocaleString()
+    }`;
   };
 
   const getPackageType = (type) => {
@@ -110,29 +227,157 @@ export default function AllPackagesScreen({ navigation }) {
       return "Batch";
     }
 
-    return type;
+    if (!type) {
+      return "-";
+    }
+
+    return type
+      .replace(/[-_]/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
   };
 
-  return (
-    <SafeAreaView
-      style={[styles.container, commonStyles.container]}
-    >
-      <TopBar
-        navigation={navigation}
-        headerTitle="Back to Fee Management"
-      />
+  const renderPackage = ({ item }) => {
+    return (
+      <View style={styles.packageCard}>
+        <View style={styles.packageTopRow}>
+          <View style={styles.packageIcon}>
+            <Feather
+              name={item.type === "batch"
+                ? "users"
+                : "user"}
+              size={19}
+              color={colors.primary}
+            />
+          </View>
 
-      <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-          />
-        }
-      >
+          <View style={styles.packageMain}>
+            <Text
+              style={styles.packageName}
+              numberOfLines={2}
+            >
+              {item.name}
+            </Text>
+
+            <View style={styles.typeBadge}>
+              <Text style={styles.typeBadgeText}>
+                {getPackageType(item.type)}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.packagePrice}>
+            {formatPrice(item.price)}
+          </Text>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.infoSection}>
+          <View style={[styles.infoItem, styles.infoItem1]}>
+            <Text style={styles.infoLabel}>
+              Speciality
+            </Text>
+
+            <Text
+              style={styles.infoValue}
+              numberOfLines={1}
+            >
+              {item.specialities?.length
+                ? item.specialities
+                  .map((specialityId) => {
+                    const speciality = therapistSpecialities.find(
+                      (item) => item.id === specialityId,
+                    );
+
+                    return speciality?.label || specialityId;
+                  })
+                  .join(", ")
+                : "-"}
+            </Text>
+          </View>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>
+              Duration
+            </Text>
+
+            <Text style={styles.infoValue}>
+              {item.sessionMinutes || 60} min
+            </Text>
+          </View>
+        </View>
+
+        {item.description
+          ? (
+            <>
+              <View style={styles.divider} />
+
+              <View style={styles.descriptionSection}>
+                <Text style={styles.infoLabel}>
+                  Description
+                </Text>
+
+                <Text
+                  style={styles.descriptionText}
+                  numberOfLines={3}
+                >
+                  {item.description}
+                </Text>
+              </View>
+            </>
+          )
+          : null}
+
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={styles.editButton}
+            activeOpacity={0.8}
+            onPress={() =>
+              navigation.navigate(
+                "AddNewPackage",
+                {
+                  packageId: item._id,
+                  mode: "edit",
+                },
+              )}
+          >
+            <Feather
+              name="edit-2"
+              size={16}
+              color={colors.primary}
+            />
+
+            <Text style={styles.editButtonText}>
+              Edit
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.deleteButton}
+            activeOpacity={0.8}
+            onPress={() =>
+              handleDeletePackage(
+                item._id,
+                item.name,
+              )}
+          >
+            <Feather
+              name="trash-2"
+              size={16}
+              color="#BA1A1A"
+            />
+
+            <Text style={styles.deleteButtonText}>
+              Delete
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const renderHeader = () => {
+    return (
+      <>
         <View style={styles.headerRow}>
           <View style={styles.headerContent}>
             <Text style={styles.pageTitle}>
@@ -146,16 +391,18 @@ export default function AllPackagesScreen({ navigation }) {
 
           <View style={styles.countBadge}>
             <Text style={styles.countText}>
-              {packages.length}
+              {total}
             </Text>
           </View>
         </View>
 
         <TouchableOpacity
           style={styles.addButton}
+          activeOpacity={0.8}
           onPress={() =>
-            navigation.navigate("AddNewPackage")
-          }
+            navigation.navigate(
+              "AddNewPackage",
+            )}
         >
           <Feather
             name="plus-circle"
@@ -167,173 +414,120 @@ export default function AllPackagesScreen({ navigation }) {
             Add New Package
           </Text>
         </TouchableOpacity>
+      </>
+    );
+  };
 
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator
-              size="large"
-              color={colors.primary}
-            />
+  const renderEmpty = () => {
+    if (loading) {
+      return null;
+    }
 
-            <Text style={styles.loadingText}>
-              Loading packages...
-            </Text>
-          </View>
-        ) : packages.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIcon}>
-              <Feather
-                name="package"
-                size={30}
+    return (
+      <View style={styles.emptyCard}>
+        <View style={styles.emptyIcon}>
+          <Feather
+            name="package"
+            size={30}
+            color={colors.primary}
+          />
+        </View>
+
+        <Text style={styles.emptyTitle}>
+          No Packages Found
+        </Text>
+
+        <Text style={styles.emptyDescription}>
+          You haven't created any fee packages yet.
+        </Text>
+
+        <TouchableOpacity
+          style={styles.emptyButton}
+          activeOpacity={0.8}
+          onPress={() =>
+            navigation.navigate(
+              "AddNewPackage",
+            )}
+        >
+          <Text style={styles.emptyButtonText}>
+            Create Package
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) {
+      return <View style={styles.footerSpace} />;
+    }
+
+    return (
+      <View style={styles.loadMoreContainer}>
+        <ActivityIndicator
+          size="small"
+          color={colors.primary}
+        />
+
+        <Text style={styles.loadMoreText}>
+          Loading more packages...
+        </Text>
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView
+      style={[
+        styles.container,
+        commonStyles.container,
+      ]}
+    >
+      <TopBar
+        navigation={navigation}
+        headerTitle="Back to Fee Management"
+      />
+
+      {loading && packages.length === 0
+        ? (
+          <View style={styles.initialLoadingWrapper}>
+            {renderHeader()}
+
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator
+                size="large"
                 color={colors.primary}
               />
-            </View>
 
-            <Text style={styles.emptyTitle}>
-              No Packages Found
-            </Text>
-
-            <Text style={styles.emptyDescription}>
-              You haven't created any fee packages yet.
-            </Text>
-
-            <TouchableOpacity
-              style={styles.emptyButton}
-              onPress={() =>
-                navigation.navigate("AddNewPackage")
-              }
-            >
-              <Text style={styles.emptyButtonText}>
-                Create Package
+              <Text style={styles.loadingText}>
+                Loading packages...
               </Text>
-            </TouchableOpacity>
+            </View>
           </View>
-        ) : (
-          <View style={styles.packageList}>
-            {packages.map((item) => (
-              <View
-                key={item._id}
-                style={styles.packageCard}
-              >
-                <View style={styles.packageTopRow}>
-                  <View style={styles.packageIcon}>
-                    <Feather
-                      name={
-                        item.type === "batch"
-                          ? "users"
-                          : "user"
-                      }
-                      size={19}
-                      color={colors.primary}
-                    />
-                  </View>
-
-                  <View style={styles.packageMain}>
-                    <Text
-                      style={styles.packageName}
-                      numberOfLines={2}
-                    >
-                      {item.name}
-                    </Text>
-
-                    <View style={styles.typeBadge}>
-                      <Text style={styles.typeBadgeText}>
-                        {getPackageType(item.type)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text style={styles.packagePrice}>
-                    {formatPrice(item.price)}
-                  </Text>
-                </View>
-
-                <View style={styles.divider} />
-
-                <View style={styles.infoSection}>
-                  <View style={styles.infoItem}>
-                    <Text style={styles.infoLabel}>
-                      Speciality
-                    </Text>
-
-                    <Text
-                      style={styles.infoValue}
-                      numberOfLines={2}
-                    >
-                      {item.specialities?.join(", ") || "-"}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoItem}>
-                    <Text style={styles.infoLabel}>
-                      Duration
-                    </Text>
-
-                    <Text style={styles.infoValue}>
-                      {item.sessionMinutes || 60} min
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoItem}>
-                    <Text style={styles.infoLabel}>
-                      Sessions
-                    </Text>
-
-                    <Text style={styles.infoValue}>
-                      {item.sessions || 1}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.actions}>
-                  <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={() =>
-                      navigation.navigate(
-                        "AddNewPackage",
-                        {
-                          packageId: item._id,
-                          mode: "edit",
-                        }
-                      )
-                    }
-                  >
-                    <Feather
-                      name="edit-2"
-                      size={16}
-                      color={colors.primary}
-                    />
-
-                    <Text style={styles.editButtonText}>
-                      Edit
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() =>
-                      handleDeletePackage(
-                        item._id,
-                        item.name
-                      )
-                    }
-                  >
-                    <Feather
-                      name="trash-2"
-                      size={16}
-                      color="#BA1A1A"
-                    />
-
-                    <Text style={styles.deleteButtonText}>
-                      Delete
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
+        )
+        : (
+          <FlatList
+            data={packages}
+            keyExtractor={(item) => String(item._id)}
+            renderItem={renderPackage}
+            ListHeaderComponent={renderHeader}
+            ListEmptyComponent={renderEmpty}
+            ListFooterComponent={renderFooter}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.25}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[colors.primary]}
+                tintColor={colors.primary}
+              />
+            }
+          />
         )}
-      </ScrollView>
 
       <BottomBar activeTab="" />
     </SafeAreaView>
@@ -346,13 +540,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
 
-  scrollArea: {
-    flex: 1,
-  },
-
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 30,
+  },
+
+  initialLoadingWrapper: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
 
   headerRow: {
@@ -418,8 +613,10 @@ const styles = StyleSheet.create({
   },
 
   loadingContainer: {
-    paddingVertical: 70,
+    flex: 1,
+    minHeight: 250,
     alignItems: "center",
+    justifyContent: "center",
   },
 
   loadingText: {
@@ -478,8 +675,8 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
-  packageList: {
-    gap: 12,
+  separator: {
+    height: 12,
   },
 
   packageCard: {
@@ -557,12 +754,15 @@ const styles = StyleSheet.create({
   infoSection: {
     flexDirection: "row",
     gap: 12,
+    justifyContent: "space-between",
   },
 
   infoItem: {
-    flex: 1,
+    width: "25%",
   },
-
+  infoItem1: {
+    width: "75%",
+  },
   infoLabel: {
     fontSize: 11,
     lineHeight: 16,
@@ -576,6 +776,18 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: fonts.semiBold,
     color: "#181C1E",
+  },
+
+  descriptionSection: {
+    width: "100%",
+  },
+
+  descriptionText: {
+    marginTop: 3,
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: fonts.regular,
+    color: colors.blackFont,
   },
 
   actions: {
@@ -617,5 +829,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fonts.semiBold,
     color: "#BA1A1A",
+  },
+
+  loadMoreContainer: {
+    paddingVertical: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  loadMoreText: {
+    marginTop: 8,
+    fontSize: 13,
+    fontFamily: fonts.regular,
+    color: colors.blackFont,
+  },
+
+  footerSpace: {
+    height: 15,
   },
 });

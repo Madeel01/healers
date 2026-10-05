@@ -369,6 +369,39 @@ export default function TherapistDashboardScreen({ navigation }) {
           }
         </View>
 
+        <TouchableOpacity
+          style={styles.complaintCard}
+          activeOpacity={0.8}
+          onPress={() =>
+            navigation.navigate(
+              "TherapistComplaints",
+            )}
+        >
+          <View style={styles.complaintIconBox}>
+            <Feather
+              name="message-square"
+              size={22}
+              color="#EF4444"
+            />
+          </View>
+
+          <View style={styles.complaintContent}>
+            <Text style={styles.complaintTitle}>
+              Add Complaints
+            </Text>
+
+            <Text style={styles.complaintSubtitle}>
+              Submit or view your complaints
+            </Text>
+          </View>
+
+          <Feather
+            name="chevron-right"
+            size={21}
+            color="#CBD5E1"
+          />
+        </TouchableOpacity>
+
         <View style={styles.sessionBanner}>
           <Text style={styles.bannerTag}>NEXT SCHEDULED SESSION</Text>
           {stats.nextSession
@@ -687,5 +720,48 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
+  },
+  complaintCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 28,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+
+  complaintIconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  complaintContent: {
+    flex: 1,
+    marginLeft: 16,
+  },
+
+  complaintTitle: {
+    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    color: "#191C20",
+  },
+
+  complaintSubtitle: {
+    marginTop: 3,
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: "#64748B",
   },
 });
