@@ -32,7 +32,6 @@ export const deleteChildCustomAppointment = async (childId, appointmentId) => {
   const res = await apiClient.delete(`/admin/children/${childId}/custom-appointments/${appointmentId}`);
   return res.data;
 };
-export const getSessions = (params) => apiClient.get("/admin/schedule", { params }).then((r) => r.data);
 ///////////////////// Therapist API's /////////////////////////////
 export const therapistUsers = async (params = {}) => {
   const response = await apiClient.get("/admin/get_therapists", { params });

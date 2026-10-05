@@ -20,6 +20,8 @@ export default function SessionSlotPicker({
   endDate,
   value,
   onChange,
+  startDate = new Date(),
+  maxDays = 365,
 }) {
   const [date, setDate] = useState(value?.date || null);
   const [slots, setSlots] = useState([]);
