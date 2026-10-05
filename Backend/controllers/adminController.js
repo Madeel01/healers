@@ -5562,6 +5562,7 @@ exports.deletePackage = async (req, res) => {
 exports.getSessions = async (req, res) => {
   try {
     const scope = req.query.scope === "past" ? "past" : "upcoming";
+    const scope2 = req.query.scope === "past" ? "past" : "upcoming";
     const type = ["batch", "custom"].includes(req.query.type) ? req.query.type : "all";
     const search = String(req.query.search || "").trim().toLowerCase();
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
