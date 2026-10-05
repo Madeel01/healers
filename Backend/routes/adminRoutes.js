@@ -150,6 +150,7 @@ router.delete("/scheduling/availability/:id", protect, deleteAvailability);
 
 router.get("/packages", getAllPackages);
 router.get("/packages/22", getAllPackages);
+router.get("/packages/333", getAllPackages);
 router.get("/packages/:packageId", protect, getPackageById);
 router.post("/packages/", protect, createPackage);
 router.put("/packages/:packageId", protect, updatePackage);
