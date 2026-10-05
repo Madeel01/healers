@@ -148,7 +148,7 @@ router.post("/scheduling/availability", protect, createAvailability);
 router.put("/scheduling/availability/:id", protect, updateAvailability);
 router.delete("/scheduling/availability/:id", protect, deleteAvailability);
 
-router.get("/packages/", getAllPackages);
+router.get("/packages", getAllPackages);
 router.get("/packages/:packageId", protect, getPackageById);
 router.post("/packages/", protect, createPackage);
 router.put("/packages/:packageId", protect, updatePackage);

@@ -1,9 +1,24 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
-import { getSessionSlotOptions } from "../../../api/admin/api";
-import { colors, fonts } from "../../../styles/theme";
-import { formatTo12Hour } from "../../../utils/hoursformat";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+import { getSessionSlotOptions } from '../../../api/admin/api';
+import {
+  colors,
+  fonts,
+} from '../../../styles/theme';
+import { formatTo12Hour } from '../../../utils/hoursformat';
 
 const pad = (n) => String(n).padStart(2, "0");
 const toKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -98,30 +113,30 @@ export default function SessionSlotPicker({
       </ScrollView>
 
       <Text style={styles.label}>Start time</Text>
-      {!date ? (
-        <Text style={styles.muted}>Choose a date first.</Text>
-      ) : loading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 10, alignSelf: "flex-start" }} />
-      ) : slots.length === 0 ? (
-        <Text style={styles.muted}>{message || "No free time on this date."}</Text>
-      ) : (
-        <View style={styles.slotWrap}>
-          {slots.map((s) => {
-            const on = value?.date === date && value?.startTime === s.startTime;
-            return (
-              <TouchableOpacity
-                key={s.startTime}
-                style={[styles.slot, on && styles.slotOn]}
-                onPress={() => onChange({ date, startTime: s.startTime, endTime: s.endTime })}
-              >
-                <Text style={[styles.slotText, on && styles.slotTextOn]}>
-                  {formatTo12Hour(`${s.startTime}-${s.endTime}`)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      )}
+      {!date
+        ? <Text style={styles.muted}>Choose a date first.</Text>
+        : loading
+        ? <ActivityIndicator color={colors.primary} style={{ marginTop: 10, alignSelf: "flex-start" }} />
+        : slots.length === 0
+        ? <Text style={styles.muted}>{message || "No free time on this date."}</Text>
+        : (
+          <View style={styles.slotWrap}>
+            {slots.map((s) => {
+              const on = value?.date === date && value?.startTime === s.startTime;
+              return (
+                <TouchableOpacity
+                  key={s.startTime}
+                  style={[styles.slot, on && styles.slotOn]}
+                  onPress={() => onChange({ date, startTime: s.startTime, endTime: s.endTime })}
+                >
+                  <Text style={[styles.slotText, on && styles.slotTextOn]}>
+                    {formatTo12Hour(`${s.startTime}-${s.endTime}`)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
     </View>
   );
 }

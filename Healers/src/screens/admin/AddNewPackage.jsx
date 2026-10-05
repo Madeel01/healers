@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -16,7 +20,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Feather } from '@expo/vector-icons';
 
-import { createPackage } from '../../api/admin/api';
+import {
+  createPackage,
+  getPackageById,
+  updatePackage,
+} from '../../api/admin/api';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
 import {
@@ -56,16 +64,155 @@ const CATEGORY_OPTIONS = [
 
 export default function AddNewPackageScreen({
   navigation,
+  route,
 }) {
+  const packageId = route?.params?.packageId;
+  const mode = route?.params?.mode;
+
+  const isEditMode = mode === "edit" && Boolean(packageId);
+
   const [packageName, setPackageName] = useState("");
   const [pricingModel, setPricingModel] = useState("perSession");
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
+
+  const [
+    selectedCategories,
+    setSelectedCategories,
+  ] = useState([]);
+
+  const [
+    isCategoryModalVisible,
+    setIsCategoryModalVisible,
+  ] = useState(false);
+
   const [rate, setRate] = useState("");
   const [sessionDuration, setSessionDuration] = useState("45 min");
   const [sessions, setSessions] = useState("");
   const [saving, setSaving] = useState(false);
-  
+  const [loadingPackage, setLoadingPackage] = useState(false);
+
+  const mapSpecialitiesToCategories = (
+    specialities = [],
+  ) => {
+    return specialities
+      .map((specialityId) => {
+        return CATEGORY_OPTIONS.find(
+          (category) => category.id === specialityId,
+        );
+      })
+      .filter(Boolean);
+  };
+
+  const fetchPackage = useCallback(async () => {
+    if (!isEditMode) {
+      return;
+    }
+
+    try {
+      setLoadingPackage(true);
+
+      const response = await getPackageById(
+        packageId,
+      );
+
+      if (!response?.success || !response?.data) {
+        Alert.alert(
+          "Error",
+          response?.message
+            || "Package not found.",
+        );
+
+        return;
+      }
+
+      const packageData = response.data;
+
+      /*
+       * Package Name
+       */
+      setPackageName(
+        packageData.name || "",
+      );
+
+      /*
+       * Pricing Model
+       *
+       * Backend:
+       * per-session
+       * batch
+       *
+       * Frontend:
+       * perSession
+       * batch
+       */
+      if (packageData.type === "batch") {
+        setPricingModel("batch");
+      } else {
+        setPricingModel("perSession");
+      }
+
+      /*
+       * Categories
+       */
+      const categories = mapSpecialitiesToCategories(
+        packageData.specialities || [],
+      );
+
+      setSelectedCategories(categories);
+
+      /*
+       * Price
+       */
+      setRate(
+        packageData.price !== undefined
+          && packageData.price !== null
+          ? String(packageData.price)
+          : "",
+      );
+
+   
+      const minutes = Number(packageData.sessionMinutes) || 45;
+
+      const duration = `${minutes} min`;
+
+      if (
+        DURATION_OPTIONS.includes(duration)
+      ) {
+        setSessionDuration(duration);
+      } else {
+        setSessionDuration("45 min");
+      }
+
+    
+      setSessions(
+        packageData.sessions !== undefined
+          && packageData.sessions !== null
+          ? String(packageData.sessions)
+          : "",
+      );
+    } catch (error) {
+      console.log(
+        "getPackageById error:",
+        error?.response?.data
+          || error?.message,
+      );
+
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message
+          || "Failed to load package.",
+      );
+    } finally {
+      setLoadingPackage(false);
+    }
+  }, [
+    isEditMode,
+    packageId,
+  ]);
+
+  useEffect(() => {
+    fetchPackage();
+  }, [fetchPackage]);
+
   const handlePricingModelChange = (type) => {
     setPricingModel(type);
 
@@ -102,7 +249,10 @@ export default function AddNewPackageScreen({
       return;
     }
 
-    setSelectedCategories([category]);
+    setSelectedCategories([
+      category,
+    ]);
+
     setIsCategoryModalVisible(false);
   };
 
@@ -112,6 +262,7 @@ export default function AddNewPackageScreen({
         "Validation",
         "Package name is required.",
       );
+
       return false;
     }
 
@@ -120,6 +271,7 @@ export default function AddNewPackageScreen({
         "Validation",
         "Please select a service category.",
       );
+
       return false;
     }
 
@@ -131,6 +283,7 @@ export default function AddNewPackageScreen({
         "Validation",
         "Per Session package requires one service category.",
       );
+
       return false;
     }
 
@@ -145,6 +298,7 @@ export default function AddNewPackageScreen({
         "Validation",
         "Please enter a valid rate.",
       );
+
       return false;
     }
 
@@ -161,28 +315,49 @@ export default function AddNewPackageScreen({
 
       const payload = {
         name: packageName.trim(),
+
         type: pricingModel === "perSession"
           ? "per-session"
           : "batch",
+
         specialities: selectedCategories.map(
           (item) => item.id,
         ),
+
         price: Number(rate),
-        sessionMinutes: parseInt(sessionDuration, 10) || 60,
+
+        sessionMinutes: parseInt(
+          sessionDuration,
+          10,
+        ) || 60,
+
         sessions: pricingModel === "batch"
           ? Number(sessions)
           : 1,
       };
 
-      const response = await createPackage(
-        payload,
-      );
+      let response;
+
+      if (isEditMode) {
+        response = await updatePackage(
+          packageId,
+          payload,
+        );
+      } else {
+        response = await createPackage(
+          payload,
+        );
+      }
 
       if (response?.success) {
         Alert.alert(
           "Success",
           response.message
-            || "Package created successfully.",
+            || (
+              isEditMode
+                ? "Package updated successfully."
+                : "Package created successfully."
+            ),
           [
             {
               text: "OK",
@@ -193,7 +368,9 @@ export default function AddNewPackageScreen({
       }
     } catch (error) {
       console.log(
-        "createPackage error:",
+        isEditMode
+          ? "updatePackage error:"
+          : "createPackage error:",
         error?.response?.data
           || error?.message,
       );
@@ -201,7 +378,11 @@ export default function AddNewPackageScreen({
       Alert.alert(
         "Error",
         error?.response?.data?.message
-          || "Failed to create package.",
+          || (
+            isEditMode
+              ? "Failed to update package."
+              : "Failed to create package."
+          ),
       );
     } finally {
       setSaving(false);
@@ -216,6 +397,35 @@ export default function AddNewPackageScreen({
     ? "Select Categories"
     : "Select Category";
 
+  if (isEditMode && loadingPackage) {
+    return (
+      <SafeAreaView
+        style={[
+          styles.container,
+          commonStyles.container,
+        ]}
+      >
+        <TopBar
+          navigation={navigation}
+          headerTitle="Edit Package"
+        />
+
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color={colors.primary}
+          />
+
+          <Text style={styles.loadingText}>
+            Loading package...
+          </Text>
+        </View>
+
+        <BottomBar activeTab="" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView
       style={[
@@ -225,32 +435,18 @@ export default function AddNewPackageScreen({
     >
       <TopBar
         navigation={navigation}
-        headerTitle="Add New Package"
+        headerTitle={isEditMode
+          ? "Edit Package"
+          : "Add New Package"}
       />
 
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.introDescription}>
-          Configure a specialized therapy package for children. Define rates, session parameters, and inclusions to
-          maintain clinical transparency.
-        </Text>
-
         <View style={styles.card}>
-          <View style={styles.cardTitleRow}>
-            <Feather
-              name="settings"
-              size={20}
-              color={colors.primary}
-            />
-
-            <Text style={styles.cardTitle}>
-              Core Configuration
-            </Text>
-          </View>
-
           <Text style={styles.inputLabel}>
             Package Name
           </Text>
@@ -319,7 +515,10 @@ export default function AddNewPackageScreen({
 
           <TouchableOpacity
             style={styles.dropdownBtn}
-            onPress={() => setIsCategoryModalVisible(true)}
+            onPress={() =>
+              setIsCategoryModalVisible(
+                true,
+              )}
             activeOpacity={0.7}
           >
             <Text
@@ -341,37 +540,40 @@ export default function AddNewPackageScreen({
           </TouchableOpacity>
 
           {pricingModel === "batch"
-            && selectedCategories.length > 0 && (
-            <View style={styles.selectedList}>
-              {selectedCategories.map(
-                (category) => (
-                  <View
-                    key={category.id}
-                    style={styles.selectedBadge}
-                  >
-                    <Text
-                      style={styles.selectedBadgeText}
+            && selectedCategories.length > 0
+            && (
+              <View
+                style={styles.selectedList}
+              >
+                {selectedCategories.map(
+                  (category) => (
+                    <View
+                      key={category.id}
+                      style={styles.selectedBadge}
                     >
-                      {category.label}
-                    </Text>
+                      <Text
+                        style={styles.selectedBadgeText}
+                      >
+                        {category.label}
+                      </Text>
 
-                    <TouchableOpacity
-                      onPress={() =>
-                        handleSelectCategory(
-                          category,
-                        )}
-                    >
-                      <Feather
-                        name="x"
-                        size={14}
-                        color="#1669A9"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ),
-              )}
-            </View>
-          )}
+                      <TouchableOpacity
+                        onPress={() =>
+                          handleSelectCategory(
+                            category,
+                          )}
+                      >
+                        <Feather
+                          name="x"
+                          size={14}
+                          color="#1669A9"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  ),
+                )}
+              </View>
+            )}
 
           <Text style={styles.inputLabel}>
             Rate (PKR)
@@ -380,7 +582,9 @@ export default function AddNewPackageScreen({
           <View
             style={styles.rateInputContainer}
           >
-            <Text style={styles.currencyPrefix}>
+            <Text
+              style={styles.currencyPrefix}
+            >
               Rs.
             </Text>
 
@@ -399,32 +603,38 @@ export default function AddNewPackageScreen({
           </Text>
 
           <View style={styles.durationRow}>
-            {DURATION_OPTIONS.map((item) => {
-              const isActive = sessionDuration === item;
+            {DURATION_OPTIONS.map(
+              (item) => {
+                const isActive = sessionDuration === item;
 
-              return (
-                <TouchableOpacity
-                  key={item}
-                  style={[
-                    styles.durationBtn,
-                    isActive
-                    && styles.durationBtnActive,
-                  ]}
-                  onPress={() => setSessionDuration(item)}
-                >
-                  <Text
+                return (
+                  <TouchableOpacity
+                    key={item}
                     style={[
-                      styles.durationText,
+                      styles.durationBtn,
                       isActive
-                      && styles.durationTextActive,
+                      && styles.durationBtnActive,
                     ]}
+                    onPress={() =>
+                      setSessionDuration(
+                        item,
+                      )}
                   >
-                    {item}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                    <Text
+                      style={[
+                        styles.durationText,
+                        isActive
+                        && styles.durationTextActive,
+                      ]}
+                    >
+                      {item}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              },
+            )}
           </View>
+
         </View>
 
         <View style={styles.card}>
@@ -460,7 +670,9 @@ export default function AddNewPackageScreen({
                 : (
                   <>
                     <Feather
-                      name="save"
+                      name={isEditMode
+                        ? "check"
+                        : "save"}
                       size={16}
                       color="#FFFFFF"
                       style={{
@@ -471,7 +683,9 @@ export default function AddNewPackageScreen({
                     <Text
                       style={styles.saveBtnText}
                     >
-                      Save Package
+                      {isEditMode
+                        ? "Update Package"
+                        : "Save Package"}
                     </Text>
                   </>
                 )}
@@ -484,15 +698,25 @@ export default function AddNewPackageScreen({
         visible={isCategoryModalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setIsCategoryModalVisible(false)}
+        onRequestClose={() =>
+          setIsCategoryModalVisible(
+            false,
+          )}
       >
         <TouchableWithoutFeedback
-          onPress={() => setIsCategoryModalVisible(false)}
+          onPress={() =>
+            setIsCategoryModalVisible(
+              false,
+            )}
         >
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>
+              <View
+                style={styles.modalContent}
+              >
+                <Text
+                  style={styles.modalTitle}
+                >
                   {pricingModel === "batch"
                     ? "Select Service Categories"
                     : "Select Service Category"}
@@ -537,7 +761,8 @@ export default function AddNewPackageScreen({
                   },
                 )}
 
-                {pricingModel === "batch" && (
+                {pricingModel
+                    === "batch" && (
                   <TouchableOpacity
                     style={styles.categoryDoneBtn}
                     onPress={() =>
@@ -568,21 +793,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
+
   scrollArea: {
     flex: 1,
   },
+
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 24,
   },
-  introDescription: {
-    fontSize: 16,
-    color: colors.blackFont,
-    lineHeight: 22,
-    fontFamily: fonts.regular,
-    marginBottom: 20,
+
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
+
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: colors.blackFont,
+    fontFamily: fonts.regular,
+  },
+
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -591,18 +825,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F1F5F9",
   },
+
   cardTitleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginBottom: 16,
   },
-  cardTitle: {
-    fontSize: 24,
-    lineHeight: 32,
-    fontFamily: fonts.semiBold,
-    color: "#181C1E",
-  },
+
   inputLabel: {
     fontSize: 16,
     fontFamily: fonts.semiBold,
@@ -610,6 +840,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 5,
   },
+
   textInput: {
     backgroundColor: "#F7FAFD",
     borderWidth: 1,
@@ -623,6 +854,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     height: 50,
   },
+
   dropdownBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -636,6 +868,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     height: 50,
   },
+
   dropdownPlaceholder: {
     flex: 1,
     fontSize: 14,
@@ -643,9 +876,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     marginRight: 8,
   },
+
   selectedDropdownText: {
     color: "#0F172A",
   },
+
   segmentContainer: {
     flexDirection: "row",
     backgroundColor: "#F8FAFC",
@@ -655,6 +890,7 @@ const styles = StyleSheet.create({
     padding: 4,
     marginBottom: 8,
   },
+
   segmentBtn: {
     flex: 1,
     paddingVertical: 10,
@@ -663,9 +899,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
   },
+
   segmentBtnActive: {
     backgroundColor: "#1669A9",
   },
+
   segmentText: {
     fontSize: 14,
     fontFamily: fonts.regular,
@@ -673,15 +911,18 @@ const styles = StyleSheet.create({
     color: colors.blackFont,
     textAlign: "center",
   },
+
   segmentTextActive: {
     color: "#D3E6FF",
   },
+
   selectedList: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
     marginBottom: 10,
   },
+
   selectedBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -691,11 +932,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
   },
+
   selectedBadgeText: {
     fontSize: 11,
     fontFamily: fonts.medium,
     color: "#1669A9",
   },
+
   rateInputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -707,12 +950,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 8,
   },
+
   currencyPrefix: {
     fontSize: 14,
     color: colors.blackFont,
     fontFamily: fonts.regular,
     marginRight: 8,
   },
+
   rateTextInput: {
     flex: 1,
     fontSize: 14,
@@ -720,11 +965,13 @@ const styles = StyleSheet.create({
     padding: 0,
     fontFamily: fonts.regular,
   },
+
   durationRow: {
     flexDirection: "row",
     gap: 8,
     marginTop: 4,
   },
+
   durationBtn: {
     flex: 1,
     backgroundColor: "#F7FAFD",
@@ -734,25 +981,31 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
+
   durationBtnActive: {
     backgroundColor: "#1669A9",
     borderColor: "#1669A9",
   },
+
   durationText: {
     fontSize: 14,
     fontFamily: fonts.regular,
     color: "#181C1E",
   },
+
   durationTextActive: {
     color: "#FFFFFF",
   },
+
   sessionsLabel: {
     marginTop: 14,
   },
+
   buttonRow: {
     flexDirection: "row",
     gap: 12,
   },
+
   cancelBtn: {
     flex: 1,
     borderWidth: 1,
@@ -762,12 +1015,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   cancelBtnText: {
     fontSize: 16,
     fontFamily: fonts.regular,
     color: colors.primary,
     lineHeight: 24,
   },
+
   saveBtn: {
     flex: 1,
     flexDirection: "row",
@@ -777,15 +1032,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   saveBtnDisabled: {
     opacity: 0.6,
   },
+
   saveBtnText: {
     fontSize: 12,
     fontFamily: fonts.regular,
     color: "#FFFFFF",
     lineHeight: 24,
   },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(15, 23, 42, 0.4)",
@@ -793,6 +1051,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
   },
+
   modalContent: {
     width: "100%",
     backgroundColor: "#FFFFFF",
@@ -807,12 +1066,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
   },
+
   modalTitle: {
     fontSize: 18,
     fontFamily: fonts.semiBold,
     color: "#0F172A",
     marginBottom: 16,
   },
+
   modalOption: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -821,15 +1082,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
+
   modalOptionText: {
     fontSize: 15,
     fontFamily: fonts.regular,
     color: "#334155",
   },
+
   modalOptionTextSelected: {
     fontFamily: fonts.semiBold,
     color: "#0B4A6F",
   },
+
   categoryDoneBtn: {
     marginTop: 16,
     backgroundColor: colors.primary,
@@ -837,6 +1101,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
+
   categoryDoneText: {
     color: "#FFFFFF",
     fontSize: 14,

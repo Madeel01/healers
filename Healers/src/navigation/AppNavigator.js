@@ -50,6 +50,8 @@ import AttendanceScreen from '../screens/child/Attendence';
 import ChatDetailsScreen from '../screens/child/ChatDetails';
 import ChildDashboard from '../screens/child/ChildDashboard';
 import ChildVideoScreen from '../screens/child/ChildVideo';
+import ComplaintDetailsScreen from '../screens/child/ComplaintDetails';
+import ComplaintsScreen from '../screens/child/Complaints';
 import ChildFeedbackScreen from '../screens/child/Feedback';
 import MessagingScreen from '../screens/child/Messages';
 import ReportScreen from '../screens/child/Report';
@@ -132,6 +134,8 @@ function TherapistStack() {
       <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
       <Stack.Screen name="ChildProfile" component={ChildProfileScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
+      <Stack.Screen name="TherapistComplaints" component={ComplaintsScreen} />
+      <Stack.Screen name="ComplaintDetails" component={ComplaintDetailsScreen} />
     </Stack.Navigator>
   );
 }
@@ -149,6 +153,8 @@ function ChildStack() {
       <Stack.Screen name="ChildReport" component={ReportScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="ChildProfile" component={ChildProfileScreen} />
+      <Stack.Screen name="ChildComplaints" component={ComplaintsScreen} />
+      <Stack.Screen name="ComplaintDetails" component={ComplaintDetailsScreen} />
     </Stack.Navigator>
   );
 }

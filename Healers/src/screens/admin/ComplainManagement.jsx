@@ -1,4 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -14,7 +19,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -28,15 +36,27 @@ import {
 } from '../../api/admin/api';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
-import { colors, fonts } from '../../styles/theme';
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
 
 const PAGE_SIZE = 10;
 const CHAT_POLL_MS = 6000;
 
 const AVATAR_COLORS = [
-  "#0B4A6F", "#7C3AED", "#DC2626", "#059669",
-  "#D97706", "#DB2777", "#2563EB", "#0891B2",
-  "#65A30D", "#9333EA", "#EA580C", "#0D9488",
+  "#0B4A6F",
+  "#7C3AED",
+  "#DC2626",
+  "#059669",
+  "#D97706",
+  "#DB2777",
+  "#2563EB",
+  "#0891B2",
+  "#65A30D",
+  "#9333EA",
+  "#EA580C",
+  "#0D9488",
 ];
 
 const getAvatarColor = (str = "") => {
@@ -62,16 +82,15 @@ const timeAgo = (iso) => {
 const formatDateTime = (iso) =>
   iso
     ? new Date(iso).toLocaleString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
     : "";
 
-const formatTime = (iso) =>
-  new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const formatTime = (iso) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 const mapComplaint = (c) => ({
   id: c._id || c.id,
@@ -103,7 +122,6 @@ export default function ComplainManagementScreen({ navigation }) {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [activeBottomTab, setActiveBottomTab] = useState("");
   const [draft, setDraft] = useState({ status: "All", priority: "All", role: "All" });
-
 
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -173,7 +191,7 @@ export default function ComplainManagementScreen({ navigation }) {
         }
       }
     },
-    [searchQuery]
+    [searchQuery],
   );
 
   useEffect(() => {
@@ -193,9 +211,7 @@ export default function ComplainManagementScreen({ navigation }) {
   };
 
   const applyUpdated = (updated) => {
-    setComplaints((prev) =>
-      prev.map((c) => (c.id === updated.id ? { ...updated, unreadCount: c.unreadCount } : c))
-    );
+    setComplaints((prev) => prev.map((c) => (c.id === updated.id ? { ...updated, unreadCount: c.unreadCount } : c)));
     setDetailComplaint((prev) => (prev && prev.id === updated.id ? updated : prev));
     fetchComplaints({ pageNum: 1, silent: true });
   };
@@ -368,9 +384,7 @@ export default function ComplainManagementScreen({ navigation }) {
               keyboardShouldPersistTaps="handled"
               onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
             >
-              {chatLoading && (
-                <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
-              )}
+              {chatLoading && <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />}
 
               {!chatLoading && messages.length === 0 && (
                 <Text style={styles.chatEmpty}>
@@ -378,7 +392,7 @@ export default function ComplainManagementScreen({ navigation }) {
                 </Text>
               )}
 
-              {messages.map((m,index) => {
+              {messages.map((m, index) => {
                 const mine = m.senderRole === "Admin";
                 return (
                   <View
@@ -396,37 +410,37 @@ export default function ComplainManagementScreen({ navigation }) {
               })}
             </ScrollView>
 
-            {readOnly ? (
-              <View style={[styles.readOnlyBanner, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-                <Feather name="lock" size={14} color="#64748B" />
-                <Text style={styles.readOnlyText}>
-                  This complaint is resolved. The conversation is read-only.
-                </Text>
-              </View>
-            ) : (
-              <View style={[styles.chatInputRow, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-                <TextInput
-                  style={styles.chatInput}
-                  placeholder="Type a message..."
-                  placeholderTextColor="#94A3B8"
-                  value={messageText}
-                  onChangeText={setMessageText}
-                  multiline
-                  maxLength={1000}
-                />
-                <TouchableOpacity
-                  style={[styles.sendBtn, (!messageText.trim() || sending) && { opacity: 0.5 }]}
-                  onPress={handleSend}
-                  disabled={!messageText.trim() || sending}
-                >
-                  {sending ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Feather name="send" size={18} color="#FFFFFF" />
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
+            {readOnly
+              ? (
+                <View style={[styles.readOnlyBanner, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+                  <Feather name="lock" size={14} color="#64748B" />
+                  <Text style={styles.readOnlyText}>
+                    This complaint is resolved. The conversation is read-only.
+                  </Text>
+                </View>
+              )
+              : (
+                <View style={[styles.chatInputRow, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+                  <TextInput
+                    style={styles.chatInput}
+                    placeholder="Type a message..."
+                    placeholderTextColor="#94A3B8"
+                    value={messageText}
+                    onChangeText={setMessageText}
+                    multiline
+                    maxLength={1000}
+                  />
+                  <TouchableOpacity
+                    style={[styles.sendBtn, (!messageText.trim() || sending) && { opacity: 0.5 }]}
+                    onPress={handleSend}
+                    disabled={!messageText.trim() || sending}
+                  >
+                    {sending
+                      ? <ActivityIndicator size="small" color="#FFFFFF" />
+                      : <Feather name="send" size={18} color="#FFFFFF" />}
+                  </TouchableOpacity>
+                </View>
+              )}
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -478,33 +492,33 @@ export default function ComplainManagementScreen({ navigation }) {
                   </View>
                 </View>
 
-                {resolved ? (
-                  <View style={styles.resolvedBox}>
-                    <View style={styles.resolvedHeaderRow}>
-                      <Feather name="check-circle" size={16} color="#059669" />
-                      <Text style={styles.resolvedTitle}>
-                        Resolved by {item.resolvedByName || "an admin"}
-                      </Text>
+                {resolved
+                  ? (
+                    <View style={styles.resolvedBox}>
+                      <View style={styles.resolvedHeaderRow}>
+                        <Feather name="check-circle" size={16} color="#059669" />
+                        <Text style={styles.resolvedTitle}>
+                          Resolved by {item.resolvedByName || "an admin"}
+                        </Text>
+                      </View>
+                      <Text style={styles.resolvedMeta}>{formatDateTime(item.resolvedAt)}</Text>
+                      {!!item.resolutionNote && <Text style={styles.resolvedNote}>{item.resolutionNote}</Text>}
                     </View>
-                    <Text style={styles.resolvedMeta}>{formatDateTime(item.resolvedAt)}</Text>
-                    {!!item.resolutionNote && (
-                      <Text style={styles.resolvedNote}>{item.resolutionNote}</Text>
-                    )}
-                  </View>
-                ) : (
-                  <>
-                    <Text style={styles.fieldLabel}>Resolution note (optional)</Text>
-                    <TextInput
-                      style={styles.noteInput}
-                      placeholder="What was done to resolve this?"
-                      placeholderTextColor="#94A3B8"
-                      value={resolveNote}
-                      onChangeText={setResolveNote}
-                      multiline
-                      maxLength={500}
-                    />
-                  </>
-                )}
+                  )
+                  : (
+                    <>
+                      <Text style={styles.fieldLabel}>Resolution note (optional)</Text>
+                      <TextInput
+                        style={styles.noteInput}
+                        placeholder="What was done to resolve this?"
+                        placeholderTextColor="#94A3B8"
+                        value={resolveNote}
+                        onChangeText={setResolveNote}
+                        multiline
+                        maxLength={500}
+                      />
+                    </>
+                  )}
 
                 <View style={styles.detailActions}>
                   <TouchableOpacity style={styles.secondaryBtn} onPress={() => openChat(item)}>
@@ -532,11 +546,9 @@ export default function ComplainManagementScreen({ navigation }) {
                     onPress={() => doResolve(item, resolveNote)}
                     disabled={actionLoading}
                   >
-                    {actionLoading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Text style={styles.primaryBtnText}>Mark as resolved</Text>
-                    )}
+                    {actionLoading
+                      ? <ActivityIndicator size="small" color="#FFFFFF" />
+                      : <Text style={styles.primaryBtnText}>Mark as resolved</Text>}
                   </TouchableOpacity>
                 )}
                 <View style={{ height: 8 }} />
@@ -632,7 +644,7 @@ export default function ComplainManagementScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {loading && complaints.length === 0 &&  (
+        {loading && complaints.length === 0 && (
           <ActivityIndicator size="large" color={colors.primary} style={styles.centerLoader} />
         )}
 
@@ -649,74 +661,72 @@ export default function ComplainManagementScreen({ navigation }) {
         )}
 
         {complaints.map((item) => {
-            const resolved = item.status === "Resolved";
-            return (
-              <View key={item.id} style={styles.complaintCard}>
-                <View style={styles.userHeader}>
-                  <View style={styles.avatarWrapper}>
-                    <View style={[styles.userAvatar, { backgroundColor: getAvatarColor(item.name) }]}>
-                      <Text style={styles.userAvatarText}>
-                        {item.name?.trim()?.charAt(0)?.toUpperCase() || "?"}
-                      </Text>
-                    </View>
-                    <View style={styles.roleIconBadge}>
-                      <Feather
-                        name={item.role === "Therapist" ? "briefcase" : "smile"}
-                        size={9}
-                        color="#FFFFFF"
-                      />
-                    </View>
-                  </View>
-
-                  <View style={styles.userDetails}>
-                    <Text style={styles.userName} numberOfLines={1}>
-                      {item.name}
+          const resolved = item.status === "Resolved";
+          return (
+            <View key={item.id} style={styles.complaintCard}>
+              <View style={styles.userHeader}>
+                <View style={styles.avatarWrapper}>
+                  <View style={[styles.userAvatar, { backgroundColor: getAvatarColor(item.name) }]}>
+                    <Text style={styles.userAvatarText}>
+                      {item.name?.trim()?.charAt(0)?.toUpperCase() || "?"}
                     </Text>
-                    <View style={styles.roleBadge}>
-                      <Text style={styles.roleBadgeText}>{item.role.toUpperCase()}</Text>
-                    </View>
                   </View>
-
-                  <View style={styles.badgeTimeCol}>
-                    <StatusBadge item={item} />
-                    {item.priority === "High" && !resolved && <PriorityBadge />}
-                    <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
+                  <View style={styles.roleIconBadge}>
+                    <Feather
+                      name={item.role === "Therapist" ? "briefcase" : "smile"}
+                      size={9}
+                      color="#FFFFFF"
+                    />
                   </View>
                 </View>
 
-                <Text style={styles.complaintTitle} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                <Text style={styles.complaintDescription} numberOfLines={2}>
-                  {item.description}
-                </Text>
+                <View style={styles.userDetails}>
+                  <Text style={styles.userName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <View style={styles.roleBadge}>
+                    <Text style={styles.roleBadgeText}>{item.role.toUpperCase()}</Text>
+                  </View>
+                </View>
 
-                <View style={styles.cardActions}>
-                  <TouchableOpacity style={styles.viewDetailsBtn} onPress={() => openDetails(item)}>
-                    <Text style={styles.viewDetailsText}>View Details</Text>
-                    <Feather name="chevron-right" size={16} color="#475569" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.iconActionBtn} onPress={() => openChat(item)}>
-                    <Ionicons name="chatbox-outline" size={18} color="#0B4A6F" />
-                    {item.unreadCount > 0 && <View style={styles.unreadDot} />}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.iconActionBtn, styles.greenIconBtn, resolved && { opacity: 0.45 }]}
-                    onPress={() => confirmQuickResolve(item)}
-                    disabled={resolved || actionLoading}
-                  >
-                    <Feather name="check-circle" size={18} color="#059669" />
-                  </TouchableOpacity>
+                <View style={styles.badgeTimeCol}>
+                  <StatusBadge item={item} />
+                  {item.priority === "High" && !resolved && <PriorityBadge />}
+                  <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
                 </View>
               </View>
-            );
-          })}
 
-        {loadingMore && (
-          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
-        )}
+              <Text style={styles.complaintTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={styles.complaintDescription} numberOfLines={2}>
+                {item.description}
+              </Text>
+
+              <View style={styles.cardActions}>
+                <TouchableOpacity style={styles.viewDetailsBtn} onPress={() => openDetails(item)}>
+                  <Text style={styles.viewDetailsText}>View Details</Text>
+                  <Feather name="chevron-right" size={16} color="#475569" />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.iconActionBtn} onPress={() => openChat(item)}>
+                  <Ionicons name="chatbox-outline" size={18} color="#0B4A6F" />
+                  {item.unreadCount > 0 && <View style={styles.unreadDot} />}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.iconActionBtn, styles.greenIconBtn, resolved && { opacity: 0.45 }]}
+                  onPress={() => confirmQuickResolve(item)}
+                  disabled={resolved || actionLoading}
+                >
+                  <Feather name="check-circle" size={18} color="#059669" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        })}
+
+        {loadingMore && <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />}
         <View style={{ height: 24 }} />
       </ScrollView>
 
@@ -1079,7 +1089,14 @@ const styles = StyleSheet.create({
   chatTitle: { fontSize: 17, fontWeight: "800", color: "#0F172A" },
   chatSubTitle: { fontSize: 12, color: "#64748B", marginTop: 2 },
   chatBody: { flex: 1, paddingHorizontal: 16, backgroundColor: "#F8FAFC" },
-  chatEmpty: { textAlign: "center", color: "#94A3B8", fontSize: 14, marginTop: 40, paddingHorizontal: 24, lineHeight: 20 },
+  chatEmpty: {
+    textAlign: "center",
+    color: "#94A3B8",
+    fontSize: 14,
+    marginTop: 40,
+    paddingHorizontal: 24,
+    lineHeight: 20,
+  },
   bubbleRow: { flexDirection: "row", marginBottom: 8 },
   bubbleRowMine: { justifyContent: "flex-end" },
   bubbleRowTheirs: { justifyContent: "flex-start" },

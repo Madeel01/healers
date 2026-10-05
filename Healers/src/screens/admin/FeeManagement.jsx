@@ -32,21 +32,16 @@ import {
   fonts,
 } from '../../styles/theme';
 
-const PAGE_LIMIT = 5;
+const PAGE_LIMIT = 3;
 
-export default function FeeManagementScreen({
-  navigation,
-}) {
+export default function FeeManagementScreen({ navigation }) {
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchPackages = useCallback(async () => {
     try {
-      const response = await getAllPackages(
-        1,
-        PAGE_LIMIT,
-      );
+      const response = await getAllPackages(1, PAGE_LIMIT);
 
       if (response?.success) {
         setPackages(response.data || []);
@@ -110,8 +105,7 @@ export default function FeeManagementScreen({
                   )
                 );
 
-                // Load again so dashboard still
-                // contains latest 5 after deletion.
+              
                 await fetchPackages();
 
                 Alert.alert(
@@ -350,8 +344,6 @@ export default function FeeManagementScreen({
                         ?.replace(/-/g, " ")
                         .replace(/\b\w/g, (char) => char.toUpperCase())}
                     </Text>
-
-                  
                   </View>
 
                   <View style={styles.actionButtons}>

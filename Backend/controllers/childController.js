@@ -4,6 +4,7 @@ const Scheduling = require("../models/Scheduling");
 const TherapistAssignment = require("../models/TherapistAssignment");
 const WeeklyVideo = require("../models/Video");
 const User = require("../models/User");
+const Complaint = require("../models/Complaint");
 
 exports.getChildFeedbackManagement = async (req, res) => {
   try {
@@ -2005,6 +2006,415 @@ exports.getChildUpcomingSessions = async (req, res) => {
       success: false,
       message: "Failed to fetch upcoming sessions",
       error: error.message,
+    });
+  }
+};
+const ALLOWED_USER_ROLES = [
+  "Child",
+  "Therapist",
+];
+const getUserId = (req) => req.user?._id || req.user?.id;
+
+const checkUserRole = (role) => ALLOWED_USER_ROLES.includes(role);
+
+exports.createComplaint = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const userRole = req.user?.role;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized.",
+      });
+    }
+    if (!checkUserRole(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only Child or Therapist can create complaints.",
+      });
+    }
+
+    const {
+      title,
+      description,
+      priority = "Normal",
+    } = req.body;
+
+    if (!title?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Complaint title is required.",
+      });
+    }
+
+    if (!description?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Complaint description is required.",
+      });
+    }
+
+    if (title.trim().length > 120) {
+      return res.status(400).json({
+        success: false,
+        message: "Title cannot exceed 120 characters.",
+      });
+    }
+
+    if (
+      description.trim().length > 2000
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Description cannot exceed 2000 characters.",
+      });
+    }
+
+    if (
+      !["Normal", "High"].includes(
+        priority,
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid priority.",
+      });
+    }
+
+    const complaint = await Complaint.create({
+      complainantId: userId,
+      complainantRole: userRole,
+      title: title.trim(),
+      description: description.trim(),
+      priority,
+      status: "Pending",
+      messages: [],
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Complaint submitted successfully.",
+      data: complaint,
+    });
+  } catch (error) {
+    console.error(
+      "createComplaint:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create complaint.",
+    });
+  }
+};
+
+exports.getMyComplaints = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const userRole = req.user?.role;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized.",
+      });
+    }
+
+    if (!checkUserRole(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied.",
+      });
+    }
+
+    const page = Math.max(
+      parseInt(req.query.page, 10) || 1,
+      1,
+    );
+
+    const limit = 5;
+
+    const skip = (page - 1) * limit;
+
+    const query = {
+      complainantId: userId,
+    };
+
+    if (
+      ["Pending", "Resolved"].includes(
+        req.query.status,
+      )
+    ) {
+      query.status = req.query.status;
+    }
+
+    const [
+      complaints,
+      total,
+    ] = await Promise.all([
+      Complaint.find(query)
+        .select(
+          [
+            "title",
+            "description",
+            "status",
+            "priority",
+            "messages",
+            "resolvedAt",
+            "resolutionNote",
+            "createdAt",
+            "updatedAt",
+          ].join(" "),
+        )
+        .sort({
+          createdAt: -1,
+          _id: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      Complaint.countDocuments(
+        query,
+      ),
+    ]);
+
+    const data = complaints.map(
+      (complaint) => {
+        const messages = complaint.messages || [];
+
+        const lastMessage = messages.length > 0
+          ? messages[
+            messages.length - 1
+          ]
+          : null;
+
+        return {
+          _id: complaint._id,
+          title: complaint.title,
+          description: complaint.description,
+          status: complaint.status,
+          priority: complaint.priority,
+          createdAt: complaint.createdAt,
+          updatedAt: complaint.updatedAt,
+          resolvedAt: complaint.resolvedAt,
+          resolutionNote: complaint.resolutionNote,
+          messageCount: messages.length,
+          lastMessage: lastMessage
+            ? {
+              text: lastMessage.text,
+              senderRole: lastMessage.senderRole,
+              createdAt: lastMessage.createdAt,
+            }
+            : null,
+        };
+      },
+    );
+
+    const totalPages = Math.ceil(
+      total / limit,
+    );
+
+    const hasMore = page < totalPages;
+
+    return res.status(200).json({
+      success: true,
+      page,
+      limit,
+      count: data.length,
+      total,
+      totalPages,
+      hasMore,
+      nextPage: hasMore
+        ? page + 1
+        : null,
+
+      data,
+    });
+  } catch (error) {
+    console.error(
+      "getMyComplaints:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch complaints.",
+    });
+  }
+};
+
+exports.getComplaintById = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const userRole = req.user?.role;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized.",
+      });
+    }
+
+    if (!checkUserRole(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied.",
+      });
+    }
+
+    const {
+      complaintId,
+    } = req.params;
+
+    if (
+      !mongoose.Types.ObjectId.isValid(
+        complaintId,
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid complaint ID.",
+      });
+    }
+
+    const complaint = await Complaint.findOne({
+      _id: complaintId,
+      complainantId: userId,
+    })
+      .populate(
+        "complainantId",
+        "fullName profileImage role",
+      )
+      .populate(
+        "messages.senderId",
+        "fullName profileImage role",
+      )
+      .populate(
+        "resolvedBy",
+        "fullName profileImage role",
+      )
+      .lean();
+
+    if (!complaint) {
+      return res.status(404).json({
+        success: false,
+        message: "Complaint not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: complaint,
+    });
+  } catch (error) {
+    console.error(
+      "getComplaintById:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch complaint.",
+    });
+  }
+};
+
+exports.replyComplaint = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const userRole = req.user?.role;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized.",
+      });
+    }
+
+    if (!checkUserRole(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied.",
+      });
+    }
+
+    const {
+      complaintId,
+    } = req.params;
+
+    const {
+      text,
+    } = req.body;
+
+    if (
+      !mongoose.Types.ObjectId.isValid(
+        complaintId,
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid complaint ID.",
+      });
+    }
+
+    if (!text?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Reply message is required.",
+      });
+    }
+
+    if (
+      text.trim().length > 1000
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Reply cannot exceed 1000 characters.",
+      });
+    }
+
+    const complaint = await Complaint.findOne({
+      _id: complaintId,
+      complainantId: userId,
+    });
+
+    if (!complaint) {
+      return res.status(404).json({
+        success: false,
+        message: "Complaint not found.",
+      });
+    }
+
+    complaint.messages.push({
+      senderId: userId,
+      senderRole: userRole,
+      text: text.trim(),
+      readByRecipient: false,
+    });
+
+    await complaint.save();
+
+    const newMessage = complaint.messages[
+      complaint.messages.length - 1
+    ];
+
+    return res.status(200).json({
+      success: true,
+      message: "Reply sent successfully.",
+      data: newMessage,
+    });
+  } catch (error) {
+    console.error(
+      "replyComplaint:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send reply.",
     });
   }
 };
