@@ -153,5 +153,6 @@ router.get("/packages/:packageId", protect, getPackageById);
 router.post("/packages/", protect, createPackage);
 router.put("/packages/:packageId", protect, updatePackage);
 router.delete("/packages/:packageId", deletePackage);
+router.get("/test")
 
 module.exports = router;

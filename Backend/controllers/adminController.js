@@ -5566,7 +5566,8 @@ exports.getSessions = async (req, res) => {
     const search = String(req.query.search || "").trim().toLowerCase();
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 15, 1), 50);
- 
+    const test = Math.min(Math.max(parseInt(req.query.limit, 10) || 15, 1), 50);
+    
     const settings = await SystemSetting.findOne().lean();
     const tz = settings?.timezone || "Asia/Karachi";
     const today = new Date().toLocaleDateString("en-CA", { timeZone: tz });
