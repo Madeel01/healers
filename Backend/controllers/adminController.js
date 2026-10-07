@@ -883,6 +883,38 @@ const createExtraSession = async ({
   });
   return { appointmentId: appointment._id };
 };
+const resolvePackageAssignment = async (packageId, discountedPrice) => {
+  if (packageId === null || packageId === "") {
+    return { fields: { packageId: null, discountedPrice: null } };
+  }
+
+  if (!mongoose.isValidObjectId(packageId)) {
+    return { status: 400, error: "Invalid package." };
+  }
+
+  const pkg = await Package.findById(packageId, "price").lean();
+  if (!pkg) {
+    return { status: 404, error: "Package not found." };
+  }
+
+  let discounted = null;
+
+  if (discountedPrice !== undefined && discountedPrice !== null && discountedPrice !== "") {
+    discounted = Number(discountedPrice);
+
+    if (!Number.isFinite(discounted) || discounted <= 0) {
+      return { status: 400, error: "Discounted price must be greater than 0." };
+    }
+    if (discounted >= pkg.price) {
+      return {
+        status: 400,
+        error: `Discounted price must be less than the package rate (PKR ${pkg.price}).`,
+      };
+    }
+  }
+
+  return { fields: { packageId, discountedPrice: discounted } };
+};
 
 exports.getAdminOverview = async (req, res) => {
   try {
@@ -1793,7 +1825,10 @@ exports.childUsers = async (req, res) => {
       age: 1,
       email: 1,
       phone: 1,
+      packageId: 1,         
+      discountedPrice: 1,
     })
+      .populate("packageId", "name price type")
       .sort({ createdAt: -1 })
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum);
@@ -1815,7 +1850,7 @@ exports.childUsers = async (req, res) => {
 };
 exports.createChild = async (req, res) => {
   try {
-    const { fullName, fatherName, fatherCnic, age, email, phone, password } = req.body;
+    const { fullName, fatherName, fatherCnic, age, email, phone, password, packageId, discountedPrice } = req.body;
 
     if (
       !fullName
@@ -1853,6 +1888,14 @@ exports.createChild = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    let packageFields = { packageId: null, discountedPrice: null };
+    if (packageId) {
+      const r = await resolvePackageAssignment(packageId, discountedPrice);
+      if (r.error) {
+        return res.status(r.status).json({ success: false, message: r.error });
+      }
+      packageFields = r.fields;
+    }
 
     const child = await User.create({
       fullName,
@@ -1864,6 +1907,7 @@ exports.createChild = async (req, res) => {
       password: hashedPassword,
       role: "Child",
       agreeTerms: true,
+      ...packageFields,
     });
 
     return res.status(201).json({
@@ -1893,7 +1937,7 @@ exports.createChild = async (req, res) => {
 exports.updateChild = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fullName, fatherName, fatherCnic, age, email, phone, password } = req.body;
+    const { fullName, fatherName, fatherCnic, age, email, phone, password, packageId, discountedPrice, } = req.body;
     if (!fullName || !email || !phone) {
       return res.json({
         success: false,
@@ -1946,6 +1990,13 @@ exports.updateChild = async (req, res) => {
       ...(email && { email }),
       ...(phone && { phone }),
     };
+    if (packageId !== undefined) {
+      const r = await resolvePackageAssignment(packageId, discountedPrice);
+      if (r.error) {
+        return res.status(r.status).json({ success: false, message: r.error });
+      }
+      Object.assign(updateFields, r.fields);
+    }
 
     if (password) {
       updateFields.password = await bcrypt.hash(password, 10);
@@ -5332,157 +5383,109 @@ exports.deleteChildCustomAppointment = async (req, res) => {
   }
 };
 
+const PACKAGE_TYPE = "per-month";
+ 
+const parsePackageBody = (body = {}) => {
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const price = Number(body.price);
+ 
+  if (!name) {
+    return { error: "Package name is required." };
+  }
+ 
+  if (!Number.isFinite(price) || price <= 0) {
+    return { error: "Monthly rate must be a number greater than 0." };
+  }
+ 
+  return { name, price };
+};
+ 
 exports.getAllPackages = async (req, res) => {
   try {
-    const page = Math.max(
-      parseInt(req.query.page, 10) || 1,
-      1,
-    );
-
-    const limit = Math.min(
-      Math.max(
-        parseInt(req.query.limit, 10) || 5,
-        1,
-      ),
-      50,
-    );
-
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 5, 1), 50);
     const skip = (page - 1) * limit;
 
+    const search = String(req.query.search || "").trim();
+    const filter = search
+      ? { name: { $regex: escapeRegex(search), $options: "i" } }
+      : {};
+
     const [packages, total] = await Promise.all([
-      Package.find()
-        .populate(
-          "createdBy",
-          "fullName email",
-        )
-        .sort({
-          createdAt: -1,
-          _id: -1,
-        })
+      Package.find(filter)
+        .populate("createdBy", "fullName email")
+        .sort({ createdAt: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      Package.countDocuments(),
+      Package.countDocuments(filter),
     ]);
-
+ 
     return res.status(200).json({
       success: true,
       page,
       limit,
       count: packages.length,
       total,
-      totalPages: Math.ceil(
-        total / limit,
-      ),
+      totalPages: Math.ceil(total / limit),
       hasMore: skip + packages.length < total,
       data: packages,
     });
   } catch (error) {
-    console.error(
-      "getAllPackages:",
-      error,
-    );
-
+    console.error("getAllPackages:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch packages.",
     });
   }
 };
+ 
 exports.getPackageById = async (req, res) => {
   try {
-    const packageData = await Package.findById(
-      req.params.packageId,
-    )
-      .populate(
-        "createdBy",
-        "fullName email",
-      )
-      .lean();
-
-    if (!packageData) {
-      return res.status(404).json({
-        success: false,
-        message: "Package not found.",
-      });
+    const { packageId } = req.params;
+ 
+    if (!mongoose.isValidObjectId(packageId)) {
+      return res.status(404).json({ success: false, message: "Package not found." });
     }
-
-    return res.status(200).json({
-      success: true,
-      data: packageData,
-    });
+ 
+    const packageData = await Package.findById(packageId)
+      .populate("createdBy", "fullName email")
+      .lean();
+ 
+    if (!packageData) {
+      return res.status(404).json({ success: false, message: "Package not found." });
+    }
+ 
+    return res.status(200).json({ success: true, data: packageData });
   } catch (error) {
-    console.error(
-      "getPackageById:",
-      error,
-    );
-
+    console.error("getPackageById:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch package.",
     });
   }
 };
+ 
 exports.createPackage = async (req, res) => {
   try {
     const userId = req.user?._id || req.user?.id;
-
+ 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized.",
-      });
+      return res.status(401).json({ success: false, message: "Unauthorized." });
     }
-
-    const {
-      name,
-      type,
-      specialities,
-      price,
-      sessionMinutes,
-      sessions,
-    } = req.body;
-
-    if (!name || !type || !specialities || !price) {
-      return res.status(400).json({
-        success: false,
-        message: "Name, type, speciality and price are required.",
-      });
+ 
+    const parsed = parsePackageBody(req.body);
+    if (parsed.error) {
+      return res.status(400).json({ success: false, message: parsed.error });
     }
-
-    if (!["per-session", "batch"].includes(type)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid package type.",
-      });
-    }
-
-    if (!Array.isArray(specialities) || specialities.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "At least one speciality is required.",
-      });
-    }
-
-    if (type === "per-session" && specialities.length !== 1) {
-      return res.status(400).json({
-        success: false,
-        message: "Per-session package must have exactly one speciality.",
-      });
-    }
-
+ 
     const packageData = await Package.create({
-      name: name.trim(),
-      type,
-      specialities,
-      price: Number(price),
-      sessionMinutes: Number(sessionMinutes) || 60,
-      sessions: type === "per-session"
-        ? 1
-        : Number(sessions) || 1,
+      name: parsed.name,
+      type: PACKAGE_TYPE,
+      price: parsed.price,
       createdBy: userId,
     });
-
+ 
     return res.status(201).json({
       success: true,
       message: "Package created successfully.",
@@ -5490,70 +5493,58 @@ exports.createPackage = async (req, res) => {
     });
   } catch (error) {
     console.error("createPackage:", error);
-
+ 
     if (error.name === "ValidationError") {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      return res.status(400).json({ success: false, message: error.message });
     }
-
+ 
     return res.status(500).json({
       success: false,
       message: "Failed to create package.",
     });
   }
 };
+ 
 exports.updatePackage = async (req, res) => {
   try {
-    const {
-      name,
-      type,
-      specialities,
-      price,
-      sessionMinutes,
-      sessions,
-    } = req.body;
-
-    const packageData = await Package.findById(req.params.packageId);
-
+    const { packageId } = req.params;
+ 
+    if (!mongoose.isValidObjectId(packageId)) {
+      return res.status(404).json({ success: false, message: "Package not found." });
+    }
+ 
+    const parsed = parsePackageBody(req.body);
+    if (parsed.error) {
+      return res.status(400).json({ success: false, message: parsed.error });
+    }
+ 
+    const packageData = await Package.findById(packageId);
+ 
     if (!packageData) {
-      return res.status(404).json({
-        success: false,
-        message: "Package not found.",
-      });
+      return res.status(404).json({ success: false, message: "Package not found." });
     }
 
-    if (!name || !type || !specialities || !price) {
-      return res.status(400).json({
-        success: false,
-        message: "Name, type, speciality and price are required.",
+    if (parsed.price < packageData.price) {
+      const conflicting = await User.countDocuments({
+        role: "Child",
+        packageId,
+        discountedPrice: { $ne: null, $gte: parsed.price },
       });
+ 
+      if (conflicting > 0) {
+        return res.status(409).json({
+          success: false,
+          message: `${conflicting} child(ren) have a discounted price equal to or above PKR ${parsed.price}. Update their discount first.`,
+        });
+      }
     }
-
-    if (!Array.isArray(specialities) || specialities.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "At least one speciality is required.",
-      });
-    }
-
-    if (type === "per-session" && specialities.length !== 1) {
-      return res.status(400).json({
-        success: false,
-        message: "Per-session package must have exactly one speciality.",
-      });
-    }
-
-    packageData.name = name.trim();
-    packageData.type = type;
-    packageData.specialities = specialities;
-    packageData.price = Number(price);
-    packageData.sessionMinutes = Number(sessionMinutes) || 60;
-    packageData.sessions = Number(sessions) || 1;
-
+ 
+    packageData.name = parsed.name;
+    packageData.price = parsed.price;
+    packageData.type = PACKAGE_TYPE;
+ 
     await packageData.save();
-
+ 
     return res.status(200).json({
       success: true,
       message: "Package updated successfully.",
@@ -5561,40 +5552,49 @@ exports.updatePackage = async (req, res) => {
     });
   } catch (error) {
     console.error("updatePackage:", error);
-
+ 
     if (error.name === "ValidationError") {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      return res.status(400).json({ success: false, message: error.message });
     }
-
+ 
     return res.status(500).json({
       success: false,
       message: "Failed to update package.",
     });
   }
 };
+ 
 exports.deletePackage = async (req, res) => {
   try {
-    const packageData = await Package.findById(req.params.packageId);
-
+    const { packageId } = req.params;
+ 
+    if (!mongoose.isValidObjectId(packageId)) {
+      return res.status(404).json({ success: false, message: "Package not found." });
+    }
+ 
+    const packageData = await Package.findById(packageId).lean();
+ 
     if (!packageData) {
-      return res.status(404).json({
+      return res.status(404).json({ success: false, message: "Package not found." });
+    }
+ 
+    const assigned = await User.countDocuments({ role: "Child", packageId });
+ 
+    if (assigned > 0) {
+      return res.status(409).json({
         success: false,
-        message: "Package not found.",
+        message: `This package is assigned to ${assigned} child(ren). Remove it from them before deleting.`,
       });
     }
-
-    await Package.findByIdAndDelete(req.params.packageId);
-
+ 
+    await Package.findByIdAndDelete(packageId);
+ 
     return res.status(200).json({
       success: true,
       message: "Package deleted successfully.",
     });
   } catch (error) {
     console.error("deletePackage:", error);
-
     return res.status(500).json({
       success: false,
       message: "Failed to delete package.",
