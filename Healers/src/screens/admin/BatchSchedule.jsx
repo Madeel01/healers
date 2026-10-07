@@ -23,12 +23,12 @@ import {
   getBatchScheduleData,
   removeBatchAssignment,
   updateBatchChildren,
+  getServices,
 } from "../../api/admin/api";
 import BottomBar from "../../components/BottomBar";
 import TopBar from "../../components/TopBar";
 import { colors, fonts } from "../../styles/theme";
 import { formatTo12Hour } from "../../utils/hoursformat";
-import { therapistSpecialities } from "../../utils/specialities";
 const sessionTypeLabel = (type) => {
   switch (type) {
     case "postponed":
@@ -75,8 +75,7 @@ const prettyDay = (k) =>
 const prettyFull = (k) =>
   keyToDate(k).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const timeRange = (s) => formatTo12Hour(`${s.startTime}-${s.endTime}`);
-const specMeta = (id) =>
-  therapistSpecialities.find((s) => s.id === id) || { label: id, bg: "#E0F2FE", color: "#0B4A6F" };
+
 
 const groupByDate = (list) => {
   const out = [];
@@ -99,7 +98,8 @@ export default function BatchScheduleScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const batchId = route?.params?.batchId;
   const [fabOpen, setFabOpen] = useState(false);
-
+  
+  const [services, setServices] = useState([])
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -136,6 +136,37 @@ export default function BatchScheduleScreen({ navigation, route }) {
       }
     },
     [batchId],
+  );
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
+
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
+  const specMeta = useCallback(
+    (id) => {
+      return (
+        services.find(
+          (service) => service.id === id
+        ) || {
+          label: id,
+          bg: "#E0F2FE",
+          color: "#0B4A6F",
+        }
+      );
+    },
+    [services]
   );
 
   useFocusEffect(

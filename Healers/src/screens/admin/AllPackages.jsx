@@ -23,6 +23,7 @@ import Feather from '@expo/vector-icons/Feather';
 import {
   deletePackage,
   getAllPackages,
+  getServices,
 } from '../../api/admin/api';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
@@ -31,7 +32,6 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
-import { therapistSpecialities } from '../../utils/specialities';
 
 export default function AllPackagesScreen({ navigation }) {
   const { height } = useWindowDimensions();
@@ -44,6 +44,7 @@ export default function AllPackagesScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [services, setServices] = useState([])
   const loadingMoreRef = useRef(false);
 
   const fetchPackages = useCallback(
@@ -114,6 +115,23 @@ export default function AllPackagesScreen({ navigation }) {
     },
     [PAGE_LIMIT],
   );
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
+
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener(
@@ -285,7 +303,7 @@ export default function AllPackagesScreen({ navigation }) {
               {item.specialities?.length
                 ? item.specialities
                   .map((specialityId) => {
-                    const speciality = therapistSpecialities.find(
+                    const speciality = services.find(
                       (item) => item.id === specialityId,
                     );
 

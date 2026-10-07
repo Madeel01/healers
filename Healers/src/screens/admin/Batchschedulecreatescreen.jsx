@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -19,11 +19,10 @@ import {
   getBatchTherapistOptions,
   previewBatchSchedule,
   saveBatchSchedule,
+  getServices,
 } from "../../api/admin/api";
 import { colors, fonts } from "../../styles/theme";
 import { formatTo12Hour } from "../../utils/hoursformat";
-import { therapistSpecialities } from "../../utils/specialities";
-
 const DURATIONS = [45, 60, 90, 120];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const FULL_DAY = {
@@ -35,9 +34,6 @@ const FULL_DAY = {
   Sat: "Saturday",
   Sun: "Sunday",
 };
-
-const specMeta = (id) =>
-  therapistSpecialities.find((s) => s.id === id) || { label: id, bg: "#E0F2FE", color: "#0B4A6F" };
 const mins = (t) => {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -58,6 +54,7 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
   const [groups, setGroups] = useState([]); 
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [team, setTeam] = useState([]); 
+  const [services, setServices] = useState([])
 
   const [options, setOptions] = useState({}); 
   const [blocked, setBlocked] = useState({});
@@ -80,6 +77,38 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
       }
     })();
   }, [batchId]);
+
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
+
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
+  const specMeta = useCallback(
+    (id) => {
+      return (
+        services.find(
+          (service) => service.id === id
+        ) || {
+          label: id,
+          bg: "#E0F2FE",
+          color: "#0B4A6F",
+        }
+      );
+    },
+    [services]
+  );
 
   const toggleTherapist = (speciality, t) => {
     const key = `${t._id}|${speciality}`;

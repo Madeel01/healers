@@ -41,6 +41,8 @@ export const deleteChildCustomAppointment = async (childId, appointmentId) => {
 
 export const getSessions = (params) => apiClient.get("/admin/schedule", { params }).then((r) => r.data);
 
+
+///////////////////// Therapist API's /////////////////////////////
 export const therapistUsers = async (params = {}) => {
   const response = await apiClient.get("/admin/get_therapists", { params });
   return response.data;
@@ -75,6 +77,8 @@ export const assignChildrenToTherapist = async ({ therapistId, addChildIds, remo
   return response.data;
 };
 
+
+
 ///////////////////// Schedule API's /////////////////////////////
 export const createSchedule = (body) => apiClient.post("/scheduling", body).then((r) => r.data);
 
@@ -91,20 +95,27 @@ export const getTherapistSchedules = (params) => apiClient.get("/scheduling/ther
 
 ///////////////////// Leave Request API's /////////////////////////////
 export const getLeaveRequests = (params) => apiClient.get("/admin/leave-requests", { params });
+
 export const approveLeaveRequest = (id) => apiClient.put(`/admin/leave-requests/${id}/approve`);
+
 export const rejectLeaveRequest = (id, rejectionReason) =>
   apiClient.put(`/admin/leave-requests/${id}/reject`, { rejectionReason });
+
 export const getStaffOnLeaveToday = () => apiClient.get("/admin/leave-requests/on-leave-today");
+
 
 ///////////////////// Feedback Request API's /////////////////////////////
 export const getFeedbackRequests = (params) => apiClient.get(`/admin/feedback/${params.status}`);
+
 export const deleteFeedback = (feedbackId) => apiClient.delete(`/admin/feedback/${feedbackId}`);
+
 export const getFeedbackReplies = async (feedbackId) => {
   const response = await apiClient.get(
     `/admin/feedback/${feedbackId}/replies`,
   );
   return response.data;
 };
+
 export const addFeedbackReply = async (feedbackId, message) => {
   const response = await apiClient.post(
     `/admin/feedback/${feedbackId}/replies`,
@@ -114,9 +125,12 @@ export const addFeedbackReply = async (feedbackId, message) => {
 };
 
 ///////////////////// Batch API's /////////////////////////////
+
 export const getBatches = (params) => apiClient.get("/admin/batches", { params }).then((r) => r.data);
 
 export const createBatch = (data) => apiClient.post("/admin/batches", data).then((r) => r.data);
+
+export const getBatchPackageOptions = () => apiClient.get("/admin/batches/batch-packages").then((r) => r.data);
 
 export const getBatchScheduleData = (batchId) =>
   apiClient.get(`/admin/batches/schedule/${batchId}`).then((r) => r.data);
@@ -145,6 +159,7 @@ export const removeBatchAssignment = (batchId, assignmentId) =>
   apiClient
     .delete(`/admin/batches/${batchId}/assignments/${assignmentId}`)
     .then((r) => r.data);
+
 export const updateBatch = (id, data) => apiClient.put(`/admin/batches/${id}`, data).then((r) => r.data);
 
 export const getSessionSlotOptions = async (batchId, assignmentId, body) => {
@@ -164,6 +179,7 @@ export const postponeBatchSession = async (batchId, assignmentId, sessionId, bod
   );
   return res.data;
 };
+
 export const deleteBatchSession = (batchId, assignmentId, sessionId) =>
   apiClient
     .delete(`/admin/batches/${batchId}/assignments/${assignmentId}/sessions/${sessionId}`)
@@ -176,6 +192,8 @@ export const getAllPackages = (page = 1, limit = 5) =>
       limit,
     },
   }).then((res) => res.data);
+
+
 
 export const getPackageById = (packageId) =>
   apiClient
@@ -204,6 +222,7 @@ export const createBroadcast = (formData) =>
   apiClient.post("/admin/broadcast", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+
 export const updateBroadcast = (broadcastId, formData) =>
   apiClient.put(`/admin/broadcast/${broadcastId}`, formData, { headers: { "Content-Type": "multipart/form-data" } });
 
@@ -243,6 +262,7 @@ export const sendComplaintMessage = (complaintId, text) =>
 
 ///////////////////// Common API's /////////////////////////////
 export const getParents = (params = {}) => apiClient.get("/admin/parents", { params }).then((res) => res.data);
+
 export const getUsersByRole = async (params = {}) => {
   const response = await apiClient.get("/admin/users", { params });
   return response.data;
@@ -252,7 +272,10 @@ export const getUsersByRole = async (params = {}) => {
 export const getAllNotifications = (params) => apiClient.get("/admin/notifications", { params }).then((r) => r.data);
 
 export const markNotificationRead = (id) => apiClient.put(`/admin/notifications/${id}/read`).then((r) => r.data);
+
 export const markAllNotificationsRead = () => apiClient.put("/admin/notifications/read-all").then((r) => r.data);
+
+
 
 ///////////////////// Availability API's /////////////////////////////
 export const getAvailability = (params) =>
@@ -264,3 +287,26 @@ export const updateAvailability = (id, body) =>
   apiClient.put(`/admin/scheduling/availability/${id}`, body).then((r) => r.data);
 
 export const deleteAvailability = (id) => apiClient.delete(`/admin/scheduling/availability/${id}`).then((r) => r.data);
+
+
+
+export const getServices = async (params = {}) => {
+  const response = await apiClient.get("/admin/services", { params });
+  return response.data;
+};
+
+export const createService = async (payload) => {
+  const response = await apiClient.post("/admin/services", payload);
+  return response.data;
+};
+
+export const updateService = async (id, payload) => {
+  const response = await apiClient.put(`/admin/services/${id}`, payload);
+  return response.data;
+};
+
+export const deleteService = async (id) => {
+  const response = await apiClient.delete(`/admin/services/${id}`);
+  return response.data;
+};
+

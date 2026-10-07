@@ -30,6 +30,7 @@ import {
   deleteChildCustomAppointment,
   getSessions,
   getUsersByRole,
+  getServices,
 } from '../../api/admin/api';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
@@ -38,7 +39,6 @@ import {
   fonts,
 } from '../../styles/theme';
 import { formatTo12Hour } from '../../utils/hoursformat';
-import { therapistSpecialities } from '../../utils/specialities';
 
 const LIMIT = 15;
 
@@ -77,8 +77,6 @@ const mins = (t) => {
   return h * 60 + m;
 };
 const timeRange = (s) => formatTo12Hour(`${s.startTime}-${s.endTime}`);
-const specMeta = (id) =>
-  therapistSpecialities.find((s) => s.id === id) || { label: id, bg: "#E0F2FE", color: "#0B4A6F" };
 
 const isInactive = (s) => s.sessionType === "cancel" || s.sessionType === "postponed";
 
@@ -89,7 +87,7 @@ const attendanceSummary = (children = []) => {
 };
 
 // ---------- card (declared outside the screen so it never remounts) ----------
-function SessionCard({ s, onPress }) {
+function SessionCard({ s, onPress,specMeta }) {
   const isCustom = s.type === "custom";
   const spec = !isCustom && s.speciality ? specMeta(s.speciality) : null;
   const tm = TYPE_META[s.sessionType];
@@ -171,6 +169,7 @@ export default function ScheduleScreen({ navigation }) {
   const [type, setType] = useState("all");
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
+  const [services, setServices] = useState([])
 
   const [items, setItems] = useState([]);
   const [today, setToday] = useState(dateToKey(new Date()));
@@ -190,6 +189,37 @@ export default function ScheduleScreen({ navigation }) {
   const [pickerLoading, setPickerLoading] = useState(false);
 
   const requestRef = useRef(0);
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
+
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
+  const specMeta = useCallback(
+    (id) => {
+      return (
+        services.find(
+          (service) => service.id === id
+        ) || {
+          label: id,
+          bg: "#E0F2FE",
+          color: "#0B4A6F",
+        }
+      );
+    },
+    [services]
+  );
 
   // debounce the search box
   useEffect(() => {
@@ -212,7 +242,7 @@ export default function ScheduleScreen({ navigation }) {
           Alert.alert("Error", res?.message || "Could not load the schedule.");
           return;
         }
-
+        
         if (res.today) setToday(res.today);
         setHasMore(!!res.hasMore);
         setPage(pageNum);
@@ -325,7 +355,7 @@ export default function ScheduleScreen({ navigation }) {
             {!!rel && <Text style={styles.dayRel}>{rel}</Text>}
           </View>
         )}
-        <SessionCard s={item} onPress={setDetail} />
+        <SessionCard s={item} onPress={setDetail} specMeta={specMeta} />
       </View>
     );
   };

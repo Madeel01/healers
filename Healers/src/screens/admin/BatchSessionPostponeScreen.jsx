@@ -1,16 +1,14 @@
 // src/screens/admin/BatchSessionPostponeScreen.js
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Feather from "@expo/vector-icons/Feather";
 
-import { postponeBatchSession } from "../../api/admin/api";
+import { postponeBatchSession, getServices } from "../../api/admin/api";
 import SessionSlotPicker from "./components/SessionSlotPicker";
 import { colors, fonts } from "../../styles/theme";
 import { formatTo12Hour } from "../../utils/hoursformat";
-import { therapistSpecialities } from "../../utils/specialities";
-const specMeta = (id) =>
-  therapistSpecialities.find((s) => s.id === id) || { label: id, bg: "#E0F2FE", color: "#0B4A6F" };
+
 const mins = (t) => {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -30,11 +28,12 @@ export default function BatchSessionPostponeScreen({ navigation, route }) {
     route.params;
 
   const minutes = mins(endTime) - mins(startTime);
-  const meta = specMeta(speciality);
+  
 
   const [createAlternate, setCreateAlternate] = useState(true);
   const [choice, setChoice] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [services, setServices] = useState([])
 
   const submit = async () => {
     if (createAlternate && !choice) {
@@ -54,7 +53,38 @@ export default function BatchSessionPostponeScreen({ navigation, route }) {
       setBusy(false);
     }
   };
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
 
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
+  const specMeta = useCallback(
+    (id) => {
+      return (
+        services.find(
+          (service) => service.id === id
+        ) || {
+          label: id,
+          bg: "#E0F2FE",
+          color: "#0B4A6F",
+        }
+      );
+    },
+    [services]
+  );
+  const meta = specMeta(speciality);
   const confirm = () => {
     if (createAlternate) return submit();
     Alert.alert(

@@ -26,7 +26,7 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
-import { therapistSpecialities } from '../../utils/specialities';
+import { getServices } from '../../api/admin/api';
 
 const MOOD_OPTIONS = [
   {
@@ -52,11 +52,30 @@ const MOOD_OPTIONS = [
 ];
 
 export default function ChildAddFeedbackScreen({ navigation, route }) {
+  const [services, setServices] = useState([])
   const { session } = route?.params || {};
 
   const specialtyId = session?.specialty;
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
 
-  const selectedSpecialty = therapistSpecialities.find(
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
+
+
+  const selectedSpecialty = services.find(
     (item) => item.id === specialtyId,
   );
   const resolvedAppointmentId = session?.appointmentId || "";

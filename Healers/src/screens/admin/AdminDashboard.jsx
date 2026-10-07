@@ -306,6 +306,16 @@ export default function AdminDashboard() {
           <AntDesign name="file-text" size={24} color="#717781" />
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate("ServiceManagement")}>
+          <View style={[styles.quickIconBox, { backgroundColor: "#dbfef9" }]}>
+            <MaterialIcons name="description" size={22} color="#25ebb0" />
+          </View>
+          <View style={styles.quickActionText}>
+            <Text style={styles.quickActionTitle}>Service Management</Text>
+            <Text style={styles.quickActionSub}>Create and manage services</Text>
+          </View>
+          <AntDesign name="file-text" size={24} color="#717781" />
+        </TouchableOpacity>
         <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate("InvoiceManagement")}>
           <View style={[styles.quickIconBox, { backgroundColor: "#DBEAFE" }]}>
             <MaterialIcons name="description" size={22} color="#2563EB" />

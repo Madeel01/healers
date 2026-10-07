@@ -15,12 +15,14 @@ const SystemSetting = require("../models/SystemSetting");
 const TherapistAvailability = require("../models/TherapistAvailability");
 const BatchAssignment = require("../models/BatchAssignment");
 const Package = require("../models/Package");
+const Service = require("../models/Service");
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const PAST_DAYS = 365; 
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
   { path: "resolvedBy", select: "fullName" },
 ];
+
 const normalizeName = (name) => name?.trim().replace(/\s+/g, " ").toLowerCase();
 const normalizeCnic = (v = "") => {
   const d = String(v).replace(/\D/g, "");
@@ -2630,6 +2632,23 @@ exports.deleteFeedback = async (req, res) => {
   }
 };
 
+
+const resolvePackageIds = async (value) => {
+  const ids = [...new Set((Array.isArray(value) ? value : []).map(String))];
+  if (!ids.length) return { error: "Select at least one package." };
+  if (ids.some((id) => !mongoose.isValidObjectId(id))) {
+    return { error: "Invalid package selected." };
+  }
+  const count = await Package.countDocuments({ _id: { $in: ids }, type: "batch" });
+  if (count !== ids.length) {
+    return { error: "One or more selected packages were not found or are not batch packages." };
+  }
+  return { ids };
+};
+const BATCH_POPULATE = [
+  { path: "therapistIds", select: "fullName email" },
+  // { path: "packageIds", select: "name type price sessions sessionMinutes specialities" },
+];
 exports.getBatches = async (req, res) => {
   try {
     const { page = 1, limit = 20, speciality } = req.query;
@@ -2669,21 +2688,26 @@ exports.getBatches = async (req, res) => {
 };
 exports.createBatch = async (req, res) => {
   try {
-    const { batchName, speciality, dateFrom, dateTo, maxChild, fee } = req.body;
+    const { batchName, speciality, dateFrom, dateTo, maxChild, packageIds } = req.body;
     const specialityList = Array.isArray(speciality) ? speciality : [];
+
     if (
       !batchName
       || !specialityList.length
       || !dateFrom
       || !dateTo
       || !maxChild
-      || !fee
     ) {
       return res.status(400).json({
         success: false,
-        message: "batchName, speciality (at least one), dateFrom, dateTo, Batch fee and Batch Size are required.",
+        message: "batchName, speciality (at least one), dateFrom, dateTo and Batch Size are required.",
       });
     }
+
+    // const pk = await resolvePackageIds(packageIds);
+    // if (pk.error) {
+    //   return res.status(400).json({ success: false, message: pk.error });
+    // }
 
     const batch = await Batch.create({
       batchName: batchName.trim(),
@@ -2691,10 +2715,10 @@ exports.createBatch = async (req, res) => {
       dateFrom: new Date(dateFrom),
       dateTo: new Date(dateTo),
       maxChild: parseInt(maxChild, 10),
-      fee: parseInt(fee, 10),
+      // packageIds: pk.ids,
     });
 
-    const populated = await batch.populate("therapistIds", "fullName email");
+    const populated = await batch.populate(BATCH_POPULATE);
 
     return res.status(201).json({
       success: true,
@@ -2713,7 +2737,7 @@ exports.createBatch = async (req, res) => {
 exports.updateBatch = async (req, res) => {
   try {
     const { id } = req.params;
-    const { batchName, speciality, dateFrom, dateTo, maxChild, fee } = req.body;
+    const { batchName, speciality, dateFrom, dateTo, maxChild, packageIds } = req.body;
 
     const batch = await Batch.findById(id);
     if (!batch) {
@@ -2727,10 +2751,17 @@ exports.updateBatch = async (req, res) => {
     if (dateFrom !== undefined) batch.dateFrom = new Date(dateFrom);
     if (dateTo !== undefined) batch.dateTo = new Date(dateTo);
     if (maxChild !== undefined) batch.maxChild = parseInt(maxChild, 10);
-    if (fee !== undefined) batch.fee = parseInt(fee, 10);
+
+    // if (packageIds !== undefined) {
+    //   const pk = await resolvePackageIds(packageIds);
+    //   if (pk.error) {
+    //     return res.status(400).json({ success: false, message: pk.error });
+    //   }
+    //   batch.packageIds = pk.ids;
+    // }
 
     await batch.save();
-    const populated = await batch.populate("therapistIds", "fullName email");
+    const populated = await batch.populate(BATCH_POPULATE);
 
     return res.status(200).json({
       success: true,
@@ -2763,6 +2794,18 @@ exports.deleteBatch = async (req, res) => {
       message: "Failed to delete batch.",
       error: error.message,
     });
+  }
+};
+exports.getBatchPackageOptions = async (req, res) => {
+  try {
+    const packages = await Package.find({ type: "batch" })
+      .select("name type price sessions sessionMinutes specialities")
+      .sort({ createdAt: -1 })
+      .lean();
+    return res.status(200).json({ success: true, data: packages });
+  } catch (error) {
+    console.error("getBatchPackageOptions:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch packages." });
   }
 };
 
@@ -5566,7 +5609,7 @@ exports.getSessions = async (req, res) => {
     const search = String(req.query.search || "").trim().toLowerCase();
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 15, 1), 50);
- 
+    
     const settings = await SystemSetting.findOne().lean();
     const tz = settings?.timezone || "Asia/Karachi";
     const today = new Date().toLocaleDateString("en-CA", { timeZone: tz });
@@ -5578,7 +5621,6 @@ exports.getSessions = async (req, res) => {
     const [ty, tm] = today.split("-").map(Number);
     const [cy, cm] = cutoff.split("-").map(Number);
  
-    // only load the month documents that can contain what we need
     const monthFilter =
       scope === "upcoming"
         ? { $or: [{ year: { $gt: ty } }, { year: ty, month: { $gte: tm } }] }
@@ -5670,5 +5712,142 @@ exports.getSessions = async (req, res) => {
       message: "Failed to load schedule.",
       error: error.message,
     });
+  }
+};
+
+const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+const shapeService = (s) => ({
+  id: String(s._id),
+  label: s.label,
+  color: s.color,
+  bg: s.bg,
+  isActive: s.isActive,
+});
+
+const validateServiceIds = async (value, { allowInactive = false } = {}) => {
+  const ids = [...new Set((Array.isArray(value) ? value : []).map(String))];
+  if (!ids.length || ids.some((id) => !mongoose.isValidObjectId(id))) {
+    return { error: "Invalid service selected." };
+  }
+  const filter = { _id: { $in: ids } };
+  if (!allowInactive) filter.isActive = true;
+  if ((await Service.countDocuments(filter)) !== ids.length) {
+    return { error: "One or more selected services are not available." };
+  }
+  return { ids };
+};
+
+exports.getServices = async (req, res) => {
+  try {
+    const { search = "", includeInactive } = req.query;
+    const filter = {
+      ...(includeInactive !== "true" && { isActive: true }),
+      ...(search && {
+        label: { $regex: search, $options: "i" },
+      }),
+    };
+    const list = await Service.find(filter)
+      .sort({ createdAt: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      data: list.map(shapeService),
+    });
+  } catch (error) {
+    console.error("getServices:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch services.",
+    });
+  }
+};
+
+exports.createService = async (req, res) => {
+  try {
+    const label = String(req.body.label || "").trim();
+    const { color, bg } = req.body;
+
+    if (!label) return res.status(400).json({ success: false, message: "Service name is required." });
+    if (!HEX.test(color || "") || !HEX.test(bg || "")) {
+      return res.status(400).json({ success: false, message: "Valid colors are required." });
+    }
+    
+    const created = await Service.create({ label, color, bg });
+    return res.status(201).json({ success: true, data: shapeService(created) });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: "This service already exists." });
+    }
+    console.error("createService:", error);
+    return res.status(500).json({ success: false, message: "Failed to create service." });
+  }
+};
+
+exports.updateService = async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid id." });
+    }
+    const doc = await Service.findById(req.params.id);
+    if (!doc) return res.status(404).json({ success: false, message: "Service not found." });
+
+    const { label, color, bg, isActive } = req.body;
+
+    if (label !== undefined) {
+      if (!String(label).trim()) {
+        return res.status(400).json({ success: false, message: "Service name is required." });
+      }
+      doc.label = String(label).trim();
+    }
+    if (color !== undefined) {
+      if (!HEX.test(color)) return res.status(400).json({ success: false, message: "Invalid color." });
+      doc.color = color;
+    }
+    if (bg !== undefined) {
+      if (!HEX.test(bg)) return res.status(400).json({ success: false, message: "Invalid color." });
+      doc.bg = bg;
+    }
+    if (isActive !== undefined) doc.isActive = !!isActive;
+
+    await doc.save();
+    return res.status(200).json({ success: true, data: shapeService(doc) });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: "This service already exists." });
+    }
+    console.error("updateService:", error);
+    return res.status(500).json({ success: false, message: "Failed to update service." });
+  }
+};
+
+exports.deleteService = async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid id." });
+    }
+    const doc = await Service.findById(req.params.id);
+    if (!doc) return res.status(404).json({ success: false, message: "Service not found." });
+
+    const id = String(doc._id);
+    const [inBatch, inPackage, inTherapist] = await Promise.all([
+      Batch.exists({ speciality: id }),
+      Package.exists({ specialities: id }),
+      TherapistAssignment.exists({ specialty: id }),
+    ]);
+
+    if (inBatch || inPackage || inTherapist) {
+      return res.status(409).json({
+        success: false,
+        message: "This service is used by batches, packages or therapists. Deactivate it instead.",
+      });
+    }
+
+    await doc.deleteOne();
+    return res.status(200).json({ success: true, message: "Service deleted." });
+  } catch (error) {
+    console.error("deleteService:", error);
+    return res.status(500).json({ success: false, message: "Failed to delete service." });
   }
 };

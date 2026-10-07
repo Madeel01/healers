@@ -25,7 +25,6 @@ import {
   fonts,
 } from '../../styles/theme';
 import { addFeedbackReply, getFeedbackReplies, getFeedbackRequests, deleteFeedback } from '../../api/admin/api';
-import { therapistSpecialities } from '../../utils/specialities';
 import { formatTo12Hour } from '../../utils/hoursformat';
 import { AuthContext } from '../../context/AuthContext';
 
@@ -101,16 +100,6 @@ function mapFeedbackItem(item, status) {
     moodLabel: item.mood || 'No reaction',
     moodEmoji:
       MOOD_OPTIONS.find((m) => m.id === item.mood)?.emoji || '🙂',
-
-    category: item.category || 'Unknown',
-
-    categoryColor:
-      therapistSpecialities.find((s) => s.label === item.category)?.color ||
-      '#64748B',
-
-    categoryBg:
-      therapistSpecialities.find((s) => s.label === item.category)?.bg ||
-      '#F1F5F9',
   };
 }
 
@@ -425,23 +414,6 @@ export default function FeedbackScreen({ navigation }) {
                       </View>
 
                       {item.rating != null && renderStars(item.rating)}
-                      {/* {item.tab !== 'pending' && (
-                        <View
-                          style={[
-                            styles.categoryBadge,
-                            { backgroundColor: item.categoryBg },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.categoryBadgeText,
-                              { color: item.categoryColor },
-                            ]}
-                          >
-                            {item.category}
-                          </Text>
-                        </View>
-                      )} */}
                     </View>
 
                     {/* RIGHT SIDE */}
@@ -978,19 +950,6 @@ const styles = StyleSheet.create({
   },
 
   detailLabel: {
-    fontFamily: fonts.semiBold,
-  },
-
-  categoryBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    marginBottom: 14,
-  },
-
-  categoryBadgeText: {
-    fontSize: 11,
     fontFamily: fonts.semiBold,
   },
   modalOverlay: {
