@@ -4,8 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const YOUR_COMPUTER_IP = '192.168.88.76';
 
-const BASE_URL = `https://dialviz.com/api`;
-// const BASE_URL = `http://${YOUR_COMPUTER_IP}:5000/api`;
+// const BASE_URL = `https://dialviz.com/api`;
+const BASE_URL = `http://${YOUR_COMPUTER_IP}:5000/api`;
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

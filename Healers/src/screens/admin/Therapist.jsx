@@ -30,6 +30,7 @@ import {
   getUsersByRole,
   therapistUsers,
   updateTherapist,
+  getServices,
 } from '../../api/admin/api';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
@@ -37,7 +38,6 @@ import {
   colors,
   fonts,
 } from '../../styles/theme';
-import { therapistSpecialities } from '../../utils/specialities';
 const AVATAR_COLORS = [
   "#0B4A6F", "#7C3AED", "#DC2626", "#059669",
   "#D97706", "#DB2777", "#2563EB", "#0891B2",
@@ -67,6 +67,7 @@ export default function TherapistsScreen({ navigation }) {
   const [hasMore, setHasMore] = useState(true);
   const [saving, setSaving] = useState(false);
   const [touchedChildIds, setTouchedChildIds] = useState([]);
+  const [services, setServices] = useState([])
 
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -107,7 +108,23 @@ export default function TherapistsScreen({ navigation }) {
     resetTherapistForm();
     setIsAddModalOpen(true);
   };
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
 
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
   const openEditModal = (therapist) => {
     setEditingTherapistId(therapist.id);
     setNewTherapist({
@@ -330,7 +347,7 @@ export default function TherapistsScreen({ navigation }) {
 
       const formattedTherapists = therapistsData.map((therapist) => {
         const therapistSpecialties = (therapist.specialties || []).map((specId) => {
-          const matched = therapistSpecialities.find((item) => item.id === specId);
+          const matched = services.find((item) => item.id === specId);
           return {
             id: specId,
             label: matched?.label || "",
@@ -373,6 +390,9 @@ export default function TherapistsScreen({ navigation }) {
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, selectedFilter]);
+  
+
+  
 
   const handleScroll = ({ nativeEvent }) => {
     const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
@@ -582,7 +602,7 @@ export default function TherapistsScreen({ navigation }) {
 
         <View style={styles.tabWrap}>
           {selectedSpecilites.map((cat) => {
-            const specility = therapistSpecialities.find((item) => item.id === cat);
+            const specility = services.find((item) => item.id === cat);
             if(!specility) return;
             return (
               <View
@@ -644,14 +664,54 @@ export default function TherapistsScreen({ navigation }) {
                 </View>
                 <View style={styles.therapistInfo}>
                   <Text style={styles.therapistName}>{therapist.name}</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                    {(therapist.specialties || []).map((spec,index) => {  
-                    return (
-                      <View style={[styles.specialtyBadge, { backgroundColor: spec.bg }]} key={index}>
-                        <Text style={[styles.specialtyText, { color: spec.color }]}>{spec.label}</Text>
-                      </View>
-                    )})}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      marginTop: 4,
+                    }}
+                  >
+                    {(therapist.specialties || []).map((speciality) => {
+                      const specialityId =
+                        typeof speciality === "object"
+                          ? speciality.id
+                          : speciality;
+
+                      const service = services.find(
+                        (item) => item.id === specialityId
+                      );
+
+                      if (!service) {
+                        return null;
+                      }
+
+                      return (
+                        <View
+                          key={service.id}
+                          style={[
+                            styles.specialtyBadge,
+                            {
+                              backgroundColor: service.bg,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.specialtyText,
+                              {
+                                color: service.color,
+                              },
+                            ]}
+                          >
+                            {service.label}
+                          </Text>
+                        </View>
+                      );
+                    })}
+
                   </View>
+
                 </View>
 
                 <View
@@ -776,7 +836,7 @@ export default function TherapistsScreen({ navigation }) {
                 <Text style={styles.filterModalChipTextAll}>All Types</Text>
               </TouchableOpacity>
 
-              {therapistSpecialities.map((cat,index) => {
+              {services.map((cat,index) => {
               return (
                 <TouchableOpacity
                   key={index}
@@ -844,7 +904,7 @@ export default function TherapistsScreen({ navigation }) {
 
               <Text style={styles.fieldLabel}>Specialty</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 6 }}>
-                  {therapistSpecialities.map((item,index) => {
+                  {services.map((item,index) => {
                     const isSelected = newTherapist.specialty === item.id;
                     return (
                       <TouchableOpacity
@@ -858,8 +918,6 @@ export default function TherapistsScreen({ navigation }) {
                         onPress={() => setNewTherapist({ 
                           ...newTherapist, 
                           specialty: item.id,
-                          specialtyBg: item.bg,
-                          specialtyColor: item.color 
                         })}
                       >
                         <Text style={[styles.tabChipText, { color: item.color, fontWeight: '700' }]}>

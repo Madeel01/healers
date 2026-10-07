@@ -1,18 +1,14 @@
 // src/screens/admin/BatchAdditionalClassScreen.js
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Feather from "@expo/vector-icons/Feather";
 
-import { createAdditionalSession, getBatchScheduleData } from "../../api/admin/api";
+import { createAdditionalSession, getBatchScheduleData, getServices } from "../../api/admin/api";
 import SessionSlotPicker from "./components/SessionSlotPicker";
 import { colors, fonts } from "../../styles/theme";
-import { therapistSpecialities } from "../../utils/specialities";
 
 const DURATIONS = [45, 60, 90, 120];
-
-const specMeta = (id) =>
-  therapistSpecialities.find((s) => s.id === id) || { label: id, bg: "#E0F2FE", color: "#0B4A6F" };
 
 export default function BatchAdditionalClassScreen({ navigation, route }) {
   const { batchId } = route.params;
@@ -20,7 +16,7 @@ export default function BatchAdditionalClassScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [batch, setBatch] = useState(null);
   const [assignments, setAssignments] = useState([]);
-
+  const [services, setServices] = useState([])
   const [assignmentId, setAssignmentId] = useState(null);
   const [minutes, setMinutes] = useState(60);
   const [choice, setChoice] = useState(null);
@@ -43,6 +39,37 @@ export default function BatchAdditionalClassScreen({ navigation, route }) {
       }
     })();
   }, [batchId]);
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
+
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
+  const specMeta = useCallback(
+    (id) => {
+      return (
+        services.find(
+          (service) => service.id === id
+        ) || {
+          label: id,
+          bg: "#E0F2FE",
+          color: "#0B4A6F",
+        }
+      );
+    },
+    [services]
+  );
 
   const pickAssignment = (id) => {
     setAssignmentId(id);

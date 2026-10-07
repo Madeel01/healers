@@ -20,12 +20,12 @@ import {
   getChildBatchOptions,
   getChildSchedule,
   updateBatchChildren,
+  getServices,
 } from "../../api/admin/api";
 import BottomBar from "../../components/BottomBar";
 import TopBar from "../../components/TopBar";
 import { colors, fonts } from "../../styles/theme";
 import { formatTo12Hour } from "../../utils/hoursformat";
-import { therapistSpecialities } from "../../utils/specialities";
 
 const PAGE = 20;
 
@@ -62,8 +62,6 @@ const mins = (t) => {
   return h * 60 + m;
 };
 const timeRange = (s) => formatTo12Hour(`${s.startTime}-${s.endTime}`);
-const specMeta = (id) =>
-  therapistSpecialities.find((s) => s.id === id) || { label: id, bg: "#E0F2FE", color: "#0B4A6F" };
 const asList = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 
 const groupByDate = (list) => {
@@ -87,7 +85,7 @@ const attendanceMeta = (s) => {
 };
 
 // ---------- row (declared outside the screen so it never remounts) ----------
-function SessionRow({ s, onPress }) {
+function SessionRow({ s, onPress, specMeta }) {
   const isCustom = s.type === "custom";
   const spec = s.speciality ? specMeta(s.speciality) : null;
   const tm = TYPE_META[s.sessionType];
@@ -141,6 +139,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [services, setServices] = useState([])
 
   const [tab, setTab] = useState("upcoming");
   const [pastLimit, setPastLimit] = useState(PAGE);
@@ -170,6 +169,37 @@ export default function ChildScheduleScreen({ navigation, route }) {
       }
     },
     [childId],
+  );
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
+
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
+  const specMeta = useCallback(
+    (id) => {
+      return (
+        services.find(
+          (service) => service.id === id
+        ) || {
+          label: id,
+          bg: "#E0F2FE",
+          color: "#0B4A6F",
+        }
+      );
+    },
+    [services]
   );
 
   useFocusEffect(
@@ -388,7 +418,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
                   {relLabel(g.date) && <Text style={styles.dayRel}>{relLabel(g.date)}</Text>}
                 </View>
                 {g.items.map((s) => (
-                  <SessionRow key={s.id} s={s} onPress={setDetail} />
+                  <SessionRow key={s.id} s={s} onPress={setDetail} specMeta={specMeta} />
                 ))}
               </View>
             ))
@@ -411,7 +441,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
                     <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
                   </View>
                   {g.items.map((s) => (
-                    <SessionRow key={s.id} s={s} onPress={setDetail} />
+                    <SessionRow key={s.id} s={s} onPress={setDetail} specMeta={specMeta} />
                   ))}
                 </View>
               ))}

@@ -27,8 +27,9 @@ import {
   deleteBatch,
   getBatches,
   updateBatch,
+  getBatchPackageOptions,
+  getServices
 } from "../../api/admin/api";
-import { therapistSpecialities } from "../../utils/specialities";
 
 const MONTHS = [
   "January",
@@ -59,6 +60,7 @@ export default function BatchManagementScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [activeBottomTab, setActiveBottomTab] = useState("");
+  const [services, setServices] = useState([])
 
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +87,23 @@ export default function BatchManagementScreen({ navigation }) {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const [isSpecialityModalOpen, setIsSpecialityModalOpen] = useState(false);
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
 
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
   const fetchBatches = useCallback(
     async (isRefresh = false) => {
       try {
@@ -115,9 +133,17 @@ export default function BatchManagementScreen({ navigation }) {
   );
 
   useEffect(() => {
-  const unsub = navigation.addListener("focus", () => fetchBatches());
-  return unsub;
-}, [navigation, fetchBatches]);
+    fetchBatches();
+  }, [selectedSpeciality]);
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      fetchBatches();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+
 
   const openCreateModal = () => {
     setEditingBatchId(null);
@@ -131,7 +157,7 @@ export default function BatchManagementScreen({ navigation }) {
 
     setForm({
       batchName: batch.batchName || "",
-      speciality: therapistSpecialities.filter((s) =>
+      speciality: services.filter((s) =>
         batchSpecialities.includes(s.id),
       ),
       dateFrom: batch.dateFrom ? batch.dateFrom.substring(0, 10) : "",
@@ -184,10 +210,10 @@ export default function BatchManagementScreen({ navigation }) {
       Alert.alert("Missing info", "Please enter a valid max children count.");
       return false;
     }
-    if (!form.fee || parseInt(form.fee, 10) <= 0) {
-      Alert.alert("Missing info", "Please enter a valid batch fee.");
-      return false;
-    }
+    // if (!form.fee || parseInt(form.fee, 10) <= 0) {
+    //   Alert.alert("Missing info", "Please enter a valid batch fee.");
+    //   return false;
+    // }
     return true;
   };
 
@@ -420,7 +446,7 @@ export default function BatchManagementScreen({ navigation }) {
                 const batchSpecialities = getBatchSpecialities(
                   batch.speciality,
                 );
-                const specs = therapistSpecialities.filter((s) =>
+                const specs = services.filter((s) =>
                   batchSpecialities.includes(s.id),
                 );
                 return (
@@ -721,7 +747,7 @@ export default function BatchManagementScreen({ navigation }) {
             </View>
 
             <ScrollView style={{ maxHeight: 320 }}>
-              {therapistSpecialities.map((spec) => {
+              {services.map((spec) => {
                 const isSelected = form.speciality.some(
                   (s) => s.id === spec.id,
                 );
@@ -881,7 +907,7 @@ export default function BatchManagementScreen({ navigation }) {
             </View>
 
             <ScrollView style={{ maxHeight: 320 }}>
-              {therapistSpecialities.map((spec) => {
+              {services.map((spec) => {
                 const selected = tempSpeciality.includes(spec.id);
 
                 return (
@@ -931,12 +957,12 @@ export default function BatchManagementScreen({ navigation }) {
         animationType="slide"
         onRequestClose={() => setIsDetailModalOpen(false)}
       >
-        <TouchableOpacity
+        <View
           style={styles.bottomSheetOverlay}
           activeOpacity={1}
           onPress={() => setIsDetailModalOpen(false)}
         >
-          <TouchableOpacity
+          <View
             activeOpacity={1}
             style={styles.bottomSheetContainer}
           >
@@ -994,7 +1020,7 @@ export default function BatchManagementScreen({ navigation }) {
                 <View style={styles.detailSection}>
                   <Text style={styles.detailLabel}>Speciality</Text>
                   <View style={styles.selectedTagsContainer}>
-                    {therapistSpecialities
+                    {services
                       .filter((s) =>
                         getBatchSpecialities(selectedBatch.speciality).includes(
                           s.id,
@@ -1087,8 +1113,8 @@ export default function BatchManagementScreen({ navigation }) {
                 <Text style={styles.scheduleBtnText}>View Schedule</Text>
               </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       <BottomBar

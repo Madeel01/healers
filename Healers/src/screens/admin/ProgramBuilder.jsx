@@ -23,7 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { AssignTheraistChild } from '../../api/admin/api';
+import { AssignTheraistChild, getServices } from '../../api/admin/api';
 import {
   addGoalToProgramApi,
   AddPrograms,
@@ -38,7 +38,6 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
-import { therapistSpecialities } from '../../utils/specialities';
 
 export default function ProgramBuilderScreen({ navigation }) {
   const [children, setChildren] = useState([]);
@@ -53,6 +52,7 @@ export default function ProgramBuilderScreen({ navigation }) {
   const [programModalVisible, setProgramModalVisible] = useState(false);
   const [goalInputText, setGoalInputText] = useState({});
   const [activeGoalInputProgramId, setActiveGoalInputProgramId] = useState(null);
+  const [services, setServices] = useState([])
 
   const getAssignmentId = (item) =>
     `${item.childId}-${item.therapistId}`;
@@ -83,6 +83,23 @@ export default function ProgramBuilderScreen({ navigation }) {
       setPrograms([]);
     }
   }, [selectedChildId, selectedTherapistId]);
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
+
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
 
   const fetchChildren = async () => {
     try {
@@ -546,11 +563,9 @@ export default function ProgramBuilderScreen({ navigation }) {
                           styles.childSpecialty
                         }
                       >
-                        {item.specialty
-                          .replace(
-                            /_/g,
-                            " ",
-                          )}
+                          {
+                            services.find(service => service.id === item.specialty)?.label || "-"
+                          }
                       </Text>
                     )}
                   </TouchableOpacity>
@@ -594,9 +609,10 @@ export default function ProgramBuilderScreen({ navigation }) {
                   Specialty
                 </Text>
                 <Text style={styles.selectedInfoValue}>
-                  {selectedAssignment.specialty
-                    ?.replace(/_/g, " ")
-                    || "-"}
+                  {
+                    services.find(service => service.id === selectedAssignment.specialty)?.label || "-"
+                  }
+
                 </Text>
               </View>
 
@@ -991,11 +1007,9 @@ export default function ProgramBuilderScreen({ navigation }) {
                                   styles.modalOptionSubtext
                                 }
                               >
-                                {item.specialty
-                                  .replace(
-                                    /_/g,
-                                    " ",
-                                  )}
+                                  {
+                                    services.find(service => service.id === item.specialty)?.label || "-"
+                                  }
                               </Text>
                             )}
                           </View>
@@ -1064,7 +1078,7 @@ export default function ProgramBuilderScreen({ navigation }) {
                   }}
                   showsVerticalScrollIndicator
                 >
-                  {therapistSpecialities.map(
+                  {services.map(
                     (department) => (
                       <TouchableOpacity
                         key={department.id}

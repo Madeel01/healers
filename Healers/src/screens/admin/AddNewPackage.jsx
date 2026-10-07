@@ -24,6 +24,7 @@ import {
   createPackage,
   getPackageById,
   updatePackage,
+  getServices,
 } from '../../api/admin/api';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
@@ -39,29 +40,6 @@ const DURATION_OPTIONS = [
   "60 min",
 ];
 
-const CATEGORY_OPTIONS = [
-  {
-    id: "speech_therapy_department",
-    label: "Speech Therapy Department",
-  },
-  {
-    id: "aba_therapy",
-    label: "ABA Therapy",
-  },
-  {
-    id: "occupational_therapy",
-    label: "Occupational Therapy",
-  },
-  {
-    id: "physiotherapy",
-    label: "Physiotherapy",
-  },
-  {
-    id: "inclusive_education",
-    label: "Inclusive Education",
-  },
-];
-
 export default function AddNewPackageScreen({
   navigation,
   route,
@@ -73,6 +51,9 @@ export default function AddNewPackageScreen({
 
   const [packageName, setPackageName] = useState("");
   const [pricingModel, setPricingModel] = useState("perSession");
+  const [services, setServices] = useState([])
+  const [packageData, setPackageData] = useState(null);
+
 
   const [
     selectedCategories,
@@ -89,13 +70,30 @@ export default function AddNewPackageScreen({
   const [sessions, setSessions] = useState("");
   const [saving, setSaving] = useState(false);
   const [loadingPackage, setLoadingPackage] = useState(false);
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
+
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
 
   const mapSpecialitiesToCategories = (
     specialities = [],
   ) => {
     return specialities
       .map((specialityId) => {
-        return CATEGORY_OPTIONS.find(
+        return services.find(
           (category) => category.id === specialityId,
         );
       })
@@ -126,33 +124,16 @@ export default function AddNewPackageScreen({
 
       const packageData = response.data;
 
-      /*
-       * Package Name
-       */
-      setPackageName(
-        packageData.name || "",
-      );
+      setPackageData(packageData);
 
-      /*
-       * Pricing Model
-       *
-       * Backend:
-       * per-session
-       * batch
-       *
-       * Frontend:
-       * perSession
-       * batch
-       */
+      setPackageName(packageData.name || "");
+
       if (packageData.type === "batch") {
         setPricingModel("batch");
       } else {
         setPricingModel("perSession");
       }
 
-      /*
-       * Categories
-       */
       const categories = mapSpecialitiesToCategories(
         packageData.specialities || [],
       );
@@ -208,6 +189,22 @@ export default function AddNewPackageScreen({
     isEditMode,
     packageId,
   ]);
+  useEffect(() => {
+    if (!packageData?.specialities?.length || !services.length) {
+      return;
+    }
+
+    const categories = packageData.specialities
+      .map((specialityId) => {
+        return services.find(
+          (category) => category.id === specialityId
+        );
+      })
+      .filter(Boolean);
+
+    setSelectedCategories(categories);
+  }, [packageData, services]);
+
 
   useEffect(() => {
     fetchPackage();
@@ -722,7 +719,7 @@ export default function AddNewPackageScreen({
                     : "Select Service Category"}
                 </Text>
 
-                {CATEGORY_OPTIONS.map(
+                {services.map(
                   (category) => {
                     const isSelected = selectedCategories.some(
                       (item) =>

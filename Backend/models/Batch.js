@@ -40,11 +40,18 @@ const batchSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
-    fee: {
-        type: Number,
-        required: true,
-        min: 1,
-    }
+    packageIds: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Package",
+        },
+      ],
+      // validate: {
+      //   validator: (arr) => Array.isArray(arr) && arr.length > 0,
+      //   message: "At least one package is required.",
+      // },
+    },
   },
   { timestamps: true }
 );

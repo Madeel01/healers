@@ -41,7 +41,7 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
-import { therapistSpecialities } from '../../utils/specialities';
+import { getServices } from '../../api/admin/api';
 
 export default function ChildDashboardScreen({ navigation }) {
   const { user, logout, switchUser } = useContext(AuthContext);
@@ -50,6 +50,7 @@ export default function ChildDashboardScreen({ navigation }) {
   const userId = user?.id || user?.id;
   const role = user?.role;
   const fatherCnic = user?.fatherCnic;
+  const [services, setServices] = useState([])
   // console.log("user", user);
   const [unreadData, setUnreadData] = useState({
     hasUnread: false,
@@ -150,6 +151,23 @@ export default function ChildDashboardScreen({ navigation }) {
       setUpcomingLoading(false);
     }
   };
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
+
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
   const getSpeciality = (specialtyId) => {
     if (!specialtyId) {
       return null;
@@ -157,7 +175,7 @@ export default function ChildDashboardScreen({ navigation }) {
 
     const normalizedId = specialtyId;
 
-    return therapistSpecialities.find(
+    return services.find(
       (item) => item.id === normalizedId,
     );
   };

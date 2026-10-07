@@ -1,5 +1,5 @@
 // src/screens/admin/TherapistScheduleScreen.js
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,12 +16,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Feather from "@expo/vector-icons/Feather";
 import { useFocusEffect } from "@react-navigation/native";
 
-import { getTherapistSchedule } from "../../api/admin/api";
+import { getTherapistSchedule,getServices } from "../../api/admin/api";
 import BottomBar from "../../components/BottomBar";
 import TopBar from "../../components/TopBar";
 import { colors, fonts } from "../../styles/theme";
 import { formatTo12Hour } from "../../utils/hoursformat";
-import { therapistSpecialities } from "../../utils/specialities";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const FULL_DAY = {
@@ -68,8 +67,6 @@ const mins = (t) => {
   return h * 60 + m;
 };
 const timeRange = (s) => formatTo12Hour(`${s.startTime}-${s.endTime}`);
-const specMeta = (id) =>
-  therapistSpecialities.find((s) => s.id === id) || { label: id, bg: "#E0F2FE", color: "#0B4A6F" };
 
 const groupByDate = (list) => {
   const out = [];
@@ -90,8 +87,10 @@ const attendanceSummary = (children = []) => {
   return { present, absent, pending };
 };
 
-function SessionRow({ s, past, onPress }) {
-  const spec = s.speciality ? specMeta(s.speciality) : null;
+function SessionRow({ s, past, onPress, specMeta }) {
+    const spec = s.speciality
+    ? specMeta(s.speciality)
+    : null;
   const tm = TYPE_META[s.sessionType];
   const att = attendanceSummary(s.children);
 
@@ -152,6 +151,7 @@ export default function TherapistScheduleScreen({ navigation, route }) {
   const [tab, setTab] = useState("upcoming");
   const [pastLimit, setPastLimit] = useState(PAGE);
   const [detail, setDetail] = useState(null);
+  const [services, setServices] = useState([])
 
   const load = useCallback(
     async (isRefresh = false) => {
@@ -175,6 +175,36 @@ export default function TherapistScheduleScreen({ navigation, route }) {
       if (therapistId) load();
     }, [therapistId, load]),
   );
+  useEffect(() => {
+    const servicesData = async () => {
+      try {
+        const res = await getServices({ search: "" });
+
+        const activeServices = res.data.filter(
+          (service) => service.isActive === true
+        );
+
+        setServices(activeServices);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    servicesData();
+  }, []);
+  const specMeta = useCallback(
+    (id) => {
+      return (
+        services.find((service) => service.id === id) || {
+          label: id,
+          bg: "#E0F2FE",
+          color: "#0B4A6F",
+        }
+      );
+    },
+    [services]
+  );
+
 
   const today = data?.today || dateToKey(new Date());
   const upcoming = data?.upcoming || [];
@@ -381,7 +411,7 @@ export default function TherapistScheduleScreen({ navigation, route }) {
                   {relLabel(g.date) && <Text style={styles.dayRel}>{relLabel(g.date)}</Text>}
                 </View>
                 {g.items.map((s) => (
-                  <SessionRow key={s.id} s={s} past={false} onPress={setDetail} />
+                  <SessionRow key={s.id} s={s} past={false} onPress={setDetail} specMeta={specMeta}/>
                 ))}
               </View>
             ))
@@ -404,7 +434,7 @@ export default function TherapistScheduleScreen({ navigation, route }) {
                     <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
                   </View>
                   {g.items.map((s) => (
-                    <SessionRow key={s.id} s={s} past onPress={setDetail} />
+                    <SessionRow key={s.id} s={s} past onPress={setDetail} specMeta={specMeta} />
                   ))}
                 </View>
               ))}

@@ -66,7 +66,15 @@ const {
   createChildCustomAppointment,
   deleteChildCustomAppointment,
   deleteBatchSession,
-  getSessions
+  getSessions,
+  getSessionSlotOptions,
+  getBatchPackageOptions,
+  getServices,
+  createService,
+  updateService,
+  deleteService,
+  postponeBatchSession,
+  createAdditionalSession
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
@@ -111,7 +119,7 @@ router.get("/batches", protect, getBatches);
 router.post("/batches", protect, createBatch);
 router.put("/batches/:id", protect, updateBatch);
 router.delete("/batches/:id", protect, deleteBatch);
-
+router.get("/batches/batch-packages", protect, getBatchPackageOptions);
 router.get("/batches/schedule/:batchId", protect, getBatchScheduleData);
 router.get("/batches/:batchId/therapist-options", protect, getBatchTherapistOptions);
 router.post("/batches/:batchId/schedule/options", protect, getBatchSlotOptions);
@@ -120,6 +128,9 @@ router.post("/batches/:batchId/schedule", protect, saveBatchSchedule);
 router.get("/batches/:batchId/eligible-children", protect, getBatchEligibleChildren);
 router.put("/batches/:batchId/children", protect, updateBatchChildren);
 router.delete("/batches/:batchId/assignments/:assignmentId", protect, removeBatchAssignment);
+router.post("/batches/:batchId/assignments/:assignmentId/slot-options", protect, getSessionSlotOptions);
+router.post("/batches/:batchId/assignments/:assignmentId/sessions/:sessionId/postpone", protect, postponeBatchSession);
+router.post("/batches/:batchId/assignments/:assignmentId/additional", protect, createAdditionalSession);
 
 router.post("/broadcast", protect, uploadBroadcastAttachment, createBroadcast);
 router.get("/broadcast", protect, getAllBroadcasts);
@@ -152,7 +163,12 @@ router.get("/packages", getAllPackages);
 router.get("/packages/:packageId", protect, getPackageById);
 router.post("/packages/", protect, createPackage);
 router.put("/packages/:packageId", protect, updatePackage);
-router.delete("/packages/:packageId", deletePackage);
+router.delete("/packages/:packageId", protect, deletePackage);
+
+router.get("/services", protect, getServices);
+router.post("/services", protect, createService);
+router.put("/services/:id", protect, updateService);
+router.delete("/services/:id", protect, deleteService);
 
 
 module.exports = router;
