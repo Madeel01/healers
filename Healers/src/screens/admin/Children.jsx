@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Modal,
   RefreshControl,
   ScrollView,
@@ -25,6 +26,7 @@ import {
   updateChild,
   deleteChild,
   getParents,
+  getAllPackages,
 } from "../../api/admin/api";
 import BottomBar from "../../components/BottomBar";
 import TopBar from "../../components/TopBar";
@@ -59,6 +61,8 @@ const initialChildState = {
   age: "",
   email: "",
   phone: "",
+  packageId: null,        
+  discountedPrice: "",
 };
 export default function ChildrenScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -84,6 +88,19 @@ export default function ChildrenScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fetchingParent, setFetchingParent] = useState(false);
+  const [packages, setPackages] = useState([]);
+  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [isPackagePickerOpen, setIsPackagePickerOpen] = useState(false);
+  const [packageSearch, setPackageSearch] = useState("");
+  const [pkgResults, setPkgResults] = useState([]);
+  const [pkgPage, setPkgPage] = useState(1);
+  const [pkgHasMore, setPkgHasMore] = useState(true);
+  const [pkgLoading, setPkgLoading] = useState(false);
+  const [pkgLoadingMore, setPkgLoadingMore] = useState(false);
+  const pkgRequestIdRef = useRef(0);
+  const pkgLoadingMoreRef = useRef(false);
+
+  const PKG_LIMIT = 10;
 
   const isEditMode = editingChildId !== null;
   const menuTouchRef = useRef(false);
@@ -94,6 +111,7 @@ export default function ChildrenScreen({ navigation }) {
   const resetChildForm = () => {
     setNewChild(initialChildState);
     setEditingChildId(null);
+    setSelectedPackage(null);          
     setPassword("");
     setConfirmPassword("");
   };
@@ -114,7 +132,14 @@ export default function ChildrenScreen({ navigation }) {
       age: child.age != null ? String(child.age) : "",
       email: child.email || "",
       phone: child.phone || "",
+      packageId: child.packageId || null,
+      discountedPrice: child.discountedPrice != null ? String(child.discountedPrice) : "",
     });
+    setSelectedPackage(
+      child.packageId
+        ? { _id: child.packageId, name: child.packageName, price: child.packagePrice }
+        : null,
+    );
 
     setPassword("");
     setConfirmPassword("");
@@ -168,6 +193,10 @@ export default function ChildrenScreen({ navigation }) {
         age: child.age ?? null,
         email: child.email || "",
         phone: child.phone || "",
+        packageId: child.packageId?._id || child.packageId || null,
+        packageName: child.packageId?.name || "",
+        packagePrice: child.packageId?.price ?? null,
+        discountedPrice: child.discountedPrice ?? null,
       }));
 
       setHasMore(hasMoreData);
@@ -202,6 +231,76 @@ export default function ChildrenScreen({ navigation }) {
         loadingMoreRef.current = false;
       }
     }
+  };
+  const fetchPackageResults = async (pageNum = 1, search = "") => {
+    const requestId = ++pkgRequestIdRef.current;
+    const isFirst = pageNum === 1;
+
+    if (isFirst) {
+      pkgLoadingMoreRef.current = false;
+      setPkgLoadingMore(false);
+      setPkgLoading(true);
+    } else {
+      pkgLoadingMoreRef.current = true;
+      setPkgLoadingMore(true);
+    }
+
+    try {
+      const res = await getAllPackages(pageNum, PKG_LIMIT, search.trim());
+      if (requestId !== pkgRequestIdRef.current) return;
+
+      if (res?.success) {
+        const list = res.data || [];
+        setPkgResults((prev) =>
+          isFirst
+            ? list
+            : [...prev, ...list.filter((i) => !prev.some((p) => p._id === i._id))],
+        );
+        setPkgPage(pageNum);
+        setPkgHasMore(Boolean(res.hasMore));
+      }
+    } catch (error) {
+      if (requestId === pkgRequestIdRef.current) {
+        console.log("Failed to fetch packages:", error);
+      }
+    } finally {
+      if (requestId === pkgRequestIdRef.current) {
+        setPkgLoading(false);
+        setPkgLoadingMore(false);
+        pkgLoadingMoreRef.current = false;
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!isPackagePickerOpen) return;
+    const t = setTimeout(() => fetchPackageResults(1, packageSearch), 300);
+    return () => clearTimeout(t);
+  }, [packageSearch, isPackagePickerOpen]);
+
+  const openPackagePicker = () => {
+    setPackageSearch("");
+    setPkgResults([]);
+    setPkgHasMore(true);
+    setIsPackagePickerOpen(true);
+  };
+
+  const closePackagePicker = () => setIsPackagePickerOpen(false);
+
+  const handleSelectPackage = (pkg) => {
+    setSelectedPackage({ _id: pkg._id, name: pkg.name, price: pkg.price });
+    setNewChild((prev) => ({ ...prev, packageId: pkg._id, discountedPrice: "" }));
+    closePackagePicker();
+  };
+
+  const handleClearPackage = () => {
+    setSelectedPackage(null);
+    setNewChild((prev) => ({ ...prev, packageId: null, discountedPrice: "" }));
+  };
+
+  const handlePackageEndReached = () => {
+    if (pkgLoading || pkgLoadingMoreRef.current || !pkgHasMore) return;
+    fetchPackageResults(pkgPage + 1, packageSearch);
   };
 
 
@@ -301,6 +400,22 @@ export default function ChildrenScreen({ navigation }) {
       Alert.alert("Validation Error", "Please enter a valid age.");
       return;
     }
+    if (newChild.packageId && newChild.discountedPrice !== "") {
+      const dp = Number(newChild.discountedPrice);
+      const selected = selectedPackage;
+
+      if (!Number.isFinite(dp) || dp <= 0) {
+        Alert.alert("Validation Error", "Please enter a valid discounted price.");
+        return;
+      }
+      if (selected?.price != null && dp >= selected.price) {
+        Alert.alert(
+          "Validation Error",
+          `Discounted price must be less than the monthly rate (PKR ${Number(selected.price).toLocaleString()}).`,
+        );
+        return;
+      }
+    }
     const phone = newChild.phone.trim();
 
     const phoneRegex = /^(030\d{8}|\+923\d{9})$/;
@@ -360,6 +475,11 @@ export default function ChildrenScreen({ navigation }) {
       email: newChild.email,
       phone: normalizedPhone,
       ...((!isEditMode || password) && { password }),
+      packageId: newChild.packageId || null,
+      discountedPrice:
+        newChild.packageId && newChild.discountedPrice !== ""
+          ? Number(newChild.discountedPrice)
+          : null,
     };
 
     try {
@@ -578,6 +698,17 @@ export default function ChildrenScreen({ navigation }) {
                       <Feather name="phone" size={14} color="#64748B" />
                       <Text style={styles.contactText}>{child.phone}</Text>
                     </View>
+                    {!!child.packageId && (
+                      <View style={styles.packagePill}>
+                        <Feather name="package" size={12} color="#0B4A6F" />
+                        <Text style={styles.packagePillText} numberOfLines={1}>
+                          {child.packageName} •{" "}
+                          {child.discountedPrice != null
+                            ? `PKR ${Number(child.packagePrice - child.discountedPrice).toLocaleString()}/mo (was ${Number(child.packagePrice || 0).toLocaleString()})`
+                            : `PKR ${Number(child.packagePrice || 0).toLocaleString()}/mo`}
+                        </Text>
+                      </View>
+                    )}
                   </View>
 
                   {/* MENU */}
@@ -769,6 +900,55 @@ export default function ChildrenScreen({ navigation }) {
                 onChangeText={(t) => setNewChild({ ...newChild, phone: t })}
               />
 
+              <Text style={styles.fieldLabel}>Fee Package (optional)</Text>
+
+              {selectedPackage ? (
+                <View style={styles.selectedPackageCard}>
+                  <View style={styles.selectedPackageInfo}>
+                    <Text style={styles.packageOptionName} numberOfLines={1}>
+                      {selectedPackage.name}
+                    </Text>
+                    <Text style={styles.packageOptionPrice}>
+                      PKR {Number(selectedPackage.price || 0).toLocaleString()}/mo
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity onPress={openPackagePicker} style={styles.changeButton}>
+                    <Text style={styles.changeButtonText}>Change</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={handleClearPackage} style={styles.clearButton}>
+                    <Feather name="x" size={18} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.selectPackageButton}
+                  activeOpacity={0.8}
+                  onPress={openPackagePicker}
+                >
+                  <Feather name="search" size={16} color="#94A3B8" />
+                  <Text style={styles.selectPackageText}>Select a package</Text>
+                  <Feather name="chevron-down" size={18} color="#94A3B8" />
+                </TouchableOpacity>
+              )}
+
+              {!!selectedPackage && (
+                <>
+                  <Text style={styles.fieldLabel}>Discounted Price (PKR / month)</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="Optional, leave blank for full rate"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="numeric"
+                    value={newChild.discountedPrice || ""}
+                    onChangeText={(t) =>
+                      setNewChild({ ...newChild, discountedPrice: t.replace(/[^0-9.]/g, "") })
+                    }
+                  />
+                </>
+              )}
+
               <Text style={styles.fieldLabel}>
                 {isEditMode ? "New Password" : "Password"}{" "}
                 {!isEditMode && <Text style={styles.requiredText}>*</Text>}
@@ -842,6 +1022,86 @@ export default function ChildrenScreen({ navigation }) {
                 )}
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={isPackagePickerOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={closePackagePicker}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.pickerContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Package</Text>
+              <TouchableOpacity onPress={closePackagePicker}>
+                <Feather name="x" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.pickerSearchBox}>
+              <Feather name="search" size={18} color="#94A3B8" />
+              <TextInput
+                style={styles.pickerSearchInput}
+                placeholder="Search packages..."
+                placeholderTextColor="#94A3B8"
+                value={packageSearch}
+                onChangeText={setPackageSearch}
+                autoFocus
+              />
+            </View>
+
+            {pkgLoading ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={{ marginVertical: 30 }}
+              />
+            ) : (
+              <FlatList
+                data={pkgResults}
+                keyExtractor={(item) => String(item._id)}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                onEndReached={handlePackageEndReached}
+                onEndReachedThreshold={0.3}
+                ListEmptyComponent={
+                  <Text style={styles.pickerEmpty}>
+                    {packageSearch ? "No packages match your search." : "No packages created yet."}
+                  </Text>
+                }
+                ListFooterComponent={
+                  pkgLoadingMore ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.primary}
+                      style={{ marginVertical: 12 }}
+                    />
+                  ) : null
+                }
+                renderItem={({ item }) => {
+                  const on = selectedPackage?._id === item._id;
+                  return (
+                    <TouchableOpacity
+                      style={[styles.packageOption, on && styles.packageOptionOn]}
+                      activeOpacity={0.8}
+                      onPress={() => handleSelectPackage(item)}
+                    >
+                      <View style={[styles.radio, on && styles.radioOn]}>
+                        {on && <View style={styles.radioDot} />}
+                      </View>
+                      <Text style={styles.packageOptionName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <Text style={styles.packageOptionPrice}>
+                        PKR {Number(item.price || 0).toLocaleString()}/mo
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            )}
           </View>
         </View>
       </Modal>
@@ -1099,4 +1359,89 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   scheduleButtonText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  helperText: { fontSize: 12, color: "#64748B", marginBottom: 6 }, // was referenced but missing
+
+  packageOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#F8FAFC",
+  },
+  packageOptionOn: { borderColor: "#0B4A6F", backgroundColor: "#FFFFFF" },
+  packageOptionName: { flex: 1, fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
+  packageOptionPrice: { fontSize: 12, fontFamily: fonts.regular, color: "#475569" },
+
+  radio: {
+    width: 20, height: 20, borderRadius: 10, borderWidth: 2,
+    borderColor: "#CBD5E1", alignItems: "center", justifyContent: "center",
+  },
+  radioOn: { borderColor: "#0B4A6F" },
+  selectPackageButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
+  height: 46,
+  paddingHorizontal: 14,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: "#CBD5E1",
+  backgroundColor: "#F8FAFC",
+},
+selectPackageText: { flex: 1, fontSize: 14, color: "#94A3B8" },
+
+selectedPackageCard: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+  padding: 12,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: "#0B4A6F",
+  backgroundColor: "#FFFFFF",
+},
+selectedPackageInfo: { flex: 1 },
+changeButton: { paddingHorizontal: 10, paddingVertical: 6 },
+changeButtonText: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary },
+clearButton: { padding: 4 },
+
+pickerContent: {
+  backgroundColor: "#FFFFFF",
+  borderTopLeftRadius: 28,
+  borderTopRightRadius: 28,
+  padding: 24,
+  height: "70%",
+},
+pickerSearchBox: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
+  height: 46,
+  paddingHorizontal: 14,
+  marginBottom: 8,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: "#CBD5E1",
+  backgroundColor: "#F8FAFC",
+},
+pickerSearchInput: { flex: 1, fontSize: 14, color: "#0F172A" },
+pickerEmpty: { textAlign: "center", marginTop: 30, fontSize: 14, color: "#64748B" },
+
+  packagePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#E8F2FC",
+  },
+  packagePillText: { fontSize: 11, fontFamily: fonts.semiBold, color: "#0B4A6F", flexShrink: 1 },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#0B4A6F" },
 });

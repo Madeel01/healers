@@ -185,13 +185,10 @@ export const deleteBatchSession = (batchId, assignmentId, sessionId) =>
     .delete(`/admin/batches/${batchId}/assignments/${assignmentId}/sessions/${sessionId}`)
     .then((r) => r.data);
 
-export const getAllPackages = (page = 1, limit = 5) =>
-  apiClient.get("/admin/packages", {
-    params: {
-      page,
-      limit,
-    },
-  }).then((res) => res.data);
+export const getAllPackages = async (page = 1, limit = 5, search = "") => {
+  const res = await apiClient.get("/admin/packages", { params: { page, limit, search } });
+  return res.data;
+};
 
 
 

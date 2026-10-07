@@ -339,10 +339,7 @@ export default function FeeManagementScreen({ navigation }) {
 
                     <Text style={styles.feePrice}>
                       PKR {Number(item.price || 0).toLocaleString()}
-                      {" • "}
-                      {item.type
-                        ?.replace(/-/g, " ")
-                        .replace(/\b\w/g, (char) => char.toUpperCase())}
+                      {" • Monthly"}
                     </Text>
                   </View>
 

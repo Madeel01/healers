@@ -68,6 +68,17 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    packageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Package",
+      default: null,
+      index: true,
+    },
+    discountedPrice: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
   },
   { timestamps: true },
 );

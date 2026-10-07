@@ -23,7 +23,6 @@ import Feather from '@expo/vector-icons/Feather';
 import {
   deletePackage,
   getAllPackages,
-  getServices,
 } from '../../api/admin/api';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
@@ -44,7 +43,6 @@ export default function AllPackagesScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [services, setServices] = useState([])
   const loadingMoreRef = useRef(false);
 
   const fetchPackages = useCallback(
@@ -115,23 +113,6 @@ export default function AllPackagesScreen({ navigation }) {
     },
     [PAGE_LIMIT],
   );
-  useEffect(() => {
-    const servicesData = async () => {
-      try {
-        const res = await getServices({ search: "" });
-
-        const activeServices = res.data.filter(
-          (service) => service.isActive === true
-        );
-
-        setServices(activeServices);
-      } catch (error) {
-        console.log(error);
-      }
-    };
-
-    servicesData();
-  }, []);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener(
@@ -237,8 +218,8 @@ export default function AllPackagesScreen({ navigation }) {
   };
 
   const getPackageType = (type) => {
-    if (type === "per-session") {
-      return "Per Session";
+    if (type === "per-month") {
+      return "Monthly";
     }
 
     if (type === "batch") {
@@ -286,42 +267,6 @@ export default function AllPackagesScreen({ navigation }) {
           <Text style={styles.packagePrice}>
             {formatPrice(item.price)}
           </Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.infoSection}>
-          <View style={[styles.infoItem, styles.infoItem1]}>
-            <Text style={styles.infoLabel}>
-              Speciality
-            </Text>
-
-            <Text
-              style={styles.infoValue}
-              numberOfLines={1}
-            >
-              {item.specialities?.length
-                ? item.specialities
-                  .map((specialityId) => {
-                    const speciality = services.find(
-                      (item) => item.id === specialityId,
-                    );
-
-                    return speciality?.label || specialityId;
-                  })
-                  .join(", ")
-                : "-"}
-            </Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>
-              Duration
-            </Text>
-
-            <Text style={styles.infoValue}>
-              {item.sessionMinutes || 60} min
-            </Text>
-          </View>
         </View>
 
         {item.description
@@ -767,33 +712,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#F1F5F9",
     marginVertical: 15,
-  },
-
-  infoSection: {
-    flexDirection: "row",
-    gap: 12,
-    justifyContent: "space-between",
-  },
-
-  infoItem: {
-    width: "25%",
-  },
-  infoItem1: {
-    width: "75%",
-  },
-  infoLabel: {
-    fontSize: 11,
-    lineHeight: 16,
-    fontFamily: fonts.regular,
-    color: "#8A94A3",
-    marginBottom: 3,
-  },
-
-  infoValue: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.semiBold,
-    color: "#181C1E",
   },
 
   descriptionSection: {
