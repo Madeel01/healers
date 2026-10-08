@@ -31,10 +31,12 @@ import FeedbackScreen from '../screens/admin/Feedback';
 import FeeManagementScreen from '../screens/admin/FeeManagement';
 import InvoiceDetailScreen from '../screens/admin/InvoiceDetailScreen';
 import InvoiceManagementScreen from '../screens/admin/InvoiceManagement';
+import InvoiceViewScreen from '../screens/admin/InvoiceViewScreen';
 import LeaveRequestsScreen from '../screens/admin/LeaveRequest';
 import NotificationScreen from '../screens/admin/Notification';
 import ProgramBuilderScreen from '../screens/admin/ProgramBuilder';
 import ScheduleScreen from '../screens/admin/Schedule';
+import ServiceManagementScreen from '../screens/admin/ServiceManagementScreen';
 import StaffOnLeaveScreen from '../screens/admin/StaffOnLeave';
 import TherapistsScreen from '../screens/admin/Therapist';
 import TherapistAvailabilityScreen
@@ -64,7 +66,6 @@ import ProgressTrackingScreen from '../screens/therapist/ProgressTracking';
 import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
-import ServiceManagementScreen from '../screens/admin/ServiceManagementScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -115,6 +116,7 @@ function AdminStack() {
       <Stack.Screen name="AllPackages" component={AllPackagesScreen} />
       <Stack.Screen name="ServiceManagement" component={ServiceManagementScreen} />
       <Stack.Screen name="ProgramBuilder" component={ProgramBuilderScreen} />
+      <Stack.Screen name="InvoiceView" component={InvoiceViewScreen} />
     </Stack.Navigator>
   );
 }

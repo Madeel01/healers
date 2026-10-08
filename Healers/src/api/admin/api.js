@@ -41,7 +41,6 @@ export const deleteChildCustomAppointment = async (childId, appointmentId) => {
 
 export const getSessions = (params) => apiClient.get("/admin/schedule", { params }).then((r) => r.data);
 
-
 ///////////////////// Therapist API's /////////////////////////////
 export const therapistUsers = async (params = {}) => {
   const response = await apiClient.get("/admin/get_therapists", { params });
@@ -77,8 +76,6 @@ export const assignChildrenToTherapist = async ({ therapistId, addChildIds, remo
   return response.data;
 };
 
-
-
 ///////////////////// Schedule API's /////////////////////////////
 export const createSchedule = (body) => apiClient.post("/scheduling", body).then((r) => r.data);
 
@@ -102,7 +99,6 @@ export const rejectLeaveRequest = (id, rejectionReason) =>
   apiClient.put(`/admin/leave-requests/${id}/reject`, { rejectionReason });
 
 export const getStaffOnLeaveToday = () => apiClient.get("/admin/leave-requests/on-leave-today");
-
 
 ///////////////////// Feedback Request API's /////////////////////////////
 export const getFeedbackRequests = (params) => apiClient.get(`/admin/feedback/${params.status}`);
@@ -190,8 +186,6 @@ export const getAllPackages = async (page = 1, limit = 5, search = "") => {
   return res.data;
 };
 
-
-
 export const getPackageById = (packageId) =>
   apiClient
     .get(`/admin/packages/${packageId}`)
@@ -272,8 +266,6 @@ export const markNotificationRead = (id) => apiClient.put(`/admin/notifications/
 
 export const markAllNotificationsRead = () => apiClient.put("/admin/notifications/read-all").then((r) => r.data);
 
-
-
 ///////////////////// Availability API's /////////////////////////////
 export const getAvailability = (params) =>
   apiClient.get("/admin/scheduling/availability", { params }).then((r) => r.data);
@@ -284,8 +276,6 @@ export const updateAvailability = (id, body) =>
   apiClient.put(`/admin/scheduling/availability/${id}`, body).then((r) => r.data);
 
 export const deleteAvailability = (id) => apiClient.delete(`/admin/scheduling/availability/${id}`).then((r) => r.data);
-
-
 
 export const getServices = async (params = {}) => {
   const response = await apiClient.get("/admin/services", { params });
@@ -307,3 +297,54 @@ export const deleteService = async (id) => {
   return response.data;
 };
 
+export const createInvoiceApi = async (data) => {
+  const response = await apiClient.post(
+    "/admin_invoice/invoice",
+    data,
+  );
+  return response.data;
+};
+
+export const getInvoicesApi = async (params = {}) => {
+  const response = await apiClient.get(
+    "/admin_invoice/invoices",
+    { params },
+  );
+  return response.data;
+};
+
+export const getInvoiceByIdApi = async (invoiceId) => {
+  const response = await apiClient.get(
+    `/admin_invoice/invoice/${invoiceId}`,
+  );
+  return response.data;
+};
+
+export const addInvoicePaymentApi = async (
+  invoiceId,
+  data,
+) => {
+  const response = await apiClient.post(
+    `/admin_invoice/invoice/${invoiceId}/payment`,
+    data,
+  );
+  return response.data;
+};
+
+export const getInvoiceChildrenApi = async (
+  params = {},
+) => {
+  const response = await apiClient.get(
+    "/admin_invoice/invoice/children",
+    { params },
+  );
+  return response.data;
+};
+
+export const downloadInvoicePdfApi = (invoiceId) =>
+  apiClient.get(`/admin_invoice/invoice/${invoiceId}/download`, {
+    responseType: "arraybuffer",
+    headers: {
+      Accept: "application/pdf",
+    },
+  });

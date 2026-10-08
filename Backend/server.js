@@ -10,6 +10,7 @@ const therapistRoutes = require("./routes/therapistRoutes");
 const schedulingRoutes = require("./routes/schedulingRoutes");
 const childRoutes = require("./routes/childRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const invoiceRoutes = require("./routes/invoiceRoute");
 
 const app = express();
 app.use(cors());
@@ -43,6 +44,7 @@ app.use("/api/scheduling", schedulingRoutes);
 app.use("/assets/broadcasts", express.static(path.join(__dirname, "assets", "broadcasts")));
 app.use("/api/child", childRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/admin_invoice", invoiceRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({ message: `Cannot find ${req.originalUrl} on this server` });

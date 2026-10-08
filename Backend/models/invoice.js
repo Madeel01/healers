@@ -26,8 +26,8 @@ const invoiceItemSchema = new mongoose.Schema(
 
     durationUnit: {
       type: String,
-      enum: ["min", "hour", "session"],
-      default: "min",
+      enum: ["month", "hour", "session"],
+      default: "month",
     },
 
     quantity: {
