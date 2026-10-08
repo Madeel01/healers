@@ -49,6 +49,14 @@ export const sendMessageApi = async (payload) => {
   return response.data;
 };
 
+export const deleteConversationApi = async (conversationId) => {
+  const response = await apiClient.delete(
+    `/chat/conversations/${conversationId}`,
+  );
+
+  return response.data;
+};
+
 export const markAsSeenApi = async (payload) => {
   const response = await apiClient.post("/chat/messages/mark-as-seen", payload);
   return response.data;
@@ -107,6 +115,32 @@ export const replyComplaintApi = async (complaintId, message) => {
     {
       text: message,
     },
+  );
+
+  return response.data;
+};
+
+export const getMyInvoicesApi = async ({
+  page = 1,
+  limit = 5,
+  status = "All Statuses",
+} = {}) => {
+  const params = { page, limit };
+
+  if (status !== "All Statuses") {
+    params.status = status;
+  }
+
+  const response = await apiClient.get("/admin_invoice/child/invoices", {
+    params,
+  });
+
+  return response.data;
+};
+
+export const getMyInvoiceByIdApi = async (invoiceId) => {
+  const response = await apiClient.get(
+    `/child/invoices/${invoiceId}`,
   );
 
   return response.data;

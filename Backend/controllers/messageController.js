@@ -1,5 +1,6 @@
 const Conversation = require("../models/Conversation");
 const Message = require("../models/Message");
+const mongoose = require("mongoose");
 
 exports.sendMessage = async (req, res) => {
   try {
@@ -23,6 +24,7 @@ exports.sendMessage = async (req, res) => {
     });
 
     conversation.lastMessage = message._id;
+    conversation.deletedFor = [];
     await conversation.save();
 
     res.status(201).json({ success: true, data: message });
@@ -55,9 +57,10 @@ exports.getConversations = async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
     const skip = (page - 1) * limit;
-console.log("userId",userId)
+
     const conversations = await Conversation.find({
       participants: userId,
+      deletedFor: { $ne: userId },
     })
       .populate({
         path: "participants",
@@ -195,6 +198,65 @@ exports.getUnreadSummary = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server Error fetching unread summary",
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteConversation = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user?._id || req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (!mongoose.isValidObjectId(conversationId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid conversation ID",
+      });
+    }
+
+    const conversation = await Conversation.findOneAndUpdate(
+      {
+        _id: conversationId,
+        participants: userId,
+      },
+      {
+        $addToSet: {
+          deletedFor: userId,
+        },
+      },
+      {
+        returnDocument: "after",
+      },
+    );
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: "Conversation not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Conversation deleted successfully",
+      data: {
+        conversationId,
+      },
+    });
+  } catch (error) {
+    console.error("Delete conversation error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete conversation",
       error: error.message,
     });
   }

@@ -24,6 +24,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useIsFocused } from '@react-navigation/native';
 
+import { getServices } from '../../api/admin/api';
 import {
   getUnreadNotificationCountApi,
   switchUserApi,
@@ -41,7 +42,6 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
-import { getServices } from '../../api/admin/api';
 
 export default function ChildDashboardScreen({ navigation }) {
   const { user, logout, switchUser } = useContext(AuthContext);
@@ -50,7 +50,7 @@ export default function ChildDashboardScreen({ navigation }) {
   const userId = user?.id || user?.id;
   const role = user?.role;
   const fatherCnic = user?.fatherCnic;
-  const [services, setServices] = useState([])
+  const [services, setServices] = useState([]);
   // console.log("user", user);
   const [unreadData, setUnreadData] = useState({
     hasUnread: false,
@@ -157,7 +157,7 @@ export default function ChildDashboardScreen({ navigation }) {
         const res = await getServices({ search: "" });
 
         const activeServices = res.data.filter(
-          (service) => service.isActive === true
+          (service) => service.isActive === true,
         );
 
         setServices(activeServices);
@@ -380,7 +380,11 @@ export default function ChildDashboardScreen({ navigation }) {
             <Text style={styles.gridCardTitle}>School {"\n"} Announcements</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.gridCard} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.gridCard}
+            onPress={() => navigation.navigate("ChildInvoices")}
+            activeOpacity={0.8}
+          >
             <View style={[styles.iconCircle, { backgroundColor: "#FEE2E2" }]}>
               <MaterialCommunityIcons name="receipt" size={24} color="#EF4444" />
             </View>

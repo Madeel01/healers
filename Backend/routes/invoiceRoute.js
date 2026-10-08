@@ -12,13 +12,18 @@ const {
   getInvoiceById,
   addInvoicePayment,
   getInvoiceChildren,
+  updateInvoiceStatus,
+  getInvoiceDashboardSummary,
+  getChildInvoices
 } = require("../controllers/invoiceController");
-const { downloadInvoicePdf } = require("../controllers/invoicePdfController");
 
 router.get("/invoice/children", protect, getInvoiceChildren);
 router.get("/invoices", protect, getInvoices);
 router.post("/invoice", protect, createInvoice);
 router.post("/invoice/:invoiceId/payment", protect, addInvoicePayment);
 router.get("/invoice/:invoiceId", protect, getInvoiceById);
-router.get("/invoice/:invoiceId/download",protect, downloadInvoicePdf);
+router.patch("/invoice/:invoiceId/status", protect, updateInvoiceStatus);
+router.get("/dashboard-summary", protect, getInvoiceDashboardSummary);
+router.get("/child/invoices", protect, getChildInvoices);
+
 module.exports = router;

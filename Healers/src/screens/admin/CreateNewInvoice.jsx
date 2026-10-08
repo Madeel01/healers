@@ -33,6 +33,7 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import { sendInvoiceBroadcast } from '../../utils/invoiceBroadcast';
 
 const CHILD_LIMIT = 5;
 
@@ -128,6 +129,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
       packageType: "",
       discount: "0",
       packagePrice: "0",
+      childID: null,
     },
   ]);
   const searchTimerRef = useRef(null);
@@ -277,10 +279,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
     setChildren([]);
     setChildHasMore(false);
     setChildrenLoading(false);
-    setChildrenLoadingMore(
-      false,
-    );
-
+    setChildrenLoadingMore(false);
     if (child?.package) {
       const packagePrice = Number(child.package.price) || 0;
 
@@ -302,6 +301,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
           package: child.package.name || "",
           packageType: child.package.type || "",
           discount: String(discount),
+          childID: child._id || null,
         },
       ]);
     } else {
@@ -325,6 +325,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
         packageType: "",
         discount: "0",
         packagePrice: "0",
+        childID: null,
       },
     ]);
 
@@ -418,6 +419,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
       dueDate,
 
       items: items.map((item) => {
+        console.log("iii", item);
         const rate = Number(item.packagePrice) || 0;
         const discount = Number(item.discount) || 0;
         const quantity = 1;
@@ -455,57 +457,66 @@ export default function CreateNewInvoiceScreen({ navigation }) {
   };
 
   const handleSubmitInvoice = async (status = "Pending") => {
-    if (!validateForm()) {
+    if (!validateForm() || submitting) {
       return;
     }
 
-    if (submitting) {
-      return;
-    }
+    let createdInvoice = null;
 
     try {
       setSubmitting(true);
 
       const payload = buildInvoicePayload(status);
-      console.log(
-        "invoice payload:",
-        payload,
-      );
+
       const response = await createInvoiceApi(payload);
-      const result = response;
+
+      const result = response?.data?.success
+        ? response.data
+        : response;
+
       if (!result?.success) {
-        Alert.alert(
-          "Error",
+        throw new Error(
           result?.message || "Unable to create invoice.",
         );
-
-        return;
       }
 
-      const createdInvoice = result.data;
+      createdInvoice = result.data;
+
+      let notificationSent = false;
+
+      if (status === "Pending") {
+        try {
+          await sendInvoiceBroadcast({
+            ...createdInvoice,
+            childId: payload.childId,
+          });
+
+          notificationSent = true;
+        } catch (broadcastError) {
+          console.error(
+            "Invoice broadcast error:",
+            broadcastError?.response?.data
+              || broadcastError?.message,
+          );
+        }
+      }
 
       Alert.alert(
-        status === "Draft"
-          ? "Draft Saved"
-          : "Invoice Created",
+        status === "Draft" ? "Draft Saved" : "Invoice Created",
         status === "Draft"
           ? "Invoice draft saved successfully."
-          : "Invoice created successfully.",
+          : notificationSent
+          ? "Invoice created and notification sent successfully."
+          : "Invoice created successfully, but notification could not be sent.",
         [
           {
             text: "View Invoice",
-
             onPress: () => {
-              navigation.replace(
-                "InvoiceView",
-                {
-                  invoiceId: createdInvoice
-                    ?._id,
-                },
-              );
+              navigation.replace("InvoiceView", {
+                invoiceId: createdInvoice._id,
+              });
             },
           },
-
           {
             text: "Done",
             onPress: () => navigation.goBack(),
@@ -513,14 +524,10 @@ export default function CreateNewInvoiceScreen({ navigation }) {
         ],
       );
     } catch (error) {
-      console.log(
-        "createInvoice error:",
-        error?.response?.data || error?.message || error,
-      );
-
       Alert.alert(
         "Error",
         error?.response?.data?.message
+          || error?.message
           || "Unable to create invoice.",
       );
     } finally {
@@ -1025,7 +1032,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
                           </Text>
 
                           <Text style={styles.discountPriceValue}>
-                          - PKR {formatMoney(selectedChild.discountedPrice)}
+                            - PKR {formatMoney(selectedChild.discountedPrice)}
                           </Text>
                         </View>
                       )}

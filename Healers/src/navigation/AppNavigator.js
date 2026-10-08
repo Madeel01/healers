@@ -55,6 +55,7 @@ import ChildVideoScreen from '../screens/child/ChildVideo';
 import ComplaintDetailsScreen from '../screens/child/ComplaintDetails';
 import ComplaintsScreen from '../screens/child/Complaints';
 import ChildFeedbackScreen from '../screens/child/Feedback';
+import ChildInvoicesScreen from '../screens/child/Invoice';
 import MessagingScreen from '../screens/child/Messages';
 import ReportScreen from '../screens/child/Report';
 import AddFeedbackScreen from '../screens/therapist/AddFeedback';
@@ -158,6 +159,9 @@ function ChildStack() {
       <Stack.Screen name="ChildProfile" component={ChildProfileScreen} />
       <Stack.Screen name="ChildComplaints" component={ComplaintsScreen} />
       <Stack.Screen name="ComplaintDetails" component={ComplaintDetailsScreen} />
+      <Stack.Screen name="ChildInvoices" component={ChildInvoicesScreen} />
+      <Stack.Screen name="InvoiceView" component={InvoiceViewScreen} />
+
     </Stack.Navigator>
   );
 }

@@ -42,7 +42,8 @@
           "recordAudioAndroid": true
         }
       ],
-      "expo-video"
+      "expo-video",
+      "expo-asset"
     ],
     "extra": {
       "eas": {
