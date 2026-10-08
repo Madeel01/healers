@@ -133,7 +133,7 @@ function SessionRow({ s, onPress, specMeta }) {
 }
 
 export default function ChildScheduleScreen({ navigation, route }) {
-  const { childId, childName } = route.params || {};
+  const { childId, childName, isActive  } = route.params || {};
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [data, setData] = useState(null);
@@ -236,6 +236,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
   const batches = data?.batches || [];
   const stats = data?.stats || { present: 0, absent: 0, notMarked: 0, total: 0 };
   const child = data?.child;
+  const isChildActive = (child?.isActive ?? isActive ?? true) !== false;
 
   const marked = stats.present + stats.absent;
   const rate = marked > 0 ? `${Math.round((stats.present / marked) * 100)}%` : "-";
@@ -378,15 +379,34 @@ export default function ChildScheduleScreen({ navigation, route }) {
           </Text>
 
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => setEnrollOpen(true)}>
+            <TouchableOpacity
+              style={[styles.primaryBtn, !isChildActive && styles.disabledBtn]}
+              disabled={!isChildActive}
+              onPress={() => setEnrollOpen(true)}
+            >
               <Feather name="layers" size={16} color="#FFFFFF" />
               <Text style={styles.primaryText}>Enroll in batch</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryBtn} onPress={goCustom}>
-              <Feather name="plus" size={16} color={colors.primary} />
-              <Text style={styles.secondaryText}>Appointment</Text>
+            <TouchableOpacity
+              style={[styles.secondaryBtn, !isChildActive && styles.disabledOutlineBtn]}
+              disabled={!isChildActive}
+              onPress={goCustom}
+            >
+              <Feather name="plus" size={16} color={isChildActive ? colors.primary : "#94A3B8"} />
+              <Text style={[styles.secondaryText, !isChildActive && { color: "#94A3B8" }]}>
+                Appointment
+              </Text>
             </TouchableOpacity>
           </View>
+
+          {!isChildActive && (
+            <View style={styles.inactiveNotice}>
+              <Feather name="info" size={14} color="#B91C1C" />
+              <Text style={styles.inactiveNoticeText}>
+                This child is inactive. Activate them to enroll or book appointments.
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* tabs */}
@@ -459,7 +479,8 @@ export default function ChildScheduleScreen({ navigation, route }) {
             <View style={styles.empty}>
               <Feather name="layers" size={34} color="#94A3B8" />
               <Text style={styles.emptyTitle}>Not in any batch</Text>
-              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 12 }]} onPress={() => setEnrollOpen(true)}>
+              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 12 }, !isChildActive && styles.disabledBtn]}
+  disabled={!isChildActive} onPress={() => setEnrollOpen(true)}>
                 <Text style={styles.primaryText}>Enroll in batch</Text>
               </TouchableOpacity>
             </View>
@@ -474,8 +495,8 @@ export default function ChildScheduleScreen({ navigation, route }) {
                     </Text>
                   </View>
                   <TouchableOpacity
-                    style={styles.iconBtn}
-                    disabled={removingId === String(b._id)}
+                    style={[styles.iconBtn, !isChildActive && { opacity: 0.4 }]}
+                    disabled={!isChildActive || removingId === String(b._id)}
                     onPress={() => removeFromBatch(b)}
                   >
                     {removingId === String(b._id) ? (
@@ -571,8 +592,8 @@ export default function ChildScheduleScreen({ navigation, route }) {
 
                 {detail.canCancel && (
                   <TouchableOpacity
-                    style={[styles.dangerBtn, cancelling && { opacity: 0.6 }]}
-                    disabled={cancelling}
+                    style={[styles.dangerBtn, (cancelling || !isChildActive) && { opacity: 0.4 }]}
+                    disabled={cancelling || !isChildActive}
                     onPress={() => cancelAppointment(detail)}
                   >
                     {cancelling ? (
@@ -815,4 +836,23 @@ const styles = StyleSheet.create({
   },
   radioOn: { borderColor: "#0B4A6F" },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#0B4A6F" },
+  disabledBtn: { backgroundColor: "#CBD5E1" },
+  disabledOutlineBtn: { borderColor: "#CBD5E1" },
+  inactiveNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  inactiveNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: "#B91C1C",
+  },
 });

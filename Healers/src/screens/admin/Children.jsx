@@ -63,7 +63,38 @@ const initialChildState = {
   phone: "",
   packageId: null,        
   discountedPrice: "",
+  isActive: true,
 };
+const STATUS_FILTERS = [
+  { label: "All", value: "all" },
+  { label: "Active", value: "active" },
+  { label: "Inactive", value: "inactive" },
+];
+
+const ACTIVE_OPTIONS = [
+  { label: "Active", value: true },
+  { label: "Inactive", value: false },
+];
+
+const SegmentedToggle = ({ options, value, onChange }) => (
+  <View style={styles.segmentWrap}>
+    {options.map((opt) => {
+      const on = value === opt.value;
+      return (
+        <TouchableOpacity
+          key={String(opt.value)}
+          style={[styles.segmentItem, on && styles.segmentItemOn]}
+          activeOpacity={0.8}
+          onPress={() => onChange(opt.value)}
+        >
+          <Text style={[styles.segmentText, on && styles.segmentTextOn]}>
+            {opt.label}
+          </Text>
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+);
 export default function ChildrenScreen({ navigation }) {
   const insets = useSafeAreaInsets();
 
@@ -82,6 +113,8 @@ export default function ChildrenScreen({ navigation }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newChild, setNewChild] = useState(initialChildState);
   const [editingChildId, setEditingChildId] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("active");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -134,6 +167,7 @@ export default function ChildrenScreen({ navigation }) {
       phone: child.phone || "",
       packageId: child.packageId || null,
       discountedPrice: child.discountedPrice != null ? String(child.discountedPrice) : "",
+      isActive: child.isActive !== false,
     });
     setSelectedPackage(
       child.packageId
@@ -174,6 +208,7 @@ export default function ChildrenScreen({ navigation }) {
         page: pageNum,
         limit: 5,
         search: searchQuery.trim(),
+        status: statusFilter,
       });
 
       if (requestId !== requestIdRef.current) {
@@ -197,6 +232,7 @@ export default function ChildrenScreen({ navigation }) {
         packageName: child.packageId?.name || "",
         packagePrice: child.packageId?.price ?? null,
         discountedPrice: child.discountedPrice ?? null,
+        isActive: child.isActive ?? true,
       }));
 
       setHasMore(hasMoreData);
@@ -323,7 +359,7 @@ export default function ChildrenScreen({ navigation }) {
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, statusFilter]);
 
 
   const handleScroll = ({ nativeEvent }) => {
@@ -371,7 +407,7 @@ export default function ChildrenScreen({ navigation }) {
               setChildren(previous);
               Alert.alert(
                 "Error",
-                "Could not delete this child. Please try again.",
+                `${error?.response?.data?.message??"Could not delete this child. Please try again."}`,
               );
             }
           },
@@ -480,6 +516,7 @@ export default function ChildrenScreen({ navigation }) {
         newChild.packageId && newChild.discountedPrice !== ""
           ? Number(newChild.discountedPrice)
           : null,
+      isActive: newChild.isActive,
     };
 
     try {
@@ -636,6 +673,14 @@ export default function ChildrenScreen({ navigation }) {
               onChangeText={setSearchQuery}
             />
           </View>
+          <TouchableOpacity
+            style={styles.filterButton}
+            activeOpacity={0.8}
+            onPress={() => setIsFilterOpen(true)}
+          >
+            <Feather name="sliders" size={20} color="#0B4A6F" />
+            {statusFilter !== "active" && <View style={styles.filterDot} />}
+          </TouchableOpacity>
         </View>
 
         {loading && (
@@ -682,12 +727,24 @@ export default function ChildrenScreen({ navigation }) {
                     ]}
                   >
                     <Text style={styles.avatarInitialText}>
-                      {child.name?.trim()?.charAt(0)?.toUpperCase() || "?"}
-                    </Text>
+                      {child.name?.trim()?.charAt(0)?.toUpperCase() || "?"} 
+                      </Text> 
+                    
                   </View>
 
                   <View style={styles.childInfo}>
-                    <Text style={styles.childName}>{child.name}</Text>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.childNameInline} numberOfLines={1}>
+                        {child.name}
+                      </Text>
+
+                      {child.isActive === false && (
+                        <View style={styles.inactiveBadge}>
+                          <View style={styles.inactiveDot} />
+                          <Text style={styles.inactiveBadgeText}>Inactive</Text>
+                        </View>
+                      )}
+                    </View>
 
                     <View style={styles.contactRow}>
                       <Feather name="mail" size={14} color="#64748B" />
@@ -766,6 +823,7 @@ export default function ChildrenScreen({ navigation }) {
                     navigation.navigate("ChildSchedule", {
                       childId: child.id,
                       childName: child.name,
+                      isActive: child.isActive
                     })
                   }
                 >
@@ -1005,6 +1063,12 @@ export default function ChildrenScreen({ navigation }) {
                   />
                 </TouchableOpacity>
               </View>
+              <Text style={styles.fieldLabel}>Status</Text>
+              <SegmentedToggle
+                options={ACTIVE_OPTIONS}
+                value={newChild.isActive}
+                onChange={(v) => setNewChild((prev) => ({ ...prev, isActive: v }))}
+              />
             </ScrollView>
 
             <View style={styles.stickyButtonContainer}>
@@ -1105,6 +1169,40 @@ export default function ChildrenScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+      <Modal
+        visible={isFilterOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsFilterOpen(false)}
+      >
+        <View
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsFilterOpen(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[styles.filterSheet, { paddingBottom: insets.bottom + 24 }]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter Children</Text>
+              <TouchableOpacity onPress={() => setIsFilterOpen(false)}>
+                <Feather name="x" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.fieldLabel, { marginTop: 0 }]}>Status</Text>
+            <SegmentedToggle
+              options={STATUS_FILTERS}
+              value={statusFilter}
+              onChange={(v) => {
+                setStatusFilter(v);
+                setIsFilterOpen(false);
+              }}
+            />
+          </TouchableOpacity>
+        </View>
+      </Modal>
 
       <BottomBar
         activeTab={"Children"}
@@ -1180,7 +1278,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarInitialText: { color: "#FFFFFF", fontSize: 22, fontWeight: "700" },
-  childInfo: { flex: 1 },
+  childInfo: { flex: 1, },
   childName: {
     fontSize: 18,
     fontFamily: fonts.semiBold,
@@ -1444,4 +1542,81 @@ pickerEmpty: { textAlign: "center", marginTop: 30, fontSize: 14, color: "#64748B
   },
   packagePillText: { fontSize: 11, fontFamily: fonts.semiBold, color: "#0B4A6F", flexShrink: 1 },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#0B4A6F" },
+  filterButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterDot: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#EF4444",
+  },
+  filterSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+  },
+  segmentWrap: {
+    flexDirection: "row",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    padding: 4,
+  },
+  segmentItem: {
+    flex: 1,
+    height: 40,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  segmentItemOn: {
+    backgroundColor: "#0B4A6F",
+  },
+  segmentText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#475569" },
+  segmentTextOn: { color: "#FFFFFF" },
+    nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    // marginBottom: 2,
+  },
+  childNameInline: {
+    flexShrink: 1,
+    fontSize: 18,
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
+  inactiveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  inactiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#EF4444",
+  },
+  inactiveBadgeText: {
+    fontSize: 11,
+    fontFamily: fonts.semiBold,
+    color: "#DC2626",
+  },
 });
