@@ -1808,13 +1808,19 @@ exports.getTherapistSchedule = async (req, res) => {
 
 exports.childUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 5, search = "" } = req.query;
+    const { page = 1, limit = 5, search = "", status = "active" } = req.query;
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
 
     const filter = { role: "Child" };
     if (search.trim()) {
       filter.fullName = { $regex: search.trim(), $options: "i" };
+    }
+
+    if (status === "active") {
+      filter.isActive = true;
+    } else if (status === "inactive") {
+      filter.isActive = false;
     }
 
     const totalCount = await User.countDocuments(filter);
@@ -1828,6 +1834,7 @@ exports.childUsers = async (req, res) => {
       phone: 1,
       packageId: 1,         
       discountedPrice: 1,
+      isActive: 1,
     })
       .populate("packageId", "name price type")
       .sort({ createdAt: -1 })
@@ -1851,7 +1858,7 @@ exports.childUsers = async (req, res) => {
 };
 exports.createChild = async (req, res) => {
   try {
-    const { fullName, fatherName, fatherCnic, age, email, phone, password, packageId, discountedPrice } = req.body;
+    const { fullName, fatherName, fatherCnic, age, email, phone, password, packageId, discountedPrice, isActive } = req.body;
 
     if (
       !fullName
@@ -1908,7 +1915,7 @@ exports.createChild = async (req, res) => {
       password: hashedPassword,
       role: "Child",
       agreeTerms: true,
-      isActive:true,
+      isActive:isActive??true,
       ...packageFields,
     });
 
@@ -1939,31 +1946,144 @@ exports.createChild = async (req, res) => {
 exports.updateChild = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fullName, fatherName, fatherCnic, age, email, phone, password, packageId, discountedPrice, } = req.body;
+
+    const {
+      fullName,
+      fatherName,
+      fatherCnic,
+      age,
+      email,
+      phone,
+      password,
+      packageId,
+      discountedPrice,
+      isActive,
+    } = req.body;
+
     if (!fullName || !email || !phone) {
       return res.json({
         success: false,
         message: "fullName, email and phone are required.",
       });
     }
-    const cnic = fatherCnic ? normalizeCnic(fatherCnic) : undefined;
+
+    if (
+      isActive !== undefined &&
+      isActive !== true &&
+      isActive !== false
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "isActive must be true or false.",
+      });
+    }
+
+    const currentChild = await User.findOne({
+      _id: id,
+      role: "Child",
+    });
+
+    if (!currentChild) {
+      return res.status(404).json({
+        success: false,
+        message: "Child not found.",
+      });
+    }
+
+    const now = new Date();
+
+    if (isActive === false) {
+
+      const batches = await Batch.find({
+        childrenIds: id,
+      });
+
+      const activeBatch = batches.find(
+        (batch) =>
+          batch.dateFrom <= now &&
+          batch.dateTo >= now
+      );
+
+      if (activeBatch) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Child cannot be deactivated because the child is currently enrolled in an active running batch.",
+          batchId: activeBatch._id,
+          batchName: activeBatch.batchName,
+        });
+      }
+
+      await Scheduling.updateMany(
+        {
+          "appointments.date": { $gte: now },
+          "appointments.children.childId": id,
+        },
+        {
+          $pull: {
+            "appointments.$[appointment].children": {
+              childId: id,
+            },
+          },
+        },
+        {
+          arrayFilters: [
+            {
+              "appointment.date": { $gte: now },
+              "appointment.children.childId": id,
+            },
+          ],
+        }
+      );
+
+      await Scheduling.updateMany(
+        {
+          "appointments.date": { $gte: now },
+          "appointments.type": "custom",
+          "appointments.children": { $size: 0 },
+        },
+        {
+          $pull: {
+            appointments: {
+              date: { $gte: now },
+              type: "custom",
+              children: { $size: 0 },
+            },
+          },
+        }
+      );
+
+      await Scheduling.deleteMany({
+        appointments: { $size: 0 },
+      });
+
+      currentChild.isActive = false;
+      await currentChild.save();
+    }
+
+    else if (isActive === true) {
+      currentChild.isActive = true;
+      await currentChild.save();
+    }
+
+    const cnic = fatherCnic
+      ? normalizeCnic(fatherCnic)
+      : undefined;
+
     if (fatherCnic && !cnic) {
       return res.status(400).json({
         success: false,
         message: "CNIC must be 13 digits.",
       });
     }
-    if (fatherName !== undefined || fatherCnic !== undefined) {
-      const currentChild = await User.findOne({
-        _id: id,
-        role: "Child",
-      }).lean();
 
-      if (!currentChild) {
-        return res.json({ success: false, message: "Child not found." });
-      }
 
-      const targetCnic = cnic || currentChild.fatherCnic;
+    if (
+      fatherName !== undefined ||
+      fatherCnic !== undefined
+    ) {
+      const targetCnic =
+        cnic || currentChild.fatherCnic;
 
       const otherChildren = await User.find({
         role: "Child",
@@ -1972,51 +2092,90 @@ exports.updateChild = async (req, res) => {
       }).lean();
 
       if (
-        otherChildren.length > 0
-        && fatherName !== undefined
-        && otherChildren.some(
-          (child) => normalizeName(child.fatherName) !== normalizeName(fatherName),
+        otherChildren.length > 0 &&
+        fatherName !== undefined &&
+        otherChildren.some(
+          (child) =>
+            normalizeName(child.fatherName) !==
+            normalizeName(fatherName)
         )
       ) {
         return res.status(409).json({
           success: false,
-          message: "This parent CNIC already exists with a different parent name.",
+          message:
+            "This parent CNIC already exists with a different parent name.",
         });
       }
     }
+
+
     const updateFields = {
       ...(fullName && { fullName }),
-      ...(fatherName !== undefined && { fatherName }),
-      ...(fatherCnic !== undefined && { fatherCnic: cnic }),
+      ...(fatherName !== undefined && {
+        fatherName,
+      }),
+      ...(fatherCnic !== undefined && {
+        fatherCnic: cnic,
+      }),
       ...(age !== undefined && { age }),
       ...(email && { email }),
       ...(phone && { phone }),
     };
+
     if (packageId !== undefined) {
-      const r = await resolvePackageAssignment(packageId, discountedPrice);
+      const r = await resolvePackageAssignment(
+        packageId,
+        discountedPrice
+      );
+
       if (r.error) {
-        return res.status(r.status).json({ success: false, message: r.error });
+        return res.status(r.status).json({
+          success: false,
+          message: r.error,
+        });
       }
+
       Object.assign(updateFields, r.fields);
     }
 
     if (password) {
-      updateFields.password = await bcrypt.hash(password, 10);
+      updateFields.password = await bcrypt.hash(
+        password,
+        10
+      );
+    }
+
+    if (isActive !== undefined) {
+      updateFields.isActive = isActive;
     }
 
     const child = await User.findOneAndUpdate(
-      { _id: id, role: "Child" },
+      {
+        _id: id,
+        role: "Child",
+      },
       updateFields,
-      { new: true, runValidators: true },
+      {
+        new: true,
+        runValidators: true,
+      }
     );
 
     if (!child) {
-      return res.json({ success: false, message: "Child not found." });
+      return res.json({
+        success: false,
+        message: "Child not found.",
+      });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Child updated successfully.",
+      message:
+        isActive === false
+          ? "Child deactivated successfully and future appointments were removed."
+          : isActive === true
+            ? "Child activated successfully."
+            : "Child updated successfully.",
       data: child,
     });
   } catch (error) {
@@ -2072,40 +2231,60 @@ exports.deleteChild = async (req, res) => {
       });
     }
 
-    const pastBatch = batches.find(
-      (batch) => batch.dateTo < now
+    await Scheduling.updateMany(
+      {
+        "appointments.date": { $gte: now },
+        "appointments.children.childId": id,
+      },
+      {
+        $pull: {
+          "appointments.$[appointment].children": {
+            childId: id,
+          },
+        },
+      },
+      {
+        arrayFilters: [
+          {
+            "appointment.date": { $gte: now },
+            "appointment.children.childId": id,
+          },
+        ],
+      }
     );
 
-    if (pastBatch) {
-      child.isActive = false;
-      await child.save();
-
-      return res.status(200).json({
-        success: true,
-        message: "Child was in a past batch, so the child has been made inactive instead of deleted.",
-      });
-    }
-
-    await User.deleteOne({
-      _id: id,
-      role: "Child",
-    });
-
-    await TherapistAssignment.updateMany(
-      { childIds: id },
-      { $pull: { childIds: id } }
+    await Scheduling.updateMany(
+      {
+        "appointments.date": { $gte: now },
+        "appointments.type": "custom",
+        "appointments.children": { $size: 0 },
+      },
+      {
+        $pull: {
+          appointments: {
+            date: { $gte: now },
+            type: "custom",
+            children: { $size: 0 },
+          },
+        },
+      }
     );
+
+    child.isActive = false;
+    await child.save();
 
     return res.status(200).json({
       success: true,
-      message: "Child deleted successfully.",
+      message:
+        "Child has been made inactive and removed from future appointments.",
+      data: child,
     });
   } catch (error) {
     console.error("Delete Child Error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to delete child.",
+      message: "Failed to deactivate child.",
       error: error.message,
     });
   }
