@@ -17,7 +17,7 @@ const BatchAssignment = require("../models/BatchAssignment");
 const Package = require("../models/Package");
 const Service = require("../models/Service");
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const PAST_DAYS = 365; 
+const PAST_DAYS = 365;
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
   { path: "resolvedBy", select: "fullName" },
@@ -1825,7 +1825,7 @@ exports.childUsers = async (req, res) => {
       age: 1,
       email: 1,
       phone: 1,
-      packageId: 1,         
+      packageId: 1,
       discountedPrice: 1,
     })
       .populate("packageId", "name price type")
@@ -1937,7 +1937,7 @@ exports.createChild = async (req, res) => {
 exports.updateChild = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fullName, fatherName, fatherCnic, age, email, phone, password, packageId, discountedPrice, } = req.body;
+    const { fullName, fatherName, fatherCnic, age, email, phone, password, packageId, discountedPrice } = req.body;
     if (!fullName || !email || !phone) {
       return res.json({
         success: false,
@@ -2682,7 +2682,6 @@ exports.deleteFeedback = async (req, res) => {
     });
   }
 };
-
 
 const resolvePackageIds = async (value) => {
   const ids = [...new Set((Array.isArray(value) ? value : []).map(String))];
@@ -5384,22 +5383,22 @@ exports.deleteChildCustomAppointment = async (req, res) => {
 };
 
 const PACKAGE_TYPE = "per-month";
- 
+
 const parsePackageBody = (body = {}) => {
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const price = Number(body.price);
- 
+
   if (!name) {
     return { error: "Package name is required." };
   }
- 
+
   if (!Number.isFinite(price) || price <= 0) {
     return { error: "Monthly rate must be a number greater than 0." };
   }
- 
+
   return { name, price };
 };
- 
+
 exports.getAllPackages = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
@@ -5420,7 +5419,7 @@ exports.getAllPackages = async (req, res) => {
         .lean(),
       Package.countDocuments(filter),
     ]);
- 
+
     return res.status(200).json({
       success: true,
       page,
@@ -5439,23 +5438,23 @@ exports.getAllPackages = async (req, res) => {
     });
   }
 };
- 
+
 exports.getPackageById = async (req, res) => {
   try {
     const { packageId } = req.params;
- 
+
     if (!mongoose.isValidObjectId(packageId)) {
       return res.status(404).json({ success: false, message: "Package not found." });
     }
- 
+
     const packageData = await Package.findById(packageId)
       .populate("createdBy", "fullName email")
       .lean();
- 
+
     if (!packageData) {
       return res.status(404).json({ success: false, message: "Package not found." });
     }
- 
+
     return res.status(200).json({ success: true, data: packageData });
   } catch (error) {
     console.error("getPackageById:", error);
@@ -5465,27 +5464,27 @@ exports.getPackageById = async (req, res) => {
     });
   }
 };
- 
+
 exports.createPackage = async (req, res) => {
   try {
     const userId = req.user?._id || req.user?.id;
- 
+
     if (!userId) {
       return res.status(401).json({ success: false, message: "Unauthorized." });
     }
- 
+
     const parsed = parsePackageBody(req.body);
     if (parsed.error) {
       return res.status(400).json({ success: false, message: parsed.error });
     }
- 
+
     const packageData = await Package.create({
       name: parsed.name,
       type: PACKAGE_TYPE,
       price: parsed.price,
       createdBy: userId,
     });
- 
+
     return res.status(201).json({
       success: true,
       message: "Package created successfully.",
@@ -5493,33 +5492,33 @@ exports.createPackage = async (req, res) => {
     });
   } catch (error) {
     console.error("createPackage:", error);
- 
+
     if (error.name === "ValidationError") {
       return res.status(400).json({ success: false, message: error.message });
     }
- 
+
     return res.status(500).json({
       success: false,
       message: "Failed to create package.",
     });
   }
 };
- 
+
 exports.updatePackage = async (req, res) => {
   try {
     const { packageId } = req.params;
- 
+
     if (!mongoose.isValidObjectId(packageId)) {
       return res.status(404).json({ success: false, message: "Package not found." });
     }
- 
+
     const parsed = parsePackageBody(req.body);
     if (parsed.error) {
       return res.status(400).json({ success: false, message: parsed.error });
     }
- 
+
     const packageData = await Package.findById(packageId);
- 
+
     if (!packageData) {
       return res.status(404).json({ success: false, message: "Package not found." });
     }
@@ -5530,21 +5529,22 @@ exports.updatePackage = async (req, res) => {
         packageId,
         discountedPrice: { $ne: null, $gte: parsed.price },
       });
- 
+
       if (conflicting > 0) {
         return res.status(409).json({
           success: false,
-          message: `${conflicting} child(ren) have a discounted price equal to or above PKR ${parsed.price}. Update their discount first.`,
+          message:
+            `${conflicting} child(ren) have a discounted price equal to or above PKR ${parsed.price}. Update their discount first.`,
         });
       }
     }
- 
+
     packageData.name = parsed.name;
     packageData.price = parsed.price;
     packageData.type = PACKAGE_TYPE;
- 
+
     await packageData.save();
- 
+
     return res.status(200).json({
       success: true,
       message: "Package updated successfully.",
@@ -5552,43 +5552,43 @@ exports.updatePackage = async (req, res) => {
     });
   } catch (error) {
     console.error("updatePackage:", error);
- 
+
     if (error.name === "ValidationError") {
       return res.status(400).json({ success: false, message: error.message });
     }
- 
+
     return res.status(500).json({
       success: false,
       message: "Failed to update package.",
     });
   }
 };
- 
+
 exports.deletePackage = async (req, res) => {
   try {
     const { packageId } = req.params;
- 
+
     if (!mongoose.isValidObjectId(packageId)) {
       return res.status(404).json({ success: false, message: "Package not found." });
     }
- 
+
     const packageData = await Package.findById(packageId).lean();
- 
+
     if (!packageData) {
       return res.status(404).json({ success: false, message: "Package not found." });
     }
- 
+
     const assigned = await User.countDocuments({ role: "Child", packageId });
- 
+
     if (assigned > 0) {
       return res.status(409).json({
         success: false,
         message: `This package is assigned to ${assigned} child(ren). Remove it from them before deleting.`,
       });
     }
- 
+
     await Package.findByIdAndDelete(packageId);
- 
+
     return res.status(200).json({
       success: true,
       message: "Package deleted successfully.",
@@ -5609,7 +5609,7 @@ exports.getSessions = async (req, res) => {
     const search = String(req.query.search || "").trim().toLowerCase();
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 15, 1), 50);
-    
+
     const settings = await SystemSetting.findOne().lean();
     const tz = settings?.timezone || "Asia/Karachi";
     const today = new Date().toLocaleDateString("en-CA", { timeZone: tz });
@@ -5617,60 +5617,59 @@ exports.getSessions = async (req, res) => {
     const cutoff = new Date(Date.parse(`${today}T00:00:00Z`) - PAST_DAYS * DAY_MS)
       .toISOString()
       .slice(0, 10);
- 
+
     const [ty, tm] = today.split("-").map(Number);
     const [cy, cm] = cutoff.split("-").map(Number);
- 
-    const monthFilter =
-      scope === "upcoming"
-        ? { $or: [{ year: { $gt: ty } }, { year: ty, month: { $gte: tm } }] }
-        : {
-            $and: [
-              { $or: [{ year: { $lt: ty } }, { year: ty, month: { $lte: tm } }] },
-              { $or: [{ year: { $gt: cy } }, { year: cy, month: { $gte: cm } }] },
-            ],
-          };
- 
+
+    const monthFilter = scope === "upcoming"
+      ? { $or: [{ year: { $gt: ty } }, { year: ty, month: { $gte: tm } }] }
+      : {
+        $and: [
+          { $or: [{ year: { $lt: ty } }, { year: ty, month: { $lte: tm } }] },
+          { $or: [{ year: { $gt: cy } }, { year: cy, month: { $gte: cm } }] },
+        ],
+      };
+
     const schedules = await Scheduling.find(monthFilter)
       .populate("therapistId", "fullName")
       .populate("appointments.batchId", "batchName")
       .populate("appointments.batchAssignmentId", "speciality")
       .populate("appointments.children.childId", "fullName")
       .lean();
- 
+
     const items = [];
- 
+
     for (const sc of schedules) {
       const therapistId = String(sc.therapistId?._id || sc.therapistId);
       const therapistName = sc.therapistId?.fullName || "Therapist";
- 
+
       for (const ap of sc.appointments || []) {
         if (type !== "all" && ap.type !== type) continue;
- 
+
         const date = dateKeyOf(ap.date);
         const isPast = date < today || (date === today && toMin(ap.endTime) <= nowMin);
- 
+
         if ((scope === "past") !== isPast) continue;
         if (scope === "past" && date < cutoff) continue;
- 
+
         const isCustom = ap.type === "custom";
         const sessionType = ap.sessionType || "regular";
- 
+
         const children = (ap.children || []).map((c) => ({
           childId: String(c.childId?._id || c.childId),
           fullName: c.childId?.fullName || "Child",
           attendance: c.attendance_status || "Pending",
         }));
- 
+
         const batchName = isCustom ? null : ap.batchId?.batchName || "Batch Session";
- 
+
         if (search) {
           const hay = [therapistName, batchName || "custom", ...children.map((c) => c.fullName)]
             .join(" ")
             .toLowerCase();
           if (!hay.includes(search)) continue;
         }
- 
+
         items.push({
           id: String(ap._id),
           date,
@@ -5689,14 +5688,14 @@ exports.getSessions = async (req, res) => {
         });
       }
     }
- 
+
     items.sort((a, b) => {
       const cmp = a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date);
       return scope === "past" ? -cmp : cmp;
     });
- 
+
     const start = (page - 1) * limit;
- 
+
     return res.json({
       success: true,
       today,
@@ -5773,7 +5772,7 @@ exports.createService = async (req, res) => {
     if (!HEX.test(color || "") || !HEX.test(bg || "")) {
       return res.status(400).json({ success: false, message: "Valid colors are required." });
     }
-    
+
     const created = await Service.create({ label, color, bg });
     return res.status(201).json({ success: true, data: shapeService(created) });
   } catch (error) {

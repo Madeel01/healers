@@ -2,10 +2,12 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 
 import {
+  Animated,
   Image,
   RefreshControl,
   ScrollView,
@@ -23,8 +25,10 @@ import {
   useIsFocused,
 } from '@react-navigation/native';
 
+import { getUnreadNotificationCountApi } from '../../api/authApi';
 import { UnreadSummary } from '../../api/child/api';
 import { getDashboardStatsApi } from '../../api/therapist/api';
+import NotificationModal from '../../components/NotificationModal';
 import TherapistBottomBar from '../../components/TherapistBottomBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
@@ -41,6 +45,8 @@ export default function TherapistDashboardScreen({ navigation }) {
   const userId = user?.id || user?._id;
   const role = user?.role;
   const profileImage = user?.profileImage || "";
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
 
   const [stats, setStats] = useState({
     assignedChildren: 0,
@@ -109,18 +115,36 @@ export default function TherapistDashboardScreen({ navigation }) {
       console.log("fetchUnreadSummary error:", err);
     }
   };
+  const fetchNotificationUnreadCount = async () => {
+    try {
+      const response = await getUnreadNotificationCountApi();
+
+      if (response?.success) {
+        setNotificationUnreadCount(response.count || 0);
+      }
+    } catch (error) {
+      console.log("fetchNotificationUnreadCount error:", error);
+    }
+  };
 
   useEffect(() => {
     if (!isFocused || !userId) {
       return;
     }
     fetchUnreadSummary();
+    fetchNotificationUnreadCount();
+
     const interval = setInterval(() => {
       fetchUnreadSummary();
     }, 5000);
 
+    const intervalUnread = setInterval(() => {
+      fetchNotificationUnreadCount();
+    }, 10000);
+
     return () => {
       clearInterval(interval);
+      clearInterval(intervalUnread);
     };
   }, [isFocused, userId]);
 
@@ -130,6 +154,49 @@ export default function TherapistDashboardScreen({ navigation }) {
   const senderInitials = senderName
     ? senderName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
     : "MSG";
+
+  const bellShake = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (notificationUnreadCount > 0) {
+      const shakeAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(bellShake, {
+            toValue: 1,
+            duration: 80,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bellShake, {
+            toValue: -1,
+            duration: 80,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bellShake, {
+            toValue: 1,
+            duration: 80,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bellShake, {
+            toValue: 0,
+            duration: 80,
+            useNativeDriver: true,
+          }),
+          Animated.delay(1200),
+        ]),
+      );
+
+      shakeAnimation.start();
+
+      return () => {
+        shakeAnimation.stop();
+        bellShake.setValue(0);
+      };
+    }
+
+    bellShake.stopAnimation();
+    bellShake.setValue(0);
+  }, [notificationUnreadCount]);
+  
   return (
     <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <View style={styles.headerRow}>
@@ -162,10 +229,32 @@ export default function TherapistDashboardScreen({ navigation }) {
         </View>
 
         <View style={styles.headerActions}>
-          <TouchableOpacity style={[styles.iconButton, { marginLeft: 12 }]}>
+          <TouchableOpacity
+            style={[styles.iconButton, { marginLeft: 12 }]}
+            activeOpacity={0.7}
+            onPress={() => setShowNotificationModal(true)}
+          >
             <View style={styles.notificationWrapper}>
-              <Feather name="bell" size={20} color="#64748B" />
-              <View style={styles.redDot} />
+              <Animated.View
+                style={{
+                  transform: [
+                    {
+                      rotate: bellShake.interpolate({
+                        inputRange: [-1, 1],
+                        outputRange: ["-12deg", "12deg"],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                <Feather
+                  name="bell"
+                  size={20}
+                  color="#64748B"
+                />
+              </Animated.View>
+
+              {notificationUnreadCount > 0 && <View style={styles.redDot} />}
             </View>
           </TouchableOpacity>
 
@@ -429,6 +518,10 @@ export default function TherapistDashboardScreen({ navigation }) {
         </View>
       </ScrollView>
 
+      <NotificationModal
+        visible={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+      />
       <TherapistBottomBar activeTab={"TherapistDashboard"} />
     </SafeAreaView>
   );

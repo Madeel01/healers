@@ -305,14 +305,45 @@ export const createInvoiceApi = async (data) => {
   return response.data;
 };
 
-export const getInvoicesApi = async (params = {}) => {
-  const response = await apiClient.get(
-    "/admin_invoice/invoices",
-    { params },
-  );
-  return response.data;
-};
+export const getInvoicesApi = async ({
+  page = 1,
+  limit = 5,
+  status = "All Statuses",
+  search = "",
+  childId,
+} = {}) => {
+  try {
+    const params = {
+      page,
+      limit,
+    };
 
+    if (status && status !== "All Statuses") {
+      params.status = status;
+    }
+
+    if (search.trim()) {
+      params.search = search.trim();
+    }
+
+    if (childId) {
+      params.childId = childId;
+    }
+
+    const response = await apiClient.get("/admin_invoice/invoices", {
+      params,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error(
+      "getInvoicesApi error:",
+      error?.response?.data || error.message,
+    );
+
+    throw error;
+  }
+};
 export const getInvoiceByIdApi = async (invoiceId) => {
   const response = await apiClient.get(
     `/admin_invoice/invoice/${invoiceId}`,
@@ -348,3 +379,22 @@ export const downloadInvoicePdfApi = (invoiceId) =>
       Accept: "application/pdf",
     },
   });
+
+export const updateInvoiceStatusApi = async (invoiceId, status) => {
+  const response = await apiClient.patch(
+    `/admin_invoice/invoice/${invoiceId}/status`,
+    {
+      status,
+    },
+  );
+
+  return response.data;
+};
+
+export const getInvoiceDashboardSummaryApi = async () => {
+  const response = await apiClient.get(
+    "/admin_invoice/dashboard-summary",
+  );
+
+  return response.data;
+};

@@ -3,8 +3,9 @@ import React, {
   useState,
 } from 'react';
 
-import { Buffer } from 'buffer';
+import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import {
   ActivityIndicator,
@@ -21,10 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 
-import {
-  downloadInvoicePdfApi,
-  getInvoiceByIdApi,
-} from '../../api/admin/api';
+import { getInvoiceByIdApi } from '../../api/admin/api';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
 import {
@@ -77,7 +75,7 @@ const durationText = (item) => {
   return `${quantity} ${unit}${quantity !== 1 ? "s" : ""}`;
 };
 
-const getInvoiceHtml = (invoice) => {
+const getInvoiceHtml = (invoice, logoBase64) => {
   const child = invoice.childId || {};
   const parent = invoice.parentId || {};
   const items = invoice.items || [];
@@ -155,6 +153,14 @@ const getInvoiceHtml = (invoice) => {
       align-items: flex-start;
       padding-bottom: 28px;
     }
+
+    .company-logo {
+  width: 75px;
+  height: 75px;
+  object-fit: contain;
+  display: block;
+  margin-bottom: 10px;
+}
 
     .company {
       color: #07588d;
@@ -341,9 +347,19 @@ const getInvoiceHtml = (invoice) => {
 <body>
   <div class="header">
     <div>
-      <div class="company">${escapeHtml(COMPANY.name)}</div>
-      <div class="address">${escapeHtml(COMPANY.address)}</div>
-    </div>
+    ${
+    logoBase64
+      ? `<img
+             src="data:image/png;base64,${logoBase64}"
+             class="company-logo"
+             alt="Company Logo"
+           />`
+      : ""
+  }
+
+    <div class="company">${escapeHtml(COMPANY.name)}</div>
+    <div class="address">${escapeHtml(COMPANY.address)}</div>
+  </div>
 
     <div>
       <div class="invoice-title">INVOICE</div>
@@ -612,15 +628,37 @@ export default function InvoiceViewScreen({ navigation, route }) {
     try {
       setDownloading(true);
 
-      const response = await downloadInvoicePdfApi(invoiceId);
+      const logoAsset = Asset.fromModule(
+        require("../../asstes/logo.png"),
+      );
 
-      if (response.status !== 200) {
-        throw new Error("Failed to download invoice PDF.");
+      await logoAsset.downloadAsync();
+
+      const logoUri = logoAsset.localUri || logoAsset.uri;
+
+      if (!logoUri) {
+        throw new Error("Logo file could not be loaded.");
       }
 
-      const arrayBuffer = response.data;
+      const logoBase64 = await FileSystem.readAsStringAsync(
+        logoUri,
+        {
+          encoding: FileSystem.EncodingType.Base64,
+        },
+      );
 
-      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      const html = getInvoiceHtml(invoice, logoBase64);
+
+      const result = await Print.printToFileAsync({
+        html,
+        base64: true,
+        width: 595,
+        height: 842,
+      });
+
+      if (!result.base64) {
+        throw new Error("PDF generation failed.");
+      }
 
       const invoiceNumber = String(
         invoice.invoiceNumber || invoice._id || "Invoice",
@@ -628,44 +666,52 @@ export default function InvoiceViewScreen({ navigation, route }) {
 
       const fileName = `${invoiceNumber}_${Date.now()}.pdf`;
 
-      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+      const destinationUri = `${FileSystem.documentDirectory}${fileName}`;
 
-      await FileSystem.writeAsStringAsync(fileUri, base64, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      await FileSystem.writeAsStringAsync(
+        destinationUri,
+        result.base64,
+        {
+          encoding: FileSystem.EncodingType.Base64,
+        },
+      );
 
-      const fileInfo = await FileSystem.getInfoAsync(fileUri, {
-        size: true,
-      });
+      const fileInfo = await FileSystem.getInfoAsync(
+        destinationUri,
+        { size: true },
+      );
 
       if (!fileInfo.exists || !fileInfo.size) {
-        throw new Error("PDF file was not saved.");
+        throw new Error("PDF could not be saved.");
       }
 
-      const isAvailable = await Sharing.isAvailableAsync();
+      const canShare = await Sharing.isAvailableAsync();
 
-      if (isAvailable) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: "application/pdf",
-          UTI: "com.adobe.pdf",
-          dialogTitle: `Invoice ${invoice.invoiceNumber}`,
-        });
-      } else {
-        Alert.alert("Success", "Invoice PDF saved successfully.");
+      if (!canShare) {
+        Alert.alert(
+          "PDF Created",
+          "Invoice PDF saved successfully.",
+        );
+        return;
       }
+
+      await Sharing.shareAsync(destinationUri, {
+        mimeType: "application/pdf",
+        UTI: "com.adobe.pdf",
+        dialogTitle: `Invoice ${invoice.invoiceNumber}`,
+      });
     } catch (error) {
-      console.log("Download Invoice Error:", error);
+      console.log("Download invoice error:", error);
 
       Alert.alert(
-        "Download Failed",
-        error?.response?.data?.message
-          || error?.message
-          || "Unable to download invoice PDF.",
+        "Error",
+        error?.message || "Failed to download invoice PDF.",
       );
     } finally {
       setDownloading(false);
     }
   };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.screen}>

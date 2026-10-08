@@ -316,6 +316,7 @@ export default function AdminDashboard() {
           </View>
           <AntDesign name="file-text" size={24} color="#717781" />
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate("InvoiceManagement")}>
           <View style={[styles.quickIconBox, { backgroundColor: "#DBEAFE" }]}>
             <MaterialIcons name="description" size={22} color="#2563EB" />
@@ -326,6 +327,7 @@ export default function AdminDashboard() {
           </View>
           <AntDesign name="file-text" size={24} color="#717781" />
         </TouchableOpacity>
+        
       </ScrollView>
 
       <BottomBar />
