@@ -1805,6 +1805,7 @@ exports.getTherapistSchedule = async (req, res) => {
   }
 };
 
+
 exports.childUsers = async (req, res) => {
   try {
     const { page = 1, limit = 5, search = "" } = req.query;
@@ -1907,6 +1908,7 @@ exports.createChild = async (req, res) => {
       password: hashedPassword,
       role: "Child",
       agreeTerms: true,
+      isActive:true,
       ...packageFields,
     });
 
@@ -2037,16 +2039,61 @@ exports.updateChild = async (req, res) => {
 exports.deleteChild = async (req, res) => {
   try {
     const { id } = req.params;
+    const now = new Date();
 
-    const child = await User.findOneAndDelete({ _id: id, role: "Child" });
+    const child = await User.findOne({
+      _id: id,
+      role: "Child",
+    });
 
     if (!child) {
-      return res.json({ success: false, message: "Child not found." });
+      return res.status(404).json({
+        success: false,
+        message: "Child not found.",
+      });
     }
+
+    const batches = await Batch.find({
+      childrenIds: id,
+    });
+
+    const activeBatch = batches.find(
+      (batch) =>
+        batch.dateFrom <= now &&
+        batch.dateTo >= now
+    );
+
+    if (activeBatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Child is already in an active running batch.",
+        batchId: activeBatch._id,
+        batchName: activeBatch.batchName,
+      });
+    }
+
+    const pastBatch = batches.find(
+      (batch) => batch.dateTo < now
+    );
+
+    if (pastBatch) {
+      child.isActive = false;
+      await child.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Child was in a past batch, so the child has been made inactive instead of deleted.",
+      });
+    }
+
+    await User.deleteOne({
+      _id: id,
+      role: "Child",
+    });
 
     await TherapistAssignment.updateMany(
       { childIds: id },
-      { $pull: { childIds: id } },
+      { $pull: { childIds: id } }
     );
 
     return res.status(200).json({
@@ -2055,6 +2102,7 @@ exports.deleteChild = async (req, res) => {
     });
   } catch (error) {
     console.error("Delete Child Error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to delete child.",
@@ -2683,19 +2731,6 @@ exports.deleteFeedback = async (req, res) => {
   }
 };
 
-
-const resolvePackageIds = async (value) => {
-  const ids = [...new Set((Array.isArray(value) ? value : []).map(String))];
-  if (!ids.length) return { error: "Select at least one package." };
-  if (ids.some((id) => !mongoose.isValidObjectId(id))) {
-    return { error: "Invalid package selected." };
-  }
-  const count = await Package.countDocuments({ _id: { $in: ids }, type: "batch" });
-  if (count !== ids.length) {
-    return { error: "One or more selected packages were not found or are not batch packages." };
-  }
-  return { ids };
-};
 const BATCH_POPULATE = [
   { path: "therapistIds", select: "fullName email" },
   // { path: "packageIds", select: "name type price sessions sessionMinutes specialities" },
