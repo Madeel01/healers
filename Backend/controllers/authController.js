@@ -4,12 +4,14 @@ const jwt = require("jsonwebtoken");
 const cloudinary = require("../config/cloudinary");
 const mongoose = require("mongoose");
 const Notification = require("../models/Notification");
+const crypto = require("crypto");
+const sendEmail = require("../utils/sendEmail");
 
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role, permissions: user.permissions },
     process.env.JWT_SECRET,
-    { expiresIn: "10m" },
+    { expiresIn: "3d" },
   );
 };
 
@@ -63,8 +65,7 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { identifier, password } = req.body;
-
+    const { identifier, password, rememberMe } = req.body;
     if (!identifier || !password) {
       return res.status(400).json({ message: "Please provide credentials." });
     }
@@ -74,7 +75,7 @@ exports.login = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials." });
+      return res.status(401).json({ message: "User not register." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -85,7 +86,21 @@ exports.login = async (req, res) => {
     await user.save();
 
     const token = generateToken(user);
-
+    if (rememberMe && user.email) {
+      sendEmail({
+        to: user.email,
+        subject: "New Login Alert - MobileApp Healer",
+        html: `
+      <h2>New Login Detected</h2>
+      <p>Hello ${user.fullName},</p>
+      <p>Your MobileApp Healer account was logged in.</p>
+      <p>Time: ${new Date().toUTCString()}</p>
+      <p>If this was not you, please reset your password.</p>
+    `,
+      }).catch((error) => {
+        console.error("Login alert email failed:", error);
+      });
+    }
     res.json({
       message: "Logged in successfully",
       token,
@@ -710,6 +725,216 @@ exports.markAllNotificationsAsRead = async (req, res) => {
       success: false,
       message: "Failed to mark notifications as read",
       error: error.message,
+    });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter your email address.",
+      });
+    }
+
+    // Check if email exists in MongoDB
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      console.log("❌ Email not registered:", email);
+
+      return res.status(404).json({
+        success: false,
+        message: "This email is not registered.",
+      });
+    }
+
+    console.log("✅ Registered email found:", email);
+
+    const otp = crypto.randomInt(100000, 1000000).toString();
+
+    user.resetPasswordOtpHash = await bcrypt.hash(otp, 10);
+    user.resetPasswordOtpExpires = new Date(
+      Date.now() + 5 * 60 * 1000,
+    );
+    user.resetPasswordAttempts = 0;
+
+    await user.save();
+
+    await sendEmail({
+      to: user.email,
+      subject: "Password Reset Verification Code",
+      html: `
+        <h2>MobileApp Healer</h2>
+        <p>Hello ${user.fullName},</p>
+        <p>Your password reset code is:</p>
+        <h1>${otp}</h1>
+        <p>This code expires in 5 minutes.</p>
+        <p>If you did not request this, ignore this email.</p>
+      `,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Verification code sent successfully.",
+    });
+  } catch (error) {
+    console.error("❌ Forgot Password Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to send verification code.",
+    });
+  }
+};
+
+exports.verifyResetOtp = async (req, res) => {
+  try {
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
+
+    const otp = String(req.body.otp || "");
+
+    if (!/^\d{6}$/.test(otp)) {
+      return res.status(400).json({
+        message: "Enter a valid 6-digit code.",
+      });
+    }
+
+    const user = await User.findOne({ email })
+      .select("+resetPasswordOtpHash +resetPasswordOtpExpires +resetPasswordAttempts");
+
+    if (
+      !user
+      || !user.resetPasswordOtpHash
+      || !user.resetPasswordOtpExpires
+      || user.resetPasswordOtpExpires.getTime() <= Date.now()
+    ) {
+      return res.status(400).json({
+        message: "Invalid or expired verification code.",
+      });
+    }
+
+    if (user.resetPasswordAttempts >= 5) {
+      return res.status(429).json({
+        message: "Too many attempts. Request a new code.",
+      });
+    }
+
+    const valid = await bcrypt.compare(
+      otp,
+      user.resetPasswordOtpHash,
+    );
+
+    if (!valid) {
+      user.resetPasswordAttempts += 1;
+      await user.save();
+
+      return res.status(400).json({
+        message: "Invalid or expired verification code.",
+      });
+    }
+
+    user.resetPasswordOtpHash = null;
+    user.resetPasswordOtpExpires = null;
+    user.resetPasswordAttempts = 0;
+    user.resetPasswordVersion += 1;
+
+    await user.save();
+
+    // Short-lived token that authorizes password reset only.
+    const resetToken = jwt.sign(
+      {
+        id: user._id.toString(),
+        purpose: "password-reset",
+        version: user.resetPasswordVersion,
+      },
+      process.env.RESET_TOKEN_SECRET,
+      { expiresIn: "5m" },
+    );
+
+    return res.json({
+      message: "OTP verified successfully.",
+      resetToken,
+    });
+  } catch (error) {
+    console.error("OTP verification error:", error);
+    return res.status(500).json({
+      message: "Unable to verify code.",
+    });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+
+    if (
+      typeof newPassword !== "string"
+      || newPassword.length < 8
+    ) {
+      return res.status(400).json({
+        message: "Password must contain at least 8 characters.",
+      });
+    }
+
+    let decoded;
+
+    try {
+      decoded = jwt.verify(
+        resetToken,
+        process.env.RESET_TOKEN_SECRET,
+      );
+    } catch {
+      return res.status(401).json({
+        message: "Reset session expired. Request a new code.",
+      });
+    }
+
+    if (decoded.purpose !== "password-reset") {
+      return res.status(401).json({
+        message: "Invalid reset session.",
+      });
+    }
+
+    const user = await User.findOneAndUpdate(
+      {
+        _id: decoded.id,
+        resetPasswordVersion: decoded.version,
+      },
+      {
+        $set: {
+          password: await bcrypt.hash(newPassword, 10),
+          resetPasswordOtpHash: null,
+          resetPasswordOtpExpires: null,
+          resetPasswordAttempts: 0,
+          isLogin: false,
+          isOnline: false,
+        },
+        $inc: { resetPasswordVersion: 1 },
+      },
+      { new: true },
+    );
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Reset session is invalid or already used.",
+      });
+    }
+
+    return res.json({
+      message: "Password changed successfully. Please login.",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    return res.status(500).json({
+      message: "Unable to reset password.",
     });
   }
 };

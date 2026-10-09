@@ -5,85 +5,106 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from './apiClient';
 
 // Helper: Lightweight UUID generator replacing expo-crypto
-const generateUUID = () =>
-  'bio-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
-
+const generateUUID = () => "bio-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9);
 
 export const registerUser = async (userData) => {
-  const response = await apiClient.post('/auth/register', userData);
+  const response = await apiClient.post("/auth/register", userData);
   if (response.data.token) {
-    await AsyncStorage.setItem('userToken', response.data.token);
-    await AsyncStorage.setItem('userData', JSON.stringify(response.data.user));
+    await AsyncStorage.setItem("userToken", response.data.token);
+    await AsyncStorage.setItem("userData", JSON.stringify(response.data.user));
   }
   return response.data;
 };
 
-export const loginUser = async (identifier, password) => {
-  const response = await apiClient.post('/auth/login', { identifier, password });
+export const loginUser = async (identifier, password, rememberMe = false) => {
+  const response = await apiClient.post("/auth/login", { identifier, password, rememberMe });
   if (response.data.token) {
-    await AsyncStorage.setItem('userToken', response.data.token);
-    await AsyncStorage.setItem('userData', JSON.stringify(response.data.user));
+    await AsyncStorage.setItem("userToken", response.data.token);
+    await AsyncStorage.setItem("userData", JSON.stringify(response.data.user));
   }
   return response.data;
 };
 
 export const logoutUser = async () => {
-  await AsyncStorage.multiRemove(['userToken', 'userData', 'deviceBiometricKey']);
+  await AsyncStorage.multiRemove(["userToken", "userData", "deviceBiometricKey"]);
 };
-
 
 export const enableBiometricAuth = async () => {
   const hasHardware = await LocalAuthentication.hasHardwareAsync();
   const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
   if (!hasHardware || !isEnrolled) {
-    throw new Error('Biometrics not available or not set up on this device.');
+    throw new Error("Biometrics not available or not set up on this device.");
   }
 
   const authResult = await LocalAuthentication.authenticateAsync({
-    promptMessage: 'Scan fingerprint/FaceID to enable Biometric Login',
-    fallbackLabel: 'Cancel',
+    promptMessage: "Scan fingerprint/FaceID to enable Biometric Login",
+    fallbackLabel: "Cancel",
   });
 
   if (!authResult.success) {
-    throw new Error('Biometric authentication failed or canceled.');
+    throw new Error("Biometric authentication failed or canceled.");
   }
 
   const biometricKey = generateUUID();
 
-  const response = await apiClient.post('/auth/register-biometric', { biometricKey });
+  const response = await apiClient.post("/auth/register-biometric", { biometricKey });
 
-  await AsyncStorage.setItem('deviceBiometricKey', biometricKey);
+  await AsyncStorage.setItem("deviceBiometricKey", biometricKey);
 
   return response.data;
 };
 
 export const loginWithBiometrics = async () => {
-  const savedBiometricKey = await AsyncStorage.getItem('deviceBiometricKey');
+  const savedBiometricKey = await AsyncStorage.getItem("deviceBiometricKey");
 
   if (!savedBiometricKey) {
     throw new Error(
-      'Biometric login is not registered on this device. Please log in with password first.'
+      "Biometric login is not registered on this device. Please log in with password first.",
     );
   }
 
   const authResult = await LocalAuthentication.authenticateAsync({
-    promptMessage: 'Scan fingerprint/Face ID to login',
-    fallbackLabel: 'Use Password',
+    promptMessage: "Scan fingerprint/Face ID to login",
+    fallbackLabel: "Use Password",
   });
 
   if (!authResult.success) {
-    throw new Error('Biometric scan failed.');
+    throw new Error("Biometric scan failed.");
   }
 
-  const response = await apiClient.post('/auth/login-biometric', {
+  const response = await apiClient.post("/auth/login-biometric", {
     biometricKey: savedBiometricKey,
   });
 
   if (response.data.token) {
-    await AsyncStorage.setItem('userToken', response.data.token);
-    await AsyncStorage.setItem('userData', JSON.stringify(response.data.user));
+    await AsyncStorage.setItem("userToken", response.data.token);
+    await AsyncStorage.setItem("userData", JSON.stringify(response.data.user));
   }
 
+  return response.data;
+};
+
+export const forgotPasswordApi = async (email) => {
+  const response = await apiClient.post(
+    "/auth/forgot-password",
+    { email },
+  );
+  return response.data;
+};
+
+export const verifyResetOtpApi = async (email, otp) => {
+  const response = await apiClient.post(
+    "/auth/verify-reset-otp",
+    { email, otp },
+  );
+  return response.data;
+};
+
+export const resetPasswordApi = async (resetToken, newPassword) => {
+  const response = await apiClient.post(
+    "/auth/reset-password",
+    { resetToken, newPassword },
+  );
   return response.data;
 };

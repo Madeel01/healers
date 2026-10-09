@@ -65,53 +65,85 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // const logout = useCallback(async (expectedToken) => {
+  //   const currentToken = tokenRef.current;
+
+  //   if (expectedToken !== undefined && currentToken !== expectedToken) {
+  //     return;
+  //   }
+
+  //   if (logoutInProgressRef.current) {
+  //     return;
+  //   }
+
+  //   logoutInProgressRef.current = true;
+  //   const sessionVersion = sessionVersionRef.current;
+
+  //   try {
+
+  //     if (currentToken && getTokenRemainingMs(currentToken) > 0) {
+  //       await updateOnlineStatus(false, currentToken);
+  //     }
+
+  //     if (sessionVersionRef.current !== sessionVersion) {
+  //       return;
+  //     }
+
+  //     await clearAuthData();
+
+  //     if (sessionVersionRef.current !== sessionVersion) {
+  //       return;
+  //     }
+
+  //     tokenRef.current = null;
+  //     sessionVersionRef.current += 1;
+  //     setToken(null);
+  //     setUser(null);
+  //   } catch (error) {
+  //     console.log(" Logout Error:", error);
+  //   } finally {
+  //     logoutInProgressRef.current = false;
+  //   }
+  // }, [updateOnlineStatus]);
+
   const logout = useCallback(async (expectedToken) => {
     const currentToken = tokenRef.current;
 
-    if (expectedToken !== undefined && currentToken !== expectedToken) {
+    if (typeof expectedToken === "string" && currentToken !== expectedToken) {
       return;
     }
 
     if (logoutInProgressRef.current) {
+      console.log(" Logout already in progress");
       return;
     }
 
     logoutInProgressRef.current = true;
-    const sessionVersion = sessionVersionRef.current;
 
     try {
-     
-      if (currentToken && getTokenRemainingMs(currentToken) > 0) {
-        await updateOnlineStatus(false, currentToken);
-      }
-
-      if (sessionVersionRef.current !== sessionVersion) {
-        return;
-      }
-
       await clearAuthData();
-
-      if (sessionVersionRef.current !== sessionVersion) {
-        return;
-      }
-
       tokenRef.current = null;
       sessionVersionRef.current += 1;
       setToken(null);
       setUser(null);
     } catch (error) {
-      console.log(" Logout Error:", error);
+      console.log("Logout Error:", error);
+
+      tokenRef.current = null;
+      sessionVersionRef.current += 1;
+
+      setToken(null);
+      setUser(null);
     } finally {
       logoutInProgressRef.current = false;
     }
-  }, [updateOnlineStatus]);
-
+  }, []);
+  
   useEffect(() => {
     let mounted = true;
 
     const loadSession = async () => {
       try {
-
         const data = await getAuthData();
 
         if (!mounted) return;
@@ -128,7 +160,6 @@ export const AuthProvider = ({ children }) => {
               setUser(null);
             }
           } else {
-
             tokenRef.current = data.token;
             sessionVersionRef.current += 1;
 
@@ -153,7 +184,6 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
- 
   const login = async (jwtToken, userData) => {
     const remainingMs = getTokenRemainingMs(jwtToken);
 
@@ -169,7 +199,6 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   };
 
- 
   const switchUser = async (jwtToken, userData) => {
     const remainingMs = getTokenRemainingMs(jwtToken);
 
@@ -192,7 +221,7 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   };
 
-   const updateUser = async (userData) => {
+  const updateUser = async (userData) => {
     const currentToken = tokenRef.current;
 
     if (!currentToken) return;
@@ -263,7 +292,6 @@ export const AuthProvider = ({ children }) => {
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("⏳ JWT AUTO LOGOUT TIMER STARTED");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
 
     intervalId = setInterval(checkRemainingTime, 1000);
 
@@ -347,7 +375,6 @@ export const AuthProvider = ({ children }) => {
     };
   }, [token, user, logout, updateOnlineStatus]);
 
- 
   return (
     <AuthContext.Provider
       value={{
