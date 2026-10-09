@@ -16,7 +16,6 @@ const VALID_TYPES = [
   "General",
 ];
 
-// Template names. Use these instead of typing strings.
 const TEMPLATE = {
   INVOICE_GENERATED: "invoice_generated",
   INVOICE_SENT: "invoice_sent",
@@ -30,9 +29,6 @@ const TEMPLATE = {
   CUSTOM: "custom",
 };
 
-/* -------------------------------------------------------------------------- */
-/*  Small helpers                                                             */
-/* -------------------------------------------------------------------------- */
 
 const money = (amount) => `PKR ${Number(amount || 0).toLocaleString()}`;
 
@@ -45,19 +41,13 @@ const formatDate = (date) => {
   });
 };
 
-// Joins sentences together and skips the empty ones.
 const sentence = (...parts) => parts.filter(Boolean).join(" ");
 
-// "Oct 1, 2026 to Oct 3, 2026" (or just one date, or empty)
 const dateRange = (from, to) => {
   if (from && to) return `${formatDate(from)} to ${formatDate(to)}`;
   return formatDate(from || to);
 };
 
-/* -------------------------------------------------------------------------- */
-/*  Templates                                                                 */
-/*  Each one gets the "data" object and returns { title, message, type }      */
-/* -------------------------------------------------------------------------- */
 
 const TEMPLATES = {
   // ---------- FEE ----------
@@ -153,16 +143,12 @@ const TEMPLATES = {
   [TEMPLATE.CUSTOM]: () => ({}),
 };
 
-// Lets you add more templates from any other file.
 const registerTemplate = (name, templateFn) => {
   TEMPLATES[name] = templateFn;
 };
 
-/* -------------------------------------------------------------------------- */
-/*  Internal steps                                                            */
-/* -------------------------------------------------------------------------- */
 
-// Step 1: work out the final title, message and type
+
 const buildContent = (options) => {
   const { template = TEMPLATE.CUSTOM, data = {}, title, message, type } = options;
 
@@ -173,7 +159,6 @@ const buildContent = (options) => {
 
   const fromTemplate = templateFn(data);
 
-  // Text passed by the caller wins over the template text
   const finalTitle = (title || fromTemplate.title || "").trim();
   const finalMessage = (message || fromTemplate.message || "").trim();
 
@@ -187,7 +172,6 @@ const buildContent = (options) => {
   return { title: finalTitle, message: finalMessage, type: finalType };
 };
 
-// Step 2: work out who receives it (returns an array of user ids)
 const getRecipientIds = async ({ audience, roles, users }) => {
   if (audience === "users") {
     const uniqueIds = [...new Set(users.map(String))];
@@ -206,7 +190,6 @@ const getRecipientIds = async ({ audience, roles, users }) => {
   return found.map((user) => String(user._id));
 };
 
-// Step 3: save it
 const saveNotification = async ({ content, audience, roles, recipientIds, options }) => {
   const createdBy = options.createdBy || SYSTEM_USER_ID;
   if (!createdBy) {
@@ -231,8 +214,6 @@ const saveNotification = async ({ content, audience, roles, recipientIds, option
   return notification;
 };
 
-// Runs the 3 steps. Never throws unless options.throwOnError is true,
-// so a failed notification never breaks invoice generation etc.
 const send = async ({ audience, roles = [], users = [], options = {} }) => {
   try {
     const content = buildContent(options);
@@ -258,20 +239,14 @@ const send = async ({ audience, roles = [], users = [], options = {} }) => {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*  The 3 basic methods                                                       */
-/* -------------------------------------------------------------------------- */
 
-// 1) One user
 const sendToUser = (userId, options = {}) =>
   send({ audience: "users", users: [userId], options });
 
-// 2) Many specific users
 const sendToUsers = (userIds, options = {}) =>
   send({ audience: "users", users: userIds, options });
 
-// 3) A role group or everyone
-//    sendToRole("Child", ...)  sendToRole(["Therapist", "Child"], ...)  sendToRole("all", ...)
+
 const sendToRole = (roles, options = {}) => {
   if (roles === "all") {
     return send({ audience: "all", options });

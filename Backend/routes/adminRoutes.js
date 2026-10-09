@@ -75,6 +75,7 @@ const {
   createAdditionalSession,
   getProgramTherapists,
   getProgramTherapistChildren,
+  sendFeedbackReminderNotification,
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
@@ -114,6 +115,7 @@ router.get("/leave-requests/on-leave-today", protect, getStaffOnLeaveToday);
 router.get("/feedback/:status", getAdminFeedbackManagement);
 router.get("/feedback/:feedbackId/replies", protect, getFeedbackReplies);
 router.post("/feedback/:feedbackId/replies", protect, addFeedbackReply);
+router.post("/feedback/send-reminder", protect, sendFeedbackReminderNotification);
 router.delete("/feedback/:feedbackId", deleteFeedback);
 
 router.get("/batches", protect, getBatches);

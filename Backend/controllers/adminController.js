@@ -17,6 +17,7 @@ const BatchAssignment = require("../models/BatchAssignment");
 const Package = require("../models/Package");
 const Service = require("../models/Service");
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const { sendToUsers, TEMPLATE } = require("../utils/notificationService");
 const PAST_DAYS = 365;
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
@@ -6601,5 +6602,101 @@ exports.updateSettings = async (req, res) => {
     }
     console.error("updateSettings:", error);
     return res.status(500).json({ success: false, message: "Failed to save settings." });
+  }
+};
+exports.sendFeedbackReminderNotification = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+
+    if (!appointmentId) {
+      return res.status(400).json({
+        success: false,
+        message: "appointmentId is required.",
+      });
+    }
+
+    // 1. Appointment aur usse jude Therapist aur Children Fetch karein
+    const schedulingDoc = await Scheduling.findOne({
+      "appointments._id": appointmentId,
+    })
+      .populate("therapistId", "fullName")
+      .populate("appointments.children.childId", "fullName");
+
+    if (!schedulingDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment session not found.",
+      });
+    }
+
+    const appointment = schedulingDoc.appointments.id(appointmentId);
+    const therapist = schedulingDoc.therapistId;
+
+    // 2. Direct Recipient User IDs ki List Tayyar Karein
+    const recipientUserIds = [];
+
+    // Therapist ID Add Karein
+    if (therapist?._id) {
+      recipientUserIds.push(therapist._id);
+    }
+
+    // Children (Parents/Users) IDs Add Karein
+    (appointment.children || []).forEach((c) => {
+      const childObj = c.childId;
+      if (childObj?._id) {
+        recipientUserIds.push(childObj._id);
+      }
+    });
+
+    // Duplicate IDs Filter Karein
+    const uniqueRecipients = [...new Set(recipientUserIds.map((id) => String(id)))];
+
+    if (uniqueRecipients.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid therapist or child recipients found for this appointment.",
+      });
+    }
+
+    // 3. Date Formatting
+    const formattedDate = appointment.date
+      ? new Date(appointment.date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "upcoming session";
+
+    // 4. Sender ID (Current Admin ya System User)
+    const senderId = req.user?._id || process.env.SYSTEM_USER_ID;
+
+    // 5. Direct Notification DB Object Create Karein
+    const notificationDoc = {
+      title: "Session Feedback Reminder",
+      message: `Please submit your feedback for the session on ${formattedDate} (${appointment.startTime || ""} - ${appointment.endTime || ""}).`,
+      type: "Reminder",
+      audience: "users",
+      users: uniqueRecipients,
+      recipients: uniqueRecipients.map((id) => ({ user: id })),
+      createdBy: senderId,
+      status: "sent",
+      sentAt: new Date(),
+    };
+
+    // 6. Direct DB Insertion
+    const [savedNotification] = await Notification.create([notificationDoc]);
+
+    return res.status(200).json({
+      success: true,
+      message: `Feedback reminder successfully sent to therapist and children!`,
+      data: savedNotification,
+    });
+  } catch (error) {
+    console.error("Direct Send Feedback Reminder Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send feedback reminder.",
+      error: error.message,
+    });
   }
 };
