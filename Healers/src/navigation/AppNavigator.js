@@ -42,6 +42,7 @@ import TherapistsScreen from '../screens/admin/Therapist';
 import TherapistAvailabilityScreen
   from '../screens/admin/TherapistAvailability';
 import TherapistScheduleScreen from '../screens/admin/TherapistScheduleScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPassword';
 import LoginScreen from '../screens/auth/LoginScreen';
 import OnboardingScreen from '../screens/auth/OnboardingScreen';
 import ChildProfileScreen from '../screens/auth/ProfileScreen';
@@ -81,6 +82,7 @@ function AuthStack() {
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </Stack.Navigator>
   );
 }
@@ -163,7 +165,6 @@ function ChildStack() {
       <Stack.Screen name="ComplaintDetails" component={ComplaintDetailsScreen} />
       <Stack.Screen name="ChildInvoices" component={ChildInvoicesScreen} />
       <Stack.Screen name="InvoiceView" component={InvoiceViewScreen} />
-
     </Stack.Navigator>
   );
 }

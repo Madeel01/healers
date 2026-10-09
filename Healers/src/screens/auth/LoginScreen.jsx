@@ -1,5 +1,6 @@
 import React, {
   useContext,
+  useEffect,
   useState,
 } from 'react';
 
@@ -14,12 +15,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 
 import {
@@ -34,24 +33,21 @@ import {
 } from '../../styles/theme';
 
 export default function LoginScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { login } = useContext(AuthContext);
 
-  const [identifier, setIdentifier] = useState("admin@gmail.com");
+  // const [identifier, setIdentifier] = useState("admin@gmail.com");
   // const [identifier, setIdentifier] = useState("child@gmail.com");
   // const [identifier, setIdentifier] = useState("therapist@gmail.com");
-  // const [identifier, setIdentifier] = useState("madeel@callhub.cc");
-  const [password, setPassword] = useState("test@123");
+  // const [password, setPassword] = useState("test@123");
+  const [identifier, setIdentifier] = useState("madeel@callhub.cc");
+  const [password, setPassword] = useState("Test@123");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleCreateAccount = () => {
-    navigation.navigate("Register");
-  };
-
   const handleForgotPassword = () => {
+    navigation.navigate("ForgotPassword");
   };
 
   const handleLogin = async () => {
@@ -62,7 +58,15 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const response = await loginUser(identifier.trim(), password);
+      const response = await loginUser(identifier.trim(), password, rememberMe);
+      if (rememberMe) {
+        await AsyncStorage.setItem(
+          "rememberedEmail",
+          identifier.trim(),
+        );
+      } else {
+        await AsyncStorage.removeItem("rememberedEmail");
+      }
 
       await login(response.token, response.user);
       Alert.alert("Success", "Logged in successfully!");
@@ -92,6 +96,21 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const loadRememberedEmail = async () => {
+      const savedEmail = await AsyncStorage.getItem(
+        "rememberedEmail",
+      );
+
+      if (savedEmail) {
+        setIdentifier(savedEmail);
+        setRememberMe(true);
+      }
+    };
+
+    loadRememberedEmail();
+  }, []);
 
   return (
     <SafeAreaView style={commonStyles.container}>
@@ -268,7 +287,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 24,
     marginBottom: 24,
-    width:'100%'
+    width: "100%",
   },
   fieldContainer: {
     marginBottom: 16,
