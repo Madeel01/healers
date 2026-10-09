@@ -24,7 +24,7 @@ import {
   colors,
   fonts,
 } from '../../styles/theme';
-import { addFeedbackReply, getFeedbackReplies, getFeedbackRequests, deleteFeedback } from '../../api/admin/api';
+import { addFeedbackReply, getFeedbackReplies, getFeedbackRequests, deleteFeedback, sendFeedbackReminder } from '../../api/admin/api';
 import { formatTo12Hour } from '../../utils/hoursformat';
 import { AuthContext } from '../../context/AuthContext';
 
@@ -111,9 +111,7 @@ function formatDate(dateStr) {
     return dateStr;
   }
 }
-const handleSendReminder = (item) => {
-  console.log('SEND REMINDER:', item.id);
-};
+
 export default function FeedbackScreen({ navigation }) {
   // const insets = useSafeAreaInsets();
   const { user } = useContext(AuthContext);
@@ -138,6 +136,7 @@ export default function FeedbackScreen({ navigation }) {
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [sendingReminderId, setSendingReminderId] = useState(null);
 
   const status = TAB_TO_STATUS[activeTab] || 'all';
 
@@ -266,6 +265,38 @@ export default function FeedbackScreen({ navigation }) {
       ],
     );
   };
+  const handleSendReminder = async (item) => {
+  Alert.alert(
+    "Send Feedback Reminder",
+    `Send a feedback request alert to ${item.name}?`,
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Send Alert",
+        onPress: async () => {
+          try {
+            setSendingReminderId(item.id);
+            const res = await sendFeedbackReminder(item.id); 
+
+            if (res?.success) {
+              Alert.alert("Success", res.message || "Feedback reminder sent successfully!");
+            } else {
+              Alert.alert("Error", res?.message || "Could not send reminder.");
+            }
+          } catch (error) {
+            console.error("Failed to send reminder:", error);
+            Alert.alert(
+              "Error",
+              error?.response?.data?.message || "Failed to send reminder alert."
+            );
+          } finally {
+            setSendingReminderId(null);
+          }
+        },
+      },
+    ]
+  );
+};
 
 
   return (
@@ -446,10 +477,9 @@ export default function FeedbackScreen({ navigation }) {
                 <TouchableOpacity
                   style={[
                     styles.actionBtn,
-                    item.actionType === 'primary'
-                      ? styles.primaryBtn
-                      : styles.outlineBtn,
+                    item.actionType === 'primary' ? styles.primaryBtn : styles.outlineBtn,
                   ]}
+                  disabled={sendingReminderId === item.id}
                   onPress={() => {
                     if (
                       item.primaryAction === 'Reply' ||
@@ -461,15 +491,17 @@ export default function FeedbackScreen({ navigation }) {
                     }
                   }}
                 >
-                  {item.primaryIcon && (
-                    <Feather
-                      name={item.primaryIcon}
-                      size={16}
-                      color={
-                        item.actionType === 'primary' ? '#ffffff' : '#0B4A6F'
-                      }
-                      style={styles.btnIcon}
-                    />
+                  {sendingReminderId === item.id ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" style={styles.btnIcon} />
+                  ) : (
+                    item.primaryIcon && (
+                      <Feather
+                        name={item.primaryIcon}
+                        size={16}
+                        color={item.actionType === 'primary' ? '#ffffff' : '#0B4A6F'}
+                        style={styles.btnIcon}
+                      />
+                    )
                   )}
 
                   <Text
@@ -480,7 +512,7 @@ export default function FeedbackScreen({ navigation }) {
                         : styles.outlineBtnText,
                     ]}
                   >
-                    {item.primaryAction}
+                    {sendingReminderId === item.id ? 'Sending...' : item.primaryAction}
                   </Text>
                 </TouchableOpacity>
 

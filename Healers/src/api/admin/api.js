@@ -433,3 +433,10 @@ export const saveSettings = async (payload) => {
   const res = await apiClient.put("/admin/settings", payload);
   return res.data;
 };
+
+export const sendFeedbackReminder = async (appointmentId) => {
+  const response = await apiClient.post("/admin/feedback/send-reminder", {
+    appointmentId,
+  });
+  return response.data;
+};

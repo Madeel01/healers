@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Feather from "@expo/vector-icons/Feather";
 
-import { createChildCustomAppointment, getChildCustomSlotOptions, getUsersByRole } from "../../api/admin/api";
+import { createChildCustomAppointment, getChildCustomSlotOptions, getUsersByRole, getServices, } from "../../api/admin/api";
 import SessionSlotPicker from "./components/SessionSlotPicker";
 import { colors, fonts } from "../../styles/theme";
 import { formatTo12Hour } from "../../utils/hoursformat";
@@ -31,6 +31,8 @@ const prettyFull = (k) => {
 
 export default function ChildCustomAppointmentScreen({ navigation, route }) {
   const { childId, childName } = route.params;
+  const [selectingTherapist, setSelectingTherapist] = useState(false);
+  const [selectedTherapist, setSelectedTherapist] = useState(null);
 
   const [search, setSearch] = useState("");
   const [therapists, setTherapists] = useState([]);
@@ -40,8 +42,25 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
   const [minutes, setMinutes] = useState(60);
   const [choice, setChoice] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [services, setServices] = useState([]);
 
-  // therapists (debounced search)
+  useEffect(() => {
+    let alive = true;
+    getServices({ search: "" })
+      .then((res) => {
+        if (alive) setServices((res?.data || []).filter((s) => s.isActive === true));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const serviceMap = useMemo(
+    () => new Map(services.map((s) => [s.id, s])),
+    [services],
+  );
+
   useEffect(() => {
     let alive = true;
     setLoadingList(true);
@@ -61,19 +80,27 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
     };
   }, [search]);
 
-  // changing therapist -> the picker reloads because this function changes
   const loadSlots = useCallback(
     (date, m) => getChildCustomSlotOptions(childId, { therapistId, date, sessionMinutes: m }),
     [childId, therapistId],
   );
 
-  const pickTherapist = (id) => {
-    setTherapistId(id);
+  const pickTherapist = (t) => {
+    if (t === therapistId) return;
+
+    setSelectedTherapist(t);
+    setTherapistId(t._id || t.id);
     setChoice(null);
   };
   const pickMinutes = (m) => {
     setMinutes(m);
     setChoice(null);
+  };
+  const changeTherapist = () => {
+    setSelectedTherapist(null);
+    setTherapistId(null);
+    setChoice(null);
+    setSearch(""); 
   };
 
   const submit = async () => {
@@ -92,6 +119,22 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
     } finally {
       setBusy(false);
     }
+  };
+  const renderSpecChips = (t) => {
+    const specs = [].concat(t.speciality ?? t.specialities ?? t.services ?? []);
+    if (services.length === 0 || specs.length === 0) return null;
+    return (
+      <View style={styles.chipWrap}>
+        {specs.map((sid) => {
+          const m = serviceMap.get(sid) || { label: sid, bg: "#E0F2FE", color: "#0B4A6F" };
+          return (
+            <View key={sid} style={[styles.chip, { backgroundColor: m.bg }]}>
+              <Text style={[styles.chipText, { color: m.color }]}>{m.label}</Text>
+            </View>
+          );
+        })}
+      </View>
+    );
   };
 
   const ready = !!therapistId && !!choice && !busy;
@@ -113,42 +156,62 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.hint}>
-          A one-to-one session. Only times inside the therapist's availability, when both the therapist
-          and the child are free, can be picked.
-        </Text>
 
         <Text style={styles.label}>Therapist</Text>
-        <View style={styles.searchBox}>
-          <Feather name="search" size={16} color="#94A3B8" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search therapist..."
-            placeholderTextColor="#94A3B8"
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
 
-        {loadingList ? (
-          <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
-        ) : therapists.length === 0 ? (
-          <Text style={styles.muted}>No therapists found.</Text>
-        ) : (
-          therapists.map((t) => {
-            const id = t._id || t.id;
-            const on = therapistId === id;
-            return (
-              <TouchableOpacity
-                key={id}
-                style={[styles.therapistRow, on && styles.therapistRowOn]}
-                onPress={() => pickTherapist(id)}
-              >
-                <View style={[styles.radio, on && styles.radioOn]}>{on && <View style={styles.radioDot} />}</View>
-                <Text style={styles.therapistName}>{t.fullName || t.name}</Text>
+        {selectedTherapist ? (
+          <View style={styles.selectedCard}>
+            <View style={styles.selectedTop}>
+              <View style={[styles.radio, styles.radioOn]}>
+                <View style={styles.radioDot} />
+              </View>
+              <Text style={styles.therapistName} numberOfLines={1}>
+                {selectedTherapist.fullName || selectedTherapist.name}
+              </Text>
+              <TouchableOpacity style={styles.changeBtn} onPress={changeTherapist} activeOpacity={0.8}>
+                <Feather name="repeat" size={14} color={colors.primary} />
+                <Text style={styles.changeBtnText}>Change</Text>
               </TouchableOpacity>
-            );
-          })
+            </View>
+            {renderSpecChips(selectedTherapist)}
+          </View>
+        ) : (
+          <>
+            <View style={styles.searchBox}>
+              <Feather name="search" size={16} color="#94A3B8" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search therapist..."
+                placeholderTextColor="#94A3B8"
+                value={search}
+                onChangeText={setSearch}
+              />
+            </View>
+
+            {loadingList ? (
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
+            ) : therapists.length === 0 ? (
+              <Text style={styles.muted}>No therapists found.</Text>
+            ) : (
+              therapists.map((t) => {
+                const id = t._id || t.id;
+                return (
+                  <TouchableOpacity
+                    key={id}
+                    style={styles.therapistRow}
+                    onPress={() => pickTherapist(t)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.radio} />
+                    <Text style={styles.therapistName} numberOfLines={1}>
+                      {t.fullName || t.name}
+                    </Text>
+                    {renderSpecChips(t)}
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </>
         )}
 
         <Text style={styles.label}>Session length</Text>
@@ -263,4 +326,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   primaryText: { fontSize: 15, fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 8 },
+  chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  chipText: { fontSize: 11, fontFamily: fonts.semiBold },
+  selectedCard: {
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#0B4A6F",
+  },
+  selectedTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  changeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: "#E8F2FC",
+  },
+  changeBtnText: { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
 });
