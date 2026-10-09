@@ -121,6 +121,9 @@ export const AuthProvider = ({ children }) => {
     logoutInProgressRef.current = true;
 
     try {
+      if (currentToken && getTokenRemainingMs(currentToken) > 0) {
+        await updateOnlineStatus(false, currentToken);
+      }
       await clearAuthData();
       tokenRef.current = null;
       sessionVersionRef.current += 1;
@@ -137,8 +140,8 @@ export const AuthProvider = ({ children }) => {
     } finally {
       logoutInProgressRef.current = false;
     }
-  }, []);
-  
+  }, [updateOnlineStatus]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -184,20 +187,41 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const login = async (jwtToken, userData) => {
-    const remainingMs = getTokenRemainingMs(jwtToken);
+  // const login = async (jwtToken, userData) => {
+  //   const remainingMs = getTokenRemainingMs(jwtToken);
 
-    if (remainingMs <= 0) {
-      throw new Error("Invalid or expired login token");
-    }
+  //   if (remainingMs <= 0) {
+  //     throw new Error("Invalid or expired login token");
+  //   }
 
-    await setAuthData(jwtToken, userData);
+  //   await setAuthData(jwtToken, userData);
 
-    sessionVersionRef.current += 1;
-    tokenRef.current = jwtToken;
-    setToken(jwtToken);
-    setUser(userData);
-  };
+  //   sessionVersionRef.current += 1;
+  //   tokenRef.current = jwtToken;
+  //   setToken(jwtToken);
+  //   setUser(userData);
+  // };
+
+  const login = useCallback(
+    async (jwtToken, userData) => {
+      if (getTokenRemainingMs(jwtToken) <= 0) {
+        throw new Error("Invalid or expired token");
+      }
+
+      await setAuthData(jwtToken, userData);
+
+      sessionVersionRef.current += 1;
+      tokenRef.current = jwtToken;
+
+      setToken(jwtToken);
+      setUser(userData);
+
+      if (AppState.currentState === "active") {
+        await updateOnlineStatus(true, jwtToken);
+      }
+    },
+    [updateOnlineStatus],
+  );
 
   const switchUser = async (jwtToken, userData) => {
     const remainingMs = getTokenRemainingMs(jwtToken);
@@ -286,7 +310,7 @@ export const AuthProvider = ({ children }) => {
 
       const formattedTime = formatRemainingTime(remainingMs);
 
-      console.log(`🟢 Auto Logout In: ${formattedTime}`);
+      // console.log(`🟢 Auto Logout In: ${formattedTime}`);
     };
 
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

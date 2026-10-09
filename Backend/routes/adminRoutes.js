@@ -72,7 +72,9 @@ const {
   updateService,
   deleteService,
   postponeBatchSession,
-  createAdditionalSession
+  createAdditionalSession,
+  getProgramTherapists,
+  getProgramTherapistChildren,
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
@@ -92,7 +94,8 @@ router.get("/overview", getAdminOverview);
 router.get("/get_therapists", getTherapistsUsers);
 router.get("/get_therapists_child", assignTherapistsUsers);
 router.get("/users", getUsersByRole);
-
+router.get("/program/therapists", protect, getProgramTherapists);
+router.get("/program/therapists/:therapistId/children", protect, getProgramTherapistChildren);
 router.post("/therapists", protect, createTherapist);
 router.put("/therapists/:id", protect, updateTherapist);
 router.delete("/therapists/:id", protect, deleteTherapist);
@@ -165,6 +168,5 @@ router.delete("/services/:id", protect, deleteService);
 
 router.get("/settings", protect, getSettings);
 router.put("/settings", protect, updateSettings);
-
 
 module.exports = router;

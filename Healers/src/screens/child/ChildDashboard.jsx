@@ -7,6 +7,7 @@ import React, {
 
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Image,
   Modal,
@@ -100,6 +101,12 @@ export default function ChildDashboardScreen({ navigation }) {
       const response = await switchUserApi(selectedUser._id);
 
       if (!response?.success) {
+        Alert.alert(
+          "Error",
+          response?.message
+            || response?.data?.message
+            || "Error while switch User",
+        );
         return;
       }
 
@@ -107,9 +114,15 @@ export default function ChildDashboardScreen({ navigation }) {
 
       await switchUser(response.token, response.user);
     } catch (error) {
+      Alert.alert(
+        "Error",
+         error?.response?.data?.message ||
+        error?.message
+          || "Error while switch User",
+      );
       console.log(
         "switch user error:",
-        error?.response?.data || error?.message,
+        error?.response?.data ,
       );
     } finally {
       setSwitchingUser(false);

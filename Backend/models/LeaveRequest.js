@@ -7,7 +7,7 @@ const leaveRequestSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-   approved_by: {
+    approved_by: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
@@ -35,12 +35,12 @@ const leaveRequestSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    rejectionReason: {         
+    rejectionReason: {
       type: String,
       trim: true,
       default: "",
     },
-    actionedAt: {            
+    actionedAt: {
       type: Date,
       default: null,
     },
@@ -48,6 +48,10 @@ const leaveRequestSchema = new mongoose.Schema(
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
+    },
+    isSeen: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true },

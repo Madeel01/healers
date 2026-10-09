@@ -78,9 +78,16 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "User not register." });
     }
 
+    if (user.isActive !== true) {
+      return res.status(403).json({
+        success: false,
+        message: "User is not active. Please contact admin.",
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials." });
+      return res.status(401).json({ message: "Invalid Password." });
     }
     user.isLogin = true;
     await user.save();
@@ -141,7 +148,6 @@ exports.switchUser = async (req, res) => {
     }
 
     const currentUser = await User.findById(currentUserId);
-
     if (!currentUser) {
       return res.status(404).json({
         success: false,
@@ -150,6 +156,7 @@ exports.switchUser = async (req, res) => {
     }
 
     const targetUser = await User.findById(userId);
+    console.log("targetUser", targetUser);
 
     if (!targetUser) {
       return res.status(404).json({
@@ -157,7 +164,12 @@ exports.switchUser = async (req, res) => {
         message: "User not found",
       });
     }
-
+    if (targetUser.isActive !== true) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account is not active. Please contact admin.",
+      });
+    }
     if (
       !currentUser.fatherCnic
       || !targetUser.fatherCnic
