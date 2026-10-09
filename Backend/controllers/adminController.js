@@ -245,9 +245,13 @@ const addDays = (key, n) =>
     .slice(0, 10);
 const sameId = (a, b) => String(a?._id || a) === String(b?._id || b);
 const utcMidnight = (key) => new Date(`${key}T00:00:00Z`);
+let settingsCache = { at: 0, value: null };
 const loadScheduleSettings = async () => {
+  if (settingsCache.value && Date.now() - settingsCache.at < 60 * 1000) {
+    return settingsCache.value;
+  }
   const s = await SystemSetting.findOne().lean();
-  return {
+  const value = {
     tz: s?.timezone || "Asia/Karachi",
     clinicStart: s?.clinicStartTime ? toMin(s.clinicStartTime) : null,
     clinicEnd: s?.clinicEndTime ? toMin(s.clinicEndTime) : null,
@@ -255,6 +259,8 @@ const loadScheduleSettings = async () => {
     breakEnd: s?.breakEndTime ? toMin(s.breakEndTime) : null,
     workingDays: s?.workingDays?.length ? s.workingDays : WORKING_DAYS,
   };
+  settingsCache = { at: Date.now(), value };
+  return value;
 };
 
 const planRange = (batch, today) => {
@@ -667,28 +673,64 @@ const computeFreeSlots = async ({
   }
 
   const children = childIds.map(String);
+  const childObjIds = children.map((id) => new mongoose.Types.ObjectId(id));
+  const therapistObjId = new mongoose.Types.ObjectId(therapistId);
+  const dayStart = utcMidnight(date);
+  const [year, month] = date.split("-").map(Number);
 
-  const [rules, schedules] = await Promise.all([
+  const [rules, rows] = await Promise.all([
     TherapistAvailability.find({ therapistId, isActive: true }).lean(),
-    Scheduling.find({
-      "appointments.date": utcMidnight(date),
-      $or: [
-        { therapistId },
-        ...(children.length ? [{ "appointments.children.childId": { $in: children } }] : []),
-      ],
-    }).lean(),
+    Scheduling.aggregate([
+      {
+        $match: {
+          $or: [
+            { therapistId: therapistObjId, year, month },
+            ...(childObjIds.length
+              ? [
+                  {
+                    appointments: {
+                      $elemMatch: {
+                        date: dayStart,
+                        "children.childId": { $in: childObjIds },
+                      },
+                    },
+                  },
+                ]
+              : []),
+          ],
+        },
+      },
+      {
+        $project: {
+          therapistId: 1,
+          appointments: {
+            $filter: {
+              input: "$appointments",
+              as: "a",
+              cond: { $eq: ["$$a.date", dayStart] },
+            },
+          },
+        },
+      },
+      { $unwind: "$appointments" },
+      {
+        $project: {
+          _id: 0,
+          mine: { $eq: ["$therapistId", therapistObjId] },
+          sessionType: "$appointments.sessionType",
+          startTime: "$appointments.startTime",
+          endTime: "$appointments.endTime",
+          childIds: "$appointments.children.childId",
+        },
+      },
+    ]),
   ]);
 
   const busy = [];
-  for (const sc of schedules) {
-    const mine = String(sc.therapistId) === String(therapistId);
-    for (const ap of sc.appointments || []) {
-      if (dateKeyOf(ap.date) !== date) continue;
-      const hasChild = (ap.children || []).some((c) => children.includes(String(c.childId)));
-      const inactive = INACTIVE_TYPES.includes(ap.sessionType);
-      if (mine || (hasChild && !inactive)) {
-        busy.push({ a: toMin(ap.startTime), b: toMin(ap.endTime) });
-      }
+  for (const ap of rows) {
+    const hasChild = (ap.childIds || []).some((c) => children.includes(String(c)));
+    if (ap.mine || (hasChild && !INACTIVE_TYPES.includes(ap.sessionType))) {
+      busy.push({ a: toMin(ap.startTime), b: toMin(ap.endTime) });
     }
   }
 
@@ -848,7 +890,7 @@ exports.getAdminOverview = async (req, res) => {
     const [totalChild, therapistCount, totalUsers] = await Promise.all([
       User.countDocuments({ role: "Child" }),
       User.countDocuments({ role: "Therapist" }),
-      User.countDocuments(),
+      User.countDocuments({ role: { $ne:"Admin" }}),
     ]);
 
     const sessionCount = 5;
@@ -1761,7 +1803,7 @@ exports.getTherapistSchedule = async (req, res) => {
 
     const therapist = await User.findOne(
       { _id: therapistId, role: "Therapist" },
-      "fullName email phone",
+      "fullName email phone isActive",
     ).lean();
 
     if (!therapist) {
@@ -1990,233 +2032,194 @@ exports.createChild = async (req, res) => {
 exports.updateChild = async (req, res) => {
   try {
     const { id } = req.params;
-
     const {
-      fullName,
-      fatherName,
-      fatherCnic,
-      age,
-      email,
-      phone,
-      password,
-      packageId,
-      discountedPrice,
-      isActive,
+      fullName, fatherName, fatherCnic, age, email,
+      phone, password, packageId, discountedPrice, isActive,
     } = req.body;
 
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid child id." });
+    }
     if (!fullName || !email || !phone) {
-      return res.json({
+      return res.status(400).json({
         success: false,
         message: "fullName, email and phone are required.",
       });
     }
-
-    if (
-      isActive !== undefined &&
-      isActive !== true &&
-      isActive !== false
-    ) {
+    if (isActive !== undefined && typeof isActive !== "boolean") {
       return res.status(400).json({
         success: false,
         message: "isActive must be true or false.",
       });
     }
 
-    const currentChild = await User.findOne({
-      _id: id,
-      role: "Child",
-    });
+    const currentChild = await User.findOne({ _id: id, role: "Child" })
+      .select("fatherName fatherCnic")
+      .lean();
 
     if (!currentChild) {
-      return res.status(404).json({
-        success: false,
-        message: "Child not found.",
-      });
+      return res.status(404).json({ success: false, message: "Child not found." });
     }
 
+    let cnic;
+    if (fatherCnic) {
+      cnic = normalizeCnic(fatherCnic);
+      if (!cnic) {
+        return res.status(400).json({
+          success: false,
+          message: "CNIC must be 13 digits.",
+        });
+      }
+    }
+
+    if (cnic || fatherName !== undefined) {
+      const targetCnic = cnic || currentChild.fatherCnic;
+      const targetName =
+        fatherName !== undefined ? fatherName : currentChild.fatherName;
+
+      if (targetCnic) {
+        const others = await User.find({
+          role: "Child",
+          fatherCnic: targetCnic,
+          _id: { $ne: id },
+        })
+          .select("fatherName")
+          .lean();
+
+        if (
+          others.some(
+            (c) => normalizeName(c.fatherName) !== normalizeName(targetName)
+          )
+        ) {
+          return res.status(409).json({
+            success: false,
+            message: "This parent CNIC already exists with a different parent name.",
+          });
+        }
+      }
+    }
+
+    const updateFields = {
+      fullName,
+      email,
+      phone,
+      ...(fatherName !== undefined && { fatherName }),
+      ...(cnic && { fatherCnic: cnic }),
+      ...(age !== undefined && { age }),
+      ...(isActive !== undefined && { isActive }),
+    };
+
+    if (packageId !== undefined) {
+      const r = await resolvePackageAssignment(packageId, discountedPrice);
+      if (r.error) {
+        return res.status(r.status).json({ success: false, message: r.error });
+      }
+      Object.assign(updateFields, r.fields);
+    }
+
+    if (password) {
+      updateFields.password = await bcrypt.hash(password, 10);
+    }
+
+    const childId = new mongoose.Types.ObjectId(id);
     const now = new Date();
 
     if (isActive === false) {
-
-      const batches = await Batch.find({
-        childrenIds: id,
-      });
-
-      const activeBatch = batches.find(
-        (batch) =>
-          batch.dateFrom <= now &&
-          batch.dateTo >= now
-      );
+      const activeBatch = await Batch.findOne({
+        childrenIds: childId,
+        dateFrom: { $lte: now },
+        dateTo: { $gte: now },
+      })
+        .select("batchName")
+        .lean();
 
       if (activeBatch) {
         return res.status(400).json({
           success: false,
           message:
-            "Child cannot be deactivated because the child is currently enrolled in an active running batch.",
+            "Child cannot be deactivated because the child is already in an active running batch.",
           batchId: activeBatch._id,
           batchName: activeBatch.batchName,
         });
       }
-
-      await Scheduling.updateMany(
-        {
-          "appointments.date": { $gte: now },
-          "appointments.children.childId": id,
-        },
-        {
-          $pull: {
-            "appointments.$[appointment].children": {
-              childId: id,
-            },
-          },
-        },
-        {
-          arrayFilters: [
-            {
-              "appointment.date": { $gte: now },
-              "appointment.children.childId": id,
-            },
-          ],
-        }
-      );
-
-      await Scheduling.updateMany(
-        {
-          "appointments.date": { $gte: now },
-          "appointments.type": "custom",
-          "appointments.children": { $size: 0 },
-        },
-        {
-          $pull: {
-            appointments: {
-              date: { $gte: now },
-              type: "custom",
-              children: { $size: 0 },
-            },
-          },
-        }
-      );
-
-      await Scheduling.deleteMany({
-        appointments: { $size: 0 },
-      });
-
-      currentChild.isActive = false;
-      await currentChild.save();
-    }
-
-    else if (isActive === true) {
-      currentChild.isActive = true;
-      await currentChild.save();
-    }
-
-    const cnic = fatherCnic
-      ? normalizeCnic(fatherCnic)
-      : undefined;
-
-    if (fatherCnic && !cnic) {
-      return res.status(400).json({
-        success: false,
-        message: "CNIC must be 13 digits.",
-      });
-    }
-
-
-    if (
-      fatherName !== undefined ||
-      fatherCnic !== undefined
-    ) {
-      const targetCnic =
-        cnic || currentChild.fatherCnic;
-
-      const otherChildren = await User.find({
-        role: "Child",
-        fatherCnic: targetCnic,
-        _id: { $ne: id },
-      }).lean();
-
-      if (
-        otherChildren.length > 0 &&
-        fatherName !== undefined &&
-        otherChildren.some(
-          (child) =>
-            normalizeName(child.fatherName) !==
-            normalizeName(fatherName)
-        )
-      ) {
-        return res.status(409).json({
-          success: false,
-          message:
-            "This parent CNIC already exists with a different parent name.",
-        });
-      }
-    }
-
-
-    const updateFields = {
-      ...(fullName && { fullName }),
-      ...(fatherName !== undefined && {
-        fatherName,
-      }),
-      ...(fatherCnic !== undefined && {
-        fatherCnic: cnic,
-      }),
-      ...(age !== undefined && { age }),
-      ...(email && { email }),
-      ...(phone && { phone }),
-    };
-
-    if (packageId !== undefined) {
-      const r = await resolvePackageAssignment(
-        packageId,
-        discountedPrice
-      );
-
-      if (r.error) {
-        return res.status(r.status).json({
-          success: false,
-          message: r.error,
-        });
-      }
-
-      Object.assign(updateFields, r.fields);
-    }
-
-    if (password) {
-      updateFields.password = await bcrypt.hash(
-        password,
-        10
-      );
-    }
-
-    if (isActive !== undefined) {
-      updateFields.isActive = isActive;
     }
 
     const child = await User.findOneAndUpdate(
-      {
-        _id: id,
-        role: "Child",
-      },
+      { _id: id, role: "Child" },
       updateFields,
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
+      { new: true, runValidators: true }
+    ).select("-password");
 
     if (!child) {
-      return res.json({
-        success: false,
-        message: "Child not found.",
-      });
+      return res.status(404).json({ success: false, message: "Child not found." });
+    }
+
+    if (isActive === false) {
+      await Scheduling.updateMany(
+        {
+          appointments: {
+            $elemMatch: { date: { $gte: now }, "children.childId": childId },
+          },
+        },
+        [
+          {
+            $set: {
+              updatedAt: now,
+              appointments: {
+                $filter: {
+                  input: {
+                    $map: {
+                      input: "$appointments",
+                      as: "a",
+                      in: {
+                        $cond: [
+                          { $gte: ["$$a.date", now] },
+                          {
+                            $mergeObjects: [
+                              "$$a",
+                              {
+                                children: {
+                                  $filter: {
+                                    input: "$$a.children",
+                                    as: "c",
+                                    cond: { $ne: ["$$c.childId", childId] },
+                                  },
+                                },
+                              },
+                            ],
+                          },
+                          "$$a",
+                        ],
+                      },
+                    },
+                  },
+                  as: "a",
+                  cond: {
+                    $not: [
+                      {
+                        $and: [
+                          { $gte: ["$$a.date", now] },
+                          { $eq: ["$$a.type", "custom"] },
+                          { $eq: [{ $size: "$$a.children" }, 0] },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ]
+      );
+
+      await Scheduling.deleteMany({ appointments: { $size: 0 } });
     }
 
     return res.status(200).json({
       success: true,
       message:
         isActive === false
-          ? "Child deactivated successfully and future appointments were removed."
+          ? "Child deactivated successfully and removed from future appointments."
           : isActive === true
             ? "Child activated successfully."
             : "Child updated successfully.",
@@ -2231,7 +2234,6 @@ exports.updateChild = async (req, res) => {
         message: "A user with this email already exists.",
       });
     }
-
     return res.status(500).json({
       success: false,
       message: "Failed to update child.",
@@ -2242,29 +2244,26 @@ exports.updateChild = async (req, res) => {
 exports.deleteChild = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid child id." });
+    }
+    const childId = new mongoose.Types.ObjectId(id);
     const now = new Date();
 
-    const child = await User.findOne({
-      _id: id,
-      role: "Child",
-    });
+    const [child, activeBatch] = await Promise.all([
+      User.exists({ _id: childId, role: "Child" }),
+      Batch.findOne({
+        childrenIds: childId,
+        dateFrom: { $lte: now },
+        dateTo: { $gte: now },
+      })
+        .select("batchName")
+        .lean(),
+    ]);
 
     if (!child) {
-      return res.status(404).json({
-        success: false,
-        message: "Child not found.",
-      });
+      return res.status(404).json({ success: false, message: "Child not found." });
     }
-
-    const batches = await Batch.find({
-      childrenIds: id,
-    });
-
-    const activeBatch = batches.find(
-      (batch) =>
-        batch.dateFrom <= now &&
-        batch.dateTo >= now
-    );
 
     if (activeBatch) {
       return res.status(400).json({
@@ -2275,60 +2274,99 @@ exports.deleteChild = async (req, res) => {
       });
     }
 
-    await Scheduling.updateMany(
-      {
-        "appointments.date": { $gte: now },
-        "appointments.children.childId": id,
-      },
-      {
-        $pull: {
-          "appointments.$[appointment].children": {
-            childId: id,
-          },
-        },
-      },
-      {
-        arrayFilters: [
-          {
-            "appointment.date": { $gte: now },
-            "appointment.children.childId": id,
-          },
-        ],
-      }
-    );
-
-    await Scheduling.updateMany(
-      {
-        "appointments.date": { $gte: now },
-        "appointments.type": "custom",
-        "appointments.children": { $size: 0 },
-      },
-      {
-        $pull: {
+    const [, hasPastData] = await Promise.all([
+      Scheduling.updateMany(
+        {
           appointments: {
-            date: { $gte: now },
-            type: "custom",
-            children: { $size: 0 },
+            $elemMatch: { date: { $gte: now }, "children.childId": childId },
           },
         },
-      }
-    );
+        [
+          {
+            $set: {
+              updatedAt: now,
+              appointments: {
+                $filter: {
+                  input: {
+                    $map: {
+                      input: "$appointments",
+                      as: "a",
+                      in: {
+                        $cond: [
+                          { $gte: ["$$a.date", now] },
+                          {
+                            $mergeObjects: [
+                              "$$a",
+                              {
+                                children: {
+                                  $filter: {
+                                    input: "$$a.children",
+                                    as: "c",
+                                    cond: { $ne: ["$$c.childId", childId] },
+                                  },
+                                },
+                              },
+                            ],
+                          },
+                          "$$a",
+                        ],
+                      },
+                    },
+                  },
+                  as: "a",
+                  cond: {
+                    $not: [
+                      {
+                        $and: [
+                          { $gte: ["$$a.date", now] },
+                          { $eq: ["$$a.type", "custom"] },
+                          { $eq: [{ $size: "$$a.children" }, 0] },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ]
+      ),
+      Scheduling.exists({
+        appointments: {
+          $elemMatch: { date: { $lt: now }, "children.childId": childId },
+        },
+      }),
+    ]);
 
-    child.isActive = false;
-    await child.save();
+    await Scheduling.deleteMany({ appointments: { $size: 0 } });
+
+    if (hasPastData) {
+      await User.updateOne({ _id: childId }, { $set: { isActive: false } });
+
+      return res.status(200).json({
+        success: true,
+        message:
+          "Child has past records, so the child was deactivated and removed from future appointments.",
+        deleted: false,
+      });
+    }
+
+    await Promise.all([
+      Batch.updateMany({ childrenIds: childId }, { $pull: { childrenIds: childId } }),
+      BatchAssignment.updateMany({ childIds: childId }, { $pull: { childIds: childId } }),
+      User.deleteOne({ _id: childId, role: "Child" }),
+    ]);
 
     return res.status(200).json({
       success: true,
-      message:
-        "Child has been made inactive and removed from future appointments.",
-      data: child,
+      message: "Child deleted permanently (no past records found).",
+      deleted: true,
     });
   } catch (error) {
     console.error("Delete Child Error:", error);
-
     return res.status(500).json({
       success: false,
-      message: "Failed to deactivate child.",
+      message: "Failed to delete child.",
       error: error.message,
     });
   }
@@ -5226,7 +5264,7 @@ exports.deleteBatchSession = async (req, res) => {
 
 const loadChild = (childId) =>
   mongoose.isValidObjectId(childId)
-    ? User.findOne({ _id: childId, role: "Child" }, "fullName email phone fatherName age").lean()
+    ? User.findOne({ _id: childId, role: "Child" }, "fullName email").lean()
     : null;
 
 exports.getChildSchedule = async (req, res) => {
@@ -5394,7 +5432,7 @@ exports.getChildCustomSlotOptions = async (req, res) => {
     const { therapistId, date } = req.body;
     const minutes = Number(req.body.sessionMinutes);
 
-    if (!(await loadChild(childId))) {
+    if (!mongoose.isValidObjectId(childId)) {
       return res.status(404).json({ success: false, message: "Child not found." });
     }
     if (!mongoose.isValidObjectId(therapistId)) {
@@ -5407,7 +5445,12 @@ exports.getChildCustomSlotOptions = async (req, res) => {
       });
     }
 
-    const r = await computeFreeSlots({ therapistId, childIds: [childId], date, minutes });
+    const [child, r] = await Promise.all([
+      loadChild(childId),
+      computeFreeSlots({ therapistId, childIds: [childId], date, minutes }),
+    ]);
+
+    if (!child) return res.status(404).json({ success: false, message: "Child not found." });
     if (r.error) return res.status(400).json({ success: false, message: r.error });
 
     return res.json({ success: true, data: { slots: r.slots, reason: r.reason } });
@@ -5421,15 +5464,11 @@ exports.createChildCustomAppointment = async (req, res) => {
     const { childId } = req.params;
     const { therapistId, date, startTime, endTime } = req.body;
 
-    if (!(await loadChild(childId))) {
+    if (!mongoose.isValidObjectId(childId)) {
       return res.status(404).json({ success: false, message: "Child not found." });
     }
     if (!mongoose.isValidObjectId(therapistId)) {
       return res.status(400).json({ success: false, message: "Select a therapist." });
-    }
-    const therapist = await User.findOne({ _id: therapistId, role: "Therapist" }, "_id").lean();
-    if (!therapist) {
-      return res.status(404).json({ success: false, message: "Therapist not found." });
     }
     if (!TIME_REGEX.test(startTime || "") || !TIME_REGEX.test(endTime || "")) {
       return res.status(400).json({ success: false, message: "Start and end time must be HH:mm." });
@@ -5442,7 +5481,14 @@ exports.createChildCustomAppointment = async (req, res) => {
       });
     }
 
-    const r = await computeFreeSlots({ therapistId, childIds: [childId], date, minutes });
+    const [child, therapist, r] = await Promise.all([
+      loadChild(childId),
+      User.exists({ _id: therapistId, role: "Therapist" }),
+      computeFreeSlots({ therapistId, childIds: [childId], date, minutes }),
+    ]);
+
+    if (!child) return res.status(404).json({ success: false, message: "Child not found." });
+    if (!therapist) return res.status(404).json({ success: false, message: "Therapist not found." });
     if (r.error) return res.status(400).json({ success: false, message: r.error });
     if (!r.slots.some((s) => s.startTime === startTime && s.endTime === endTime)) {
       return res.status(409).json({
@@ -5452,24 +5498,25 @@ exports.createChildCustomAppointment = async (req, res) => {
     }
 
     const d = utcMidnight(date);
-    const year = d.getUTCFullYear();
-    const month = d.getUTCMonth() + 1;
 
-    let schedule = await Scheduling.findOne({ therapistId, year, month });
-    if (!schedule) {
-      schedule = new Scheduling({ therapistId, year, month, appointments: [] });
-    }
-
-    schedule.appointments.push({
-      date: d,
-      startTime,
-      endTime,
-      type: "custom",
-      sessionType: "regular",
-      children: [{ childId, attendance_status: "Pending" }],
-    });
-
-    await schedule.save();
+    await Scheduling.updateOne(
+      { therapistId, year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 },
+      {
+        $push: {
+          appointments: {
+            _id: new mongoose.Types.ObjectId(),
+            date: d,
+            startTime,
+            endTime,
+            type: "custom",
+            sessionType: "regular",
+            session_status: "Upcoming",
+            children: [{ childId, attendance_status: "Pending" }],
+          },
+        },
+      },
+      { upsert: true },
+    );
 
     return res.status(201).json({
       success: true,

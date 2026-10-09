@@ -55,5 +55,6 @@ const batchSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+batchSchema.index({ childrenIds: 1, dateFrom: 1, dateTo: 1 });
 
 module.exports = mongoose.model("Batch", batchSchema);

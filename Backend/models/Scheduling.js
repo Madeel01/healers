@@ -166,6 +166,7 @@ schedulingSchema.pre("validate", function() {
 schedulingSchema.index({ "appointments.batchId": 1 });
 schedulingSchema.index({ "appointments.batchAssignmentId": 1 });
 schedulingSchema.index({ "appointments.children.childId": 1 });
+schedulingSchema.index({ "appointments._id": 1 });
 
 
 module.exports = mongoose.model("Scheduling", schedulingSchema);

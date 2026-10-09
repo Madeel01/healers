@@ -46,6 +46,7 @@ batchAssignmentSchema.index(
   },
   { unique: true }
 );
+batchAssignmentSchema.index({ childIds: 1 });
 
 module.exports = mongoose.model(
   "BatchAssignment",

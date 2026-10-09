@@ -18,8 +18,11 @@ exports.getUsersByRole = async (req, res) => {
     }
 
     const filter = role
-      ? { role }
-      : { role: { $in: allowedRoles } };
+                  ? { role, isActive: true }
+                  : {
+                      role: { $in: allowedRoles },
+                      isActive: true,
+                    };
 
     if (role === "Therapist" && child) {
       const assignments = await TherapistAssignment.find({
@@ -57,7 +60,8 @@ exports.getUsersByRole = async (req, res) => {
       }
     )
       .sort({ fullName: 1 })
-      .limit(5);
+      .limit(5)
+      .lean();
 
     let responseData = users;
 
@@ -71,8 +75,29 @@ exports.getUsersByRole = async (req, res) => {
       );
 
       responseData = users.map((u) => ({
-        ...u.toObject(),
+        ...u,
         isAssigned: assignedSet.has(u._id.toString()),
+      }));
+    }
+    if (role === "Therapist" && users.length) {
+      const rows = await TherapistAssignment.find(
+        {
+          therapistId: { $in: users.map((u) => u._id) },
+          specialty: { $exists: true, $ne: "" },
+        },
+        { therapistId: 1, specialty: 1 }
+      ).lean();
+
+      const map = new Map();
+      for (const r of rows) {
+        const key = String(r.therapistId);
+        if (!map.has(key)) map.set(key, new Set());
+        map.get(key).add(r.specialty);
+      }
+
+      responseData = users.map((u) => ({
+        ...u,
+        speciality: [...(map.get(String(u._id)) || [])],
       }));
     }
 
