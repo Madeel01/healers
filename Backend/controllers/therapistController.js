@@ -13,10 +13,7 @@ exports.getDashboardStats = async (req, res) => {
   try {
     const rawTherapistId = req.query.filter || req.user?._id || req.user?.id;
 
-    if (
-      !rawTherapistId
-      || !mongoose.Types.ObjectId.isValid(rawTherapistId)
-    ) {
+    if (!rawTherapistId || !mongoose.Types.ObjectId.isValid(rawTherapistId)) {
       return res.status(400).json({
         success: false,
         message: "Valid therapist ID is required.",
@@ -37,8 +34,15 @@ exports.getDashboardStats = async (req, res) => {
 
     const assignedChildren = assignment?.childIds || [];
 
+    const activeAssignedChildren = await User.find({
+      _id: { $in: assignedChildren },
+      isActive: true,
+    })
+      .select("_id")
+      .lean();
+
     const assignedChildIds = new Set(
-      assignedChildren.map((id) => String(id)),
+      activeAssignedChildren.map((child) => String(child._id)),
     );
 
     const schedules = await Scheduling.find({
@@ -59,10 +63,7 @@ exports.getDashboardStats = async (req, res) => {
     let nextSession = null;
     let closestTime = Infinity;
 
-    const getSessionDateTime = (
-      date,
-      time,
-    ) => {
+    const getSessionDateTime = (date, time) => {
       if (!date) {
         return null;
       }
@@ -125,21 +126,14 @@ exports.getDashboardStats = async (req, res) => {
 
           totalSessions++;
 
-          const isToday = startDateTime.getFullYear()
-              === now.getFullYear()
-            && startDateTime.getMonth()
-              === now.getMonth()
-            && startDateTime.getDate()
-              === now.getDate();
+          const isToday = startDateTime.getFullYear() === now.getFullYear()
+            && startDateTime.getMonth() === now.getMonth() && startDateTime.getDate() === now.getDate();
 
           if (isToday) {
             todaySessions++;
           }
 
-          if (
-            startDateTime.getTime()
-              >= now.getTime()
-          ) {
+          if (startDateTime.getTime() >= now.getTime()) {
             const difference = startDateTime.getTime()
               - now.getTime();
 
@@ -149,13 +143,8 @@ exports.getDashboardStats = async (req, res) => {
               const child = children[0];
 
               nextSession = {
-                appointmentId: String(
-                  appointment._id,
-                ),
-                childId: String(
-                  child.childId?._id
-                    || child.childId,
-                ),
+                appointmentId: String(appointment._id),
+                childId: String(child.childId?._id || child.childId),
                 childName: child.childId?.fullName
                   || child.childId?.name
                   || "Assigned Child",
@@ -168,18 +157,11 @@ exports.getDashboardStats = async (req, res) => {
             }
           }
 
-          if (
-            endDateTime
-            && endDateTime.getTime()
-              <= now.getTime()
-          ) {
+          if (endDateTime && endDateTime.getTime() <= now.getTime()) {
             children.forEach((child) => {
               attendanceSessions++;
 
-              if (
-                child.attendance_status
-                  === "Complete"
-              ) {
+              if (child.attendance_status === "Complete") {
                 completedSessions++;
               }
             });
@@ -224,7 +206,7 @@ exports.getDashboardStats = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
-        assignedChildren: assignedChildren.length,
+        assignedChildren: activeAssignedChildren.length,
         todaySessions,
         monthlyFeedback: `${totalSubmittedFeedback}/${totalSessions}`,
         overallAttendance: `${overallAttendance}%`,
@@ -263,6 +245,7 @@ exports.getTherapistUser = async (req, res) => {
 
     const children = await User.find({
       _id: { $in: childIds },
+      isActive: true,
     })
       .select("-password")
       .lean();
@@ -281,35 +264,233 @@ exports.getTherapistUser = async (req, res) => {
   }
 };
 
+
 exports.getChildPrograms = async (req, res) => {
   try {
-    const { childId } = req.params;
-    const therapistId = req.query.therapistId || req.user?._id || req.user?.id;
+    const therapistId =
+      req.query.therapistId ||
+      req.user?._id ||
+      req.user?.id;
 
-    if (!childId || !therapistId) {
+    const { childId } = req.params;
+
+    if (
+      therapistId &&
+      !mongoose.Types.ObjectId.isValid(therapistId)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Both childId and therapistId are required.",
+        message: "Invalid therapist ID.",
       });
     }
 
-    const programs = await Program.find({
-      userId: childId,
-      therapistId: therapistId,
-    }).sort({ createdAt: -1 });
+    if (
+      childId &&
+      !mongoose.Types.ObjectId.isValid(childId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid child ID.",
+      });
+    }
+
+    const matchQuery = {};
+
+    if (therapistId) {
+      matchQuery.therapistId =
+        new mongoose.Types.ObjectId(therapistId);
+    }
+
+    if (childId) {
+      matchQuery.childIds =
+        new mongoose.Types.ObjectId(childId);
+    }
+
+    const data = await TherapistAssignment.aggregate([
+      { $match: matchQuery },
+
+      // Active therapist
+      {
+        $lookup: {
+          from: "users",
+          localField: "therapistId",
+          foreignField: "_id",
+          as: "therapist",
+        },
+      },
+      { $unwind: "$therapist" },
+      {
+        $match: {
+          "therapist.role": "Therapist",
+          "therapist.isActive": true,
+        },
+      },
+
+      // One row per assigned child
+      { $unwind: "$childIds" },
+
+      ...(childId
+        ? [
+            {
+              $match: {
+                childIds: new mongoose.Types.ObjectId(childId),
+              },
+            },
+          ]
+        : []),
+
+      // Get active child
+      {
+        $lookup: {
+          from: "users",
+          localField: "childIds",
+          foreignField: "_id",
+          as: "child",
+        },
+      },
+      { $unwind: "$child" },
+      {
+        $match: {
+          "child.role": "Child",
+          "child.isActive": true,
+        },
+      },
+
+      // Get programs for this child and therapist
+      {
+        $lookup: {
+          from: "programs",
+          let: {
+            childId: "$child._id",
+            therapistId: "$therapist._id",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$userId", "$$childId"] },
+                    { $eq: ["$therapistId", "$$therapistId"] },
+                  ],
+                },
+              },
+            },
+            { $sort: { createdAt: -1 } },
+            {
+              $project: {
+                programName: 1,
+                description: 1,
+                therapistTitle: 1,
+                therapistDescription: 1,
+                programGoals: 1,
+                createdAt: 1,
+                updatedAt: 1,
+              },
+            },
+          ],
+          as: "programs",
+        },
+      },
+
+      // Group duplicate child assignments
+      {
+        $group: {
+          _id: {
+            therapistId: "$therapist._id",
+            childId: "$child._id",
+          },
+          therapist: {
+            $first: {
+              _id: "$therapist._id",
+              fullName: "$therapist.fullName",
+              email: "$therapist.email",
+              profileImage: "$therapist.profileImage",
+              isActive: "$therapist.isActive",
+            },
+          },
+          child: {
+            $first: {
+              _id: "$child._id",
+              fullName: "$child.fullName",
+              age: "$child.age",
+              profileImage: "$child.profileImage",
+              isActive: "$child.isActive",
+            },
+          },
+          programs: { $first: "$programs" },
+        },
+      },
+
+      // Group all children under therapist
+      {
+        $group: {
+          _id: "$_id.therapistId",
+          therapist: { $first: "$therapist" },
+          children: {
+            $push: {
+              child: "$child",
+              programs: "$programs",
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          therapist: 1,
+          children: 1,
+          totalChildren: { $size: "$children" },
+        },
+      },
+      { $sort: { "therapist.fullName": 1 } },
+    ]);
 
     return res.status(200).json({
       success: true,
-      count: programs.length,
-      data: programs,
+      count: data.length,
+      data,
     });
   } catch (error) {
+    console.error("getChildPrograms error:", error);
+
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Failed to fetch child programs.",
+      error: error.message,
     });
   }
 };
+
+
+// exports.getChildPrograms = async (req, res) => {
+//   try {
+//     const { childId } = req.params;
+//     const therapistId = req.query.therapistId || req.user?._id || req.user?.id;
+
+//     if (!childId || !therapistId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Both childId and therapistId are required.",
+//       });
+//     }
+
+//     const programs = await Program.find({
+//       userId: childId,
+//       therapistId: therapistId,
+//     }).sort({ createdAt: -1 });
+
+//     return res.status(200).json({
+//       success: true,
+//       count: programs.length,
+//       data: programs,
+//     });
+//   } catch (error) {
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
 
 exports.AddPrograms = async (req, res) => {
   try {

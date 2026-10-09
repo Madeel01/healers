@@ -1599,6 +1599,147 @@ exports.getVideosByChild = async (req, res) => {
   }
 };
 
+// exports.getAssignMembers = async (req, res) => {
+//   try {
+//     const targetId = req?.query?.userId
+//       || req?.query?.therapistId
+//       || req?.params?.userId
+//       || req?.params?.therapistId
+//       || req?.body?.userId
+//       || req?.body?.therapistId
+//       || req?.user?._id
+//       || req?.user?.id;
+
+//     const role = req?.query?.role
+//       || req?.body?.role
+//       || req?.user?.role;
+
+//     if (role === "Admin") {
+//       const allAssignments = await TherapistAssignment.find()
+//         .populate({
+//           path: "therapistId",
+//           select: "_id fullName profileImage isOnline lastActive role",
+//         })
+//         .populate({
+//           path: "childIds",
+//           select: "_id fullName profileImage isOnline lastActive role",
+//         })
+//         .lean();
+
+//       const formattedData = allAssignments.map((assignment) => ({
+//         assignmentId: assignment._id,
+//         specialty: assignment.specialty || "",
+//         maxChildren: assignment.maxChildren || 0,
+//         therapist: assignment.therapistId
+//           ? {
+//             id: assignment.therapistId._id,
+//             fullName: assignment.therapistId.fullName,
+//             profileImage: assignment.therapistId.profileImage || "",
+//             isOnline: assignment.therapistId.isOnline,
+//             lastActive: assignment.therapistId.lastActive ?? null,
+//             role: assignment.therapistId.role || "therapist",
+//           }
+//           : null,
+//         assignedChildren: Array.isArray(assignment.childIds)
+//           ? assignment.childIds.map((child) => ({
+//             id: child._id,
+//             fullName: child.fullName,
+//             profileImage: child.profileImage || "",
+//             isOnline: child.isOnline,
+//             lastActive: child.lastActive ?? null,
+//             role: child.role || "child",
+//           }))
+//           : [],
+//       }));
+
+//       return res.status(200).json({
+//         success: true,
+//         count: formattedData.length,
+//         data: formattedData,
+//       });
+//     }
+
+//     if (!targetId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Therapist ID or User ID is required",
+//       });
+//     }
+
+//     if (role === "Therapist") {
+//       const assignments = await TherapistAssignment.find({
+//         therapistId: targetId,
+//       })
+//         .populate({
+//           path: "childIds",
+//           select: "_id fullName profileImage isOnline lastActive role",
+//         })
+//         .lean();
+
+//       const childrenMap = new Map();
+
+//       assignments.forEach((item) => {
+//         if (Array.isArray(item.childIds)) {
+//           item.childIds.forEach((child) => {
+//             if (child && !childrenMap.has(child._id.toString())) {
+//               childrenMap.set(child._id.toString(), {
+//                 id: child._id,
+//                 fullName: child.fullName,
+//                 profileImage: child.profileImage || "",
+//                 isOnline: child.isOnline,
+//                 role: child.role || "child",
+//                 lastActive: child.lastActive ?? null,
+//               });
+//             }
+//           });
+//         }
+//       });
+
+//       const children = Array.from(childrenMap.values());
+
+//       return res.status(200).json({
+//         success: true,
+//         count: children.length,
+//         data: children,
+//       });
+//     }
+
+//     const assignments = await TherapistAssignment.find({
+//       childIds: targetId,
+//     })
+//       .populate({
+//         path: "therapistId",
+//         select: "_id fullName profileImage isOnline lastActive role",
+//       })
+//       .lean();
+
+//     const therapists = assignments
+//       .filter((item) => item.therapistId)
+//       .map((item) => ({
+//         id: item.therapistId._id,
+//         fullName: item.therapistId.fullName,
+//         profileImage: item.therapistId.profileImage || "",
+//         isOnline: item.therapistId.isOnline,
+//         role: item.therapistId.role || "therapist",
+//         lastActive: item.therapistId.lastActive ?? null,
+//         specialty: item.specialty || "",
+//       }));
+
+//     return res.status(200).json({
+//       success: true,
+//       count: therapists.length,
+//       data: therapists,
+//     });
+//   } catch (error) {
+//     console.error("getAssignMembers error:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
+
 exports.getAssignMembers = async (req, res) => {
   try {
     const targetId = req?.query?.userId
@@ -1618,39 +1759,47 @@ exports.getAssignMembers = async (req, res) => {
       const allAssignments = await TherapistAssignment.find()
         .populate({
           path: "therapistId",
-          select: "_id fullName profileImage isOnline lastActive role",
+          match: { isActive: true },
+          select: "_id fullName profileImage isOnline isActive lastActive role",
         })
         .populate({
           path: "childIds",
-          select: "_id fullName profileImage isOnline lastActive role",
+          match: { isActive: true },
+          select: "_id fullName profileImage isOnline isActive lastActive role",
         })
         .lean();
 
-      const formattedData = allAssignments.map((assignment) => ({
-        assignmentId: assignment._id,
-        specialty: assignment.specialty || "",
-        maxChildren: assignment.maxChildren || 0,
-        therapist: assignment.therapistId
-          ? {
+      const formattedData = allAssignments
+        .filter((assignment) => assignment.therapistId)
+        .map((assignment) => ({
+          assignmentId: assignment._id,
+          specialty: assignment.specialty || "",
+          maxChildren: assignment.maxChildren || 0,
+
+          therapist: {
             id: assignment.therapistId._id,
             fullName: assignment.therapistId.fullName,
             profileImage: assignment.therapistId.profileImage || "",
             isOnline: assignment.therapistId.isOnline,
+            isActive: assignment.therapistId.isActive,
             lastActive: assignment.therapistId.lastActive ?? null,
-            role: assignment.therapistId.role || "therapist",
-          }
-          : null,
-        assignedChildren: Array.isArray(assignment.childIds)
-          ? assignment.childIds.map((child) => ({
-            id: child._id,
-            fullName: child.fullName,
-            profileImage: child.profileImage || "",
-            isOnline: child.isOnline,
-            lastActive: child.lastActive ?? null,
-            role: child.role || "child",
-          }))
-          : [],
-      }));
+            role: assignment.therapistId.role || "Therapist",
+          },
+
+          assignedChildren: Array.isArray(assignment.childIds)
+            ? assignment.childIds
+              .filter(Boolean)
+              .map((child) => ({
+                id: child._id,
+                fullName: child.fullName,
+                profileImage: child.profileImage || "",
+                isOnline: child.isOnline,
+                isActive: child.isActive,
+                lastActive: child.lastActive ?? null,
+                role: child.role || "Child",
+              }))
+            : [],
+        }));
 
       return res.status(200).json({
         success: true,
@@ -1672,7 +1821,8 @@ exports.getAssignMembers = async (req, res) => {
       })
         .populate({
           path: "childIds",
-          select: "_id fullName profileImage isOnline lastActive role",
+          match: { isActive: true },
+          select: "_id fullName profileImage isOnline isActive lastActive role",
         })
         .lean();
 
@@ -1681,13 +1831,17 @@ exports.getAssignMembers = async (req, res) => {
       assignments.forEach((item) => {
         if (Array.isArray(item.childIds)) {
           item.childIds.forEach((child) => {
-            if (child && !childrenMap.has(child._id.toString())) {
+            if (
+              child
+              && !childrenMap.has(child._id.toString())
+            ) {
               childrenMap.set(child._id.toString(), {
                 id: child._id,
                 fullName: child.fullName,
                 profileImage: child.profileImage || "",
                 isOnline: child.isOnline,
-                role: child.role || "child",
+                isActive: child.isActive,
+                role: child.role || "Child",
                 lastActive: child.lastActive ?? null,
               });
             }
@@ -1709,7 +1863,8 @@ exports.getAssignMembers = async (req, res) => {
     })
       .populate({
         path: "therapistId",
-        select: "_id fullName profileImage isOnline lastActive role",
+        match: { isActive: true },
+        select: "_id fullName profileImage isOnline isActive lastActive role",
       })
       .lean();
 
@@ -1720,7 +1875,8 @@ exports.getAssignMembers = async (req, res) => {
         fullName: item.therapistId.fullName,
         profileImage: item.therapistId.profileImage || "",
         isOnline: item.therapistId.isOnline,
-        role: item.therapistId.role || "therapist",
+        isActive: item.therapistId.isActive,
+        role: item.therapistId.role || "Therapist",
         lastActive: item.therapistId.lastActive ?? null,
         specialty: item.specialty || "",
       }));
@@ -1744,28 +1900,30 @@ exports.getAssignTherapist = async (req, res) => {
   try {
     const rawChildId = req.user?._id || req.user?.id;
 
-    if (!rawChildId) {
+    if (
+      !rawChildId
+      || !mongoose.Types.ObjectId.isValid(rawChildId)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Child ID is required.",
+        message: "Valid child ID is required.",
       });
     }
 
     const childId = new mongoose.Types.ObjectId(rawChildId);
 
-    const assignments = await TherapistAssignment.find({ childIds: childId })
+    const assignments = await TherapistAssignment.find({
+      childIds: childId,
+    })
       .populate({
         path: "therapistId",
-        select: "fullName email",
+        match: {
+          isActive: true,
+          role: "Therapist",
+        },
+        select: "_id fullName email isActive",
       })
       .lean();
-
-    if (!assignments || assignments.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No therapists assigned for this child.",
-      });
-    }
 
     const therapists = assignments
       .filter((item) => item.therapistId)
@@ -1773,15 +1931,25 @@ exports.getAssignTherapist = async (req, res) => {
         _id: item.therapistId._id,
         name: item.therapistId.fullName,
         email: item.therapistId.email,
-        specialty: item.specialty,
+        isActive: item.therapistId.isActive,
+        specialty: item.specialty || "",
       }));
+
+    if (therapists.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No active therapists assigned for this child.",
+      });
+    }
 
     return res.status(200).json({
       success: true,
+      count: therapists.length,
       data: therapists,
     });
   } catch (error) {
     console.error("Error fetching assigned therapists:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to fetch assigned therapists.",

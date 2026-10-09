@@ -962,37 +962,130 @@ exports.getTherapistsUsers = async (req, res) => {
   }
 };
 
-exports.assignTherapistsUsers = async (req, res) => {
+exports.getProgramTherapists = async (req, res) => {
   try {
-    const page = Math.max(
-      parseInt(req.query.page, 10) || 1,
-      1,
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(
+      Math.max(Number(req.query.limit) || 5, 1),
+      50,
     );
+    const search = String(req.query.search || "").trim();
 
-    const limit = Math.max(
-      parseInt(req.query.limit, 10) || 10,
-      1,
-    );
-
-    const skip = (page - 1) * limit;
-
-    const {
-      search,
-      specialty,
-    } = req.query;
-
-    const matchStage = {};
-
-    if (
-      specialty
-      && specialty !== "All"
-    ) {
-      matchStage.specialty = specialty;
-    }
+    const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
     const pipeline = [
       {
-        $match: matchStage,
+        $lookup: {
+          from: "users",
+          localField: "therapistId",
+          foreignField: "_id",
+          as: "therapist",
+        },
+      },
+      { $unwind: "$therapist" },
+      {
+        $match: {
+          "therapist.role": "Therapist",
+          "therapist.isActive": true,
+        },
+      },
+      {
+        $group: {
+          _id: "$therapist._id",
+          fullName: { $first: "$therapist.fullName" },
+          email: { $first: "$therapist.email" },
+          profileImage: { $first: "$therapist.profileImage" },
+          isActive: { $first: "$therapist.isActive" },
+        },
+      },
+    ];
+
+    if (search) {
+      const regex = escapeRegex(search);
+
+      pipeline.push({
+        $match: {
+          $or: [
+            { fullName: { $regex: regex, $options: "i" } },
+            { email: { $regex: regex, $options: "i" } },
+          ],
+        },
+      });
+    }
+
+    pipeline.push(
+      { $sort: { fullName: 1, _id: 1 } },
+      {
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+            {
+              $project: {
+                _id: 0,
+                therapistId: { $toString: "$_id" },
+                fullName: 1,
+                email: 1,
+                profileImage: 1,
+                isActive: 1,
+              },
+            },
+          ],
+        },
+      },
+    );
+
+    const [result] = await TherapistAssignment.aggregate(pipeline);
+
+    const data = result?.data || [];
+    const total = result?.metadata?.[0]?.total || 0;
+
+    return res.status(200).json({
+      success: true,
+      page,
+      limit,
+      total,
+      count: data.length,
+      hasMore: page * limit < total,
+      data,
+    });
+  } catch (error) {
+    console.error("getProgramTherapists:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch therapists.",
+    });
+  }
+};
+
+exports.getProgramTherapistChildren = async (req, res) => {
+  try {
+    const { therapistId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(therapistId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid therapist ID.",
+      });
+    }
+
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(
+      Math.max(Number(req.query.limit) || 5, 1),
+      50,
+    );
+    const search = String(req.query.search || "").trim();
+
+    const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const therapistObjectId = new mongoose.Types.ObjectId(therapistId);
+
+    const pipeline = [
+      {
+        $match: {
+          therapistId: therapistObjectId,
+        },
       },
       {
         $lookup: {
@@ -1002,12 +1095,14 @@ exports.assignTherapistsUsers = async (req, res) => {
           as: "therapist",
         },
       },
+      { $unwind: "$therapist" },
       {
-        $unwind: "$therapist",
+        $match: {
+          "therapist.role": "Therapist",
+          "therapist.isActive": true,
+        },
       },
-      {
-        $unwind: "$childIds",
-      },
+      { $unwind: "$childIds" },
       {
         $lookup: {
           from: "users",
@@ -1016,42 +1111,528 @@ exports.assignTherapistsUsers = async (req, res) => {
           as: "child",
         },
       },
+      { $unwind: "$child" },
       {
-        $unwind: "$child",
+        $match: {
+          "child.role": "Child",
+          "child.isActive": true,
+        },
       },
+      {
+        $group: {
+          _id: "$child._id",
+          fullName: { $first: "$child.fullName" },
+          email: { $first: "$child.email" },
+          profileImage: { $first: "$child.profileImage" },
+          isActive: { $first: "$child.isActive" },
+        },
+      },
+    ];
+
+    if (search) {
+      const regex = escapeRegex(search);
+
+      pipeline.push({
+        $match: {
+          $or: [
+            { fullName: { $regex: regex, $options: "i" } },
+            { email: { $regex: regex, $options: "i" } },
+          ],
+        },
+      });
+    }
+
+    pipeline.push(
+      { $sort: { fullName: 1, _id: 1 } },
+      {
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+            {
+              $project: {
+                _id: 0,
+                childId: { $toString: "$_id" },
+                fullName: 1,
+                email: 1,
+                profileImage: 1,
+                isActive: 1,
+              },
+            },
+          ],
+        },
+      },
+    );
+
+    const [result] = await TherapistAssignment.aggregate(pipeline);
+
+    const data = result?.data || [];
+    const total = result?.metadata?.[0]?.total || 0;
+
+    return res.status(200).json({
+      success: true,
+      page,
+      limit,
+      total,
+      count: data.length,
+      hasMore: page * limit < total,
+      data,
+    });
+  } catch (error) {
+    console.error("getProgramTherapistChildren:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch assigned children.",
+    });
+  }
+};
+
+// exports.assignTherapistsUsers = async (req, res) => {
+//   try {
+//     const page = Math.max(
+//       parseInt(req.query.page, 10) || 1,
+//       1,
+//     );
+
+//     const limit = Math.max(
+//       parseInt(req.query.limit, 10) || 10,
+//       1,
+//     );
+
+//     const skip = (page - 1) * limit;
+
+//     const {
+//       search,
+//       specialty,
+//     } = req.query;
+
+//     const matchStage = {};
+
+//     if (
+//       specialty
+//       && specialty !== "All"
+//     ) {
+//       matchStage.specialty = specialty;
+//     }
+
+//     const pipeline = [
+//       {
+//         $match: matchStage,
+//       },
+//       {
+//         $lookup: {
+//           from: "users",
+//           localField: "therapistId",
+//           foreignField: "_id",
+//           as: "therapist",
+//         },
+//       },
+//       {
+//         $unwind: "$therapist",
+//       },
+//       {
+//         $unwind: "$childIds",
+//       },
+//       {
+//         $lookup: {
+//           from: "users",
+//           localField: "childIds",
+//           foreignField: "_id",
+//           as: "child",
+//         },
+//       },
+//       {
+//         $unwind: "$child",
+//       },
+//       {
+//         $match: {
+//           "therapist.role": "Therapist",
+//         },
+//       },
+//     ];
+
+//     if (search?.trim()) {
+//       const searchText = search.trim();
+
+//       pipeline.push({
+//         $match: {
+//           $or: [
+//             {
+//               "child.fullName": {
+//                 $regex: searchText,
+//                 $options: "i",
+//               },
+//             },
+//             {
+//               "child.email": {
+//                 $regex: searchText,
+//                 $options: "i",
+//               },
+//             },
+//             {
+//               "therapist.fullName": {
+//                 $regex: searchText,
+//                 $options: "i",
+//               },
+//             },
+//             {
+//               "therapist.email": {
+//                 $regex: searchText,
+//                 $options: "i",
+//               },
+//             },
+//           ],
+//         },
+//       });
+//     }
+
+//     pipeline.push(
+//       {
+//         $sort: {
+//           "therapist.fullName": 1,
+//           "child.fullName": 1,
+//         },
+//       },
+//       {
+//         $facet: {
+//           metadata: [
+//             {
+//               $count: "total",
+//             },
+//           ],
+//           data: [
+//             {
+//               $skip: skip,
+//             },
+//             {
+//               $limit: limit,
+//             },
+//             {
+//               $project: {
+//                 _id: 0,
+//                 assignmentId: {
+//                   $toString: "$_id",
+//                 },
+//                 childId: {
+//                   $toString: "$child._id",
+//                 },
+//                 childName: {
+//                   $ifNull: [
+//                     "$child.fullName",
+//                     "$child.name",
+//                   ],
+//                 },
+//                 childEmail: {
+//                   $ifNull: [
+//                     "$child.email",
+//                     "",
+//                   ],
+//                 },
+//                 childPhone: {
+//                   $ifNull: [
+//                     "$child.phone",
+//                     "",
+//                   ],
+//                 },
+//                 childProfileImage: {
+//                   $ifNull: [
+//                     "$child.profileImage",
+//                     "",
+//                   ],
+//                 },
+//                 therapistId: {
+//                   $toString: "$therapist._id",
+//                 },
+//                 therapistName: {
+//                   $ifNull: [
+//                     "$therapist.fullName",
+//                     "$therapist.name",
+//                   ],
+//                 },
+//                 therapistEmail: {
+//                   $ifNull: [
+//                     "$therapist.email",
+//                     "",
+//                   ],
+//                 },
+//                 therapistPhone: {
+//                   $ifNull: [
+//                     "$therapist.phone",
+//                     "",
+//                   ],
+//                 },
+//                 therapistProfileImage: {
+//                   $ifNull: [
+//                     "$therapist.profileImage",
+//                     "",
+//                   ],
+//                 },
+//                 specialty: 1,
+//                 maxChildren: 1,
+//                 assignedChildren: {
+//                   $size: {
+//                     $ifNull: [
+//                       "$childIdsOriginal",
+//                       [],
+//                     ],
+//                   },
+//                 },
+//                 combinedName: {
+//                   $concat: [
+//                     {
+//                       $ifNull: [
+//                         "$child.fullName",
+//                         "$child.name",
+//                       ],
+//                     },
+//                     " - ",
+//                     {
+//                       $ifNull: [
+//                         "$therapist.fullName",
+//                         "$therapist.name",
+//                       ],
+//                     },
+//                   ],
+//                 },
+//               },
+//             },
+//           ],
+//         },
+//       },
+//     );
+
+//     pipeline.splice(1, 0, {
+//       $set: {
+//         childIdsOriginal: {
+//           $cond: [
+//             {
+//               $isArray: "$childIds",
+//             },
+//             "$childIds",
+//             [],
+//           ],
+//         },
+//       },
+//     });
+
+//     const result = await TherapistAssignment.aggregate(
+//       pipeline,
+//     );
+
+//     const data = result[0]?.data || [];
+
+//     const total = result[0]?.metadata?.[0]?.total
+//       || 0;
+
+//     const specialties = await TherapistAssignment.distinct(
+//       "specialty",
+//     );
+
+//     return res.status(200).json({
+//       success: true,
+//       page,
+//       limit,
+//       total,
+//       count: data.length,
+//       hasMore: skip + data.length < total,
+//       data,
+//       specialties,
+//     });
+//   } catch (error) {
+//     console.error(
+//       "Get Therapist Users Error:",
+//       error,
+//     );
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to get therapist users",
+//       error: error.message,
+//     });
+//   }
+// };
+
+exports.assignTherapistsUsers = async (req, res) => {
+  try {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+    const skip = (page - 1) * limit;
+
+    const { search, specialty } = req.query;
+
+    const matchStage = {};
+
+    if (specialty && specialty !== "All") {
+      matchStage.specialty = specialty;
+    }
+
+    const pipeline = [
+      { $match: matchStage },
+
+      // Get therapist details
+      {
+        $lookup: {
+          from: "users",
+          localField: "therapistId",
+          foreignField: "_id",
+          as: "therapist",
+        },
+      },
+      { $unwind: "$therapist" },
+
+      // Only active therapists
       {
         $match: {
           "therapist.role": "Therapist",
+          "therapist.isActive": true,
+        },
+      },
+
+      // Get assigned children
+      {
+        $lookup: {
+          from: "users",
+          let: { ids: { $ifNull: ["$childIds", []] } },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ["$_id", "$$ids"] },
+                role: "Child",
+                isActive: true,
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                fullName: 1,
+                email: 1,
+                phone: 1,
+                profileImage: 1,
+                isActive: 1,
+              },
+            },
+          ],
+          as: "children",
+        },
+      },
+
+      // Group assignments by therapist
+      {
+        $group: {
+          _id: "$therapist._id",
+          therapist: { $first: "$therapist" },
+          assignments: {
+            $push: {
+              assignmentId: "$_id",
+              specialty: "$specialty",
+              maxChildren: "$maxChildren",
+              children: "$children",
+            },
+          },
+        },
+      },
+
+      // Merge children from all assignments
+      {
+        $project: {
+          therapist: 1,
+          assignments: 1,
+          allChildren: {
+            $reduce: {
+              input: "$assignments",
+              initialValue: [],
+              in: {
+                $concatArrays: ["$$value", "$$this.children"],
+              },
+            },
+          },
+        },
+      },
+
+      // Remove duplicate children
+      {
+        $set: {
+          children: {
+            $reduce: {
+              input: "$allChildren",
+              initialValue: [],
+              in: {
+                $cond: [
+                  {
+                    $in: [
+                      "$$this._id",
+                      {
+                        $map: {
+                          input: "$$value",
+                          as: "child",
+                          in: "$$child._id",
+                        },
+                      },
+                    ],
+                  },
+                  "$$value",
+                  { $concatArrays: ["$$value", ["$$this"]] },
+                ],
+              },
+            },
+          },
+        },
+      },
+
+      // Output therapist with children array
+      {
+        $project: {
+          _id: 0,
+          therapistId: { $toString: "$therapist._id" },
+          therapistName: "$therapist.fullName",
+          therapistEmail: {
+            $ifNull: ["$therapist.email", ""],
+          },
+          therapistPhone: {
+            $ifNull: ["$therapist.phone", ""],
+          },
+          therapistProfileImage: {
+            $ifNull: ["$therapist.profileImage", ""],
+          },
+          therapistIsActive: "$therapist.isActive",
+          specialties: "$assignments.specialty",
+          maxChildren: { $sum: "$assignments.maxChildren" },
+          assignedChildren: { $size: "$children" },
+          children: 1,
         },
       },
     ];
 
     if (search?.trim()) {
-      const searchText = search.trim();
+      const searchText = search.trim().replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&",
+      );
 
       pipeline.push({
         $match: {
           $or: [
             {
-              "child.fullName": {
+              therapistName: {
                 $regex: searchText,
                 $options: "i",
               },
             },
             {
-              "child.email": {
+              therapistEmail: {
                 $regex: searchText,
                 $options: "i",
               },
             },
             {
-              "therapist.fullName": {
+              "children.fullName": {
                 $regex: searchText,
                 $options: "i",
               },
             },
             {
-              "therapist.email": {
+              "children.email": {
                 $regex: searchText,
                 $options: "i",
               },
@@ -1062,142 +1643,19 @@ exports.assignTherapistsUsers = async (req, res) => {
     }
 
     pipeline.push(
-      {
-        $sort: {
-          "therapist.fullName": 1,
-          "child.fullName": 1,
-        },
-      },
+      { $sort: { therapistName: 1 } },
       {
         $facet: {
-          metadata: [
-            {
-              $count: "total",
-            },
-          ],
-          data: [
-            {
-              $skip: skip,
-            },
-            {
-              $limit: limit,
-            },
-            {
-              $project: {
-                _id: 0,
-                assignmentId: {
-                  $toString: "$_id",
-                },
-                childId: {
-                  $toString: "$child._id",
-                },
-                childName: {
-                  $ifNull: [
-                    "$child.fullName",
-                    "$child.name",
-                  ],
-                },
-                childEmail: {
-                  $ifNull: [
-                    "$child.email",
-                    "",
-                  ],
-                },
-                childPhone: {
-                  $ifNull: [
-                    "$child.phone",
-                    "",
-                  ],
-                },
-                childProfileImage: {
-                  $ifNull: [
-                    "$child.profileImage",
-                    "",
-                  ],
-                },
-                therapistId: {
-                  $toString: "$therapist._id",
-                },
-                therapistName: {
-                  $ifNull: [
-                    "$therapist.fullName",
-                    "$therapist.name",
-                  ],
-                },
-                therapistEmail: {
-                  $ifNull: [
-                    "$therapist.email",
-                    "",
-                  ],
-                },
-                therapistPhone: {
-                  $ifNull: [
-                    "$therapist.phone",
-                    "",
-                  ],
-                },
-                therapistProfileImage: {
-                  $ifNull: [
-                    "$therapist.profileImage",
-                    "",
-                  ],
-                },
-                specialty: 1,
-                maxChildren: 1,
-                assignedChildren: {
-                  $size: {
-                    $ifNull: [
-                      "$childIdsOriginal",
-                      [],
-                    ],
-                  },
-                },
-                combinedName: {
-                  $concat: [
-                    {
-                      $ifNull: [
-                        "$child.fullName",
-                        "$child.name",
-                      ],
-                    },
-                    " - ",
-                    {
-                      $ifNull: [
-                        "$therapist.fullName",
-                        "$therapist.name",
-                      ],
-                    },
-                  ],
-                },
-              },
-            },
-          ],
+          metadata: [{ $count: "total" }],
+          data: [{ $skip: skip }, { $limit: limit }],
         },
       },
     );
 
-    pipeline.splice(1, 0, {
-      $set: {
-        childIdsOriginal: {
-          $cond: [
-            {
-              $isArray: "$childIds",
-            },
-            "$childIds",
-            [],
-          ],
-        },
-      },
-    });
-
-    const result = await TherapistAssignment.aggregate(
-      pipeline,
-    );
+    const result = await TherapistAssignment.aggregate(pipeline);
 
     const data = result[0]?.data || [];
-
-    const total = result[0]?.metadata?.[0]?.total
-      || 0;
+    const total = result[0]?.metadata?.[0]?.total || 0;
 
     const specialties = await TherapistAssignment.distinct(
       "specialty",
@@ -1214,10 +1672,7 @@ exports.assignTherapistsUsers = async (req, res) => {
       specialties,
     });
   } catch (error) {
-    console.error(
-      "Get Therapist Users Error:",
-      error,
-    );
+    console.error("Get Therapist Users Error:", error);
 
     return res.status(500).json({
       success: false,
@@ -1229,7 +1684,7 @@ exports.assignTherapistsUsers = async (req, res) => {
 
 exports.createTherapist = async (req, res) => {
   try {
-    const { name, specialty, maxChildren, email, phone, address, password,isActive } = req.body;
+    const { name, specialty, maxChildren, email, phone, address, password, isActive } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -1320,9 +1775,9 @@ exports.updateTherapist = async (req, res) => {
     const { id } = req.params;
     const { name, specialty, maxChildren, email, phone, address, password, isActive } = req.body;
     if (
-      isActive !== undefined &&
-      isActive !== true &&
-      isActive !== false
+      isActive !== undefined
+      && isActive !== true
+      && isActive !== false
     ) {
       return res.status(400).json({
         success: false,
@@ -1390,8 +1845,8 @@ exports.updateTherapist = async (req, res) => {
     if (email) user.email = email;
     if (phone) user.phone = phone;
     if (address) user.address = address;
-    if (password) { user.password = await bcrypt.hash(password, 10); }
-    
+    if (password) user.password = await bcrypt.hash(password, 10);
+
     const now = new Date();
     if (isActive === false && user.isActive !== false) {
       const startOfToday = new Date(now);
@@ -1421,8 +1876,8 @@ exports.updateTherapist = async (req, res) => {
           const [h = 0, m = 0] = String(appt.startTime || "00:00").split(":").map(Number);
           apptTime.setHours(h, m, 0, 0);
 
-          if (apptTime < now) return true; 
-          return Boolean(appt.batchId);   
+          if (apptTime < now) return true;
+          return Boolean(appt.batchId);
         });
 
         if (schedule.appointments.length === 0) {
@@ -1462,7 +1917,7 @@ exports.updateTherapist = async (req, res) => {
         address: user.address,
         specialty: assignment?.specialty,
         maxChildren: assignment?.maxChildren,
-        isActive
+        isActive,
       },
     });
   } catch (error) {
@@ -1849,7 +2304,6 @@ exports.getTherapistSchedule = async (req, res) => {
   }
 };
 
-
 exports.childUsers = async (req, res) => {
   try {
     const { page = 1, limit = 5, search = "", status = "active" } = req.query;
@@ -1902,7 +2356,8 @@ exports.childUsers = async (req, res) => {
 };
 exports.createChild = async (req, res) => {
   try {
-    const { fullName, fatherName, fatherCnic, age, email, phone, password, packageId, discountedPrice, isActive } = req.body;
+    const { fullName, fatherName, fatherCnic, age, email, phone, password, packageId, discountedPrice, isActive } =
+      req.body;
 
     if (
       !fullName
@@ -1959,7 +2414,7 @@ exports.createChild = async (req, res) => {
       password: hashedPassword,
       role: "Child",
       agreeTerms: true,
-      isActive:isActive??true,
+      isActive: isActive ?? true,
       ...packageFields,
     });
 
@@ -2012,9 +2467,9 @@ exports.updateChild = async (req, res) => {
     }
 
     if (
-      isActive !== undefined &&
-      isActive !== true &&
-      isActive !== false
+      isActive !== undefined
+      && isActive !== true
+      && isActive !== false
     ) {
       return res.status(400).json({
         success: false,
@@ -2037,22 +2492,20 @@ exports.updateChild = async (req, res) => {
     const now = new Date();
 
     if (isActive === false) {
-
       const batches = await Batch.find({
         childrenIds: id,
       });
 
       const activeBatch = batches.find(
         (batch) =>
-          batch.dateFrom <= now &&
-          batch.dateTo >= now
+          batch.dateFrom <= now
+          && batch.dateTo >= now,
       );
 
       if (activeBatch) {
         return res.status(400).json({
           success: false,
-          message:
-            "Child cannot be deactivated because the child is currently enrolled in an active running batch.",
+          message: "Child cannot be deactivated because the child is currently enrolled in an active running batch.",
           batchId: activeBatch._id,
           batchName: activeBatch.batchName,
         });
@@ -2077,7 +2530,7 @@ exports.updateChild = async (req, res) => {
               "appointment.children.childId": id,
             },
           ],
-        }
+        },
       );
 
       await Scheduling.updateMany(
@@ -2094,7 +2547,7 @@ exports.updateChild = async (req, res) => {
               children: { $size: 0 },
             },
           },
-        }
+        },
       );
 
       await Scheduling.deleteMany({
@@ -2103,9 +2556,7 @@ exports.updateChild = async (req, res) => {
 
       currentChild.isActive = false;
       await currentChild.save();
-    }
-
-    else if (isActive === true) {
+    } else if (isActive === true) {
       currentChild.isActive = true;
       await currentChild.save();
     }
@@ -2121,13 +2572,11 @@ exports.updateChild = async (req, res) => {
       });
     }
 
-
     if (
-      fatherName !== undefined ||
-      fatherCnic !== undefined
+      fatherName !== undefined
+      || fatherCnic !== undefined
     ) {
-      const targetCnic =
-        cnic || currentChild.fatherCnic;
+      const targetCnic = cnic || currentChild.fatherCnic;
 
       const otherChildren = await User.find({
         role: "Child",
@@ -2136,22 +2585,20 @@ exports.updateChild = async (req, res) => {
       }).lean();
 
       if (
-        otherChildren.length > 0 &&
-        fatherName !== undefined &&
-        otherChildren.some(
+        otherChildren.length > 0
+        && fatherName !== undefined
+        && otherChildren.some(
           (child) =>
-            normalizeName(child.fatherName) !==
-            normalizeName(fatherName)
+            normalizeName(child.fatherName)
+              !== normalizeName(fatherName),
         )
       ) {
         return res.status(409).json({
           success: false,
-          message:
-            "This parent CNIC already exists with a different parent name.",
+          message: "This parent CNIC already exists with a different parent name.",
         });
       }
     }
-
 
     const updateFields = {
       ...(fullName && { fullName }),
@@ -2169,7 +2616,7 @@ exports.updateChild = async (req, res) => {
     if (packageId !== undefined) {
       const r = await resolvePackageAssignment(
         packageId,
-        discountedPrice
+        discountedPrice,
       );
 
       if (r.error) {
@@ -2185,7 +2632,7 @@ exports.updateChild = async (req, res) => {
     if (password) {
       updateFields.password = await bcrypt.hash(
         password,
-        10
+        10,
       );
     }
 
@@ -2202,7 +2649,7 @@ exports.updateChild = async (req, res) => {
       {
         new: true,
         runValidators: true,
-      }
+      },
     );
 
     if (!child) {
@@ -2214,12 +2661,11 @@ exports.updateChild = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message:
-        isActive === false
-          ? "Child deactivated successfully and future appointments were removed."
-          : isActive === true
-            ? "Child activated successfully."
-            : "Child updated successfully.",
+      message: isActive === false
+        ? "Child deactivated successfully and future appointments were removed."
+        : isActive === true
+        ? "Child activated successfully."
+        : "Child updated successfully.",
       data: child,
     });
   } catch (error) {
@@ -2262,8 +2708,8 @@ exports.deleteChild = async (req, res) => {
 
     const activeBatch = batches.find(
       (batch) =>
-        batch.dateFrom <= now &&
-        batch.dateTo >= now
+        batch.dateFrom <= now
+        && batch.dateTo >= now,
     );
 
     if (activeBatch) {
@@ -2294,7 +2740,7 @@ exports.deleteChild = async (req, res) => {
             "appointment.children.childId": id,
           },
         ],
-      }
+      },
     );
 
     await Scheduling.updateMany(
@@ -2311,7 +2757,7 @@ exports.deleteChild = async (req, res) => {
             children: { $size: 0 },
           },
         },
-      }
+      },
     );
 
     child.isActive = false;
@@ -2319,8 +2765,7 @@ exports.deleteChild = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message:
-        "Child has been made inactive and removed from future appointments.",
+      message: "Child has been made inactive and removed from future appointments.",
       data: child,
     });
   } catch (error) {
@@ -6028,7 +6473,7 @@ const isValidTimezone = (tz) => {
 
 const saveSettings = async (payload) => {
   let settings = await SystemSetting.findOne();
-  if (!settings) settings = new SystemSetting(); 
+  if (!settings) settings = new SystemSetting();
   settings.set(payload);
   await settings.save();
   return settings;

@@ -52,6 +52,31 @@ export const AssignTheraistChild = async () => {
   return response.data;
 };
 
+export const getProgramTherapistsApi = async ({
+  page = 1,
+  limit = 5,
+  search = "",
+}) => {
+  const response = await apiClient.get(
+    "/admin/program/therapists",
+    { params: { page, limit, search } },
+  );
+  return response.data;
+};
+
+export const getProgramTherapistChildrenApi = async ({
+  therapistId,
+  page = 1,
+  limit = 5,
+  search = "",
+}) => {
+  const response = await apiClient.get(
+    `/admin/program/therapists/${therapistId}/children`,
+    { params: { page, limit, search } },
+  );
+  return response.data;
+};
+
 export const createTherapist = async (payload) => {
   const response = await apiClient.post("/admin/therapists", payload);
   return response.data;
@@ -398,7 +423,6 @@ export const getInvoiceDashboardSummaryApi = async () => {
 
   return response.data;
 };
-
 
 export const getSettings = async () => {
   const res = await apiClient.get("/admin/settings");

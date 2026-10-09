@@ -37,6 +37,7 @@ import NotificationScreen from '../screens/admin/Notification';
 import ProgramBuilderScreen from '../screens/admin/ProgramBuilder';
 import ScheduleScreen from '../screens/admin/Schedule';
 import ServiceManagementScreen from '../screens/admin/ServiceManagementScreen';
+import SettingsScreen from '../screens/admin/SettingsScreen';
 import StaffOnLeaveScreen from '../screens/admin/StaffOnLeave';
 import TherapistsScreen from '../screens/admin/Therapist';
 import TherapistAvailabilityScreen
@@ -68,7 +69,6 @@ import ProgressTrackingScreen from '../screens/therapist/ProgressTracking';
 import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
-import SettingsScreen from '../screens/admin/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
 
