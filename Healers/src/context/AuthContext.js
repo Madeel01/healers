@@ -7,7 +7,12 @@ import React, {
 } from 'react';
 
 import { jwtDecode } from 'jwt-decode';
-import { AppState } from 'react-native';
+import {
+  Alert,
+  AppState,
+} from 'react-native';
+
+import NetInfo from '@react-native-community/netinfo';
 
 import { updateOnlineStatusApi } from '../api/authApi';
 import {
@@ -54,6 +59,7 @@ export const AuthProvider = ({ children }) => {
   const tokenRef = useRef(null);
   const logoutInProgressRef = useRef(false);
   const sessionVersionRef = useRef(0);
+  const internetAlertShownRef = useRef(false);
 
   const updateOnlineStatus = useCallback(async (isOnline, expectedToken = tokenRef.current) => {
     if (!expectedToken) return;
@@ -109,34 +115,44 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(async (expectedToken) => {
     const currentToken = tokenRef.current;
 
-    if (typeof expectedToken === "string" && currentToken !== expectedToken) {
+    if (
+      typeof expectedToken === "string"
+      && currentToken !== expectedToken
+    ) {
       return;
     }
 
     if (logoutInProgressRef.current) {
-      console.log(" Logout already in progress");
       return;
     }
 
     logoutInProgressRef.current = true;
 
     try {
-      if (currentToken && getTokenRemainingMs(currentToken) > 0) {
-        await updateOnlineStatus(false, currentToken);
-      }
-      await clearAuthData();
       tokenRef.current = null;
       sessionVersionRef.current += 1;
+
       setToken(null);
       setUser(null);
+
+      await clearAuthData();
+
+      if (currentToken) {
+        NetInfo.fetch()
+          .then((state) => {
+            if (
+              state.isConnected === true
+              && state.isInternetReachable !== false
+            ) {
+              return updateOnlineStatus(false, currentToken);
+            }
+          })
+          .catch((error) => {
+            console.log("Online status update failed:", error);
+          });
+      }
     } catch (error) {
       console.log("Logout Error:", error);
-
-      tokenRef.current = null;
-      sessionVersionRef.current += 1;
-
-      setToken(null);
-      setUser(null);
     } finally {
       logoutInProgressRef.current = false;
     }
@@ -398,6 +414,44 @@ export const AuthProvider = ({ children }) => {
       subscription.remove();
     };
   }, [token, user, logout, updateOnlineStatus]);
+
+  useEffect(() => {
+    if (!token) {
+      internetAlertShownRef.current = false;
+      return;
+    }
+
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const isOffline = state.isConnected === false
+        || state.isInternetReachable === false;
+
+      if (isOffline && !internetAlertShownRef.current) {
+        internetAlertShownRef.current = true;
+
+        Alert.alert(
+          "No Internet Connection",
+          "Your internet connection has been lost. You will be logged out.",
+          [
+            {
+              text: "OK",
+              onPress: async () => {
+                await logout(token);
+              },
+            },
+          ],
+          { cancelable: false },
+        );
+      }
+
+      if (!isOffline) {
+        internetAlertShownRef.current = false;
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [token, logout]);
 
   return (
     <AuthContext.Provider

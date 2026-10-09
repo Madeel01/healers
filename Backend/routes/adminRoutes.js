@@ -75,6 +75,7 @@ const {
   createAdditionalSession,
   getProgramTherapists,
   getProgramTherapistChildren,
+  markAllLeavesSeen,
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
@@ -110,7 +111,7 @@ router.get("/leave-requests", protect, getLeaveRequests);
 router.put("/leave-requests/:id/approve", protect, approveLeaveRequest);
 router.put("/leave-requests/:id/reject", protect, rejectLeaveRequest);
 router.get("/leave-requests/on-leave-today", protect, getStaffOnLeaveToday);
-
+router.patch("/leave-requests/mark-all-seen", markAllLeavesSeen);
 router.get("/feedback/:status", getAdminFeedbackManagement);
 router.get("/feedback/:feedbackId/replies", protect, getFeedbackReplies);
 router.post("/feedback/:feedbackId/replies", protect, addFeedbackReply);

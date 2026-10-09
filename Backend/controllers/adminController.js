@@ -885,12 +885,24 @@ const resolvePackageAssignment = async (packageId, discountedPrice) => {
   return { fields: { packageId, discountedPrice: discounted } };
 };
 
+
 exports.getAdminOverview = async (req, res) => {
   try {
-    const [totalChild, therapistCount, totalUsers] = await Promise.all([
+    const [
+      totalChild,
+      therapistCount,
+      totalUsers,
+      leaveCount,
+    ] = await Promise.all([
       User.countDocuments({ role: "Child" }),
       User.countDocuments({ role: "Therapist" }),
-      User.countDocuments({ role: { $ne:"Admin" }}),
+      User.countDocuments({ role: { $ne: "Admin" } }),
+      LeaveRequest.countDocuments({
+        $or: [
+          { isSeen: false },
+          { isSeen: { $exists: false } },
+        ],
+      }),
     ]);
 
     const sessionCount = 5;
@@ -902,10 +914,12 @@ exports.getAdminOverview = async (req, res) => {
         therapistCount,
         totalUsers,
         sessionCount,
+        leaveCount,
       },
     });
   } catch (error) {
     console.error("Error fetching admin overview stats:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to fetch dashboard metrics.",
@@ -2993,6 +3007,34 @@ exports.rejectLeaveRequest = async (req, res) => {
       success: false,
       message: "Failed to reject leave request.",
       error: error.message,
+    });
+  }
+};
+exports.markAllLeavesSeen = async (req, res) => {
+  try {
+    const result = await LeaveRequest.updateMany(
+      {
+        $or: [
+          { isSeen: false },
+          { isSeen: { $exists: false } },
+        ],
+      },
+      {
+        $set: { isSeen: true },
+      },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "All leave requests marked as seen.",
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error("Error marking leaves as seen:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to mark leave requests as seen.",
     });
   }
 };
