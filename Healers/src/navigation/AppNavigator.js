@@ -67,6 +67,7 @@ import ProgressTrackingScreen from '../screens/therapist/ProgressTracking';
 import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
+import SettingsScreen from '../screens/admin/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -118,6 +119,7 @@ function AdminStack() {
       <Stack.Screen name="ServiceManagement" component={ServiceManagementScreen} />
       <Stack.Screen name="ProgramBuilder" component={ProgramBuilderScreen} />
       <Stack.Screen name="InvoiceView" component={InvoiceViewScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>
   );
 }

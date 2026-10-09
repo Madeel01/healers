@@ -155,9 +155,11 @@ export default function AdminDashboard() {
             </View>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconButton}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => navigation.navigate("Settings")}
+            >
               <MaterialIcons name="settings" size={22} color="#475569" />
-              <View style={styles.badgeDot} />
             </TouchableOpacity>
             <TouchableOpacity style={[styles.iconButton, { marginLeft: 8 }]} onPress={logout}>
               <MaterialIcons name="logout" size={20} color="#DC2626" />
@@ -616,5 +618,13 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

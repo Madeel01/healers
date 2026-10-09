@@ -398,3 +398,14 @@ export const getInvoiceDashboardSummaryApi = async () => {
 
   return response.data;
 };
+
+
+export const getSettings = async () => {
+  const res = await apiClient.get("/admin/settings");
+  return res.data;
+};
+
+export const saveSettings = async (payload) => {
+  const res = await apiClient.put("/admin/settings", payload);
+  return res.data;
+};

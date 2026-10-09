@@ -204,79 +204,6 @@ const findConflict = async (therapistId, rule, excludeId) => {
   return others.find((o) => rulesConflict(rule, o));
 };
 
-const settingsToMinutes = (t) => {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-};
-
-const validateSettingsPayload = (body, current, { partial = false } = {}) => {
-  const errors = [];
-  const out = {};
-
-  for (
-    const field of [
-      "clinicStartTime",
-      "clinicEndTime",
-      "breakStartTime",
-      "breakEndTime",
-    ]
-  ) {
-    if (body[field] === undefined) {
-      if (!partial && ["clinicStartTime", "clinicEndTime"].includes(field)) {
-        errors.push(`${field} is required.`);
-      }
-      continue;
-    }
-    if (!TIME_REGEX.test(body[field])) {
-      errors.push(`${field} must be in HH:mm 24-hour format.`);
-      continue;
-    }
-    out[field] = body[field];
-  }
-
-  if (body.workingDays !== undefined) {
-    if (
-      !Array.isArray(body.workingDays)
-      || body.workingDays.some((d) => !WORKING_DAYS.includes(d))
-    ) {
-      errors.push(
-        `workingDays must be an array using: ${WORKING_DAYS.join(", ")}.`,
-      );
-    } else {
-      out.workingDays = body.workingDays;
-    }
-  }
-
-  for (const field of ["clinicName", "address", "phone", "timezone"]) {
-    if (body[field] !== undefined) out[field] = String(body[field]).trim();
-  }
-  if (body.email !== undefined) {
-    out.email = String(body.email).trim().toLowerCase();
-  }
-
-  const start = out.clinicStartTime ?? current?.clinicStartTime;
-  const end = out.clinicEndTime ?? current?.clinicEndTime;
-  if (start && end && settingsToMinutes(end) <= settingsToMinutes(start)) {
-    errors.push("clinicEndTime must be after clinicStartTime.");
-  }
-
-  const breakStart = out.breakStartTime ?? current?.breakStartTime;
-  const breakEnd = out.breakEndTime ?? current?.breakEndTime;
-  if (breakStart && breakEnd) {
-    if (settingsToMinutes(breakEnd) <= settingsToMinutes(breakStart)) {
-      errors.push("breakEndTime must be after breakStartTime.");
-    } else if (
-      start
-      && end
-      && (settingsToMinutes(breakStart) < settingsToMinutes(start)
-        || settingsToMinutes(breakEnd) > settingsToMinutes(end))
-    ) {
-      errors.push("Break time must fall within clinic working hours.");
-    }
-  }
-
-  return { errors, data: out };
-};
 const pad = (n) => String(n).padStart(2, "0");
 
 const formatDate = (date) => {
@@ -950,7 +877,7 @@ exports.getTherapistsUsers = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
     const skip = (page - 1) * limit;
-    const { search, specialty } = req.query;
+    const { search, specialty, status } = req.query;
 
     const matchStage = { role: "Therapist" };
 
@@ -960,7 +887,11 @@ exports.getTherapistsUsers = async (req, res) => {
         { email: { $regex: search, $options: "i" } },
       ];
     }
-
+    if (status === "active") {
+      matchStage.isActive = true;
+    } else if (status === "inactive") {
+      matchStage.isActive = false;
+    }
     const pipeline = [
       { $match: matchStage },
       { $sort: { createdAt: -1 } },
@@ -986,6 +917,7 @@ exports.getTherapistsUsers = async (req, res) => {
           role: 1,
           isLogin: 1,
           createdAt: 1,
+          isActive: 1,
           specialties: "$assignments.specialty",
           maxChildren: { $max: "$assignments.maxChildren" },
           assignedChildren: {
@@ -1297,7 +1229,7 @@ exports.assignTherapistsUsers = async (req, res) => {
 
 exports.createTherapist = async (req, res) => {
   try {
-    const { name, specialty, maxChildren, email, phone, address, password } = req.body;
+    const { name, specialty, maxChildren, email, phone, address, password,isActive } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -1342,7 +1274,6 @@ exports.createTherapist = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const user = await User.create({
       fullName: name,
       email,
@@ -1351,6 +1282,7 @@ exports.createTherapist = async (req, res) => {
       role: "Therapist",
       password: hashedPassword,
       agreeTerms: true,
+      isActive,
     });
 
     const assignment = await TherapistAssignment.create({
@@ -1371,6 +1303,7 @@ exports.createTherapist = async (req, res) => {
         specialty: assignment.specialty,
         maxChildren: assignment.maxChildren,
         currentLoad: 0,
+        isActive,
       },
     });
   } catch (error) {
@@ -1385,8 +1318,17 @@ exports.createTherapist = async (req, res) => {
 exports.updateTherapist = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, specialty, maxChildren, email, phone, address, password } = req.body;
-
+    const { name, specialty, maxChildren, email, phone, address, password, isActive } = req.body;
+    if (
+      isActive !== undefined &&
+      isActive !== true &&
+      isActive !== false
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "isActive must be true or false.",
+      });
+    }
     const user = await User.findOne({ _id: id, role: "Therapist" });
     if (!user) {
       return res
@@ -1448,11 +1390,50 @@ exports.updateTherapist = async (req, res) => {
     if (email) user.email = email;
     if (phone) user.phone = phone;
     if (address) user.address = address;
+    if (password) { user.password = await bcrypt.hash(password, 10); }
+    
+    const now = new Date();
+    if (isActive === false && user.isActive !== false) {
+      const startOfToday = new Date(now);
+      startOfToday.setHours(0, 0, 0, 0);
 
-    if (password) {
-      user.password = await bcrypt.hash(password, 10);
+      const runningBatch = await Batch.findOne({
+        therapistIds: user._id,
+        dateFrom: { $lte: now },
+        dateTo: { $gte: startOfToday },
+      })
+        .select("name dateFrom dateTo")
+        .lean();
+
+      if (runningBatch) {
+        return res.status(409).json({
+          success: false,
+          message: "Therapist is in a current running batch, so they cannot be made inactive.",
+          batch: runningBatch,
+        });
+      }
+
+      const schedules = await Scheduling.find({ therapistId: user._id });
+
+      for (const schedule of schedules) {
+        schedule.appointments = schedule.appointments.filter((appt) => {
+          const apptTime = new Date(appt.date);
+          const [h = 0, m = 0] = String(appt.startTime || "00:00").split(":").map(Number);
+          apptTime.setHours(h, m, 0, 0);
+
+          if (apptTime < now) return true; 
+          return Boolean(appt.batchId);   
+        });
+
+        if (schedule.appointments.length === 0) {
+          await Scheduling.deleteOne({ _id: schedule._id });
+        } else {
+          await schedule.save();
+        }
+      }
     }
 
+    if (isActive !== undefined) user.isActive = isActive;
     await user.save();
 
     let assignment = await TherapistAssignment.findOne({ therapistId: id });
@@ -1481,6 +1462,7 @@ exports.updateTherapist = async (req, res) => {
         address: user.address,
         specialty: assignment?.specialty,
         maxChildren: assignment?.maxChildren,
+        isActive
       },
     });
   } catch (error) {
@@ -1496,18 +1478,79 @@ exports.deleteTherapist = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const user = await User.findOneAndDelete({ _id: id, role: "Therapist" });
+    const user = await User.findOne({ _id: id, role: "Therapist" });
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Therapist not found." });
+      return res.status(404).json({ success: false, message: "Therapist not found." });
     }
 
-    await TherapistAssignment.deleteOne({ therapistId: id });
+    const now = new Date();
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
 
-    return res
-      .status(200)
-      .json({ success: true, message: "Therapist deleted." });
+    const runningBatch = await Batch.findOne({
+      therapistIds: user._id,
+      dateFrom: { $lte: now },
+      dateTo: { $gte: startOfToday },
+    })
+      .select("name dateFrom dateTo")
+      .lean();
+
+    if (runningBatch) {
+      return res.status(409).json({
+        success: false,
+        message: "Therapist is in a current running batch, so they cannot be deleted.",
+        batch: runningBatch,
+      });
+    }
+
+    const schedules = await Scheduling.find({ therapistId: user._id });
+    let hasPastAppointments = false;
+
+    for (const schedule of schedules) {
+      schedule.appointments = schedule.appointments.filter((appt) => {
+        const apptTime = new Date(appt.date);
+        const [h = 0, m = 0] = String(appt.startTime || "00:00").split(":").map(Number);
+        apptTime.setHours(h, m, 0, 0);
+
+        if (apptTime < now) {
+          hasPastAppointments = true;
+          return true;
+        }
+        return Boolean(appt.batchId);
+      });
+    }
+
+    const hasBatchHistory = await Batch.exists({ therapistIds: user._id });
+
+    if (hasPastAppointments || hasBatchHistory) {
+      for (const schedule of schedules) {
+        if (schedule.appointments.length === 0) {
+          await Scheduling.deleteOne({ _id: schedule._id });
+        } else {
+          await schedule.save();
+        }
+      }
+
+      user.isActive = false;
+      await user.save();
+
+      return res.status(200).json({
+        success: true,
+        deactivated: true,
+        message:
+          "This therapist has past appointments or batch history, so they were marked inactive instead of deleted.",
+      });
+    }
+
+    await Scheduling.deleteMany({ therapistId: user._id });
+    await TherapistAssignment.deleteOne({ therapistId: user._id });
+    await User.deleteOne({ _id: user._id });
+
+    return res.status(200).json({
+      success: true,
+      deleted: true,
+      message: "Therapist deleted.",
+    });
   } catch (error) {
     console.error("Delete Therapist Error:", error);
     return res.status(500).json({
@@ -1788,6 +1831,7 @@ exports.getTherapistSchedule = async (req, res) => {
           fullName: therapist.fullName,
           email: therapist.email,
           phone: therapist.phone,
+          isActive: therapist.isActive,
           specialties: [...new Set(assignments.map((a) => a.specialty).filter(Boolean))],
         },
         availability,
@@ -3889,119 +3933,6 @@ exports.markAllNotificationsRead = async (req, res) => {
   }
 };
 
-exports.getSettings = async (req, res) => {
-  try {
-    const settings = await SystemSetting.findOne().lean();
-    if (!settings) {
-      return res.json({ success: false, message: "No settings found." });
-    }
-    return res.status(200).json({ success: true, data: settings });
-  } catch (error) {
-    console.error("Get Settings Error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to fetch settings.",
-        error: error.message,
-      });
-  }
-};
-exports.createSettings = async (req, res) => {
-  try {
-    const existing = await SystemSetting.findOne();
-    if (existing) {
-      return res
-        .status(409)
-        .json({
-          success: false,
-          message: "Settings already exist. Use update instead.",
-        });
-    }
-
-    const { errors, data } = validateSettingsPayload(req.body, null, {
-      partial: false,
-    });
-    if (errors.length) {
-      return res
-        .status(400)
-        .json({ success: false, message: errors[0], errors });
-    }
-
-    const settings = await SystemSetting.create(data);
-
-    return res
-      .status(201)
-      .json({ success: true, message: "Settings created.", data: settings });
-  } catch (error) {
-    console.error("Create Settings Error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to create settings.",
-        error: error.message,
-      });
-  }
-};
-exports.updateSettings = async (req, res) => {
-  try {
-    const existing = await SystemSetting.findOne();
-    if (!existing) {
-      return res.json({
-        success: false,
-        message: "No settings found. Create them first.",
-      });
-    }
-
-    const { errors, data } = validateSettingsPayload(req.body, existing, {
-      partial: true,
-    });
-    if (errors.length) {
-      return res
-        .status(400)
-        .json({ success: false, message: errors[0], errors });
-    }
-
-    Object.assign(existing, data);
-    await existing.save(); // runs the pre("validate") cross-field checks too
-
-    return res
-      .status(200)
-      .json({ success: true, message: "Settings updated.", data: existing });
-  } catch (error) {
-    console.error("Update Settings Error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to update settings.",
-        error: error.message,
-      });
-  }
-};
-exports.deleteSettings = async (req, res) => {
-  try {
-    const deleted = await SystemSetting.findOneAndDelete();
-    if (!deleted) {
-      return res.json({ success: false, message: "No settings found." });
-    }
-
-    return res
-      .status(200)
-      .json({ success: true, message: "Settings deleted." });
-  } catch (error) {
-    console.error("Delete Settings Error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to delete settings.",
-        error: error.message,
-      });
-  }
-};
-
 exports.getAvailability = async (req, res) => {
   try {
     const { therapistId } = req.query;
@@ -4176,16 +4107,20 @@ exports.getBatchTherapistOptions = async (req, res) => {
       });
     }
 
+    const activeIds = await User.find({
+      role: "Therapist",
+      isActive: { $ne: false },
+    }).distinct("_id");
+
     const [assignments, existing] = await Promise.all([
       TherapistAssignment.find({
         specialty: { $in: batch.speciality },
+        therapistId: { $in: activeIds },
       })
         .populate("therapistId", "fullName email")
         .lean(),
 
-      BatchAssignment.find({
-        batchId: batch._id,
-      }).lean(),
+      BatchAssignment.find({ batchId: batch._id }).lean(),
     ]);
 
     const therapistIds = [
@@ -4589,6 +4524,7 @@ exports.getBatchEligibleChildren = async (req, res) => {
     const filter = {
       role: "Child",
       _id: { $nin: currentIds },
+      isActive: { $ne: false },
     };
 
     if (search) {
@@ -6063,5 +5999,105 @@ exports.deleteService = async (req, res) => {
   } catch (error) {
     console.error("deleteService:", error);
     return res.status(500).json({ success: false, message: "Failed to delete service." });
+  }
+};
+
+const DEFAULTS = {
+  clinicName: "",
+  address: "",
+  phone: "",
+  email: "",
+  timezone: "Asia/Karachi",
+  clinicStartTime: "09:00",
+  clinicEndTime: "17:00",
+  breakStartTime: "13:00",
+  breakEndTime: "14:00",
+  workingDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+};
+
+const EDITABLE_FIELDS = Object.keys(DEFAULTS);
+
+const isValidTimezone = (tz) => {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const saveSettings = async (payload) => {
+  let settings = await SystemSetting.findOne();
+  if (!settings) settings = new SystemSetting(); 
+  settings.set(payload);
+  await settings.save();
+  return settings;
+};
+
+exports.getSettings = async (req, res) => {
+  try {
+    const settings = await SystemSetting.findOne().lean();
+    return res.status(200).json({
+      success: true,
+      configured: Boolean(settings),
+      data: settings || DEFAULTS,
+    });
+  } catch (error) {
+    console.error("getSettings:", error);
+    return res.status(500).json({ success: false, message: "Failed to load settings." });
+  }
+};
+
+exports.updateSettings = async (req, res) => {
+  try {
+    const payload = {};
+    for (const key of EDITABLE_FIELDS) {
+      if (req.body[key] !== undefined) payload[key] = req.body[key];
+    }
+
+    if (payload.timezone !== undefined && !isValidTimezone(payload.timezone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid timezone. Use a format like Asia/Karachi.",
+      });
+    }
+
+    if (payload.email && !/^\S+@\S+\.\S+$/.test(payload.email)) {
+      return res.status(400).json({ success: false, message: "Invalid email address." });
+    }
+
+    if (payload.workingDays !== undefined) {
+      if (!Array.isArray(payload.workingDays)) {
+        return res.status(400).json({ success: false, message: "workingDays must be an array." });
+      }
+      payload.workingDays = WORKING_DAYS.filter((d) => payload.workingDays.includes(d)); // dedupe + order
+      if (payload.workingDays.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Select at least one working day.",
+        });
+      }
+    }
+
+    let settings;
+    try {
+      settings = await saveSettings(payload);
+    } catch (err) {
+      if (err?.code === 11000) settings = await saveSettings(payload);
+      else throw err;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Settings saved.",
+      data: settings,
+    });
+  } catch (error) {
+    if (error.name === "ValidationError") {
+      const first = Object.values(error.errors)[0]?.message || "Invalid settings.";
+      return res.status(400).json({ success: false, message: first });
+    }
+    console.error("updateSettings:", error);
+    return res.status(500).json({ success: false, message: "Failed to save settings." });
   }
 };

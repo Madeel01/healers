@@ -38,9 +38,7 @@ const {
   markNotificationRead,
   markAllNotificationsRead,
   getSettings,
-  createSettings,
   updateSettings,
-  deleteSettings,
   getAvailability,
   createAvailability,
   updateAvailability,
@@ -149,11 +147,6 @@ router.get("/notifications", protect, getMyNotifications);
 router.put("/notifications/:id/read", protect, markNotificationRead);
 router.put("/notifications/read-all", protect, markAllNotificationsRead);
 
-router.get("/settings", getSettings);
-router.post("/settings", createSettings);
-router.put("/settings", updateSettings);
-router.delete("/settings", deleteSettings);
-
 router.get("/scheduling/availability", protect, getAvailability);
 router.post("/scheduling/availability", protect, createAvailability);
 router.put("/scheduling/availability/:id", protect, updateAvailability);
@@ -169,6 +162,9 @@ router.get("/services", protect, getServices);
 router.post("/services", protect, createService);
 router.put("/services/:id", protect, updateService);
 router.delete("/services/:id", protect, deleteService);
+
+router.get("/settings", protect, getSettings);
+router.put("/settings", protect, updateSettings);
 
 
 module.exports = router;

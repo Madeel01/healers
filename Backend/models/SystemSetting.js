@@ -59,6 +59,7 @@ const systemSettingSchema = new mongoose.Schema(
       enum: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
       default: ["Mon", "Tue", "Wed", "Thu", "Fri"],
     },
+    singletonKey: { type: String, default: "main", unique: true, immutable: true },
   },
   { timestamps: true }
 );
@@ -69,23 +70,30 @@ systemSettingSchema.pre("validate", function () {
     return h * 60 + m;
   };
 
-  if (this.clinicStartTime && this.clinicEndTime) {
-    if (toMinutes(this.clinicEndTime) <= toMinutes(this.clinicStartTime)) {
-      throw new Error("clinicEndTime must be after clinicStartTime.");
-    }
+  const cs = this.clinicStartTime;
+  const ce = this.clinicEndTime;
+  const bs = this.breakStartTime;
+  const be = this.breakEndTime;
+
+  if (cs && ce && toMinutes(ce) <= toMinutes(cs)) {
+    this.invalidate("clinicEndTime", "Clinic end time must be after start time.");
   }
 
-  if (this.breakStartTime && this.breakEndTime) {
-    if (toMinutes(this.breakEndTime) <= toMinutes(this.breakStartTime)) {
-      throw new Error("breakEndTime must be after breakStartTime.");
-    }
-    if (
-      this.clinicStartTime &&
-      this.clinicEndTime &&
-      (toMinutes(this.breakStartTime) < toMinutes(this.clinicStartTime) ||
-        toMinutes(this.breakEndTime) > toMinutes(this.clinicEndTime))
+  if (!!bs !== !!be) {
+    this.invalidate(
+      bs ? "breakEndTime" : "breakStartTime",
+      "Set both break start and end time, or leave both empty.",
+    );
+  }
+
+  if (bs && be) {
+    if (toMinutes(be) <= toMinutes(bs)) {
+      this.invalidate("breakEndTime", "Break end time must be after break start time.");
+    } else if (
+      cs && ce &&
+      (toMinutes(bs) < toMinutes(cs) || toMinutes(be) > toMinutes(ce))
     ) {
-      throw new Error("Break time must fall within clinic working hours.");
+      this.invalidate("breakStartTime", "Break must fall within clinic working hours.");
     }
   }
 });

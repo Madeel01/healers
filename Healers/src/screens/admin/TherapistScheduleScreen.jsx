@@ -141,7 +141,7 @@ function SessionRow({ s, past, onPress, specMeta }) {
 }
 
 export default function TherapistScheduleScreen({ navigation, route }) {
-  const { therapistId, therapistName } = route.params || {};
+  const { therapistId, therapistName, isActive } = route.params || {};
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [data, setData] = useState(null);
@@ -208,9 +208,11 @@ export default function TherapistScheduleScreen({ navigation, route }) {
 
   const today = data?.today || dateToKey(new Date());
   const upcoming = data?.upcoming || [];
+  const therapistActive = data?.therapist?.isActive ?? isActive ?? true;
   const past = data?.past || [];
   const availability = data?.availability || [];
   const specialties = data?.therapist?.specialties || [];
+  
 
   const relLabel = (key) => {
     if (key === today) return "Today";
@@ -260,7 +262,10 @@ export default function TherapistScheduleScreen({ navigation, route }) {
   const activeUpcoming = upcoming.filter((s) => !isInactive(s));
   const batchCount = new Set(activeUpcoming.map((s) => s.batchId).filter(Boolean)).size;
 
-  const goManage = () => navigation.navigate("TherapistAvailability", { therapistId, therapistName });
+  const goManage = () => {
+    if (!therapistActive) return;
+    navigation.navigate("TherapistAvailability", { therapistId, therapistName });
+  };
 
   const header = (
     <TopBar
@@ -295,6 +300,12 @@ export default function TherapistScheduleScreen({ navigation, route }) {
         {/* summary */}
         <View style={styles.summary}>
           <Text style={styles.title}>{data?.therapist?.fullName || therapistName || "Therapist"}</Text>
+          {!therapistActive && (
+            <View style={styles.inactiveBadge}>
+              <View style={styles.inactiveDot} />
+              <Text style={styles.inactiveBadgeText}>Inactive</Text>
+            </View>
+          )}
           {!!data?.therapist?.email && <Text style={styles.subtitle}>{data.therapist.email}</Text>}
           {specialties.length > 0 && (
             <View style={styles.chipRow}>
@@ -316,7 +327,7 @@ export default function TherapistScheduleScreen({ navigation, route }) {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
-              <Text style={styles.statValue}>{weeklyHours}h</Text>
+              <Text style={styles.statValue}>{therapistActive ? `${weeklyHours}h` : "—"}</Text>
               <Text style={styles.statLabel}>Weekly hours</Text>
             </View>
             <View style={styles.statDivider} />
@@ -341,7 +352,17 @@ export default function TherapistScheduleScreen({ navigation, route }) {
         </View>
 
         {/* ---------- AVAILABILITY ---------- */}
-        {tab === "availability" && (
+        {tab === "availability" && 
+          (!therapistActive ? (
+            <View style={styles.inactiveNotice}>
+              <Feather name="user-x" size={28} color="#B91C1C" />
+              <Text style={styles.inactiveNoticeTitle}>Therapist is inactive</Text>
+              <Text style={styles.inactiveNoticeSub}>
+                Availability can't be viewed or managed while this therapist is inactive.
+                Reactivate them from the Therapists screen to set it again.
+              </Text>
+            </View>
+          ) : (
           <>
             <View style={styles.card}>
               <View style={styles.cardHeadRow}>
@@ -393,7 +414,7 @@ export default function TherapistScheduleScreen({ navigation, route }) {
               </View>
             )}
           </>
-        )}
+          ))}
 
         {/* ---------- UPCOMING ---------- */}
         {tab === "upcoming" &&
@@ -630,4 +651,33 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: { fontSize: 13, fontFamily: fonts.semiBold, color: "#0B4A6F" },
+  inactiveBadge: {
+  flexDirection: "row",
+  alignItems: "center",
+  alignSelf: "flex-start",
+  backgroundColor: "#FEE2E2",
+  paddingHorizontal: 8,
+  paddingVertical: 3,
+  borderRadius: 12,
+  marginTop: 6,
+},
+inactiveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#DC2626", marginRight: 5 },
+inactiveBadgeText: { color: "#B91C1C", fontSize: 11, fontFamily: fonts.semiBold },
+
+inactiveNotice: {
+  alignItems: "center",
+  backgroundColor: "#FFF7F7",
+  borderRadius: 18,
+  padding: 24,
+  gap: 6,
+  marginBottom: 14,
+},
+inactiveNoticeTitle: { fontSize: 15, fontFamily: fonts.semiBold, color: "#B91C1C", marginTop: 4 },
+inactiveNoticeSub: {
+  fontSize: 12,
+  fontFamily: fonts.regular,
+  color: "#64748B",
+  textAlign: "center",
+  lineHeight: 18,
+},
 });

@@ -51,11 +51,52 @@ const getAvatarColor = (str = "") => {
   const index = Math.abs(hash) % AVATAR_COLORS.length;
   return AVATAR_COLORS[index];
 };
+
+const STATUS_FILTERS = [
+  { label: "All", value: "all" },
+  { label: "Active", value: "active" },
+  { label: "Inactive", value: "inactive" },
+];
+
+const ACTIVE_OPTIONS = [
+  { label: "Active", value: true },
+  { label: "Inactive", value: false },
+];
+
+const SegmentedToggle = ({ options, value, onChange }) => (
+  <View style={styles.segmentWrap}>
+    {options.map((opt) => {
+      const selected = value === opt.value;
+
+      return (
+        <TouchableOpacity
+          key={String(opt.value)}
+          style={[
+            styles.segmentItem,
+            selected && styles.segmentItemOn,
+          ]}
+          activeOpacity={0.8}
+          onPress={() => onChange(opt.value)}
+        >
+          <Text
+            style={[
+              styles.segmentText,
+              selected && styles.segmentTextOn,
+            ]}
+          >
+            {opt.label}
+          </Text>
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+);
 export default function TherapistsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [therapists, setTherapists] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [activeBottomTab, setActiveBottomTab] = useState("Therapists");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState(null);
@@ -94,6 +135,28 @@ export default function TherapistsScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [originalAssignedIds, setOriginalAssignedIds] = useState([]);
+  const [draftSpecialty, setDraftSpecialty] = useState("All");
+  const [draftStatus, setDraftStatus] = useState("all");
+
+  const activeFilterCount =
+    (selectedFilter !== "All" ? 1 : 0) + (statusFilter !== "all" ? 1 : 0);
+
+  const openFilterModal = () => {
+    setDraftSpecialty(selectedFilter);
+    setDraftStatus(statusFilter);
+    setIsFilterModalOpen(true);
+  };
+
+  const applyFilters = () => {
+    setSelectedFilter(draftSpecialty);
+    setStatusFilter(draftStatus);
+    setIsFilterModalOpen(false);
+  };
+
+  const resetFilters = () => {
+    setDraftSpecialty("All");
+    setDraftStatus("all");
+  };
 
   const isEditMode = editingTherapistId !== null;
   const menuTouchRef = useRef(false);
@@ -106,6 +169,10 @@ export default function TherapistsScreen({ navigation }) {
 
   const openAddModal = () => {
     resetTherapistForm();
+    setNewTherapist((prev) => ({
+      ...prev,
+      isActive: true,
+    }));
     setIsAddModalOpen(true);
   };
   useEffect(() => {
@@ -127,9 +194,11 @@ export default function TherapistsScreen({ navigation }) {
   }, []);
   const openEditModal = (therapist) => {
     setEditingTherapistId(therapist.id);
+
     setNewTherapist({
       name: therapist.name || "",
-      specialty: therapist.specialties?.[0]?.id || therapist.specialty || "",
+      specialty:
+        therapist.specialties?.[0]?.id || therapist.specialty || "",
       maxChildren: String(therapist.maxLoad || 0),
       specialtyBg: therapist.specialties?.[0]?.bg || "",
       specialtyColor: therapist.specialties?.[0]?.color || "",
@@ -137,7 +206,13 @@ export default function TherapistsScreen({ navigation }) {
       email: therapist.email || "",
       phone: therapist.phone || "",
       address: therapist.address || "",
+      isActive: therapist.isActive !== false,
     });
+
+    setPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setActiveMenuId(null);
     setIsAddModalOpen(true);
   };
@@ -155,14 +230,26 @@ export default function TherapistsScreen({ navigation }) {
           style: "destructive",
           onPress: async () => {
             const previous = therapists;
-            setTherapists((prev) => prev.filter((item) => item.id !== therapist.id));
+            // setTherapists((prev) => prev.filter((item) => item.id !== therapist.id));
             try {
               await deleteTherapist(therapist.id);
+              if (res?.deactivated) {
+                Alert.alert(
+                  "Marked Inactive",
+                  res.message ||
+                    "This therapist has past appointments, so they were marked inactive instead of deleted.",
+                );
+              }
               await fetchTherapistData(1, true);
             } catch (error) {
               console.log("Failed to delete therapist:", error);
-              setTherapists(previous);
-              Alert.alert("Error", "Could not delete this therapist. Please try again.");
+              // setTherapists(previous);
+              Alert.alert(
+                "Cannot Delete",
+                error?.response?.data?.message ||
+                  error?.message ||
+                  "Could not delete this therapist. Please try again.",
+              );
             }
           },
         },
@@ -253,6 +340,7 @@ export default function TherapistsScreen({ navigation }) {
       phone: normalizedPhone,
       address: newTherapist.address,
       ...((!isEditMode || password) && { password }),
+      isActive: newTherapist.isActive ?? true,
     };
 
     try {
@@ -275,6 +363,7 @@ export default function TherapistsScreen({ navigation }) {
                       id: payload.specialty,
                     },
                   ],
+                  isActive: updated?.isActive ?? payload.isActive,
                 }
               : item
           )
@@ -296,6 +385,7 @@ export default function TherapistsScreen({ navigation }) {
           email: created?.email || payload.email,
           phone: created?.phone || payload.phone,
           address: created?.address || payload.address,
+          isActive: created?.isActive ?? payload.isActive,
         };
 
         setTherapists((prev) => [newItem, ...prev]);
@@ -339,6 +429,7 @@ export default function TherapistsScreen({ navigation }) {
         limit: 5,
         search: searchQuery,
         specialty: selectedFilter === "All" ? "" : selectedFilter,
+        status: statusFilter,
       });
 
       const therapistsData = response?.data || [];
@@ -365,6 +456,7 @@ export default function TherapistsScreen({ navigation }) {
           email: therapist.email || '',
           phone: therapist.phone || '',
           address: therapist.address || '',
+          isActive: therapist.isActive ?? true,
         };
       });
 
@@ -389,7 +481,7 @@ export default function TherapistsScreen({ navigation }) {
     }, 400);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, selectedFilter]);
+  }, [searchQuery, selectedFilter, statusFilter]);
   
 
   
@@ -571,10 +663,10 @@ export default function TherapistsScreen({ navigation }) {
         <View style={styles.headerTitleContainer}>
           <View style={styles.headerTitle}>
               <Text style={styles.pageTitle}>Therapists</Text>
-              <TouchableOpacity style={styles.assignChildButton} onPress={openAssignModal}>
+              {/* <TouchableOpacity style={styles.assignChildButton} onPress={openAssignModal}>
                 <Ionicons name="people-outline" size={18} color="#FFFFFF" />
                 <Text style={styles.assignChildButtonText}>Assign Child</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
           </View>
           <Text style={styles.pageSubTitle}>
             Oversee your Therapist team and balance their caseloads.
@@ -592,11 +684,9 @@ export default function TherapistsScreen({ navigation }) {
               onChangeText={setSearchQuery}
             />
           </View>
-          <TouchableOpacity
-            style={styles.filterIconButton}
-            onPress={() => setIsFilterModalOpen(true)}
-          >
+          <TouchableOpacity style={styles.filterIconButton} onPress={openFilterModal}>
             <Feather name="sliders" size={20} color="#0B4A6F" />
+            {activeFilterCount > 0 && <View style={styles.filterActiveDot} />}
           </TouchableOpacity>
         </View>
 
@@ -663,7 +753,19 @@ export default function TherapistsScreen({ navigation }) {
                   </Text>
                 </View>
                 <View style={styles.therapistInfo}>
-                  <Text style={styles.therapistName}>{therapist.name}</Text>
+                  
+                  <View style={{ flexDirection: "row", alignItems: "center", flex: 1, flexWrap: "wrap" }}>
+                    <Text style={styles.therapistName}>
+                      {therapist.name}
+                    </Text>
+
+                    {therapist.isActive === false && (
+                      <View style={styles.inactiveBadge}>
+                        <View style={styles.inactiveDot} />
+                        <Text style={styles.inactiveBadgeText}>Inactive</Text>
+                      </View>
+                    )}
+                  </View>
                   <View
                     style={{
                       flexDirection: "row",
@@ -756,7 +858,7 @@ export default function TherapistsScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.loadRow}>
+              {/* <View style={styles.loadRow}>
                 <Text style={styles.loadLabel}>Current Load</Text>
                 <Text style={styles.loadValue}>
                   {therapist.currentLoad}/{therapist.maxLoad} <Text style={styles.loadSubText}>Childs</Text>
@@ -770,13 +872,14 @@ export default function TherapistsScreen({ navigation }) {
                   end={{ x: 1, y: 0 }}
                   style={[styles.progressBar, { width: loadPercentage }]}
                 />
-              </View>
+              </View> */}
 
               <View style={styles.cardActionsRow}>
                 <TouchableOpacity style={styles.scheduleButton} onPress={() =>
                   navigation.navigate("TherapistSchedule", {
                     therapistId: therapist.id,
                     therapistName: therapist.name,
+                    isActive:therapist.isActive
                   })
                 }>
                   <Text style={styles.scheduleButtonText}>View Schedule</Text>
@@ -815,46 +918,83 @@ export default function TherapistsScreen({ navigation }) {
         >
           <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter by Specialty</Text>
+              <Text style={styles.modalTitle}>Therapist Filter</Text>
               <TouchableOpacity onPress={() => setIsFilterModalOpen(false)}>
                 <Feather name="x" size={22} color="#64748B" />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.filterModalWrap}>
-              <TouchableOpacity
-                style={[
-                  styles.filterModalChip,
-                  { backgroundColor: "#0B4A6F" },
-                  selectedFilter === "All" && styles.activeModalChip,
-                ]}
-                onPress={() => {
-                  setSelectedFilter("All");
-                  setIsFilterModalOpen(false);
-                }}
-              >
-                <Text style={styles.filterModalChipTextAll}>All Types</Text>
-              </TouchableOpacity>
-
-              {services.map((cat,index) => {
-              return (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Specialty */}
+              <Text style={styles.filterSectionTitle}>Specialty</Text>
+              <View style={styles.filterModalWrap}>
                 <TouchableOpacity
-                  key={index}
                   style={[
-                    styles.filterModalChip,
-                    { backgroundColor: cat.bg },
-                    selectedFilter === cat.id && styles.activeModalChip,
+                    styles.statusFilterChip,
+                    draftSpecialty === "All" && styles.statusFilterChipActive,
                   ]}
-                  onPress={() => {
-                    setSelectedFilter(cat.id);
-                    setIsFilterModalOpen(false);
-                  }}
+                  onPress={() => setDraftSpecialty("All")}
                 >
-                  <Text style={[styles.filterChipText, { color: cat.color }]}>
-                    {cat.label}
+                  <Text
+                    style={[
+                      styles.statusFilterText,
+                      draftSpecialty === "All" && styles.statusFilterTextActive,
+                    ]}
+                  >
+                    All Types
                   </Text>
                 </TouchableOpacity>
-              )})}
+
+                {services.map((cat) => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[
+                      styles.filterModalChip,
+                      { backgroundColor: cat.bg },
+                      draftSpecialty === cat.id && styles.activeModalChip,
+                    ]}
+                    onPress={() => setDraftSpecialty(cat.id)}
+                  >
+                    <Text style={[styles.filterChipText, { color: cat.color }]}>
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Status */}
+              <Text style={styles.filterSectionTitle}>Status</Text>
+              <View style={styles.statusFilterWrap}>
+                {STATUS_FILTERS.map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.statusFilterChip,
+                      draftStatus === option.value && styles.statusFilterChipActive,
+                    ]}
+                    onPress={() => setDraftStatus(option.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.statusFilterText,
+                        draftStatus === option.value && styles.statusFilterTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+
+            <View style={styles.filterFooter}>
+              <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
+                <Text style={styles.resetButtonText}>Reset</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
+                <Text style={styles.applyButtonText}>Apply Filters</Text>
+              </TouchableOpacity>
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -996,6 +1136,19 @@ export default function TherapistsScreen({ navigation }) {
                   <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
+              
+              <Text style={styles.fieldLabel}>Status</Text>
+
+              <SegmentedToggle
+                options={ACTIVE_OPTIONS}
+                value={newTherapist.isActive ?? true}
+                onChange={(value) =>
+                  setNewTherapist((prev) => ({
+                    ...prev,
+                    isActive: value,
+                  }))
+                }
+              />
 
             </ScrollView>
               <View style={styles.stickyButtonContainer}>
@@ -1487,12 +1640,12 @@ const styles = StyleSheet.create({
   filterModalWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 7,
     paddingBottom: 20,
   },
   filterModalChip: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 20,
   },
   filterModalChipTextAll: {
@@ -1698,4 +1851,124 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0F172A',
   },
+  
+segmentWrap: {
+  flexDirection: "row",
+  backgroundColor: "#F1F5F9",
+  borderRadius: 10,
+  padding: 4,
+  marginBottom: 16,
+},
+segmentItem: {
+  flex: 1,
+  paddingVertical: 10,
+  alignItems: "center",
+  borderRadius: 8,
+},
+segmentItemOn: {
+  backgroundColor: "#0B4A6F",
+},
+segmentText: {
+  color: "#475569",
+  fontSize: 14,
+  fontWeight: "600",
+},
+segmentTextOn: {
+  color: "#FFFFFF",
+},
+statusFilterWrap: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 8,
+  marginTop: 8,
+  marginBottom: 16,
+},
+statusFilterChip: {
+  paddingHorizontal: 16,
+  paddingVertical: 9,
+  borderRadius: 20,
+  backgroundColor: "#F1F5F9",
+  borderWidth: 1,
+  borderColor: "#E2E8F0",
+},
+statusFilterChipActive: {
+  backgroundColor: "#0B4A6F",
+  borderColor: "#0B4A6F",
+},
+statusFilterText: {
+  color: "#475569",
+  fontSize: 13,
+  fontWeight: "600",
+},
+statusFilterTextActive: {
+  color: "#FFFFFF",
+},
+inactiveBadge: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#FEE2E2",
+  paddingHorizontal: 8,
+  paddingVertical: 3,
+  borderRadius: 12,
+  marginLeft: 8,
+},
+inactiveDot: {
+  width: 6,
+  height: 6,
+  borderRadius: 3,
+  backgroundColor: "#DC2626",
+  marginRight: 5,
+},
+inactiveBadgeText: {
+  color: "#B91C1C",
+  fontSize: 11,
+  fontWeight: "700",
+},
+filterSectionTitle: {
+  fontSize: 13,
+  fontWeight: "700",
+  color: "#475569",
+  textTransform: "uppercase",
+  letterSpacing: 0.6,
+  marginTop: 6,
+  marginBottom: 10,
+},
+filterFooter: {
+  flexDirection: "row",
+  gap: 12,
+  paddingTop: 14,
+  marginTop: 8,
+  borderTopWidth: 1,
+  borderTopColor: "#F1F5F9",
+},
+resetButton: {
+  flex: 1,
+  height: 48,
+  borderRadius: 14,
+  borderWidth: 1,
+  borderColor: "#CBD5E1",
+  alignItems: "center",
+  justifyContent: "center",
+},
+resetButtonText: { fontSize: 15, fontWeight: "700", color: "#475569" },
+applyButton: {
+  flex: 2,
+  height: 48,
+  borderRadius: 14,
+  backgroundColor: "#0B4A6F",
+  alignItems: "center",
+  justifyContent: "center",
+},
+applyButtonText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+filterActiveDot: {
+  position: "absolute",
+  top: 8,
+  right: 8,
+  width: 9,
+  height: 9,
+  borderRadius: 5,
+  backgroundColor: "#EF4444",
+  borderWidth: 1.5,
+  borderColor: "#FFFFFF",
+},
 });
