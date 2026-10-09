@@ -18,7 +18,7 @@ import {
   fonts,
 } from '../../../styles/theme';
 
-export default function Administration({ customstyles }) {
+export default function Administration({ customstyles, leaveCount = 0 }) {
   const navigation = useNavigation();
   return (
     <View style={styles.container}>
@@ -31,7 +31,7 @@ export default function Administration({ customstyles }) {
         onPress={() => navigation.navigate("ProgramBuilder")}
       >
         <View style={[styles.adminIconBox, { backgroundColor: "#1669A9" }]}>
-          <Entypo name="plus" size={22}  color="#FFFFFF" />
+          <Entypo name="plus" size={22} color="#FFFFFF" />
         </View>
 
         <View style={styles.adminTextContainer}>
@@ -70,13 +70,25 @@ export default function Administration({ customstyles }) {
           <MaterialIcons name="event-note" size={22} color="#FFFFFF" />
         </View>
 
-        <View style={styles.adminTextContainer}>
-          <View style={{ width: "70%" }}>
+        <View style={[styles.adminTextContainer, { flex: 1, flexWrap: "nowrap" }]}>
+          <View style={{ flex: 1 }}>
             <Text style={styles.adminBannerTitle}>Leave Requests</Text>
-            <Text style={styles.adminBannerSub}>Approve or reject leave requests</Text>
+            <Text style={styles.adminBannerSub}>
+              Approve or reject leave requests
+            </Text>
           </View>
 
-          <AntDesign name="file-text" size={24} color="#717781" />
+          <View style={styles.leaveRightContainer}>
+            {Number(leaveCount) > 0 && (
+              <View style={styles.leaveBadge}>
+                <Text style={styles.leaveBadgeText}>
+                  {Number(leaveCount) > 99 ? "99+" : leaveCount}
+                </Text>
+              </View>
+            )}
+
+            <AntDesign name="file-text" size={24} color="#717781" />
+          </View>
         </View>
       </TouchableOpacity>
 
@@ -176,5 +188,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#414750",
     fontFamily: fonts.regular,
+  },
+  leaveRightContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  leaveBadge: {
+    backgroundColor: "#EF4444",
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  leaveBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontFamily: fonts.semiBold,
+    textAlign: "center",
   },
 });

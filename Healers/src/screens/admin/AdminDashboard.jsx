@@ -45,6 +45,7 @@ export default function AdminDashboard() {
     therapistCount: 0,
     totalUsers: 0,
     sessionCount: 0,
+    leaveCount: 0,
   });
   const [unreadData, setUnreadData] = useState({
     hasUnread: false,
@@ -58,18 +59,37 @@ export default function AdminDashboard() {
   const isFocused = useIsFocused();
 
   useEffect(() => {
-    fetchOverviewData();
-  }, []);
+    if (!isFocused) return;
+
+    const OverviewData = async () => {
+      try {
+        await fetchOverviewData();
+      } catch (error) {
+        console.log("Failed to fetch overview data:", error);
+      }
+    };
+
+    OverviewData();
+
+    const interval = setInterval(() => {
+      OverviewData();
+    }, 60000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isFocused]);
 
   const fetchOverviewData = async () => {
     try {
       const response = await Overview();
       const rawData = response?.data || response;
       setStats({
-        totalChild: rawData?.totalChild || rawData?.childrenCount || 0,
-        therapistCount: rawData?.therapistCount || rawData?.therapists || 0,
-        totalUsers: rawData?.totalUsers || rawData?.usersCount || 0,
-        sessionCount: rawData?.sessionCount || rawData?.sessions || 0,
+        totalChild: rawData?.totalChild || 0,
+        therapistCount: rawData?.therapistCount || 0,
+        totalUsers: rawData?.totalUsers || 0,
+        sessionCount: rawData?.sessionCount || 0,
+        leaveCount: rawData?.leaveCount || 0,
       });
     } catch (error) {
       console.log("Failed to fetch dashboard overview:", error);
@@ -215,7 +235,7 @@ export default function AdminDashboard() {
           >
             <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
               <Feather name="message-square" size={24} color="#10B981" />
-              <View style={styles.cardBadgeDot} />
+              {unreadData.hasUnread && <View style={styles.cardBadgeDot} />}
             </View>
             <Text style={styles.gridCardTitle}>Messages</Text>
           </TouchableOpacity>
@@ -282,7 +302,7 @@ export default function AdminDashboard() {
           </TouchableOpacity>
         )}
 
-        <Administration customstyles={styles} />
+        <Administration customstyles={styles} leaveCount={stats.leaveCount} />
 
         <Text style={styles.sectionHeadTitle}>Quick Actions</Text>
 
@@ -329,7 +349,6 @@ export default function AdminDashboard() {
           </View>
           <AntDesign name="file-text" size={24} color="#717781" />
         </TouchableOpacity>
-        
       </ScrollView>
 
       <BottomBar />

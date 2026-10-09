@@ -1,40 +1,39 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, {
+  useEffect,
+  useState,
+} from 'react';
 
 import {
-  Image,
+  ActivityIndicator,
+  Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
-  Alert,
-  ActivityIndicator,
-  Modal,
-  TextInput,
-} from "react-native";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-
-import BottomBar from "../../components/BottomBar";
-
-import TopBar from "../../components/TopBar";
-
-import { colors, commonStyles, fonts } from "../../styles/theme";
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useIsFocused } from '@react-navigation/native';
 
 import {
   approveLeaveRequest,
   getLeaveRequests,
+  markAllLeavesSeen,
   rejectLeaveRequest,
-} from "../../api/admin/api";
-import { AuthContext } from "../../context/AuthContext";
+} from '../../api/admin/api';
+import BottomBar from '../../components/BottomBar';
+import TopBar from '../../components/TopBar';
+import {
+  colors,
+  commonStyles,
+  fonts,
+} from '../../styles/theme';
 
-const formatNames = (names) =>
-  names.length > 2 ? `${names.slice(0, 2).join(", ")}...` : names.join(", ");
+const formatNames = (names) => names.length > 2 ? `${names.slice(0, 2).join(", ")}...` : names.join(", ");
 
 export default function LeaveRequestsScreen({ navigation }) {
   // const insets = useSafeAreaInsets();
@@ -56,7 +55,8 @@ export default function LeaveRequestsScreen({ navigation }) {
   const [rejectionReason, setRejectionReason] = useState("");
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
   const [reasonTarget, setReasonTarget] = useState(null);
-  
+  const isFocused = useIsFocused();
+
   const fetchRequests = async (tab = selectedTab) => {
     setLoading(true);
 
@@ -88,13 +88,26 @@ export default function LeaveRequestsScreen({ navigation }) {
     }
   };
 
-  const formatDate = (d) =>
-  d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+  useEffect(() => {
+    if (!isFocused) return;
 
-const formatDateRange = (start, end) =>
-  new Date(start).toDateString() === new Date(end).toDateString()
-    ? formatDate(start)
-    : `${formatDate(start)} - ${formatDate(end)}`;
+    const markSeen = async () => {
+      try {
+        await markAllLeavesSeen();
+      } catch (error) {
+        console.log("Failed to mark leave requests as seen:", error);
+      }
+    };
+
+    markSeen();
+  }, [isFocused]);
+
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+
+  const formatDateRange = (start, end) =>
+    new Date(start).toDateString() === new Date(end).toDateString()
+      ? formatDate(start)
+      : `${formatDate(start)} - ${formatDate(end)}`;
 
   const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
@@ -106,9 +119,7 @@ const formatDateRange = (start, end) =>
     // console.log(item,"called");
     Alert.alert(
       "Approve Request",
-
       `Approve ${item.name}'s leave request?`,
-
       [
         { text: "Cancel", style: "cancel" },
 
@@ -210,28 +221,29 @@ const formatDateRange = (start, end) =>
             </Text>
 
             <View style={styles.trendContainer}>
-              {stats.pendingCount >= stats.pendingSinceYesterday ? (
-                <MaterialIcons
-                  name="trending-up"
-                  size={16}
-                  color="#006B58"
-                />
-              ) : (
-                <MaterialIcons
-                  name="trending-down"
-                  size={16}
-                  color="#6b0005"
-                />
-              )}
+              {stats.pendingCount >= stats.pendingSinceYesterday
+                ? (
+                  <MaterialIcons
+                    name="trending-up"
+                    size={16}
+                    color="#006B58"
+                  />
+                )
+                : (
+                  <MaterialIcons
+                    name="trending-down"
+                    size={16}
+                    color="#6b0005"
+                  />
+                )}
 
               <Text
                 style={[
                   styles.trendText,
                   {
-                    color:
-                      stats.pendingCount >= stats.pendingSinceYesterday
-                        ? "#006B58"
-                        : "#6b0005",
+                    color: stats.pendingCount >= stats.pendingSinceYesterday
+                      ? "#006B58"
+                      : "#6b0005",
                   },
                 ]}
               >
@@ -305,8 +317,8 @@ const formatDateRange = (start, end) =>
           </View>
         )}
 
-        {!loading &&
-          requests.map((item) => (
+        {!loading
+          && requests.map((item) => (
             <View key={item.id} style={styles.requestCard}>
               <View style={styles.userInfoRow}>
                 <View style={styles.userDetails}>
@@ -322,8 +334,8 @@ const formatDateRange = (start, end) =>
                     item.status === "Approved"
                       ? { backgroundColor: "#D1FAE5" }
                       : item.status === "Rejected"
-                        ? { backgroundColor: "#FEE2E2" }
-                        : { backgroundColor: "#FEF3C7" },
+                      ? { backgroundColor: "#FEE2E2" }
+                      : { backgroundColor: "#FEF3C7" },
                   ]}
                 >
                   <Text
@@ -333,8 +345,8 @@ const formatDateRange = (start, end) =>
                       item.status === "Approved"
                         ? { color: "#059669" }
                         : item.status === "Rejected"
-                          ? { color: "#DC2626" }
-                          : { color: "#D97706" },
+                        ? { color: "#DC2626" }
+                        : { color: "#D97706" },
                     ]}
                   >
                     {item.status}
@@ -354,11 +366,13 @@ const formatDateRange = (start, end) =>
                 </Text>
               </View>
 
-              {/* {!!item.reason && (
+              {
+                /* {!!item.reason && (
 
                 <Text style={styles.reasonText}>Reason: {item.reason}</Text>
 
-              )} */}
+              )} */
+              }
 
               {item.status === "Rejected" && (
                 <TouchableOpacity
@@ -449,13 +463,13 @@ const formatDateRange = (start, end) =>
                 onPress={handleConfirmReject}
                 disabled={actioningId === rejectTarget?.id}
               >
-                {actioningId === rejectTarget?.id ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.confirmRejectButtonText}>
-                    Confirm Rejection
-                  </Text>
-                )}
+                {actioningId === rejectTarget?.id
+                  ? <ActivityIndicator size="small" color="#FFFFFF" />
+                  : (
+                    <Text style={styles.confirmRejectButtonText}>
+                      Confirm Rejection
+                    </Text>
+                  )}
               </TouchableOpacity>
             </TouchableOpacity>
           </TouchableOpacity>
