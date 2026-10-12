@@ -24,6 +24,14 @@ export const loginUser = async (identifier, password, rememberMe = false) => {
   }
   return response.data;
 };
+export const registerNotification = async (token,platform) => {
+  const response = await apiClient.post("/auth/push-token", { token,platform });
+  return response.data;
+};
+export const removePushToken = async (token) => {
+  const response = await apiClient.delete("/auth/push-token", { data: { token } });
+  return response.data;
+};
 
 export const logoutUser = async () => {
   await AsyncStorage.multiRemove(["userToken", "userData", "deviceBiometricKey"]);

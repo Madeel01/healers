@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,6 +25,7 @@ import { useNavigation } from '@react-navigation/native';
 import {
   loginUser,
   loginWithBiometrics,
+  registerNotification,
 } from '../../api/authService';
 import { AuthContext } from '../../context/AuthContext';
 import {
@@ -31,6 +33,7 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import { registerForPushNotifications } from '../../utils/registerForPush';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -67,7 +70,7 @@ export default function LoginScreen() {
       } else {
         await AsyncStorage.removeItem("rememberedEmail");
       }
-
+      
       await login(response.token, response.user);
       Alert.alert("Success", "Logged in successfully!");
     } catch (error) {

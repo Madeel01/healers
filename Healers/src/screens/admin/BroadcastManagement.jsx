@@ -54,6 +54,7 @@ const STATUS_OPTIONS = [
   { label: "Sending", value: "sending" },
   { label: "Sent", value: "sent" },
   { label: "Cancelled", value: "cancelled" },
+  { label: "Failed", value: "failed" }, 
 ];
 const RECIPIENT_GROUPS = Object.keys(GROUP_CONFIG);
 
@@ -62,6 +63,7 @@ const STATUS_COLORS = {
   scheduled: { bg: "#FEF3C7", text: "#B45309" },
   draft: { bg: "#E2E8F0", text: "#475569" },
   sending: { bg: "#E0F2FE", text: "#0B4A6F" },
+  failed: { bg: "#FEE2E2", text: "#B91C1C" },
 };
 
 const audienceLabel = (b) => {
@@ -158,72 +160,54 @@ export default function BroadcastManagementScreen({ navigation }) {
   //       b.message?.toLowerCase().includes(broadcastSearch.trim().toLowerCase())
   //     )
   //   : items;
+  const filtersRef = useRef({ search: "", status: "all", type: "all" });
+  const setFilters = (patch) => {
+    filtersRef.current = { ...filtersRef.current, ...patch };
+  };
+  const fetchPage = useCallback(async (pageNum, mode) => {
+    try {
+      setListError(null);
+      if (mode === "initial") setLoading(true);
+      if (mode === "more") setLoadingMore(true);
 
-  const fetchPage = useCallback(
-    async (pageNum, mode, opts = {}) => {
-      try {
-        setListError(null);
-        if (mode === "initial") setLoading(true);
-        if (mode === "more") setLoadingMore(true);
+      const { search, status, type } = filtersRef.current;
+      const res = await getBroadcasts(pageNum, LIMIT, search, status, type);
+      const { data = [], pagination } = res.data;
 
-        const searchTerm = opts.search ?? broadcastSearch;
-        const status = opts.status ?? statusFilter;
-        const type = opts.type ?? typeFilter;
+      setItems((prev) => (pageNum === 1 ? data : [...prev, ...data]));
+      setPage(pageNum);
+      setHasMore(pageNum * LIMIT < (pagination?.total || 0));
+    } catch (e) {
+      setListError(e?.response?.data?.message || "Failed to load broadcasts.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+      setLoadingMore(false);
+    }
+  }, []);
 
-        const res = await getBroadcasts(
-          pageNum,
-          LIMIT,
-          searchTerm,
-          status,
-          type,
-        );
-        const { data = [], pagination } = res.data;
-
-        setItems((prev) => (pageNum === 1 ? data : [...prev, ...data]));
-        setPage(pageNum);
-        setHasMore(pageNum * LIMIT < (pagination?.total || 0));
-      } catch (e) {
-        setListError(
-          e?.response?.data?.message || "Failed to load broadcasts.",
-        );
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-        setLoadingMore(false);
-      }
-    },
-    [broadcastSearch, statusFilter],
-  );
+  const onSearchChange = (text) => {
+    setBroadcastSearch(text);
+    setFilters({ search: text });
+    clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => fetchPage(1, "silent"), 350);
+  };
+  const onStatusSelect = (value) => {
+    setStatusFilter(value);
+    setFilters({ status: value });
+    fetchPage(1, "silent");
+  };
+  const onTypeSelect = (value) => {
+    setTypeFilter(value);
+    setFilters({ type: value });
+    fetchPage(1, "silent");
+  };
 
   useFocusEffect(
     useCallback(() => {
       fetchPage(1, "initial");
     }, [fetchPage]),
   );
-  const onSearchChange = (text) => {
-    setBroadcastSearch(text);
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(() => {
-      fetchPage(1, "silent", { search: text, status: statusFilter });
-    }, 350);
-  };
-
-  const onStatusSelect = (value) => {
-    setStatusFilter(value);
-    fetchPage(1, "silent", {
-      search: broadcastSearch,
-      status: value,
-      type: typeFilter,
-    });
-  };
-  const onTypeSelect = (value) => {
-    setTypeFilter(value);
-    fetchPage(1, "silent", {
-      search: broadcastSearch,
-      status: statusFilter,
-      type: value,
-    });
-  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -262,6 +246,7 @@ export default function BroadcastManagementScreen({ navigation }) {
 
   const resetForm = () => {
     setRecipientGroup("All Users");
+    setEditingId(null);
     setSelectedRecipients([]);
     setBroadcastTitle("");
     setMessageContent("");
@@ -281,6 +266,7 @@ export default function BroadcastManagementScreen({ navigation }) {
   const closeCreateModal = () => {
     if (submitting) return;
     setIsCreateOpen(false);
+    setEditingId(null);   
   };
 
   const loadRecipients = async (searchTerm = "") => {

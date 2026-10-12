@@ -5,21 +5,22 @@ import React, {
   useRef,
   useState,
 } from 'react';
-
 import { jwtDecode } from 'jwt-decode';
 import {
   Alert,
   AppState,
+  Platform,
 } from 'react-native';
-
 import NetInfo from '@react-native-community/netinfo';
-
 import { updateOnlineStatusApi } from '../api/authApi';
 import {
   clearAuthData,
   getAuthData,
   setAuthData,
 } from '../utils/storage';
+import { registerForPushNotifications } from '../utils/registerForPush';
+import { registerNotification, removePushToken } from '../api/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const AuthContext = createContext();
 
@@ -70,6 +71,25 @@ export const AuthProvider = ({ children }) => {
       console.log(" Failed to update online status:", error?.response?.data || error?.message);
     }
   }, []);
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const pushToken = await registerForPushNotifications();
+        if (!pushToken || cancelled) return;
+        await registerNotification(pushToken, Platform.OS);
+        await AsyncStorage.setItem("pushToken", pushToken);
+      } catch (error) {
+        console.log("Push registration failed:", error?.response?.data || error?.message);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   // const logout = useCallback(async (expectedToken) => {
   //   const currentToken = tokenRef.current;
@@ -134,6 +154,18 @@ export const AuthProvider = ({ children }) => {
 
       setToken(null);
       setUser(null);
+      const pushToken = await AsyncStorage.getItem("pushToken");
+      if (pushToken && currentToken && getTokenRemainingMs(currentToken) > 0) {
+        try {
+          await Promise.race([
+            removePushToken(pushToken),
+            new Promise((resolve) => setTimeout(resolve, 3000)),
+          ]);
+        } catch (error) {
+          console.log("Push token removal failed:", error?.message);
+        }
+        await AsyncStorage.removeItem("pushToken");
+      }
 
       await clearAuthData();
 
