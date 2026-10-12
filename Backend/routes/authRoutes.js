@@ -17,6 +17,8 @@ const {
   forgotPassword,
   verifyResetOtp,
   resetPassword,
+  savePushToken,
+  removePushToken,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
 const rateLimit = require("express-rate-limit");
@@ -44,4 +46,6 @@ router.get("/users/notifications/unread-count", protect, getUnreadNotificationCo
 router.post("/forgot-password", otpLimiter, forgotPassword);
 router.post("/verify-reset-otp", otpLimiter, verifyResetOtp);
 router.post("/reset-password", resetPassword);
+router.post("/push-token", protect, savePushToken);
+router.delete("/push-token", protect, removePushToken);
 module.exports = router;

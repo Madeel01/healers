@@ -17,7 +17,8 @@ const BatchAssignment = require("../models/BatchAssignment");
 const Package = require("../models/Package");
 const Service = require("../models/Service");
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const { sendToUsers, TEMPLATE } = require("../utils/notificationService");
+const { sendToUsers, TEMPLATE, sendNotification } = require("../utils/notificationService");
+const { buildRecipients } = require("../utils/broadcastHelpers");
 const PAST_DAYS = 365;
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
@@ -3669,6 +3670,10 @@ async function resolveRecipients(audience, roles, users) {
   }
   return [];
 }
+const parseFutureDate = (value) => {
+  const d = new Date(value);
+  return isNaN(d.getTime()) || d <= new Date() ? null : d;
+};
 exports.createBroadcast = async (req, res) => {
   try {
     const {
@@ -3754,8 +3759,15 @@ exports.createBroadcast = async (req, res) => {
             message: "sendAt is required for scheduled delivery.",
           });
       }
+      const when = parseFutureDate(sendAt);
+      if (!when) {
+        return res.status(400).json({
+          success: false,
+          message: "sendAt must be a valid future date/time.",
+        });
+      }
       status = "scheduled";
-      finalSendAt = new Date(sendAt);
+      finalSendAt = when;
     }
 
     const notification = new Notification({
@@ -3777,7 +3789,7 @@ exports.createBroadcast = async (req, res) => {
         parsedRoles,
         parsedUsers,
       );
-      notification.recipients = recipientUsers.map((u) => ({ user: u._id }));
+      notification.recipients = buildRecipients(recipientUsers);
       notification.status = "sent";
       notification.sentAt = new Date();
     }
@@ -3966,14 +3978,20 @@ exports.updateBroadcast = async (req, res) => {
             message: "sendAt is required for scheduled delivery.",
           });
       }
+      const when = parseFutureDate(sendAt);
+      if (!when) {
+        return res.status(400).json({
+          success: false,
+          message: "sendAt must be a valid future date/time.",
+        });
+      }
       broadcast.status = "scheduled";
-      broadcast.sendAt = new Date(sendAt);
+      broadcast.sendAt = when;
     } else if (deliverySchedule === "draft") {
       broadcast.status = "draft";
       broadcast.sendAt = null;
     }
 
-    // remove existing attachment if requested
     if (removeAttachment === "true" && broadcast.attachment?.url) {
       const oldPath = path.join(
         __dirname,
@@ -3984,7 +4002,6 @@ exports.updateBroadcast = async (req, res) => {
       broadcast.attachment = { url: null, name: null, type: null };
     }
 
-    // replace attachment if a new file was uploaded
     if (req.file) {
       if (broadcast.attachment?.url) {
         const oldPath = path.join(
@@ -4007,7 +4024,7 @@ exports.updateBroadcast = async (req, res) => {
         broadcast.roles,
         broadcast.users,
       );
-      broadcast.recipients = recipientUsers.map((u) => ({ user: u._id }));
+      broadcast.recipients = buildRecipients(recipientUsers);
       broadcast.status = "sent";
       broadcast.sentAt = new Date();
     }
@@ -6646,6 +6663,7 @@ exports.updateSettings = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to save settings." });
   }
 };
+
 exports.sendFeedbackReminderNotification = async (req, res) => {
   try {
     const { appointmentId } = req.body;
@@ -6657,7 +6675,6 @@ exports.sendFeedbackReminderNotification = async (req, res) => {
       });
     }
 
-    // 1. Appointment aur usse jude Therapist aur Children Fetch karein
     const schedulingDoc = await Scheduling.findOne({
       "appointments._id": appointmentId,
     })
@@ -6672,35 +6689,37 @@ exports.sendFeedbackReminderNotification = async (req, res) => {
     }
 
     const appointment = schedulingDoc.appointments.id(appointmentId);
-    const therapist = schedulingDoc.therapistId;
 
-    // 2. Direct Recipient User IDs ki List Tayyar Karein
-    const recipientUserIds = [];
-
-    // Therapist ID Add Karein
-    if (therapist?._id) {
-      recipientUserIds.push(therapist._id);
-    }
-
-    // Children (Parents/Users) IDs Add Karein
-    (appointment.children || []).forEach((c) => {
-      const childObj = c.childId;
-      if (childObj?._id) {
-        recipientUserIds.push(childObj._id);
-      }
-    });
-
-    // Duplicate IDs Filter Karein
-    const uniqueRecipients = [...new Set(recipientUserIds.map((id) => String(id)))];
-
-    if (uniqueRecipients.length === 0) {
-      return res.status(400).json({
+    if (!appointment) {
+      return res.status(404).json({
         success: false,
-        message: "No valid therapist or child recipients found for this appointment.",
+        message: "Appointment not found.",
       });
     }
 
-    // 3. Date Formatting
+    const recipientUserIds = [];
+
+    const therapist = schedulingDoc.therapistId;
+
+    if (therapist?._id) {
+      recipientUserIds.push(String(therapist._id));
+    }
+
+    (appointment.children || []).forEach((child) => {
+      if (child.childId?._id) {
+        recipientUserIds.push(String(child.childId._id));
+      }
+    });
+
+    const uniqueRecipients = [...new Set(recipientUserIds)];
+
+    if (!uniqueRecipients.length) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid therapist or child recipients found.",
+      });
+    }
+
     const formattedDate = appointment.date
       ? new Date(appointment.date).toLocaleDateString("en-US", {
           month: "short",
@@ -6709,32 +6728,32 @@ exports.sendFeedbackReminderNotification = async (req, res) => {
         })
       : "upcoming session";
 
-    // 4. Sender ID (Current Admin ya System User)
     const senderId = req.user?._id || process.env.SYSTEM_USER_ID;
 
-    // 5. Direct Notification DB Object Create Karein
-    const notificationDoc = {
+    if (!senderId) {
+      return res.status(500).json({
+        success: false,
+        message: "Notification sender is not configured.",
+      });
+    }
+
+    const notification = await sendNotification({
       title: "Session Feedback Reminder",
       message: `Please submit your feedback for the session on ${formattedDate} (${appointment.startTime || ""} - ${appointment.endTime || ""}).`,
       type: "Reminder",
       audience: "users",
       users: uniqueRecipients,
-      recipients: uniqueRecipients.map((id) => ({ user: id })),
       createdBy: senderId,
-      status: "sent",
-      sentAt: new Date(),
-    };
-
-    // 6. Direct DB Insertion
-    const [savedNotification] = await Notification.create([notificationDoc]);
+    });
 
     return res.status(200).json({
       success: true,
-      message: `Feedback reminder successfully sent to therapist and children!`,
-      data: savedNotification,
+      message: "Feedback reminder sent successfully to therapist and children.",
+      data: notification,
     });
   } catch (error) {
-    console.error("Direct Send Feedback Reminder Error:", error);
+    console.error("Send Feedback Reminder Error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to send feedback reminder.",

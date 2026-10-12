@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const Notification = require("../models/Notification");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail");
+const { Expo } = require("expo-server-sdk");
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -949,4 +950,27 @@ exports.resetPassword = async (req, res) => {
       message: "Unable to reset password.",
     });
   }
+};
+
+exports.savePushToken = async (req, res) => {
+  const { token, platform } = req.body;
+  if (!Expo.isExpoPushToken(token)) {
+    return res.status(400).json({ success: false, message: "Invalid push token." });
+  }
+  await User.updateMany(
+    { "pushTokens.token": token },
+    { $pull: { pushTokens: { token } } },
+  );
+  await User.updateOne(
+    { _id: req.user.id },
+    { $push: { pushTokens: { token, platform, updatedAt: new Date() } } },
+  );
+  res.json({ success: true });
+};
+exports.removePushToken = async (req, res) => {
+  await User.updateOne(
+    { _id: req.user.id },
+    { $pull: { pushTokens: { token: req.body.token } } },
+  );
+  res.json({ success: true });
 };

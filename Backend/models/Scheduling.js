@@ -85,6 +85,10 @@ const appointmentSchema = new mongoose.Schema(
       type: [appointmentChildSchema],
       default: [],
     },
+    reminderSentAt: {
+      type: Date,
+      default: null,
+    },
   },
   { _id: true },
 );

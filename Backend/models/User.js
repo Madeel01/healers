@@ -102,6 +102,13 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    pushTokens: [
+      {
+        token: { type: String },
+        platform: { type: String },
+        updatedAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true },
 );

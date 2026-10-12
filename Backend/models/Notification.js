@@ -97,7 +97,7 @@ const notificationSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["draft", "scheduled", "sending", "sent", "cancelled"],
+      enum: ["draft", "scheduled", "sending", "sent", "cancelled","failed"],
       default: "draft",
     },
 

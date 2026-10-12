@@ -25,7 +25,10 @@ const MONGO_URI = process.env.MONGO_URI;
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log("MongoDB Connected Successfully"))
+  .then(() => {
+    console.log("MongoDB Connected Successfully");
+    require("./jobs/scheduledBroadcasts").start();
+  })
   .catch((err) => {
     console.error("MongoDB Connection Error:", err.message);
     process.exit(1);
