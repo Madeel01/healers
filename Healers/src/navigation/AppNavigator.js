@@ -36,6 +36,8 @@ import LeaveRequestsScreen from '../screens/admin/LeaveRequest';
 import NotificationScreen from '../screens/admin/Notification';
 import ProgramBuilderScreen from '../screens/admin/ProgramBuilder';
 import ScheduleScreen from '../screens/admin/Schedule';
+import SendPushNotificationScreen
+  from '../screens/admin/SendPushNotificationScreen';
 import ServiceManagementScreen from '../screens/admin/ServiceManagementScreen';
 import SettingsScreen from '../screens/admin/SettingsScreen';
 import StaffOnLeaveScreen from '../screens/admin/StaffOnLeave';
@@ -126,6 +128,7 @@ function AdminStack() {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="ChildForm" component={ChildFormScreen} />
       <Stack.Screen name="ChildDetails" component={ChildDetailsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SendPushNotification" component={SendPushNotificationScreen} />
     </Stack.Navigator>
   );
 }

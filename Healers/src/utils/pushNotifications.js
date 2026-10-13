@@ -1,7 +1,6 @@
-  // import Constants from 'expo-constants';
-  // import * as Device from 'expo-device';
-  // import * as Notifications from 'expo-notifications';
-  // import { Platform } from 'react-native';
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
   // Notifications.setNotificationHandler({
   //   handleNotification: async () => ({
@@ -12,22 +11,20 @@
   //   }),
   // });
 
-  // export const registerPushNotifications = async () => {
-  //   if (!Device.isDevice) {
-  //     return null;
-  //   }
+export async function registerForPushNotifications() {
+  if (!Device.isDevice) {
+    console.log("Physical device required");
+    return null;
+  }
 
-  //   if (Platform.OS === "android") {
-  //     await Notifications.setNotificationChannelAsync(
-  //       "session-reminders",
-  //       {
-  //         name: "Session Reminders",
-  //         importance:
-  //           Notifications.AndroidImportance.HIGH,
-  //         sound: "default",
-  //       },
-  //     );
-  //   }
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "Default Notifications",
+      importance: Notifications.AndroidImportance.MAX,
+      enableVibrate: true,
+      vibrationPattern: [0, 250, 250, 250],
+    });
+  }
 
   //   const { status: existingStatus } =
   //     await Notifications.getPermissionsAsync();
@@ -41,23 +38,41 @@
   //     finalStatus = status;
   //   }
 
-  //   if (finalStatus !== "granted") {
-  //     return null;
-  //   }
+  if (finalStatus !== "granted") {
+    console.log("Notification permission denied");
+    return null;
+  }
 
-  //   const projectId =
-  //     Constants?.expoConfig?.extra?.eas?.projectId
-  //     ?? Constants?.easConfig?.projectId;
+  const token = await Notifications.getDevicePushTokenAsync();
 
-  //   if (!projectId) {
-  //     console.log("EAS projectId not found");
-  //     return null;
-  //   }
+  console.log("FCM Token:", token.data);
 
-  //   const token =
-  //     await Notifications.getExpoPushTokenAsync({
-  //       projectId,
-  //     });
+  return token.data;
+}
 
-  //   return token.data;
-  // };
+export function setupNotificationListeners(onNotificationPress) {
+  const receivedListener =
+    Notifications.addNotificationReceivedListener((notification) => {
+      console.log(
+        "Push Received:",
+        notification.request.content
+      );
+    });
+
+  const responseListener =
+    Notifications.addNotificationResponseReceivedListener((response) => {
+      const data =
+        response.notification.request.content.data;
+
+      console.log("Notification Clicked:", data);
+
+      if (onNotificationPress) {
+        onNotificationPress(data);
+      }
+    });
+
+  return () => {
+    receivedListener.remove();
+    responseListener.remove();
+  };
+}

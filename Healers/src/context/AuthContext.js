@@ -5,22 +5,27 @@ import React, {
   useRef,
   useState,
 } from 'react';
+
 import { jwtDecode } from 'jwt-decode';
 import {
   Alert,
   AppState,
-  Platform,
 } from 'react-native';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+
 import { updateOnlineStatusApi } from '../api/authApi';
+import {
+  removePushTokenApi,
+  savePushTokenApi,
+} from '../api/pushNotificationApi';
+import { registerForPushNotifications } from '../utils/pushNotifications';
 import {
   clearAuthData,
   getAuthData,
   setAuthData,
 } from '../utils/storage';
-import { registerForPushNotifications } from '../utils/registerForPush';
-import { registerNotification, removePushToken } from '../api/authService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const AuthContext = createContext();
 
@@ -71,68 +76,6 @@ export const AuthProvider = ({ children }) => {
       console.log(" Failed to update online status:", error?.response?.data || error?.message);
     }
   }, []);
-  // useEffect(() => {
-  //   if (!token) return;
-  //   console.log(token,"tokennnnnn")
-  //   let cancelled = false;
-  //   (async () => {
-  //     try {
-  //       const pushToken = await registerForPushNotifications();
-  //       if (!pushToken || cancelled) return;
-  //       console.log(pushToken,cancelled,"tokennnnnneee")
-  //       await registerNotification(pushToken, Platform.OS);
-  //       await AsyncStorage.setItem("pushToken", pushToken);
-  //     } catch (error) {
-  //       console.log(error,"erorrrrrrrrrr")
-  //       console.log("Push registration failed:", error?.response?.data || error?.message);
-  //     }
-  //   })();
-
-  //   return () => {
-  //     cancelled = true;
-  //   };
-  // }, [token]);
-
-  // const logout = useCallback(async (expectedToken) => {
-  //   const currentToken = tokenRef.current;
-
-  //   if (expectedToken !== undefined && currentToken !== expectedToken) {
-  //     return;
-  //   }
-
-  //   if (logoutInProgressRef.current) {
-  //     return;
-  //   }
-
-  //   logoutInProgressRef.current = true;
-  //   const sessionVersion = sessionVersionRef.current;
-
-  //   try {
-
-  //     if (currentToken && getTokenRemainingMs(currentToken) > 0) {
-  //       await updateOnlineStatus(false, currentToken);
-  //     }
-
-  //     if (sessionVersionRef.current !== sessionVersion) {
-  //       return;
-  //     }
-
-  //     await clearAuthData();
-
-  //     if (sessionVersionRef.current !== sessionVersion) {
-  //       return;
-  //     }
-
-  //     tokenRef.current = null;
-  //     sessionVersionRef.current += 1;
-  //     setToken(null);
-  //     setUser(null);
-  //   } catch (error) {
-  //     console.log(" Logout Error:", error);
-  //   } finally {
-  //     logoutInProgressRef.current = false;
-  //   }
-  // }, [updateOnlineStatus]);
 
   const logout = useCallback(async (expectedToken) => {
     const currentToken = tokenRef.current;
@@ -150,24 +93,30 @@ export const AuthProvider = ({ children }) => {
 
     logoutInProgressRef.current = true;
 
+    const pushToken = await AsyncStorage.getItem("pushToken");
+
+    if (pushToken && currentToken) {
+      try {
+        await removePushTokenApi(pushToken, currentToken);
+
+        await AsyncStorage.removeItem("pushToken");
+
+        console.log("FCM token unregistered");
+      } catch (error) {
+        console.log(
+          "FCM unregister error:",
+          error?.response?.data || error?.message,
+        );
+      }
+    }
+
     try {
       tokenRef.current = null;
+
       sessionVersionRef.current += 1;
 
       setToken(null);
       setUser(null);
-      // const pushToken = await AsyncStorage.getItem("pushToken");
-      // if (pushToken && currentToken && getTokenRemainingMs(currentToken) > 0) {
-      //   try {
-      //     await Promise.race([
-      //       removePushToken(pushToken),
-      //       new Promise((resolve) => setTimeout(resolve, 3000)),
-      //     ]);
-      //   } catch (error) {
-      //     console.log("Push token removal failed:", error?.message);
-      //   }
-      //   await AsyncStorage.removeItem("pushToken");
-      // }
 
       await clearAuthData();
 
@@ -237,21 +186,6 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // const login = async (jwtToken, userData) => {
-  //   const remainingMs = getTokenRemainingMs(jwtToken);
-
-  //   if (remainingMs <= 0) {
-  //     throw new Error("Invalid or expired login token");
-  //   }
-
-  //   await setAuthData(jwtToken, userData);
-
-  //   sessionVersionRef.current += 1;
-  //   tokenRef.current = jwtToken;
-  //   setToken(jwtToken);
-  //   setUser(userData);
-  // };
-
   const login = useCallback(
     async (jwtToken, userData) => {
       if (getTokenRemainingMs(jwtToken) <= 0) {
@@ -284,6 +218,20 @@ export const AuthProvider = ({ children }) => {
 
     if (previousToken && getTokenRemainingMs(previousToken) > 0) {
       await updateOnlineStatus(false, previousToken);
+    }
+
+
+    if (previousToken) {
+      const pushToken = await AsyncStorage.getItem("pushToken");
+
+      if (pushToken) {
+        try {
+          await removePushTokenApi(pushToken, previousToken);
+          await AsyncStorage.removeItem("pushToken");
+        } catch (error) {
+          console.log("Previous user FCM cleanup failed:", error);
+        }
+      }
     }
 
     await setAuthData(jwtToken, userData);
@@ -486,6 +434,44 @@ export const AuthProvider = ({ children }) => {
       unsubscribe();
     };
   }, [token, logout]);
+
+  useEffect(() => {
+    if (!token || !user) return;
+
+    let cancelled = false;
+
+    const setupPushNotifications = async () => {
+      try {
+        const pushToken = await registerForPushNotifications();
+
+        if (!pushToken || cancelled) return;
+        if (tokenRef.current !== token) return;
+
+        await savePushTokenApi(pushToken, token);
+
+        if (cancelled || tokenRef.current !== token) {
+          await removePushTokenApi(pushToken, token)
+            .catch(console.error);
+          return;
+        }
+
+        await AsyncStorage.setItem("pushToken", pushToken);
+
+        console.log("FCM registered successfully");
+      } catch (error) {
+        console.log(
+          "FCM registration error:",
+          error?.response?.data || error?.message,
+        );
+      }
+    };
+
+    setupPushNotifications();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, user?._id]);
 
   return (
     <AuthContext.Provider

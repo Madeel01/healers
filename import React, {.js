@@ -1,4 +1,5 @@
 import React, {
+  createContext,
   useCallback,
   useEffect,
   useMemo,
@@ -6,11 +7,17 @@ import React, {
   useState,
 } from 'react';
 
+import Constants from 'expo-constants';
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import { jwtDecode } from 'jwt-decode';
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   Image,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -20,10 +27,23 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+} from 'react-native-safe-area-context';
 
+import {
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+  useFonts,
+} from '@expo-google-fonts/poppins';
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 
 import {
   AssignTheraistChild,
@@ -45,6 +65,14 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import { updateOnlineStatusApi } from '../api/authApi';
+import {
+  clearAuthData,
+  getAuthData,
+  setAuthData,
+} from '../utils/storage';
+import { AuthProvider } from './src/context/AuthContext';
+import AppNavigator from './src/navigation/AppNavigator';
 
 const CHILD_LIMIT = 10;
 
@@ -4264,3 +4292,589 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
   },
 });
+
+export const AuthContext = createContext();
+
+const getTokenRemainingMs = (jwtToken) => {
+  try {
+    const decoded = jwtDecode(jwtToken);
+
+    if (!decoded.exp) {
+      return 0;
+    }
+
+    return Math.max(0, decoded.exp * 1000 - Date.now());
+  } catch (error) {
+    console.log(" JWT Decode Error:", error.message);
+    return 0;
+  }
+};
+
+const formatRemainingTime = (milliseconds) => {
+  const totalSeconds = Math.ceil(milliseconds / 1000);
+
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return (
+    `${String(minutes).padStart(2, "0")}:`
+    + `${String(seconds).padStart(2, "0")}`
+  );
+};
+
+export const AuthProvider = ({ children }) => {
+  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const appState = useRef(AppState.currentState);
+  const tokenRef = useRef(null);
+  const logoutInProgressRef = useRef(false);
+  const sessionVersionRef = useRef(0);
+  const internetAlertShownRef = useRef(false);
+
+  const updateOnlineStatus = useCallback(async (isOnline, expectedToken = tokenRef.current) => {
+    if (!expectedToken) return;
+
+    try {
+      await updateOnlineStatusApi(isOnline);
+    } catch (error) {
+      console.log(" Failed to update online status:", error?.response?.data || error?.message);
+    }
+  }, []);
+  // useEffect(() => {
+  //   if (!token) return;
+  //   let cancelled = false;
+
+  //   (async () => {
+  //     try {
+  //       const pushToken = await registerForPushNotifications();
+  //       if (!pushToken || cancelled) return;
+  //       await registerNotification(pushToken, Platform.OS);
+  //       await AsyncStorage.setItem("pushToken", pushToken);
+  //     } catch (error) {
+  //       console.log("Push registration failed:", error?.response?.data || error?.message);
+  //     }
+  //   })();
+
+  //   return () => {
+  //     cancelled = true;
+  //   };
+  // }, [token]);
+
+  // const logout = useCallback(async (expectedToken) => {
+  //   const currentToken = tokenRef.current;
+
+  //   if (expectedToken !== undefined && currentToken !== expectedToken) {
+  //     return;
+  //   }
+
+  //   if (logoutInProgressRef.current) {
+  //     return;
+  //   }
+
+  //   logoutInProgressRef.current = true;
+  //   const sessionVersion = sessionVersionRef.current;
+
+  //   try {
+
+  //     if (currentToken && getTokenRemainingMs(currentToken) > 0) {
+  //       await updateOnlineStatus(false, currentToken);
+  //     }
+
+  //     if (sessionVersionRef.current !== sessionVersion) {
+  //       return;
+  //     }
+
+  //     await clearAuthData();
+
+  //     if (sessionVersionRef.current !== sessionVersion) {
+  //       return;
+  //     }
+
+  //     tokenRef.current = null;
+  //     sessionVersionRef.current += 1;
+  //     setToken(null);
+  //     setUser(null);
+  //   } catch (error) {
+  //     console.log(" Logout Error:", error);
+  //   } finally {
+  //     logoutInProgressRef.current = false;
+  //   }
+  // }, [updateOnlineStatus]);
+
+  const logout = useCallback(async (expectedToken) => {
+    const currentToken = tokenRef.current;
+
+    if (
+      typeof expectedToken === "string"
+      && currentToken !== expectedToken
+    ) {
+      return;
+    }
+
+    if (logoutInProgressRef.current) {
+      return;
+    }
+
+    logoutInProgressRef.current = true;
+
+    try {
+      tokenRef.current = null;
+      sessionVersionRef.current += 1;
+
+      setToken(null);
+      setUser(null);
+      const pushToken = await AsyncStorage.getItem("pushToken");
+      // if (pushToken && currentToken && getTokenRemainingMs(currentToken) > 0) {
+      //   try {
+      //     await Promise.race([
+      //       removePushToken(pushToken),
+      //       new Promise((resolve) => setTimeout(resolve, 3000)),
+      //     ]);
+      //   } catch (error) {
+      //     console.log("Push token removal failed:", error?.message);
+      //   }
+      //   await AsyncStorage.removeItem("pushToken");
+      // }
+
+      await clearAuthData();
+
+      if (currentToken) {
+        NetInfo.fetch()
+          .then((state) => {
+            if (
+              state.isConnected === true
+              && state.isInternetReachable !== false
+            ) {
+              return updateOnlineStatus(false, currentToken);
+            }
+          })
+          .catch((error) => {
+            console.log("Online status update failed:", error);
+          });
+      }
+    } catch (error) {
+      console.log("Logout Error:", error);
+    } finally {
+      logoutInProgressRef.current = false;
+    }
+  }, [updateOnlineStatus]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadSession = async () => {
+      try {
+        const data = await getAuthData();
+
+        if (!mounted) return;
+
+        if (data?.token && data?.user) {
+          const remainingMs = getTokenRemainingMs(data.token);
+
+          if (remainingMs <= 0) {
+            await clearAuthData();
+
+            if (mounted) {
+              tokenRef.current = null;
+              setToken(null);
+              setUser(null);
+            }
+          } else {
+            tokenRef.current = data.token;
+            sessionVersionRef.current += 1;
+
+            setToken(data.token);
+            setUser(data.user);
+          }
+        } else {
+        }
+      } catch (error) {
+        console.log("Failed to load auth state:", error);
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // const login = async (jwtToken, userData) => {
+  //   const remainingMs = getTokenRemainingMs(jwtToken);
+
+  //   if (remainingMs <= 0) {
+  //     throw new Error("Invalid or expired login token");
+  //   }
+
+  //   await setAuthData(jwtToken, userData);
+
+  //   sessionVersionRef.current += 1;
+  //   tokenRef.current = jwtToken;
+  //   setToken(jwtToken);
+  //   setUser(userData);
+  // };
+
+  const login = useCallback(
+    async (jwtToken, userData) => {
+      if (getTokenRemainingMs(jwtToken) <= 0) {
+        throw new Error("Invalid or expired token");
+      }
+
+      await setAuthData(jwtToken, userData);
+
+      sessionVersionRef.current += 1;
+      tokenRef.current = jwtToken;
+
+      setToken(jwtToken);
+      setUser(userData);
+
+      if (AppState.currentState === "active") {
+        await updateOnlineStatus(true, jwtToken);
+      }
+    },
+    [updateOnlineStatus],
+  );
+
+  const switchUser = async (jwtToken, userData) => {
+    const remainingMs = getTokenRemainingMs(jwtToken);
+
+    if (remainingMs <= 0) {
+      throw new Error("New user token is expired");
+    }
+
+    const previousToken = tokenRef.current;
+
+    if (previousToken && getTokenRemainingMs(previousToken) > 0) {
+      await updateOnlineStatus(false, previousToken);
+    }
+
+    await setAuthData(jwtToken, userData);
+
+    sessionVersionRef.current += 1;
+    tokenRef.current = jwtToken;
+
+    setToken(jwtToken);
+    setUser(userData);
+  };
+
+  const updateUser = async (userData) => {
+    const currentToken = tokenRef.current;
+
+    if (!currentToken) return;
+
+    if (getTokenRemainingMs(currentToken) <= 0) {
+      await logout(currentToken);
+      return;
+    }
+
+    await setAuthData(currentToken, userData);
+
+    if (tokenRef.current === currentToken) {
+      setUser(userData);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) {
+      console.log("⏹️ Token timer stopped");
+      return;
+    }
+
+    let intervalId = null;
+    let expirationTimeoutId = null;
+    let cancelled = false;
+    let isExpiring = false;
+
+    const expireSession = async () => {
+      if (
+        cancelled
+        || isExpiring
+        || tokenRef.current !== token
+      ) {
+        return;
+      }
+
+      isExpiring = true;
+
+      clearInterval(intervalId);
+      clearTimeout(expirationTimeoutId);
+
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("🔴 JWT TOKEN EXPIRED");
+      console.log("⏰ Remaining Time: 00:00");
+      console.log("🚪 Automatically logging out...");
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+      await logout(token);
+    };
+
+    const checkRemainingTime = () => {
+      if (cancelled || tokenRef.current !== token) {
+        return;
+      }
+
+      const remainingMs = getTokenRemainingMs(token);
+
+      if (remainingMs <= 0) {
+        expireSession();
+        return;
+      }
+
+      const formattedTime = formatRemainingTime(remainingMs);
+
+      // console.log(`🟢 Auto Logout In: ${formattedTime}`);
+    };
+
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("⏳ JWT AUTO LOGOUT TIMER STARTED");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    intervalId = setInterval(checkRemainingTime, 1000);
+
+    const remainingMs = getTokenRemainingMs(token);
+
+    if (remainingMs > 0) {
+      expirationTimeoutId = setTimeout(
+        expireSession,
+        remainingMs,
+      );
+    }
+
+    return () => {
+      cancelled = true;
+
+      clearInterval(intervalId);
+      clearTimeout(expirationTimeoutId);
+
+      console.log("⏹️ JWT countdown cleanup");
+    };
+  }, [token, logout]);
+
+  useEffect(() => {
+    if (!token || !user) return;
+
+    const checkActiveSession = async () => {
+      if (tokenRef.current !== token) return;
+
+      const remainingMs = getTokenRemainingMs(token);
+
+      if (remainingMs <= 0) {
+        console.log("🔴 Token expired while app was backgrounded");
+        await logout(token);
+        return;
+      }
+
+      console.log(
+        "📱 App active - Remaining:",
+        formatRemainingTime(remainingMs),
+      );
+
+      await updateOnlineStatus(true, token);
+    };
+
+    if (AppState.currentState === "active") {
+      checkActiveSession();
+    }
+
+    const subscription = AppState.addEventListener(
+      "change",
+      async (nextAppState) => {
+        const previousAppState = appState.current;
+        appState.current = nextAppState;
+
+        if (tokenRef.current !== token) return;
+
+        if (
+          previousAppState?.match(/inactive|background/)
+          && nextAppState === "active"
+        ) {
+          console.log("📱 App returned to foreground");
+
+          await checkActiveSession();
+        }
+
+        if (
+          previousAppState === "active"
+          && nextAppState.match(/inactive|background/)
+        ) {
+          console.log("📱 App moved to background");
+
+          if (getTokenRemainingMs(token) > 0) {
+            await updateOnlineStatus(false, token);
+          }
+        }
+      },
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [token, user, logout, updateOnlineStatus]);
+
+  useEffect(() => {
+    if (!token) {
+      internetAlertShownRef.current = false;
+      return;
+    }
+
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const isOffline = state.isConnected === false
+        || state.isInternetReachable === false;
+
+      if (isOffline && !internetAlertShownRef.current) {
+        internetAlertShownRef.current = true;
+
+        Alert.alert(
+          "No Internet Connection",
+          "Your internet connection has been lost. You will be logged out.",
+          [
+            {
+              text: "OK",
+              onPress: async () => {
+                await logout(token);
+              },
+            },
+          ],
+          { cancelable: false },
+        );
+      }
+
+      if (!isOffline) {
+        internetAlertShownRef.current = false;
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [token, logout]);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        token,
+        user,
+        userRole: user?.role || null,
+        isLoading,
+        login,
+        logout,
+        switchUser,
+        updateUser,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+export default function App() {
+  // const notificationListener = useRef();
+  // const responseListener = useRef();
+
+  let [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    Poppins_800ExtraBold,
+  });
+
+  useEffect(() => {
+    registerForPushNotificationsAsync().then(token => {
+      if (token) {
+        console.log("FCM/Expo Push Token:", token);
+      }
+    });
+
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log("Notification received:", notification);
+    });
+
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log("Notification tapped:", response);
+      const targetScreen = response?.notification?.request?.content?.data?.screen;
+      if (targetScreen) {
+      }
+    });
+
+    return () => {
+      if (notificationListener.current) {
+        Notifications.removeNotificationSubscription(notificationListener.current);
+      }
+      if (responseListener.current) {
+        Notifications.removeNotificationSubscription(responseListener.current);
+      }
+    };
+  }, []);
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaProvider>
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
+    </SafeAreaProvider>
+  );
+}
+
+async function registerForPushNotificationsAsync() {
+  let token;
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
+  }
+
+  if (Device.isDevice) {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      console.log('Permission not granted to get push token!');
+      return;
+    }
+
+    try {
+      const projectId =
+        Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+      token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    } catch (e) {
+      token = `${e}`;
+    }
+  } else {
+    console.log('Must use physical device for Push Notifications');
+  }
+
+  return token;
+}
