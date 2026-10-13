@@ -22,6 +22,7 @@ const {
 } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
 const rateLimit = require("express-rate-limit");
+const { registerPushToken, sendNotification, unregisterPushToken } = require("../controllers/pushNotificationController");
 
 const otpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -46,6 +47,11 @@ router.get("/users/notifications/unread-count", protect, getUnreadNotificationCo
 router.post("/forgot-password", otpLimiter, forgotPassword);
 router.post("/verify-reset-otp", otpLimiter, verifyResetOtp);
 router.post("/reset-password", resetPassword);
-router.post("/push-token", protect, savePushToken);
-router.delete("/push-token", protect, removePushToken);
+// router.post("/push-token", protect, savePushToken);
+// router.delete("/push-token", protect, removePushToken);
+
+router.post("/users/push-notifications/register", protect, registerPushToken);
+router.delete("/users/push-notifications/unregister", protect, unregisterPushToken);
+router.post("/users/push-notifications/send", protect, sendNotification);
+
 module.exports = router;

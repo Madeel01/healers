@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "Healers",
-    "slug": "Healers",
+    "slug": "healers",
+    "owner": "healers1",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/ic_launcher_foreground.png",
@@ -22,9 +23,11 @@
       },
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
       ],
-      "package": "com.adeeltozcall.Healers"
+      "package": "com.adeeltozcall.Healers",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/ic_launcher_foreground.png"
@@ -42,12 +45,20 @@
           "recordAudioAndroid": true
         }
       ],
+       [
+        "expo-notifications",
+        {
+          "icon": "./assets/ic_launcher_foreground.png",
+          "defaultChannel": "default"
+        }
+      ],
       "expo-video",
-      "expo-asset"
+      "expo-asset",
+      "expo-notifications"
     ],
     "extra": {
       "eas": {
-        "projectId": "e33718a1-c1dd-48c4-8c19-0fbc4c65cbc6"
+        "projectId": "30c2229d-af99-462b-9138-6876e5234e31"
       }
     }
   }

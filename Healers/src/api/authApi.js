@@ -49,3 +49,4 @@ export const markAllNotificationsAsReadApi = async () => {
   const response = await apiClient.post(`/auth/users/notifications/read-all`);
   return response.data;
 };
+

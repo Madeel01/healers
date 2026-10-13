@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "773633521324",
+    "project_id": "healers-f4939",
+    "storage_bucket": "healers-f4939.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:773633521324:android:e50361bb7f9fda76b2d109",
+        "android_client_info": {
+          "package_name": "com.adeeltozcall.Healers"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNw6l2YETWr8YGIiQh-0XnQj5gze17-Cc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
