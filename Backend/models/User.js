@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
 
+const docSchema = new mongoose.Schema(
+  { url: String, publicId: String, resourceType: String, name: String, type: { type: String } },
+  { _id: false },
+);
 const userSchema = new mongoose.Schema(
   {
     fullName: {
@@ -50,6 +54,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     fatherCnic: { type: String, trim: true, default: "" },
+    address:{
+      type:String,
+      default:null,
+      trim:true,
+    },
     age: {
       type: Number,
       default: null,
@@ -109,6 +118,16 @@ const userSchema = new mongoose.Schema(
         updatedAt: { type: Date, default: Date.now },
       },
     ],
+    dateOfBirth: { type: Date, default: null },
+    gender: { type: String, enum: ["Male", "Female", null], default: null },
+    diagnosis: { type: String, default: "" },
+    documents: {
+      form: docSchema,
+      birthCertificate: docSchema,
+      slc: docSchema,
+      cnicFront: docSchema,
+      cnicBack: docSchema,
+    },
   },
   { timestamps: true },
 );

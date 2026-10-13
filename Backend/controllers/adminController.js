@@ -19,6 +19,16 @@ const Service = require("../models/Service");
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const { sendToUsers, TEMPLATE, sendNotification } = require("../utils/notificationService");
 const { buildRecipients } = require("../utils/broadcastHelpers");
+const Conversation = require("../models/Conversation");
+const multer = require("multer");
+const cloudinary = require("../config/cloudinary");
+const {
+  calcAge,
+  sanitizeDocuments,
+  removedDocuments,
+  destroyDocuments,
+  confirmDocuments,
+} = require("../utils/childDocuments");
 const PAST_DAYS = 365;
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
@@ -886,6 +896,16 @@ const resolvePackageAssignment = async (packageId, discountedPrice) => {
 
   return { fields: { packageId, discountedPrice: discounted } };
 };
+const ALLOWED = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) =>
+    ALLOWED.includes(file.mimetype)
+      ? cb(null, true)
+      : cb(new Error("Only JPG, PNG, WEBP or PDF files are allowed.")),
+}).single("file");
 
 
 exports.getAdminOverview = async (req, res) => {
@@ -932,6 +952,7 @@ exports.getAdminOverview = async (req, res) => {
 
 exports.getTherapistsUsers = async (req, res) => {
   try {
+    const userId = req.user.id || req.user._id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
     const skip = (page - 1) * limit;
@@ -968,16 +989,52 @@ exports.getTherapistsUsers = async (req, res) => {
         },
       },
       {
+        $lookup: {
+          from: "conversations",
+          let: { therapistId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    {
+                      $in: [
+                        new mongoose.Types.ObjectId(userId),
+                        "$participants",
+                      ],
+                    },
+                    { $in: ["$$therapistId", "$participants"] },
+                    { $eq: [{ $size: "$participants" }, 2] },
+                  ],
+                },
+              },
+            },
+            { $project: { _id: 1 } },
+            { $limit: 1 },
+          ],
+          as: "conversation",
+        },
+      },
+      {
         $project: {
           fullName: 1,
           email: 1,
           phone: 1,
           role: 1,
+          profileImage:1,
+          isOnline:1,
+          lastActive:1,
           isLogin: 1,
           createdAt: 1,
           isActive: 1,
           specialties: "$assignments.specialty",
           maxChildren: { $max: "$assignments.maxChildren" },
+          conversationId: {
+            $ifNull: [
+              { $arrayElemAt: ["$conversation._id", 0] },
+              null,
+            ],
+          },
           assignedChildren: {
             $sum: {
               $map: {
@@ -1742,7 +1799,7 @@ exports.assignTherapistsUsers = async (req, res) => {
 
 exports.createTherapist = async (req, res) => {
   try {
-    const { name, specialty, maxChildren, email, phone, address, password, isActive } = req.body;
+    const { name, specialty, email, phone, address, password, isActive } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -1750,14 +1807,24 @@ exports.createTherapist = async (req, res) => {
         message: "Name, email, and password are required.",
       });
     }
+    const normalizedEmail = email.trim().toLowerCase();
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Please enter a valid email address.",
-        });
+
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid email address.",
+      });
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail }).lean();
+
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: "An account with this email already exists.",
+      });
     }
 
     if (!phone) {
@@ -1789,7 +1856,7 @@ exports.createTherapist = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
       fullName: name,
-      email,
+      email:normalizedEmail,
       phone: normalizedPhone,
       address,
       role: "Therapist",
@@ -1797,11 +1864,10 @@ exports.createTherapist = async (req, res) => {
       agreeTerms: true,
       isActive,
     });
-
     const assignment = await TherapistAssignment.create({
       therapistId: user._id,
       specialty: specialty || "",
-      maxChildren: maxChildren && maxChildren > 0 ? parseInt(maxChildren, 10) : 15,
+      // maxChildren: maxChildren && maxChildren > 0 ? parseInt(maxChildren, 10) : 15,
       childIds: [],
     });
 
@@ -1814,17 +1880,24 @@ exports.createTherapist = async (req, res) => {
         phone: user.phone,
         address: user.address,
         specialty: assignment.specialty,
-        maxChildren: assignment.maxChildren,
+        // maxChildren: assignment.maxChildren,
         currentLoad: 0,
         isActive,
       },
     });
   } catch (error) {
+    if (error.code === 11000 && error.keyPattern?.email) {
+      return res.status(409).json({
+        success: false,
+        message: "An account with this email already exists.",
+      });
+    }
+
     console.error("Create Therapist Error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to create therapist.",
-      error: error.message,
     });
   }
 };
@@ -2365,37 +2438,33 @@ exports.getTherapistSchedule = async (req, res) => {
 exports.childUsers = async (req, res) => {
   try {
     const { page = 1, limit = 5, search = "", status = "active" } = req.query;
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.min(parseInt(limit, 10) || 5, 50);
 
     const filter = { role: "Child" };
-    if (search.trim()) {
-      filter.fullName = { $regex: search.trim(), $options: "i" };
+    const q = search.trim();
+    if (q) {
+      filter.fullName = {
+        $regex: q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        $options: "i",
+      };
     }
+    if (status === "active") filter.isActive = true;
+    else if (status === "inactive") filter.isActive = false;
 
-    if (status === "active") {
-      filter.isActive = true;
-    } else if (status === "inactive") {
-      filter.isActive = false;
-    }
-
-    const totalCount = await User.countDocuments(filter);
-
-    const children = await User.find(filter, {
-      fullName: 1,
-      fatherName: 1,
-      fatherCnic: 1,
-      age: 1,
-      email: 1,
-      phone: 1,
-      packageId: 1,
-      discountedPrice: 1,
-      isActive: 1,
-    })
-      .populate("packageId", "name price type")
-      .sort({ createdAt: -1 })
-      .skip((pageNum - 1) * limitNum)
-      .limit(limitNum);
+    const [totalCount, children] = await Promise.all([
+      User.countDocuments(filter),
+      User.find(filter, {
+        fullName: 1, fatherName: 1, fatherCnic: 1, age: 1, email: 1, phone: 1,
+        packageId: 1, discountedPrice: 1, isActive: 1,
+        dateOfBirth: 1, gender: 1, diagnosis: 1, documents: 1, address: 1,
+      })
+        .populate("packageId", "name price type")
+        .sort({ createdAt: -1 })
+        .skip((pageNum - 1) * limitNum)
+        .limit(limitNum)
+        .lean(),
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -2414,45 +2483,50 @@ exports.childUsers = async (req, res) => {
 };
 exports.createChild = async (req, res) => {
   try {
-    const { fullName, fatherName, fatherCnic, age, email, phone, password, packageId, discountedPrice, isActive } =
-      req.body;
+    const {
+      fullName, fatherName, fatherCnic, dateOfBirth, gender, diagnosis,
+      email, phone, password, packageId, discountedPrice, isActive, documents, address,
+    } = req.body;
 
-    if (
-      !fullName
-      || !email
-      || !phone
-      || !password
-      || !fatherName
-      || !fatherCnic
-    ) {
-      return res.json({
+    const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+
+    if (!fullName?.trim() || !cleanEmail || !phone || !password || !fatherName || !fatherCnic) {
+      return res.status(400).json({
         success: false,
         message: "fullName, email, phone, parent name, parent CNIC and password are required.",
       });
     }
+    if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+      return res.status(400).json({ success: false, message: "Enter a valid email address." });
+    }
+    if (!dateOfBirth) {
+      return res.status(400).json({ success: false, message: "Date of birth is required." });
+    }
+    const dob = new Date(dateOfBirth);
+    if (isNaN(dob.getTime()) || dob > new Date()) {
+      return res.status(400).json({ success: false, message: "Enter a valid date of birth." });
+    }
+    if (!["Male", "Female"].includes(gender)) {
+      return res.status(400).json({ success: false, message: "Gender must be Male or Female." });
+    }
 
     const cnic = normalizeCnic(fatherCnic);
     if (!cnic) {
-      return res
-        .status(400)
-        .json({ success: false, message: "CNIC must be 13 digits." });
+      return res.status(400).json({ success: false, message: "CNIC must be 13 digits." });
     }
-    const existParent = await User.findOne({
-      fatherCnic: cnic,
-      role: "Child",
-    }).lean();
 
-    if (
-      existParent
-      && normalizeName(existParent.fatherName) !== normalizeName(fatherName)
-    ) {
+    const [existParent, hashedPassword] = await Promise.all([
+      User.findOne({ fatherCnic: cnic, role: "Child" }).select("fatherName").lean(),
+      bcrypt.hash(password, 10),
+    ]);
+
+    if (existParent && normalizeName(existParent.fatherName) !== normalizeName(fatherName)) {
       return res.status(409).json({
         success: false,
         message: "This parent CNIC already exists with a different parent name.",
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
     let packageFields = { packageId: null, discountedPrice: null };
     if (packageId) {
       const r = await resolvePackageAssignment(packageId, discountedPrice);
@@ -2463,36 +2537,42 @@ exports.createChild = async (req, res) => {
     }
 
     const child = await User.create({
-      fullName,
-      fatherName: fatherName,
+      fullName: fullName.trim(),
+      fatherName,
       fatherCnic: cnic,
-      age: age ?? null,
-      email,
+      dateOfBirth: dob,
+      age: calcAge(dob),
+      gender,
+      diagnosis: (diagnosis || "").trim(),
+      email: cleanEmail,
       phone,
+      address,
       password: hashedPassword,
       role: "Child",
       agreeTerms: true,
       isActive: isActive ?? true,
+      documents: sanitizeDocuments(documents),
       ...packageFields,
     });
+    await confirmDocuments(child.documents);
+    const data = child.toObject();
+    delete data.password;
 
     return res.status(201).json({
       success: true,
       message: "Child created successfully.",
-      data: child,
+      data,
     });
   } catch (error) {
     console.error("Create Child Error:", error);
 
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern || {})[0];
-
       return res.status(409).json({
         success: false,
         message: `A user with this ${field} already exists.`,
       });
     }
-
     return res.status(500).json({
       success: false,
       message: "Failed to create child.",
@@ -2504,8 +2584,8 @@ exports.updateChild = async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      fullName, fatherName, fatherCnic, age, email,
-      phone, password, packageId, discountedPrice, isActive,
+      fullName, fatherName, fatherCnic, dateOfBirth, gender, diagnosis, age,
+      email, phone, password, packageId, discountedPrice, isActive, documents, address,
     } = req.body;
 
     if (!mongoose.isValidObjectId(id)) {
@@ -2522,6 +2602,18 @@ exports.updateChild = async (req, res) => {
         success: false,
         message: "isActive must be true or false.",
       });
+    }
+    let dob;
+    if (dateOfBirth) {
+      dob = new Date(dateOfBirth);
+      if (isNaN(dob.getTime()) || dob > new Date()) {
+        return res.status(400).json({ success: false, message: "Enter a valid date of birth." });
+      }
+    }
+
+    const cleanGender = gender === "" ? null : gender;
+    if (cleanGender !== undefined && cleanGender !== null && !["Male", "Female"].includes(cleanGender)) {
+      return res.status(400).json({ success: false, message: "Gender must be Male or Female." });
     }
 
     const currentChild = await User.findOne({ _id: id, role: "Child" })
@@ -2571,14 +2663,24 @@ exports.updateChild = async (req, res) => {
     }
 
     const updateFields = {
-      fullName,
-      email,
+      fullName: fullName.trim(),
+      email: email,
       phone,
+      ...(address !== undefined && { address }),
       ...(fatherName !== undefined && { fatherName }),
       ...(cnic && { fatherCnic: cnic }),
-      ...(age !== undefined && { age }),
+      ...(dob && { dateOfBirth: dob, age: calcAge(dob) }),
+      ...(!dob && age !== undefined && { age }),
+      ...(cleanGender !== undefined && { gender: cleanGender }),
+      ...(diagnosis !== undefined && { diagnosis: String(diagnosis).trim() }),
       ...(isActive !== undefined && { isActive }),
     };
+
+    let newDocs;
+    if (documents !== undefined) {
+      newDocs = sanitizeDocuments(documents);
+      updateFields.documents = newDocs;
+    }
 
     if (packageId !== undefined) {
       const r = await resolvePackageAssignment(packageId, discountedPrice);
@@ -2623,6 +2725,10 @@ exports.updateChild = async (req, res) => {
 
     if (!child) {
       return res.status(404).json({ success: false, message: "Child not found." });
+    }
+    if (newDocs) {
+      confirmDocuments(newDocs);
+      destroyDocuments(removedDocuments(currentChild.documents, newDocs));
     }
 
     if (isActive === false) {
@@ -2722,7 +2828,7 @@ exports.deleteChild = async (req, res) => {
     const now = new Date();
 
     const [child, activeBatch] = await Promise.all([
-      User.exists({ _id: childId, role: "Child" }),
+      User.findOne({ _id: childId, role: "Child" }).select("documents").lean(),
       Batch.findOne({
         childrenIds: childId,
         dateFrom: { $lte: now },
@@ -2800,7 +2906,8 @@ exports.deleteChild = async (req, res) => {
               },
             },
           },
-        ]
+        ],
+        { updatePipeline: true },
       ),
       Scheduling.exists({
         appointments: {
@@ -2826,6 +2933,7 @@ exports.deleteChild = async (req, res) => {
       Batch.updateMany({ childrenIds: childId }, { $pull: { childrenIds: childId } }),
       BatchAssignment.updateMany({ childIds: childId }, { $pull: { childIds: childId } }),
       User.deleteOne({ _id: childId, role: "Child" }),
+      destroyDocuments(Object.values(child.documents || {}).filter(Boolean)),
     ]);
 
     return res.status(200).json({
@@ -2842,6 +2950,49 @@ exports.deleteChild = async (req, res) => {
     });
   }
 };
+exports.uploadChildDocument = (req, res) => {
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({
+        success: false,
+        message: err.code === "LIMIT_FILE_SIZE" ? "Max file size is 5 MB." : err.message,
+      });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file uploaded." });
+    }
+
+    try {
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream(
+            { folder: "healers/child-documents", resource_type: "auto", tags: ["pending"] },
+            (e, r) => (e ? reject(e) : resolve(r))
+          )
+          .end(req.file.buffer);
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: {
+          url: result.secure_url,
+          publicId: result.public_id,
+          resourceType: result.resource_type || "image",
+          name: req.file.originalname,
+          type: req.file.mimetype === "application/pdf" ? "pdf" : "image",
+        },
+      });
+    } catch (error) {
+      console.error("Upload Child Document Error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to upload file.",
+        error: error.message,
+      });
+    }
+  });
+};
+
 
 const getOnLeaveToday = async () => {
   const start = new Date();
@@ -3655,18 +3806,25 @@ exports.getBatchPackageOptions = async (req, res) => {
   }
 };
 
-async function resolveRecipients(audience, roles, users) {
+async function resolveRecipients(audience, roles, users, batchIds = []) {
   if (audience === "all") {
-    return User.find(
-      { role: { $in: ["Therapist", "Child", "Admin"] } },
-      "_id",
-    ).lean();
+    return User.find({ role: { $in: ["Therapist", "Child", "Admin"] } }, "_id").lean();
   }
   if (audience === "role") {
     return User.find({ role: { $in: roles } }, "_id").lean();
   }
   if (audience === "users") {
     return User.find({ _id: { $in: users } }, "_id").lean();
+  }
+  if (audience === "batch") {
+    const batches = await Batch.find({ _id: { $in: batchIds } }, "childrenIds").lean();
+    const ids = [...new Set(batches.flatMap((b) => (b.childrenIds || []).map(String)))];
+    if (!ids.length) return [];
+
+    return User.find(
+      { _id: { $in: ids }, role: "Child", isActive: { $ne: false } },
+      "_id"
+    ).lean();
   }
   return [];
 }
@@ -3685,6 +3843,7 @@ exports.createBroadcast = async (req, res) => {
       deliverySchedule,
       sendAt,
       type,
+      batchIds,
     } = req.body;
 
     if (!title?.trim() || !message?.trim()) {
@@ -3702,7 +3861,7 @@ exports.createBroadcast = async (req, res) => {
       "General",
     ];
     const notifType = VALID_TYPES.includes(type) ? type : "General";
-    if (!["all", "role", "users"].includes(audience)) {
+    if (!["all", "role", "users","batch"].includes(audience)) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid audience." });
@@ -3710,18 +3869,25 @@ exports.createBroadcast = async (req, res) => {
 
     let parsedRoles = [];
     let parsedUsers = [];
+    let parsedBatchIds = [];
     try {
       parsedRoles = roles ? JSON.parse(roles) : [];
       parsedUsers = users ? JSON.parse(users) : [];
+      parsedBatchIds = batchIds ? JSON.parse(batchIds) : [];
     } catch {
       return res
         .status(400)
         .json({
           success: false,
-          message: "roles/users must be valid JSON arrays.",
+          message: "roles/users/batchIds must be valid JSON arrays.",
         });
     }
-
+    if (audience === "batch") {
+      parsedBatchIds = [...new Set(parsedBatchIds.filter((id) => mongoose.isValidObjectId(id)))];
+      if (!parsedBatchIds.length) {
+        return res.status(400).json({ success: false, message: "Select at least one batch." });
+      }
+    }
     if (audience === "role" && parsedRoles.length === 0) {
       return res
         .status(400)
@@ -3777,6 +3943,7 @@ exports.createBroadcast = async (req, res) => {
       type: notifType,
       roles: audience === "role" ? parsedRoles : [],
       users: audience === "users" ? parsedUsers : [],
+      batchIds: audience === "batch" ? parsedBatchIds : [],
       createdBy: req.user.id,
       attachment,
       status,
@@ -3788,7 +3955,14 @@ exports.createBroadcast = async (req, res) => {
         audience,
         parsedRoles,
         parsedUsers,
+        parsedBatchIds,
       );
+      if (audience === "batch" && !recipientUsers.length) {
+        return res.status(400).json({
+          success: false,
+          message: "The selected batches have no active children.",
+        });
+      }
       notification.recipients = buildRecipients(recipientUsers);
       notification.status = "sent";
       notification.sentAt = new Date();
@@ -3840,6 +4014,7 @@ exports.getAllBroadcasts = async (req, res) => {
     const [broadcasts, total] = await Promise.all([
       Notification.find(filter)
         .populate("createdBy", "fullName email role")
+        .populate("batchIds", "batchName")
         .populate("users", "fullName role")
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -3874,6 +4049,7 @@ exports.getBroadcastById = async (req, res) => {
     const { broadcastId } = req.params;
     const broadcast = await Notification.findById(broadcastId)
       .populate("createdBy", "fullName email role")
+      .populate("batchIds", "batchName")
       .populate("users", "fullName role")
       .lean();
 
@@ -3914,6 +4090,7 @@ exports.updateBroadcast = async (req, res) => {
       deliverySchedule,
       sendAt,
       removeAttachment,
+      batchIds,
     } = req.body;
 
     const broadcast = await Notification.findById(broadcastId);
@@ -3943,27 +4120,34 @@ exports.updateBroadcast = async (req, res) => {
       broadcast.type = VALID_TYPES.includes(type) ? type : broadcast.type;
     }
     if (audience !== undefined) {
-      if (!["all", "role", "users"].includes(audience)) {
+      if (!["all", "role", "users","batch"].includes(audience)) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid audience." });
       }
       let parsedRoles = [];
       let parsedUsers = [];
+      let parsedBatchIds = [];
       try {
         parsedRoles = roles ? JSON.parse(roles) : [];
         parsedUsers = users ? JSON.parse(users) : [];
+        parsedBatchIds = batchIds ? JSON.parse(batchIds) : [];
       } catch {
         return res
           .status(400)
           .json({
             success: false,
-            message: "roles/users must be valid JSON arrays.",
+            message: "roles/users/batchIds must be valid JSON arrays.",
           });
+      }
+      parsedBatchIds = parsedBatchIds.filter((id) => mongoose.isValidObjectId(id));
+      if (audience === "batch" && !parsedBatchIds.length) {
+        return res.status(400).json({ success: false, message: "Select at least one batch." });
       }
       broadcast.audience = audience;
       broadcast.roles = audience === "role" ? parsedRoles : [];
       broadcast.users = audience === "users" ? parsedUsers : [];
+      broadcast.batchIds = audience === "batch" ? parsedBatchIds : [];
     }
 
     if (deliverySchedule === "now") {
@@ -4023,7 +4207,14 @@ exports.updateBroadcast = async (req, res) => {
         broadcast.audience,
         broadcast.roles,
         broadcast.users,
+        broadcast.batchIds
       );
+      if (broadcast.audience === "batch" && !recipientUsers.length) {
+        return res.status(400).json({
+          success: false,
+          message: "The selected batches have no active children.",
+        });
+      }
       broadcast.recipients = buildRecipients(recipientUsers);
       broadcast.status = "sent";
       broadcast.sentAt = new Date();
@@ -4637,6 +4828,7 @@ exports.deleteAvailability = async (req, res) => {
       });
   }
 };
+
 
 exports.getBatchTherapistOptions = async (req, res) => {
   try {

@@ -27,7 +27,8 @@ mongoose
   .connect(MONGO_URI)
   .then(() => {
     console.log("MongoDB Connected Successfully");
-    require("./jobs/scheduledBroadcasts").start();
+    // require("./jobs/cleanupPendingUploads")();
+    // require("./jobs/scheduledBroadcasts").start();
   })
   .catch((err) => {
     console.error("MongoDB Connection Error:", err.message);

@@ -6,7 +6,7 @@ const expo = new Expo();
 exports.sendPushToUsers = async (userIds, { title, body, data = {} }) => {
   try {
     const users = await User.find({ _id: { $in: userIds } })
-      .select("pushTokens")
+      .select")
       .lean();
 
     const messages = [];

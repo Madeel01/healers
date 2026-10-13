@@ -53,10 +53,15 @@ const notificationSchema = new mongoose.Schema(
 
     audience: {
       type: String,
-      enum: ["all", "role", "users"],
+      enum: ["all", "role", "users","batch"],
       required: true,
     },
-
+    batchIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Batch",
+      },
+    ],
     roles: [
       {
         type: String,
