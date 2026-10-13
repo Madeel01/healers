@@ -57,6 +57,7 @@ const ListHeaderComponent = memo(({
   navigation,
   userId,
 }) => {
+  console.log(filteredCareTeam);
   return (
     <View style={styles.headerWrapper}>
       <View style={styles.careTeamContainer}>

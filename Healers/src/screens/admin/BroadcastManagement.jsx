@@ -34,6 +34,7 @@ import {
   getUsersByRole,
   getBroadcastById,
   updateBroadcast,
+  getBatches,
 } from "../../api/admin/api";
 import BroadcastDetailModal from "./components/BroadcastDetailModal";
 import { getAssetUrl } from "../../utils/media";
@@ -44,6 +45,7 @@ const GROUP_CONFIG = {
   "All Users": { audience: "all" },
   "All Children": { audience: "role", roles: ["Child"] },
   "All Therapists": { audience: "role", roles: ["Therapist"] },
+  Batch: { audience: "batch" },
   Specific: { audience: "users" },
 };
 
@@ -69,6 +71,10 @@ const STATUS_COLORS = {
 const audienceLabel = (b) => {
   if (b.audience === "all") return "All Users";
   if (b.audience === "role") return (b.roles || []).join(", ");
+  if (b.audience === "batch") {
+    const names = (b.batchIds || []).map((x) => x.batchName).filter(Boolean);
+    return names.length ? `Batch: ${names.join(", ")}` : "Batch";
+  }
   return `${b.users?.length || 0} selected user(s)`;
 };
 
@@ -153,6 +159,13 @@ export default function BroadcastManagementScreen({ navigation }) {
   const [notificationType, setNotificationType] = useState("General");
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState("all");
+
+  const [selectedBatches, setSelectedBatches] = useState([]);
+  const [batchOptions, setBatchOptions] = useState([]);
+  const [batchesLoading, setBatchesLoading] = useState(false);
+  const [batchSearch, setBatchSearch] = useState("");
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const isBatchMode = config.audience === "batch";
 
   // const filteredItems = broadcastSearch.trim()
   //   ? items.filter((b) =>
@@ -248,6 +261,7 @@ export default function BroadcastManagementScreen({ navigation }) {
     setRecipientGroup("All Users");
     setEditingId(null);
     setSelectedRecipients([]);
+    setSelectedBatches([]);
     setBroadcastTitle("");
     setMessageContent("");
     setDeliverySchedule("Send Now");
@@ -282,6 +296,28 @@ export default function BroadcastManagementScreen({ navigation }) {
       setRecipientsLoading(false);
     }
   };
+  const loadBatches = async (search = "") => {
+    try {
+      setBatchesLoading(true);
+      const res = await getBatches({ search, limit: 5 });
+      setBatchOptions(res?.data?.batches || res?.data || []);
+    } catch (e) {
+      setBatchOptions([]);
+    } finally {
+      setBatchesLoading(false);
+    }
+  };
+
+  const openBatchModal = () => {
+    setBatchSearch("");
+    setIsBatchModalOpen(true);
+    loadBatches("");
+  };
+
+  const toggleBatch = (b) =>
+    setSelectedBatches((prev) =>
+      prev.some((x) => x._id === b._id) ? prev.filter((x) => x._id !== b._id) : [...prev, b],
+    );
 
   const openMultiSelect = () => {
     setIsMultiSelectModalOpen(true);
@@ -362,6 +398,10 @@ export default function BroadcastManagementScreen({ navigation }) {
       Alert.alert("Invalid time", "Scheduled time must be in the future.");
       return;
     }
+    if (isBatchMode && selectedBatches.length === 0) {
+      Alert.alert("No batch", "Select at least one batch.");
+      return;
+    }
 
     const fd = new FormData();
     fd.append("title", broadcastTitle.trim());
@@ -372,6 +412,8 @@ export default function BroadcastManagementScreen({ navigation }) {
       fd.append("roles", JSON.stringify(config.roles));
     if (config.audience === "users")
       fd.append("users", JSON.stringify(selectedRecipients.map((r) => r._id)));
+    if (config.audience === "batch")
+      fd.append("batchIds", JSON.stringify(selectedBatches.map((b) => b._id)));
     fd.append(
       "deliverySchedule",
       mode === "draft" ? "draft" : isLater ? "later" : "now",
@@ -548,6 +590,9 @@ export default function BroadcastManagementScreen({ navigation }) {
       setRecipientGroup(
         broadcast.roles?.[0] === "Child" ? "All Children" : "All Therapists",
       );
+    } else if (broadcast.audience === "batch") {
+      setRecipientGroup("Batch");
+      setSelectedBatches((broadcast.batchIds || []).filter((b) => typeof b === "object"));
     } else {
       setRecipientGroup("Specific");
       setSelectedRecipients(
@@ -783,6 +828,44 @@ export default function BroadcastManagementScreen({ navigation }) {
                       ))}
                     </View>
                   )}
+                </View>
+              )}
+              {isBatchMode && (
+                <View style={{ marginTop: 14 }}>
+                  <Text style={styles.fieldLabel}>SELECT BATCHES</Text>
+                  <TouchableOpacity style={styles.multiSelectTrigger} onPress={openBatchModal}>
+                    <Text
+                      style={[
+                        styles.multiSelectPlaceholder,
+                        selectedBatches.length > 0 && { color: "#0F172A" },
+                      ]}
+                    >
+                      {selectedBatches.length > 0
+                        ? `${selectedBatches.length} Selected`
+                        : "Tap to select batches..."}
+                    </Text>
+                    <Feather name="plus-circle" size={18} color="#0B4A6F" />
+                  </TouchableOpacity>
+
+                  {selectedBatches.length > 0 && (
+                    <View style={styles.selectedTagsContainer}>
+                      {selectedBatches.map((b) => (
+                        <View key={b._id} style={styles.tagBadge}>
+                          <Text style={styles.tagBadgeText}>{b.batchName}</Text>
+                          <TouchableOpacity onPress={() => toggleBatch(b)}>
+                            <Feather name="x" size={14} color="#0B4A6F" />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <Text style={[styles.metaText, { marginTop: 10, fontWeight: "400", color: "#64748B" }]}>
+                    Goes to the active children in the selected batches.
+                    {deliverySchedule === "Schedule Later"
+                      ? " Children are picked when it is sent, so anyone added or removed before then is included or excluded."
+                      : ""}
+                  </Text>
                 </View>
               )}
             </View>
@@ -1059,6 +1142,7 @@ export default function BroadcastManagementScreen({ navigation }) {
                   onPress={() => {
                     setRecipientGroup(group);
                     setSelectedRecipients([]);
+                    setSelectedBatches([]);
                     setRecipientOptions([]);
                     setIsGroupModalOpen(false);
                   }}
@@ -1165,6 +1249,66 @@ export default function BroadcastManagementScreen({ navigation }) {
             </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
+      </Modal>
+      <Modal
+        visible={isBatchModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsBatchModalOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsBatchModalOpen(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.modalContentCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Batches</Text>
+              <TouchableOpacity onPress={() => setIsBatchModalOpen(false)}>
+                <Feather name="x" size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search batch..."
+              placeholderTextColor="#94A3B8"
+              value={batchSearch}
+              onChangeText={(t) => {
+                setBatchSearch(t);
+                loadBatches(t);
+              }}
+            />
+
+            <ScrollView style={{ maxHeight: 280 }} keyboardShouldPersistTaps="handled">
+              {batchesLoading ? (
+                <ActivityIndicator style={{ marginVertical: 24 }} color="#0B4A6F" />
+              ) : batchOptions.length === 0 ? (
+                <Text style={styles.centerMsgMuted}>No batches found</Text>
+              ) : (
+                batchOptions.map((b) => {
+                  const on = selectedBatches.some((x) => x._id === b._id);
+                  const count = b.childrenIds?.length;
+                  return (
+                    <TouchableOpacity key={b._id} style={styles.checkboxRow} onPress={() => toggleBatch(b)}>
+                      <View style={[styles.checkbox, on && styles.checkboxActive]}>
+                        {on && <Feather name="check" size={12} color="#FFF" />}
+                      </View>
+                      <Text style={styles.checkboxLabel}>
+                        {b.batchName}
+                        {count != null && <Text style={styles.roleTag}> ({count} children)</Text>}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </ScrollView>
+
+            <TouchableOpacity style={styles.confirmBtn} onPress={() => setIsBatchModalOpen(false)}>
+              <Text style={styles.confirmBtnText}>Done</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
       <BroadcastDetailModal
         visible={isDetailOpen}

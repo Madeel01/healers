@@ -69,6 +69,8 @@ import ProgressTrackingScreen from '../screens/therapist/ProgressTracking';
 import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
+import ChildFormScreen from '../screens/admin/ChildForm';
+import ChildDetailsScreen from '../screens/admin/ChildDetailsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -122,6 +124,8 @@ function AdminStack() {
       <Stack.Screen name="ProgramBuilder" component={ProgramBuilderScreen} />
       <Stack.Screen name="InvoiceView" component={InvoiceViewScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="ChildForm" component={ChildFormScreen} />
+      <Stack.Screen name="ChildDetails" component={ChildDetailsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

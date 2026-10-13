@@ -22,7 +22,8 @@
       },
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "package": "com.adeeltozcall.Healers"
     },
@@ -42,8 +43,10 @@
           "recordAudioAndroid": true
         }
       ],
+      ["expo-image-picker", { "cameraPermission": "Allow the app to take photos of child documents." }],
       "expo-video",
-      "expo-asset"
+      "expo-asset",
+      "expo-notifications"
     ],
     "extra": {
       "eas": {

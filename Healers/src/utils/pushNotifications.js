@@ -1,63 +1,63 @@
-import Constants from 'expo-constants';
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+  // import Constants from 'expo-constants';
+  // import * as Device from 'expo-device';
+  // import * as Notifications from 'expo-notifications';
+  // import { Platform } from 'react-native';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+  // Notifications.setNotificationHandler({
+  //   handleNotification: async () => ({
+  //     shouldShowBanner: true,
+  //     shouldShowList: true,
+  //     shouldPlaySound: true,
+  //     shouldSetBadge: false,
+  //   }),
+  // });
 
-export const registerPushNotifications = async () => {
-  if (!Device.isDevice) {
-    return null;
-  }
+  // export const registerPushNotifications = async () => {
+  //   if (!Device.isDevice) {
+  //     return null;
+  //   }
 
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync(
-      "session-reminders",
-      {
-        name: "Session Reminders",
-        importance:
-          Notifications.AndroidImportance.HIGH,
-        sound: "default",
-      },
-    );
-  }
+  //   if (Platform.OS === "android") {
+  //     await Notifications.setNotificationChannelAsync(
+  //       "session-reminders",
+  //       {
+  //         name: "Session Reminders",
+  //         importance:
+  //           Notifications.AndroidImportance.HIGH,
+  //         sound: "default",
+  //       },
+  //     );
+  //   }
 
-  const { status: existingStatus } =
-    await Notifications.getPermissionsAsync();
+  //   const { status: existingStatus } =
+  //     await Notifications.getPermissionsAsync();
 
-  let finalStatus = existingStatus;
+  //   let finalStatus = existingStatus;
 
-  if (existingStatus !== "granted") {
-    const { status } =
-      await Notifications.requestPermissionsAsync();
+  //   if (existingStatus !== "granted") {
+  //     const { status } =
+  //       await Notifications.requestPermissionsAsync();
 
-    finalStatus = status;
-  }
+  //     finalStatus = status;
+  //   }
 
-  if (finalStatus !== "granted") {
-    return null;
-  }
+  //   if (finalStatus !== "granted") {
+  //     return null;
+  //   }
 
-  const projectId =
-    Constants?.expoConfig?.extra?.eas?.projectId
-    ?? Constants?.easConfig?.projectId;
+  //   const projectId =
+  //     Constants?.expoConfig?.extra?.eas?.projectId
+  //     ?? Constants?.easConfig?.projectId;
 
-  if (!projectId) {
-    console.log("EAS projectId not found");
-    return null;
-  }
+  //   if (!projectId) {
+  //     console.log("EAS projectId not found");
+  //     return null;
+  //   }
 
-  const token =
-    await Notifications.getExpoPushTokenAsync({
-      projectId,
-    });
+  //   const token =
+  //     await Notifications.getExpoPushTokenAsync({
+  //       projectId,
+  //     });
 
-  return token.data;
-};
+  //   return token.data;
+  // };

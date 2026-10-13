@@ -71,25 +71,27 @@ export const AuthProvider = ({ children }) => {
       console.log(" Failed to update online status:", error?.response?.data || error?.message);
     }
   }, []);
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
+  // useEffect(() => {
+  //   if (!token) return;
+  //   console.log(token,"tokennnnnn")
+  //   let cancelled = false;
+  //   (async () => {
+  //     try {
+  //       const pushToken = await registerForPushNotifications();
+  //       if (!pushToken || cancelled) return;
+  //       console.log(pushToken,cancelled,"tokennnnnneee")
+  //       await registerNotification(pushToken, Platform.OS);
+  //       await AsyncStorage.setItem("pushToken", pushToken);
+  //     } catch (error) {
+  //       console.log(error,"erorrrrrrrrrr")
+  //       console.log("Push registration failed:", error?.response?.data || error?.message);
+  //     }
+  //   })();
 
-    (async () => {
-      try {
-        const pushToken = await registerForPushNotifications();
-        if (!pushToken || cancelled) return;
-        await registerNotification(pushToken, Platform.OS);
-        await AsyncStorage.setItem("pushToken", pushToken);
-      } catch (error) {
-        console.log("Push registration failed:", error?.response?.data || error?.message);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
+  //   return () => {
+  //     cancelled = true;
+  //   };
+  // }, [token]);
 
   // const logout = useCallback(async (expectedToken) => {
   //   const currentToken = tokenRef.current;
@@ -154,18 +156,18 @@ export const AuthProvider = ({ children }) => {
 
       setToken(null);
       setUser(null);
-      const pushToken = await AsyncStorage.getItem("pushToken");
-      if (pushToken && currentToken && getTokenRemainingMs(currentToken) > 0) {
-        try {
-          await Promise.race([
-            removePushToken(pushToken),
-            new Promise((resolve) => setTimeout(resolve, 3000)),
-          ]);
-        } catch (error) {
-          console.log("Push token removal failed:", error?.message);
-        }
-        await AsyncStorage.removeItem("pushToken");
-      }
+      // const pushToken = await AsyncStorage.getItem("pushToken");
+      // if (pushToken && currentToken && getTokenRemainingMs(currentToken) > 0) {
+      //   try {
+      //     await Promise.race([
+      //       removePushToken(pushToken),
+      //       new Promise((resolve) => setTimeout(resolve, 3000)),
+      //     ]);
+      //   } catch (error) {
+      //     console.log("Push token removal failed:", error?.message);
+      //   }
+      //   await AsyncStorage.removeItem("pushToken");
+      // }
 
       await clearAuthData();
 
