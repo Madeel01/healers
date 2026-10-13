@@ -117,18 +117,6 @@ export const AuthProvider = ({ children }) => {
 
       setToken(null);
       setUser(null);
-      const pushToken = await AsyncStorage.getItem("pushToken");
-      // if (pushToken && currentToken && getTokenRemainingMs(currentToken) > 0) {
-      //   try {
-      //     await Promise.race([
-      //       removePushToken(pushToken),
-      //       new Promise((resolve) => setTimeout(resolve, 3000)),
-      //     ]);
-      //   } catch (error) {
-      //     console.log("Push token removal failed:", error?.message);
-      //   }
-      //   await AsyncStorage.removeItem("pushToken");
-      // }
 
       await clearAuthData();
 
@@ -457,14 +445,11 @@ export const AuthProvider = ({ children }) => {
         const pushToken = await registerForPushNotifications();
 
         if (!pushToken || cancelled) return;
-
-        // Ensure this session is still active
         if (tokenRef.current !== token) return;
 
         await savePushTokenApi(pushToken, token);
 
         if (cancelled || tokenRef.current !== token) {
-          // Undo registration from a stale session
           await removePushTokenApi(pushToken, token)
             .catch(console.error);
           return;
