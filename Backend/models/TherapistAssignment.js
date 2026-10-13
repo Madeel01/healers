@@ -28,8 +28,8 @@ const therapistAssignmentSchema = new mongoose.Schema(
 
     maxChildren: {
       type: Number,
-      required: true,
-      min: 1,
+      required: false,
+      default: 0,
     },
   },
   {

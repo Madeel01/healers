@@ -25,7 +25,7 @@ const MIME_TO_TYPE = {
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 }, 
   fileFilter: (req, file, cb) => {
     if (MIME_TO_TYPE[file.mimetype]) return cb(null, true);
     cb(new Error("Unsupported file type. Only PDF, image, or doc allowed."));

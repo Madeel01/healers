@@ -25,8 +25,11 @@ async function processDueBroadcasts() {
           notification.audience,
           notification.roles,
           notification.users,
+          notification.batchIds,
         );
-
+        if (notification.audience === "batch" && !recipientUsers.length) {
+          throw new Error("No active children in the selected batches.");
+        }
         notification.recipients = buildRecipients(recipientUsers);
         notification.status = "sent";
         notification.sentAt = new Date();

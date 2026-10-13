@@ -37,7 +37,9 @@ exports.getMessages = async (req, res) => {
   try {
     const { conversationId } = req.params;
 
-    const messages = await Message.find({ conversationId }).sort({ createdAt: 1 });
+    const messages = await Message.find({ conversationId }).sort({
+      createdAt: 1,
+    });
 
     return res.status(200).json({
       success: true,
@@ -93,11 +95,11 @@ exports.getConversations = async (req, res) => {
           },
           lastMessage: conv.lastMessage
             ? {
-              text: conv.lastMessage.text,
-              createdAt: conv.lastMessage.createdAt,
-              isSeen: conv.lastMessage.isSeen,
-              sender: conv.lastMessage.sender,
-            }
+                text: conv.lastMessage.text,
+                createdAt: conv.lastMessage.createdAt,
+                isSeen: conv.lastMessage.isSeen,
+                sender: conv.lastMessage.sender,
+              }
             : null,
           unreadCount,
           isCareTeam: conv.isCareTeam,
@@ -114,7 +116,10 @@ exports.getConversations = async (req, res) => {
     });
 
     // Apply pagination after sorting
-    const paginatedConversations = formattedConversations.slice(skip, skip + limit);
+    const paginatedConversations = formattedConversations.slice(
+      skip,
+      skip + limit,
+    );
 
     res.status(200).json({ success: true, data: paginatedConversations });
   } catch (error) {
@@ -257,6 +262,40 @@ exports.deleteConversation = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to delete conversation",
+      error: error.message,
+    });
+  }
+};
+
+exports.getConversationId = async (req, res) => {
+  try {
+    const { senderId, receiverId } = req.params;
+
+    if (
+      !mongoose.isValidObjectId(senderId) ||
+      !mongoose.isValidObjectId(receiverId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid senderId or receiverId",
+      });
+    }
+
+    const conversation = await Conversation.findOne({
+      participants: { $all: [senderId, receiverId] },
+      $expr: {
+        $eq: [{ $size: "$participants" }, 2],
+      },
+    }).select("_id");
+
+    return res.status(200).json({
+      success: true,
+      conversationId: conversation?._id || null,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch conversation ID",
       error: error.message,
     });
   }
