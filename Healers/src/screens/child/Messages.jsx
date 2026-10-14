@@ -57,7 +57,6 @@ const ListHeaderComponent = memo(({
   navigation,
   userId,
 }) => {
-  console.log(filteredCareTeam);
   return (
     <View style={styles.headerWrapper}>
       <View style={styles.careTeamContainer}>
@@ -216,7 +215,7 @@ export default function MessagingScreen({ navigation }) {
       refreshCurrentList();
     }, 3000);
 
-    const membersInterval = setInterval(fetchMembers, 30000);
+    const membersInterval = setInterval(fetchMembers, 10000);
 
     return () => {
       clearInterval(initialDataInterval);

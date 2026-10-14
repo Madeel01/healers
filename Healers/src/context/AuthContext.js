@@ -77,69 +77,82 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const logout = useCallback(async (expectedToken) => {
-    const currentToken = tokenRef.current;
+  const logout = useCallback(
+    async (expectedToken) => {
+      const currentToken = tokenRef.current;
 
-    if (
-      typeof expectedToken === "string"
-      && currentToken !== expectedToken
-    ) {
-      return;
-    }
+      if (
+        typeof expectedToken === "string"
+        && currentToken !== expectedToken
+      ) {
+        return;
+      }
 
-    if (logoutInProgressRef.current) {
-      return;
-    }
+      if (logoutInProgressRef.current) {
+        return;
+      }
 
-    logoutInProgressRef.current = true;
+      logoutInProgressRef.current = true;
 
-    const pushToken = await AsyncStorage.getItem("pushToken");
-
-    if (pushToken && currentToken) {
       try {
-        await removePushTokenApi(pushToken, currentToken);
+        console.log("Logging out user...");
 
-        await AsyncStorage.removeItem("pushToken");
+        // 1. Mark user offline BEFORE clearing JWT
+        if (currentToken) {
+          const success = await updateOnlineStatus(
+            false,
+            currentToken,
+          );
 
-        console.log("FCM token unregistered");
+          console.log(
+            "Logout offline status result:",
+            success,
+          );
+        }
+
+        // 2. Unregister Firebase push token
+        const pushToken = await AsyncStorage.getItem("pushToken");
+
+        if (pushToken && currentToken) {
+          try {
+            await removePushTokenApi(
+              pushToken,
+              currentToken,
+            );
+
+            await AsyncStorage.removeItem("pushToken");
+
+            console.log("FCM token unregistered");
+          } catch (error) {
+            console.log(
+              "FCM unregister error:",
+              error?.response?.data || error?.message,
+            );
+          }
+        }
       } catch (error) {
-        console.log(
-          "FCM unregister error:",
-          error?.response?.data || error?.message,
-        );
+        console.log("Logout cleanup error:", error);
+      } finally {
+        // 3. Clear authentication AFTER API requests
+        tokenRef.current = null;
+        sessionVersionRef.current += 1;
+
+        setToken(null);
+        setUser(null);
+
+        try {
+          await clearAuthData();
+        } catch (error) {
+          console.log("Clear auth error:", error);
+        }
+
+        logoutInProgressRef.current = false;
+
+        console.log("User logged out");
       }
-    }
-
-    try {
-      tokenRef.current = null;
-
-      sessionVersionRef.current += 1;
-
-      setToken(null);
-      setUser(null);
-
-      await clearAuthData();
-
-      if (currentToken) {
-        NetInfo.fetch()
-          .then((state) => {
-            if (
-              state.isConnected === true
-              && state.isInternetReachable !== false
-            ) {
-              return updateOnlineStatus(false, currentToken);
-            }
-          })
-          .catch((error) => {
-            console.log("Online status update failed:", error);
-          });
-      }
-    } catch (error) {
-      console.log("Logout Error:", error);
-    } finally {
-      logoutInProgressRef.current = false;
-    }
-  }, [updateOnlineStatus]);
+    },
+    [updateOnlineStatus],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -219,7 +232,6 @@ export const AuthProvider = ({ children }) => {
     if (previousToken && getTokenRemainingMs(previousToken) > 0) {
       await updateOnlineStatus(false, previousToken);
     }
-
 
     if (previousToken) {
       const pushToken = await AsyncStorage.getItem("pushToken");
@@ -383,8 +395,6 @@ export const AuthProvider = ({ children }) => {
           previousAppState === "active"
           && nextAppState.match(/inactive|background/)
         ) {
-          console.log("📱 App moved to background");
-
           if (getTokenRemainingMs(token) > 0) {
             await updateOnlineStatus(false, token);
           }

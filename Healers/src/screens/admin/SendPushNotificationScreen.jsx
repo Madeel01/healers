@@ -13,9 +13,9 @@ import {
 import { sendPushNotificationApi } from '../../api/pushNotificationApi';
 
 export default function SendPushNotificationScreen() {
-  const [userId, setUserId] = useState("6acf7ad2f36a146b88a1b589");
-  const [title, setTitle] = useState("TEst");
-  const [message, setMessage] = useState("Test");
+  const [userId, setUserId] = useState("6acf86f959edf247e50d182c");
+  const [title, setTitle] = useState("LOL");
+  const [message, setMessage] = useState("Kaam sai kra kro");
   const [loading, setLoading] = useState(false);
 
   const handleSendNotification = async () => {
