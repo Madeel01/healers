@@ -38,7 +38,6 @@ import {
   getUsersByRole,
   updateBroadcast,
 } from '../../api/admin/api';
-import { sendPushNotificationApi } from '../../api/pushNotificationApi';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
 import {
@@ -439,32 +438,32 @@ export default function BroadcastManagementScreen({ navigation }) {
       fd.append("removeAttachment", "true");
     }
 
-     for (const recipient of selectedRecipients) {
-      const userId = recipient._id;
+    //  for (const recipient of selectedRecipients) {
+    //   const userId = recipient._id;
 
-      const payload = {
-        userId: userId.trim(),
-        title: broadcastTitle.trim(),
-        body: messageContent.trim(),
-        data: {
-          screen: "Notifications",
-          type: "test",
-        },
-      };
+    //   const payload = {
+    //     userId: userId.trim(),
+    //     title: broadcastTitle.trim(),
+    //     body: messageContent.trim(),
+    //     data: {
+    //       screen: "Notifications",
+    //       type: "test",
+    //     },
+    //   };
 
-      console.log("Sending Push Notification:", payload,userId);
+    //   console.log("Sending Push Notification:", payload,userId);
 
-      const response = await sendPushNotificationApi(payload);
-      console.log("Push API Response:", response);
+    //   const response = await sendPushNotificationApi(payload);
+    //   console.log("Push API Response:", response);
 
-      if (response?.data?.successCount > 0) {
-        Alert.alert(
-          "Success",
-          "Push notification sent successfully!",
-        );
-      }
-    }
-    return;
+    //   if (response?.data?.successCount > 0) {
+    //     Alert.alert(
+    //       "Success",
+    //       "Push notification sent successfully!",
+    //     );
+    //   }
+    // }
+    // return;
 
     try {
       setSubmitting(true);
