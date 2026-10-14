@@ -213,3 +213,94 @@ exports.sendNotification = async (req, res) => {
     });
   }
 };
+
+exports.sendBulkPushToUsers = async (userIds, payload) => {
+  if (!userIds || !userIds.length) {
+    return {
+      successCount: 0,
+      failureCount: 0,
+      message: "No user IDs provided",
+    };
+  }
+
+  const objectUserIds = userIds.map((id) => new mongoose.Types.ObjectId(id));
+
+  const devices = await PushToken.find({
+    userId: { $in: objectUserIds },
+  })
+    .select("pushToken")
+    .lean();
+
+  if (!devices.length) {
+    return {
+      successCount: 0,
+      failureCount: 0,
+      message: "No registered devices found for these users",
+    };
+  }
+
+  const tokens = devices.map((device) => device.pushToken);
+
+  const data = Object.fromEntries(
+    Object.entries(payload.data || {}).map(([key, value]) => [
+      key,
+      String(value),
+    ]),
+  );
+
+  const invalidTokens = [];
+  let successCount = 0;
+  let failureCount = 0;
+
+  for (let i = 0; i < tokens.length; i += 500) {
+    const batch = tokens.slice(i, i + 500);
+
+    const result = await messaging.sendEachForMulticast({
+      tokens: batch,
+      notification: {
+        title: payload.title,
+        body: payload.body,
+      },
+      data,
+      android: {
+        priority: "high",
+        notification: {
+          channelId: "default",
+        },
+      },
+    });
+
+    successCount += result.successCount;
+    failureCount += result.failureCount;
+
+    result.responses.forEach((response, index) => {
+      if (!response.success) {
+        const code = response.error?.code;
+
+        console.error(
+          "FCM bulk send failed:",
+          code,
+          response.error?.message,
+        );
+
+        if (
+          code === "messaging/registration-token-not-registered" ||
+          code === "messaging/invalid-registration-token"
+        ) {
+          invalidTokens.push(batch[index]);
+        }
+      }
+    });
+  }
+
+  if (invalidTokens.length) {
+    await PushToken.deleteMany({
+      pushToken: { $in: invalidTokens },
+    });
+  }
+
+  return {
+    successCount,
+    failureCount,
+  };
+};

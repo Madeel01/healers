@@ -1,6 +1,7 @@
+const { sendBulkPushToUsers } = require("../controllers/pushNotificationController");
 const Notification = require("../models/Notification");
 
-exports.sendNotification = async ({
+exports.sendNotifications = async ({
   title,
   message,
   type = "General",
@@ -10,6 +11,7 @@ exports.sendNotification = async ({
   createdBy,
   attachment,
   expiresAt,
+  sendPush = false
 }) => {
   if (!title || !message || !createdBy) {
     throw new Error("title, message, and createdBy are required");
@@ -68,6 +70,17 @@ exports.sendNotification = async ({
     status: "sent",
     sentAt: now,
   });
+  if (sendPush) {
+    const payload = {
+      title,
+      body: message,
+      data: {},
+    };
+
+    sendBulkPushToUsers(recipientIds, payload).catch((err) =>
+      console.error("Failed to send bulk push notifications:", err)
+    );
+  }
 
   return notification;
 };

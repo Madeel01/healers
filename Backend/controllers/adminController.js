@@ -17,7 +17,7 @@ const BatchAssignment = require("../models/BatchAssignment");
 const Package = require("../models/Package");
 const Service = require("../models/Service");
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const { sendToUsers, TEMPLATE, sendNotification } = require("../utils/notificationService");
+const { sendToUsers, TEMPLATE, sendNotifications } = require("../utils/notificationService");
 const { buildRecipients } = require("../utils/broadcastHelpers");
 const Conversation = require("../models/Conversation");
 const multer = require("multer");
@@ -29,6 +29,7 @@ const {
   destroyDocuments,
   confirmDocuments,
 } = require("../utils/childDocuments");
+const { sendBulkPushToUsers } = require("./pushNotificationController");
 const PAST_DAYS = 365;
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
@@ -3975,6 +3976,21 @@ exports.createBroadcast = async (req, res) => {
     }
 
     await notification.save();
+    if (status === "sent" && recipientUsers.length > 0) {
+      const recipientIds = recipientUsers.map((user) => String(user._id || user));
+      const payload = {
+        title: title.trim(),
+        body: message.trim(),
+        data: {
+          notificationId: String(notification._id),
+          type: notifType,
+        },
+      };
+
+      sendBulkPushToUsers(recipientIds, payload).catch((err) =>
+        console.error("Failed to send broadcast bulk push notifications:", err)
+      );
+    }
 
     return res.status(201).json({
       success: true,
@@ -6935,7 +6951,7 @@ exports.sendFeedbackReminderNotification = async (req, res) => {
       });
     }
 
-    const notification = await sendNotification({
+    const notification = await sendNotifications({
       title: "Session Feedback Reminder",
       message: `Please submit your feedback for the session on ${formattedDate} (${appointment.startTime || ""} - ${appointment.endTime || ""}).`,
       type: "Reminder",
