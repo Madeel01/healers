@@ -178,8 +178,6 @@ exports.sendNotification = async (req, res) => {
   try {
     const { userId, title, body, data } = req.body;
 
-    console.log("object", req.body);
-
     if (
       typeof userId !== "string" ||
       !/^[0-9a-fA-F]{24}$/.test(userId)
