@@ -2,6 +2,7 @@ import React, {
   useEffect,
   useRef,
   useState,
+  useContext
 } from 'react';
 
 import {
@@ -31,6 +32,7 @@ import {
   sendMessageApi,
 } from '../../api/child/api';
 import { commonStyles } from '../../styles/theme';
+import { getConversationId } from '../../api/admin/api';
 
 export default function ChatDetailsScreen({ route, navigation }) {
   const {
@@ -42,7 +44,6 @@ export default function ChatDetailsScreen({ route, navigation }) {
     lastSeen,
     currentUserId,
   } = route.params || {};
-
   const [conversationId, setConversationId] = useState(initialConvId);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
@@ -107,7 +108,7 @@ export default function ChatDetailsScreen({ route, navigation }) {
       return () => clearInterval(interval);
     }
   }, [conversationId]);
-
+  
   const handleSend = async () => {
     if (!inputText.trim()) return;
 
@@ -167,6 +168,23 @@ export default function ChatDetailsScreen({ route, navigation }) {
       </View>
     );
   };
+  useEffect(() => {
+    const fetchConversationId = async () => {
+      if (conversationId || !currentUserId || !receiverId) return;
+
+      try {
+        const res = await getConversationId(currentUserId, receiverId);
+
+        if (res?.success && res?.conversationId) {
+          setConversationId(res.conversationId);
+        }
+      } catch (err) {
+        console.log("fetchConversationId error:", err);
+      }
+    };
+
+    fetchConversationId();
+  }, [conversationId, currentUserId, receiverId]);
 
   return (
     <SafeAreaView style={[styles.container, commonStyles.container]} edges={["top", "left", "right"]}>

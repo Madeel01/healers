@@ -188,7 +188,6 @@ exports.sendNotification = async (req, res) => {
       });
     }
 
-    // Convert string to MongoDB ObjectId
     const objectUserId = new mongoose.Types.ObjectId(userId);
 
     console.log("Converted User ID:", objectUserId);

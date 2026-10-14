@@ -45,6 +45,7 @@
           "recordAudioAndroid": true
         }
       ],
+      ["expo-image-picker", { "cameraPermission": "Allow the app to take photos of child documents." }],
        [
         "expo-notifications",
         {

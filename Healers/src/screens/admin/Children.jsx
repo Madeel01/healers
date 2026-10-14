@@ -31,6 +31,7 @@ import {
 import BottomBar from "../../components/BottomBar";
 import TopBar from "../../components/TopBar";
 import { colors, fonts } from "../../styles/theme";
+import { useRoute } from "@react-navigation/native";
 
 const AVATAR_COLORS = [
   "#0B4A6F",
@@ -64,6 +65,10 @@ const initialChildState = {
   packageId: null,        
   discountedPrice: "",
   isActive: true,
+  dateOfBirth: null,
+  gender: "",
+  diagnosis: "",
+  documents: {},
 };
 const STATUS_FILTERS = [
   { label: "All", value: "all" },
@@ -132,6 +137,7 @@ export default function ChildrenScreen({ navigation }) {
   const [pkgLoadingMore, setPkgLoadingMore] = useState(false);
   const pkgRequestIdRef = useRef(0);
   const pkgLoadingMoreRef = useRef(false);
+  const route = useRoute();
 
   const PKG_LIMIT = 10;
 
@@ -228,11 +234,16 @@ export default function ChildrenScreen({ navigation }) {
         age: child.age ?? null,
         email: child.email || "",
         phone: child.phone || "",
+        address: child.address || "",
         packageId: child.packageId?._id || child.packageId || null,
         packageName: child.packageId?.name || "",
         packagePrice: child.packageId?.price ?? null,
         discountedPrice: child.discountedPrice ?? null,
         isActive: child.isActive ?? true,
+        dateOfBirth: child.dateOfBirth || null,
+        gender: child.gender || "",
+        diagnosis: child.diagnosis || "",
+        documents: child.documents || {},
       }));
 
       setHasMore(hasMoreData);
@@ -307,7 +318,13 @@ export default function ChildrenScreen({ navigation }) {
       }
     }
   };
-
+  useEffect(() => {
+    if (!route?.params?.refresh) return;
+    loadingMoreRef.current = false;
+    setPage(1);
+    setHasMore(true);
+    fetchChildrenData(1, true);
+  }, [route?.params?.refresh]);
   useEffect(() => {
     if (!isPackagePickerOpen) return;
     const t = setTimeout(() => fetchPackageResults(1, packageSearch), 300);
@@ -517,6 +534,10 @@ export default function ChildrenScreen({ navigation }) {
           ? Number(newChild.discountedPrice)
           : null,
       isActive: newChild.isActive,
+      dateOfBirth: child.dateOfBirth || null,
+      gender: child.gender || "",
+      diagnosis: child.diagnosis || "",
+      documents: child.documents || {},
     };
 
     try {
@@ -794,7 +815,18 @@ export default function ChildrenScreen({ navigation }) {
                         <TouchableOpacity
                           style={styles.menuItem}
                           activeOpacity={0.7}
-                          onPress={() => openEditModal(child)}
+                          onPress={() => {
+                            setActiveMenuId(null);
+                            navigation.navigate("ChildDetails", { child });
+                          }}
+                        >
+                          <Feather name="eye" size={15} color="#334155" />
+                          <Text style={styles.menuItemText}>View</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.menuItem, styles.deleteMenuItem]}
+                          activeOpacity={0.7}
+                          onPress={() => navigation.navigate("ChildForm", { child })}
                         >
                           <Feather name="edit-2" size={15} color="#334155" />
                           <Text style={styles.menuItemText}>Edit</Text>
@@ -847,7 +879,7 @@ export default function ChildrenScreen({ navigation }) {
 
       <TouchableOpacity
         style={[styles.fab, { bottom: insets.bottom + 90 }]}
-        onPress={openAddModal}
+        onPress={()=> navigation.navigate("ChildForm")}
         activeOpacity={0.8}
       >
         <Feather name="plus" size={30} color="#fff" />

@@ -32,11 +32,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   createBroadcast,
   deleteBroadcast,
+  getBatches,
   getBroadcastById,
   getBroadcasts,
   getUsersByRole,
   updateBroadcast,
 } from '../../api/admin/api';
+import { sendPushNotificationApi } from '../../api/pushNotificationApi';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
 import {
@@ -51,6 +53,7 @@ const GROUP_CONFIG = {
   "All Users": { audience: "all" },
   "All Children": { audience: "role", roles: ["Child"] },
   "All Therapists": { audience: "role", roles: ["Therapist"] },
+  Batch: { audience: "batch" },
   Specific: { audience: "users" },
 };
 
@@ -61,7 +64,7 @@ const STATUS_OPTIONS = [
   { label: "Sending", value: "sending" },
   { label: "Sent", value: "sent" },
   { label: "Cancelled", value: "cancelled" },
-  { label: "Failed", value: "failed" },
+  { label: "Failed", value: "failed" }, 
 ];
 const RECIPIENT_GROUPS = Object.keys(GROUP_CONFIG);
 
@@ -76,11 +79,16 @@ const STATUS_COLORS = {
 const audienceLabel = (b) => {
   if (b.audience === "all") return "All Users";
   if (b.audience === "role") return (b.roles || []).join(", ");
+  if (b.audience === "batch") {
+    const names = (b.batchIds || []).map((x) => x.batchName).filter(Boolean);
+    return names.length ? `Batch: ${names.join(", ")}` : "Batch";
+  }
   return `${b.users?.length || 0} selected user(s)`;
 };
 
 const formatDate = (b) => {
-  const d = b.status === "scheduled" && b.sendAt ? b.sendAt : b.sentAt || b.createdAt;
+  const d =
+    b.status === "scheduled" && b.sendAt ? b.sendAt : b.sentAt || b.createdAt;
   return d ? new Date(d).toLocaleString() : "";
 };
 const isImageAttachment = (att) => {
@@ -159,6 +167,13 @@ export default function BroadcastManagementScreen({ navigation }) {
   const [notificationType, setNotificationType] = useState("General");
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState("all");
+
+  const [selectedBatches, setSelectedBatches] = useState([]);
+  const [batchOptions, setBatchOptions] = useState([]);
+  const [batchesLoading, setBatchesLoading] = useState(false);
+  const [batchSearch, setBatchSearch] = useState("");
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const isBatchMode = config.audience === "batch";
 
   // const filteredItems = broadcastSearch.trim()
   //   ? items.filter((b) =>
@@ -254,6 +269,7 @@ export default function BroadcastManagementScreen({ navigation }) {
     setRecipientGroup("All Users");
     setEditingId(null);
     setSelectedRecipients([]);
+    setSelectedBatches([]);
     setBroadcastTitle("");
     setMessageContent("");
     setDeliverySchedule("Send Now");
@@ -272,7 +288,7 @@ export default function BroadcastManagementScreen({ navigation }) {
   const closeCreateModal = () => {
     if (submitting) return;
     setIsCreateOpen(false);
-    setEditingId(null);
+    setEditingId(null);   
   };
 
   const loadRecipients = async (searchTerm = "") => {
@@ -288,6 +304,28 @@ export default function BroadcastManagementScreen({ navigation }) {
       setRecipientsLoading(false);
     }
   };
+  const loadBatches = async (search = "") => {
+    try {
+      setBatchesLoading(true);
+      const res = await getBatches({ search, limit: 5 });
+      setBatchOptions(res?.data?.batches || res?.data || []);
+    } catch (e) {
+      setBatchOptions([]);
+    } finally {
+      setBatchesLoading(false);
+    }
+  };
+
+  const openBatchModal = () => {
+    setBatchSearch("");
+    setIsBatchModalOpen(true);
+    loadBatches("");
+  };
+
+  const toggleBatch = (b) =>
+    setSelectedBatches((prev) =>
+      prev.some((x) => x._id === b._id) ? prev.filter((x) => x._id !== b._id) : [...prev, b],
+    );
 
   const openMultiSelect = () => {
     setIsMultiSelectModalOpen(true);
@@ -304,7 +342,7 @@ export default function BroadcastManagementScreen({ navigation }) {
     setSelectedRecipients((prev) =>
       prev.some((r) => r._id === item._id)
         ? prev.filter((r) => r._id !== item._id)
-        : [...prev, item]
+        : [...prev, item],
     );
   };
 
@@ -368,18 +406,22 @@ export default function BroadcastManagementScreen({ navigation }) {
       Alert.alert("Invalid time", "Scheduled time must be in the future.");
       return;
     }
+    if (isBatchMode && selectedBatches.length === 0) {
+      Alert.alert("No batch", "Select at least one batch.");
+      return;
+    }
 
     const fd = new FormData();
     fd.append("title", broadcastTitle.trim());
     fd.append("message", messageContent.trim());
     fd.append("audience", config.audience);
     fd.append("type", notificationType);
-    if (config.audience === "role") {
+    if (config.audience === "role")
       fd.append("roles", JSON.stringify(config.roles));
-    }
-    if (config.audience === "users") {
+    if (config.audience === "users")
       fd.append("users", JSON.stringify(selectedRecipients.map((r) => r._id)));
-    }
+    if (config.audience === "batch")
+      fd.append("batchIds", JSON.stringify(selectedBatches.map((b) => b._id)));
     fd.append(
       "deliverySchedule",
       mode === "draft" ? "draft" : isLater ? "later" : "now",
@@ -397,30 +439,30 @@ export default function BroadcastManagementScreen({ navigation }) {
       fd.append("removeAttachment", "true");
     }
 
-    for (const recipient of selectedRecipients) {
+     for (const recipient of selectedRecipients) {
       const userId = recipient._id;
 
-      // const payload = {
-      //   userId: userId.trim(),
-      //   title: broadcastTitle.trim(),
-      //   body: messageContent.trim(),
-      //   data: {
-      //     screen: "Notifications",
-      //     type: "test",
-      //   },
-      // };
+      const payload = {
+        userId: userId.trim(),
+        title: broadcastTitle.trim(),
+        body: messageContent.trim(),
+        data: {
+          screen: "Notifications",
+          type: "test",
+        },
+      };
 
-      console.log("Sending Push Notification:", userId);
+      console.log("Sending Push Notification:", payload,userId);
 
-      // const response = await sendPushNotificationApi(payload);
-      // console.log("Push API Response:", response);
+      const response = await sendPushNotificationApi(payload);
+      console.log("Push API Response:", response);
 
-      // if (response?.data?.successCount > 0) {
-      //   Alert.alert(
-      //     "Success",
-      //     "Push notification sent successfully!",
-      //   );
-      // }
+      if (response?.data?.successCount > 0) {
+        Alert.alert(
+          "Success",
+          "Push notification sent successfully!",
+        );
+      }
     }
     return;
 
@@ -430,6 +472,14 @@ export default function BroadcastManagementScreen({ navigation }) {
         ? await updateBroadcast(editingId, fd)
         : await createBroadcast(fd);
       Alert.alert("Success", res.data?.message || "Done.");
+      if (config.audience === "users" && mode === "send") {
+        const userId = selectedRecipients[0]?._id;
+
+        if (!userId) {
+          throw new Error("No valid recipient selected.");
+        }
+
+      }
       setIsCreateOpen(false);
       setEditingId(null);
       fetchPage(1, "silent");
@@ -438,7 +488,7 @@ export default function BroadcastManagementScreen({ navigation }) {
         "Error",
         e?.response?.data?.message || "Failed to save broadcast.",
       );
-      console.log(e), "errorrrr";
+      console.log(e),"errorrrr";
     } finally {
       setSubmitting(false);
     }
@@ -461,7 +511,8 @@ export default function BroadcastManagementScreen({ navigation }) {
               style={[
                 styles.badge,
                 {
-                  backgroundColor: TYPE_COLORS[item.type]?.bg || TYPE_COLORS.General.bg,
+                  backgroundColor:
+                    TYPE_COLORS[item.type]?.bg || TYPE_COLORS.General.bg,
                 },
               ]}
             >
@@ -469,7 +520,8 @@ export default function BroadcastManagementScreen({ navigation }) {
                 style={[
                   styles.badgeText,
                   {
-                    color: TYPE_COLORS[item.type]?.text || TYPE_COLORS.General.text,
+                    color:
+                      TYPE_COLORS[item.type]?.text || TYPE_COLORS.General.text,
                   },
                 ]}
               >
@@ -488,16 +540,14 @@ export default function BroadcastManagementScreen({ navigation }) {
           {item.message}
         </Text>
 
-        {item.attachment?.name
-          ? (
-            <View style={styles.attachmentRow}>
-              <Feather name="paperclip" size={14} color="#64748B" />
-              <Text style={styles.attachmentText} numberOfLines={1}>
-                {item.attachment.name}
-              </Text>
-            </View>
-          )
-          : null}
+        {item.attachment?.name ? (
+          <View style={styles.attachmentRow}>
+            <Feather name="paperclip" size={14} color="#64748B" />
+            <Text style={styles.attachmentText} numberOfLines={1}>
+              {item.attachment.name}
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.metaRow}>
           <Text style={styles.metaText}>To: {audienceLabel(item)}</Text>
@@ -505,11 +555,9 @@ export default function BroadcastManagementScreen({ navigation }) {
 
         <View style={styles.footerRow}>
           <Text style={styles.dateText}>{formatDate(item)}</Text>
-          {
-            /* <TouchableOpacity onPress={() => confirmDelete(item)} hitSlop={10}>
+          {/* <TouchableOpacity onPress={() => confirmDelete(item)} hitSlop={10}>
             <Feather name="trash-2" size={18} color="#EF4444" />
-          </TouchableOpacity> */
-          }
+          </TouchableOpacity> */}
           {item.status === "sent" && (
             <Text style={styles.metaText}>
               Read {item.readCount}/{item.recipientCount}
@@ -585,6 +633,9 @@ export default function BroadcastManagementScreen({ navigation }) {
       setRecipientGroup(
         broadcast.roles?.[0] === "Child" ? "All Children" : "All Therapists",
       );
+    } else if (broadcast.audience === "batch") {
+      setRecipientGroup("Batch");
+      setSelectedBatches((broadcast.batchIds || []).filter((b) => typeof b === "object"));
     } else {
       setRecipientGroup("Specific");
       setSelectedRecipients(
@@ -595,11 +646,11 @@ export default function BroadcastManagementScreen({ navigation }) {
     setAttachment(
       broadcast.attachment?.url
         ? {
-          existing: true,
-          name: broadcast.attachment.name,
-          type: broadcast.attachment.type,
-          url: broadcast.attachment.url,
-        }
+            existing: true,
+            name: broadcast.attachment.name,
+            type: broadcast.attachment.type,
+            url: broadcast.attachment.url,
+          }
         : null,
     );
     setIsCreateOpen(true);
@@ -634,9 +685,11 @@ export default function BroadcastManagementScreen({ navigation }) {
           <Feather
             name="filter"
             size={18}
-            color={statusFilter !== "all" || typeFilter !== "all"
-              ? colors.primary
-              : "#94A3B8"}
+            color={
+              statusFilter !== "all" || typeFilter !== "all"
+                ? colors.primary
+                : "#94A3B8"
+            }
           />
         </TouchableOpacity>
       </View>
@@ -723,16 +776,18 @@ export default function BroadcastManagementScreen({ navigation }) {
             </View>
           }
           ListEmptyComponent={renderEmpty}
-          ListFooterComponent={loadingMore
-            ? (
+          ListFooterComponent={
+            loadingMore ? (
               <ActivityIndicator
                 style={{ marginVertical: 16 }}
                 color={colors.primary}
               />
-            )
-            : null}
+            ) : null
+          }
           contentContainerStyle={styles.listContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
           onEndReached={onEndReached}
           onEndReachedThreshold={0.4}
           showsVerticalScrollIndicator={false}
@@ -818,6 +873,44 @@ export default function BroadcastManagementScreen({ navigation }) {
                   )}
                 </View>
               )}
+              {isBatchMode && (
+                <View style={{ marginTop: 14 }}>
+                  <Text style={styles.fieldLabel}>SELECT BATCHES</Text>
+                  <TouchableOpacity style={styles.multiSelectTrigger} onPress={openBatchModal}>
+                    <Text
+                      style={[
+                        styles.multiSelectPlaceholder,
+                        selectedBatches.length > 0 && { color: "#0F172A" },
+                      ]}
+                    >
+                      {selectedBatches.length > 0
+                        ? `${selectedBatches.length} Selected`
+                        : "Tap to select batches..."}
+                    </Text>
+                    <Feather name="plus-circle" size={18} color="#0B4A6F" />
+                  </TouchableOpacity>
+
+                  {selectedBatches.length > 0 && (
+                    <View style={styles.selectedTagsContainer}>
+                      {selectedBatches.map((b) => (
+                        <View key={b._id} style={styles.tagBadge}>
+                          <Text style={styles.tagBadgeText}>{b.batchName}</Text>
+                          <TouchableOpacity onPress={() => toggleBatch(b)}>
+                            <Feather name="x" size={14} color="#0B4A6F" />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <Text style={[styles.metaText, { marginTop: 10, fontWeight: "400", color: "#64748B" }]}>
+                    Goes to the active children in the selected batches.
+                    {deliverySchedule === "Schedule Later"
+                      ? " Children are picked when it is sent, so anyone added or removed before then is included or excluded."
+                      : ""}
+                  </Text>
+                </View>
+              )}
             </View>
             <View style={styles.cardContainer}>
               <Text style={styles.fieldLabel}>NOTIFICATION TYPE</Text>
@@ -859,13 +952,15 @@ export default function BroadcastManagementScreen({ navigation }) {
                       <Text
                         style={[
                           styles.modalOptionText,
-                          notificationType === t
-                          && styles.modalOptionTextSelected,
+                          notificationType === t &&
+                            styles.modalOptionTextSelected,
                         ]}
                       >
                         {t}
                       </Text>
-                      {notificationType === t && <Feather name="check" size={18} color="#0B4A6F" />}
+                      {notificationType === t && (
+                        <Feather name="check" size={18} color="#0B4A6F" />
+                      )}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -901,8 +996,7 @@ export default function BroadcastManagementScreen({ navigation }) {
                 onChangeText={setMessageContent}
               />
 
-              {
-                /* <Text style={styles.fieldLabel}>ATTACHMENT (OPTIONAL)</Text>
+              {/* <Text style={styles.fieldLabel}>ATTACHMENT (OPTIONAL)</Text>
               <TouchableOpacity style={styles.uploadBox} onPress={pickAttachment}>
                 <View style={styles.uploadIconContainer}>
                   <MaterialCommunityIcons name="file-upload-outline" size={30} color="#0B4A6F" />
@@ -911,52 +1005,51 @@ export default function BroadcastManagementScreen({ navigation }) {
                   {attachment ? attachment.name : 'Click to upload or drag & drop'}
                 </Text>
                 <Text style={styles.uploadSecondaryText}>PDF, Image, or Doc (Max 10MB)</Text>
-              </TouchableOpacity> */
-              }
-              {attachment
-                ? (
-                  <View style={styles.attachmentChip}>
-                    <MaterialCommunityIcons
-                      name={isImageAttachment(attachment)
+              </TouchableOpacity> */}
+              {attachment ? (
+                <View style={styles.attachmentChip}>
+                  <MaterialCommunityIcons
+                    name={
+                      isImageAttachment(attachment)
                         ? "file-image-outline"
-                        : attachment.mimeType === "application/pdf"
-                            || attachment.type === "pdf"
-                        ? "file-pdf-box"
-                        : "file-document-outline"}
-                      size={20}
+                        : attachment.mimeType === "application/pdf" ||
+                            attachment.type === "pdf"
+                          ? "file-pdf-box"
+                          : "file-document-outline"
+                    }
+                    size={20}
+                    color="#0B4A6F"
+                  />
+                  <Text style={styles.attachmentChipText} numberOfLines={1}>
+                    {attachment.name}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setAttachment(null)}
+                    hitSlop={10}
+                  >
+                    <Feather name="x" size={18} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.uploadBox}
+                  onPress={pickAttachment}
+                >
+                  <View style={styles.uploadIconContainer}>
+                    <MaterialCommunityIcons
+                      name="file-upload-outline"
+                      size={30}
                       color="#0B4A6F"
                     />
-                    <Text style={styles.attachmentChipText} numberOfLines={1}>
-                      {attachment.name}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setAttachment(null)}
-                      hitSlop={10}
-                    >
-                      <Feather name="x" size={18} color="#EF4444" />
-                    </TouchableOpacity>
                   </View>
-                )
-                : (
-                  <TouchableOpacity
-                    style={styles.uploadBox}
-                    onPress={pickAttachment}
-                  >
-                    <View style={styles.uploadIconContainer}>
-                      <MaterialCommunityIcons
-                        name="file-upload-outline"
-                        size={30}
-                        color="#0B4A6F"
-                      />
-                    </View>
-                    <Text style={styles.uploadPrimaryText}>
-                      Click to upload or drag & drop
-                    </Text>
-                    <Text style={styles.uploadSecondaryText}>
-                      PDF, Image, or Doc (Max 10MB)
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                  <Text style={styles.uploadPrimaryText}>
+                    Click to upload or drag & drop
+                  </Text>
+                  <Text style={styles.uploadSecondaryText}>
+                    PDF, Image, or Doc (Max 10MB)
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Card 3: Delivery Schedule */}
@@ -973,8 +1066,8 @@ export default function BroadcastManagementScreen({ navigation }) {
                   <Text
                     style={[
                       styles.segmentText,
-                      deliverySchedule === "Send Now"
-                      && styles.activeSegmentText,
+                      deliverySchedule === "Send Now" &&
+                        styles.activeSegmentText,
                     ]}
                   >
                     Send Now
@@ -984,16 +1077,16 @@ export default function BroadcastManagementScreen({ navigation }) {
                 <TouchableOpacity
                   style={[
                     styles.segmentBtn,
-                    deliverySchedule === "Schedule Later"
-                    && styles.activeSegmentBtn,
+                    deliverySchedule === "Schedule Later" &&
+                      styles.activeSegmentBtn,
                   ]}
                   onPress={() => setDeliverySchedule("Schedule Later")}
                 >
                   <Text
                     style={[
                       styles.segmentText,
-                      deliverySchedule === "Schedule Later"
-                      && styles.activeSegmentText,
+                      deliverySchedule === "Schedule Later" &&
+                        styles.activeSegmentText,
                     ]}
                   >
                     Schedule Later
@@ -1010,9 +1103,10 @@ export default function BroadcastManagementScreen({ navigation }) {
                         pickerMode
                           ? null
                           : Platform.OS === "ios"
-                          ? "datetime"
-                          : "date",
-                      )}
+                            ? "datetime"
+                            : "date",
+                      )
+                    }
                   >
                     <Text style={styles.dropdownValueText}>
                       {sendAt.toLocaleString()}
@@ -1047,7 +1141,9 @@ export default function BroadcastManagementScreen({ navigation }) {
               disabled={submitting}
               onPress={() => submit("send")}
             >
-              {submitting ? <ActivityIndicator color="#FFF" /> : (
+              {submitting ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
                 <>
                   <Feather
                     name="send"
@@ -1089,6 +1185,7 @@ export default function BroadcastManagementScreen({ navigation }) {
                   onPress={() => {
                     setRecipientGroup(group);
                     setSelectedRecipients([]);
+                    setSelectedBatches([]);
                     setRecipientOptions([]);
                     setIsGroupModalOpen(false);
                   }}
@@ -1096,13 +1193,15 @@ export default function BroadcastManagementScreen({ navigation }) {
                   <Text
                     style={[
                       styles.modalOptionText,
-                      recipientGroup === group
-                      && styles.modalOptionTextSelected,
+                      recipientGroup === group &&
+                        styles.modalOptionTextSelected,
                     ]}
                   >
                     {group}
                   </Text>
-                  {recipientGroup === group && <Feather name="check" size={18} color="#0B4A6F" />}
+                  {recipientGroup === group && (
+                    <Feather name="check" size={18} color="#0B4A6F" />
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
@@ -1144,43 +1243,44 @@ export default function BroadcastManagementScreen({ navigation }) {
                 style={{ maxHeight: 280 }}
                 keyboardShouldPersistTaps="handled"
               >
-                {recipientsLoading
-                  ? (
-                    <ActivityIndicator
-                      style={{ marginVertical: 24 }}
-                      color="#0B4A6F"
-                    />
-                  )
-                  : recipientsError
-                  ? <Text style={styles.centerMsgError}>{recipientsError}</Text>
-                  : recipientOptions.length === 0
-                  ? <Text style={styles.centerMsgMuted}>No data found</Text>
-                  : (
-                    recipientOptions.map((item) => {
-                      const isSelected = selectedRecipients.some(
-                        (r) => r._id === item._id,
-                      );
-                      return (
-                        <TouchableOpacity
-                          key={item._id}
-                          style={styles.checkboxRow}
-                          onPress={() => toggleRecipientSelection(item)}
+                {recipientsLoading ? (
+                  <ActivityIndicator
+                    style={{ marginVertical: 24 }}
+                    color="#0B4A6F"
+                  />
+                ) : recipientsError ? (
+                  <Text style={styles.centerMsgError}>{recipientsError}</Text>
+                ) : recipientOptions.length === 0 ? (
+                  <Text style={styles.centerMsgMuted}>No data found</Text>
+                ) : (
+                  recipientOptions.map((item) => {
+                    const isSelected = selectedRecipients.some(
+                      (r) => r._id === item._id,
+                    );
+                    return (
+                      <TouchableOpacity
+                        key={item._id}
+                        style={styles.checkboxRow}
+                        onPress={() => toggleRecipientSelection(item)}
+                      >
+                        <View
+                          style={[
+                            styles.checkbox,
+                            isSelected && styles.checkboxActive,
+                          ]}
                         >
-                          <View
-                            style={[
-                              styles.checkbox,
-                              isSelected && styles.checkboxActive,
-                            ]}
-                          >
-                            {isSelected && <Feather name="check" size={12} color="#FFF" />}
-                          </View>
-                          <Text style={styles.checkboxLabel}>
-                            {item.fullName} <Text style={styles.roleTag}>({item.role})</Text>
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })
-                  )}
+                          {isSelected && (
+                            <Feather name="check" size={12} color="#FFF" />
+                          )}
+                        </View>
+                        <Text style={styles.checkboxLabel}>
+                          {item.fullName}{" "}
+                          <Text style={styles.roleTag}>({item.role})</Text>
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
               </ScrollView>
 
               <TouchableOpacity
@@ -1192,6 +1292,66 @@ export default function BroadcastManagementScreen({ navigation }) {
             </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
+      </Modal>
+      <Modal
+        visible={isBatchModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsBatchModalOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsBatchModalOpen(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.modalContentCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Batches</Text>
+              <TouchableOpacity onPress={() => setIsBatchModalOpen(false)}>
+                <Feather name="x" size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search batch..."
+              placeholderTextColor="#94A3B8"
+              value={batchSearch}
+              onChangeText={(t) => {
+                setBatchSearch(t);
+                loadBatches(t);
+              }}
+            />
+
+            <ScrollView style={{ maxHeight: 280 }} keyboardShouldPersistTaps="handled">
+              {batchesLoading ? (
+                <ActivityIndicator style={{ marginVertical: 24 }} color="#0B4A6F" />
+              ) : batchOptions.length === 0 ? (
+                <Text style={styles.centerMsgMuted}>No batches found</Text>
+              ) : (
+                batchOptions.map((b) => {
+                  const on = selectedBatches.some((x) => x._id === b._id);
+                  const count = b.childrenIds?.length;
+                  return (
+                    <TouchableOpacity key={b._id} style={styles.checkboxRow} onPress={() => toggleBatch(b)}>
+                      <View style={[styles.checkbox, on && styles.checkboxActive]}>
+                        {on && <Feather name="check" size={12} color="#FFF" />}
+                      </View>
+                      <Text style={styles.checkboxLabel}>
+                        {b.batchName}
+                        {count != null && <Text style={styles.roleTag}> ({count} children)</Text>}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </ScrollView>
+
+            <TouchableOpacity style={styles.confirmBtn} onPress={() => setIsBatchModalOpen(false)}>
+              <Text style={styles.confirmBtnText}>Done</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
       <BroadcastDetailModal
         visible={isDetailOpen}

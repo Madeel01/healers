@@ -441,3 +441,25 @@ export const sendFeedbackReminder = async (appointmentId) => {
   });
   return response.data;
 };
+export const uploadChildDocument = async (file) => {
+  const name = file.name || `upload-${Date.now()}`;
+  const isPdf = file.mimeType === "application/pdf" || /\.pdf$/i.test(name);
+
+  const form = new FormData();
+  form.append("file", {
+    uri: file.uri,
+    name,
+    type: file.mimeType || (isPdf ? "application/pdf" : "image/jpeg"),
+  });
+
+  const res = await apiClient.post("/admin/children/documents", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+    timeout: 120000,
+  });
+  return res.data.data;
+};
+
+export const getConversationId = async (senderId,receiverId) => {
+  const response = await apiClient.get(`/chat/${senderId}/${receiverId}/conversation-id`);
+  return response.data;
+}

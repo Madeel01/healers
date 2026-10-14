@@ -1,7 +1,8 @@
 import React, {
   useEffect,
   useState,
-  useRef
+  useRef,
+  useContext
 } from 'react';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,6 +39,7 @@ import {
   colors,
   fonts,
 } from '../../styles/theme';
+import { AuthContext } from '../../context/AuthContext';
 const AVATAR_COLORS = [
   "#0B4A6F", "#7C3AED", "#DC2626", "#059669",
   "#D97706", "#DB2777", "#2563EB", "#0891B2",
@@ -92,6 +94,8 @@ const SegmentedToggle = ({ options, value, onChange }) => (
   </View>
 );
 export default function TherapistsScreen({ navigation }) {
+  const { user } = useContext(AuthContext);
+  const userId = user?.id;
   const insets = useSafeAreaInsets();
   const [therapists, setTherapists] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -199,7 +203,7 @@ export default function TherapistsScreen({ navigation }) {
       name: therapist.name || "",
       specialty:
         therapist.specialties?.[0]?.id || therapist.specialty || "",
-      maxChildren: String(therapist.maxLoad || 0),
+      // maxChildren: String(therapist.maxLoad || 0),
       specialtyBg: therapist.specialties?.[0]?.bg || "",
       specialtyColor: therapist.specialties?.[0]?.color || "",
       schedule: therapist.schedule || "",
@@ -218,7 +222,6 @@ export default function TherapistsScreen({ navigation }) {
   };
 
   const handleDeleteTherapist = (therapist) => {
-    // console.log("Calleeeeddd");
     setActiveMenuId(null);
     Alert.alert(
       "Delete Therapist",
@@ -335,7 +338,7 @@ export default function TherapistsScreen({ navigation }) {
     const payload = {
       name: newTherapist.name,
       specialty: newTherapist.specialty,
-      maxChildren: parseInt(newTherapist.maxChildren, 10) || 5,
+      // maxChildren: parseInt(newTherapist.maxChildren, 10) || 5,
       email: email,
       phone: normalizedPhone,
       address: newTherapist.address,
@@ -357,7 +360,7 @@ export default function TherapistsScreen({ navigation }) {
                   email: updated?.email || payload.email,
                   phone: updated?.phone || payload.phone,
                   address: updated?.address || payload.address,
-                  maxChildren: updated?.maxChildren || payload.maxChildren,
+                  // maxChildren: updated?.maxChildren || payload.maxChildren,
                   specialties: [
                     {
                       id: payload.specialty,
@@ -381,7 +384,7 @@ export default function TherapistsScreen({ navigation }) {
             },
           ],
           currentLoad: 0,
-          maxLoad: created?.maxChildren || payload.maxChildren,
+          // maxLoad: created?.maxChildren || payload.maxChildren,
           email: created?.email || payload.email,
           phone: created?.phone || payload.phone,
           address: created?.address || payload.address,
@@ -446,20 +449,23 @@ export default function TherapistsScreen({ navigation }) {
             color: matched?.color || '',
           };
         });
-
+        
         return {
           id: therapist._id || therapist.id,
           name: therapist.fullName || therapist.name,
           specialties: therapistSpecialties,
           currentLoad: therapist.assignedChildren || therapist.currentLoad || 0,
-          maxLoad: therapist.maxChildren || therapist.maxLoad || 0,
+          profileImage:therapist.profileImage || "",
+          isOnline:therapist.isOnline || false,
+          lastActive:therapist.lastActive,
+          // maxLoad: therapist.maxChildren || therapist.maxLoad || 0,
           email: therapist.email || '',
           phone: therapist.phone || '',
           address: therapist.address || '',
           isActive: therapist.isActive ?? true,
+          conversationId:therapist.conversationId ?? null,
         };
       });
-
       setTherapists((prev) => (resetList || isRefresh ? formattedTherapists : [...prev, ...formattedTherapists]));
       setPage(pageNum);
     } catch (error) {
@@ -600,7 +606,6 @@ export default function TherapistsScreen({ navigation }) {
 
     setAssigning(true);
     const therapistId = selectedAssignTherapist._id || selectedAssignTherapist.id;
-    // console.log(addChildIds,removeChildIds,originalAssignedIds,selectedChildIds)
 
     try {
       const response = await assignChildrenToTherapist({ therapistId, addChildIds, removeChildIds });
@@ -729,7 +734,7 @@ export default function TherapistsScreen({ navigation }) {
         )}
 
         {!loading && therapists.map((therapist) => {
-          const loadPercentage = `${(therapist.currentLoad / (therapist.maxLoad || 1)) * 100}%`;
+          // const loadPercentage = `${(therapist.currentLoad / (therapist.maxLoad || 1)) * 100}%`;
           const isMenuOpen = activeMenuId === therapist.id;
           const avatarColor = getAvatarColor(therapist.id || therapist.name);
           return (
@@ -885,7 +890,18 @@ export default function TherapistsScreen({ navigation }) {
                   <Text style={styles.scheduleButtonText}>View Schedule</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.mailButton}>
+                <TouchableOpacity style={styles.mailButton}
+                  onPress={() =>
+                      navigation?.navigate("ChatDetails", {
+                        conversationId:therapist.conversationId,
+                        receiverId: therapist.id,
+                        partnerName: therapist.name,
+                        partnerImage: therapist.profileImage,
+                        isOnline: therapist.isOnline,
+                        lastSeen: therapist.lastActive,
+                        currentUserId: userId,
+                      })}
+                >
                   <Feather name="mail" size={20} color="#0B4A6F" />
                 </TouchableOpacity>
               </View>
@@ -1009,7 +1025,7 @@ export default function TherapistsScreen({ navigation }) {
           resetTherapistForm();
         }}
       >
-        <TouchableOpacity
+        <View
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => {
@@ -1068,7 +1084,7 @@ export default function TherapistsScreen({ navigation }) {
                   })}
                 </View>
 
-              <Text style={styles.fieldLabel}>Max Children (Caseload Limit)</Text>
+              {/* <Text style={styles.fieldLabel}>Max Children (Caseload Limit)</Text>
               <TextInput
                 style={styles.formInput}
                 placeholder="15"
@@ -1076,7 +1092,7 @@ export default function TherapistsScreen({ navigation }) {
                 keyboardType="number-pad"
                 value={newTherapist.maxChildren}
                 onChangeText={(t) => setNewTherapist({ ...newTherapist, maxChildren: t })}
-              />
+              /> */}
 
               <Text style={styles.fieldLabel}>Email <Text style={styles.requiredText}>*</Text></Text>
               <TextInput
@@ -1101,7 +1117,7 @@ export default function TherapistsScreen({ navigation }) {
               <Text style={styles.fieldLabel}>Address</Text>
               <TextInput
                 style={styles.formInput}
-                placeholder="Clinic Address"
+                placeholder="Address"
                 placeholderTextColor="#94A3B8"
                 value={newTherapist.address}
                 onChangeText={(t) => setNewTherapist({ ...newTherapist, address: t })}
@@ -1167,7 +1183,7 @@ export default function TherapistsScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       <Modal
