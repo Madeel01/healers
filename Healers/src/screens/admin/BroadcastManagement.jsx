@@ -1,9 +1,14 @@
-import React, { useCallback, useState, useRef } from "react";
+import React, {
+  useCallback,
+  useRef,
+  useState,
+} from 'react';
+
+import * as DocumentPicker from 'expo-document-picker';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Modal,
   Platform,
   RefreshControl,
@@ -13,32 +18,33 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
+} from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
-import Feather from "@expo/vector-icons/Feather";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import * as DocumentPicker from "expo-document-picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
+} from 'react-native-safe-area-context';
 
-import BottomBar from "../../components/BottomBar";
-import TopBar from "../../components/TopBar";
-import { colors, fonts } from "../../styles/theme";
+import Feather from '@expo/vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
+
 import {
   createBroadcast,
-  getBroadcasts,
   deleteBroadcast,
-  getUsersByRole,
-  getBroadcastById,
-  updateBroadcast,
   getBatches,
-} from "../../api/admin/api";
-import BroadcastDetailModal from "./components/BroadcastDetailModal";
-import { getAssetUrl } from "../../utils/media";
-import { sendPushNotificationApi } from "../../api/pushNotificationApi";
+  getBroadcastById,
+  getBroadcasts,
+  getUsersByRole,
+  updateBroadcast,
+} from '../../api/admin/api';
+import BottomBar from '../../components/BottomBar';
+import TopBar from '../../components/TopBar';
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
+import BroadcastDetailModal from './components/BroadcastDetailModal';
 
 const LIMIT = 20;
 
@@ -432,6 +438,33 @@ export default function BroadcastManagementScreen({ navigation }) {
       fd.append("removeAttachment", "true");
     }
 
+    //  for (const recipient of selectedRecipients) {
+    //   const userId = recipient._id;
+
+    //   const payload = {
+    //     userId: userId.trim(),
+    //     title: broadcastTitle.trim(),
+    //     body: messageContent.trim(),
+    //     data: {
+    //       screen: "Notifications",
+    //       type: "test",
+    //     },
+    //   };
+
+    //   console.log("Sending Push Notification:", payload,userId);
+
+    //   const response = await sendPushNotificationApi(payload);
+    //   console.log("Push API Response:", response);
+
+    //   if (response?.data?.successCount > 0) {
+    //     Alert.alert(
+    //       "Success",
+    //       "Push notification sent successfully!",
+    //     );
+    //   }
+    // }
+    // return;
+
     try {
       setSubmitting(true);
       const res = editingId
@@ -445,21 +478,6 @@ export default function BroadcastManagementScreen({ navigation }) {
           throw new Error("No valid recipient selected.");
         }
 
-        const payload = {
-          userId,
-          title: broadcastTitle.trim(),
-          body: messageContent.trim(),
-          data: {
-            screen: "Notifications",
-            type: notificationType,
-          },
-        };
-
-        console.log("Sending Push Notification:", payload);
-
-        const response = await sendPushNotificationApi(payload);
-
-        console.log("Push notification response:", response.data);
       }
       setIsCreateOpen(false);
       setEditingId(null);
