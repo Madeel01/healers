@@ -179,7 +179,7 @@ exports.sendNotification = async (req, res) => {
     const { userId, title, body, data } = req.body;
 
     console.log("object", req.body);
-
+    console.log(new Date());
     if (
       typeof userId !== "string" ||
       !/^[0-9a-fA-F]{24}$/.test(userId)
@@ -190,7 +190,6 @@ exports.sendNotification = async (req, res) => {
       });
     }
 
-    // Convert string to MongoDB ObjectId
     const objectUserId = new mongoose.Types.ObjectId(userId);
 
     console.log("Converted User ID:", objectUserId);

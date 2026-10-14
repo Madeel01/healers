@@ -38,6 +38,7 @@ import {
 } from "../../api/admin/api";
 import BroadcastDetailModal from "./components/BroadcastDetailModal";
 import { getAssetUrl } from "../../utils/media";
+import { sendPushNotificationApi } from "../../api/pushNotificationApi";
 
 const LIMIT = 20;
 
@@ -437,6 +438,29 @@ export default function BroadcastManagementScreen({ navigation }) {
         ? await updateBroadcast(editingId, fd)
         : await createBroadcast(fd);
       Alert.alert("Success", res.data?.message || "Done.");
+      if (config.audience === "users" && mode === "send") {
+        const userId = selectedRecipients[0]?._id;
+
+        if (!userId) {
+          throw new Error("No valid recipient selected.");
+        }
+
+        const payload = {
+          userId,
+          title: broadcastTitle.trim(),
+          body: messageContent.trim(),
+          data: {
+            screen: "Notifications",
+            type: notificationType,
+          },
+        };
+
+        console.log("Sending Push Notification:", payload);
+
+        const response = await sendPushNotificationApi(payload);
+
+        console.log("Push notification response:", response.data);
+      }
       setIsCreateOpen(false);
       setEditingId(null);
       fetchPage(1, "silent");

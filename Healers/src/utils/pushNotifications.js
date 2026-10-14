@@ -26,17 +26,17 @@ export async function registerForPushNotifications() {
     });
   }
 
-  //   const { status: existingStatus } =
-  //     await Notifications.getPermissionsAsync();
+    const { status: existingStatus } =
+      await Notifications.getPermissionsAsync();
 
-  //   let finalStatus = existingStatus;
+    let finalStatus = existingStatus;
 
-  //   if (existingStatus !== "granted") {
-  //     const { status } =
-  //       await Notifications.requestPermissionsAsync();
+    if (existingStatus !== "granted") {
+      const { status } =
+        await Notifications.requestPermissionsAsync();
 
-  //     finalStatus = status;
-  //   }
+      finalStatus = status;
+    }
 
   if (finalStatus !== "granted") {
     console.log("Notification permission denied");
