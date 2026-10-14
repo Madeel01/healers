@@ -3648,7 +3648,7 @@ const BATCH_POPULATE = [
 ];
 exports.getBatches = async (req, res) => {
   try {
-    const { page = 1, limit = 20, speciality } = req.query;
+    const { page = 1, limit = 20, speciality, search="" } = req.query;
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
 
@@ -3658,6 +3658,12 @@ exports.getBatches = async (req, res) => {
         ? speciality
         : speciality.split(",");
       filter.speciality = { $in: specialityList };
+    }
+    if (search.trim()) {
+      filter.batchName = {
+        $regex: search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        $options: "i",
+      };
     }
 
     const totalCount = await Batch.countDocuments(filter);
