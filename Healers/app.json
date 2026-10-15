@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Healers",
@@ -11,7 +12,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.adeeltozcall.Healers",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Allow Healers to access your camera for therapy sessions and capturing documents.",
+        "NSMicrophoneUsageDescription": "Allow Healers to access your microphone for audio and video therapy sessions.",
+        "NSPhotoLibraryUsageDescription": "Allow Healers to access your photo library to upload documents and images.",
+        "NSPhotoLibraryAddUsageDescription": "Allow Healers to save photos and images to your library."
       }
     },
     "android": {
@@ -33,6 +38,7 @@
       "favicon": "./assets/ic_launcher_foreground.png"
     },
     "plugins": [
+      "expo-dev-client",
       "expo-font",
       "@react-native-community/datetimepicker",
       "expo-sharing",
@@ -45,8 +51,15 @@
           "recordAudioAndroid": true
         }
       ],
-      ["expo-image-picker", { "cameraPermission": "Allow the app to take photos of child documents." }],
-       [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Healers to access your photos to upload documents.",
+          "cameraPermission": "Allow Healers to take photos of child documents.",
+          "microphonePermission": "Allow Healers to record audio."
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/ic_launcher_foreground.png",
@@ -54,8 +67,7 @@
         }
       ],
       "expo-video",
-      "expo-asset",
-      "expo-notifications"
+      "expo-asset"
     ],
     "extra": {
       "eas": {

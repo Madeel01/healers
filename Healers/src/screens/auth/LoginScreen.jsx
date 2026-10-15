@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -25,7 +24,6 @@ import { useNavigation } from '@react-navigation/native';
 import {
   loginUser,
   loginWithBiometrics,
-  registerNotification,
 } from '../../api/authService';
 import { AuthContext } from '../../context/AuthContext';
 import {
@@ -33,7 +31,6 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
-import { registerForPushNotifications } from '../../utils/registerForPush';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -70,7 +67,7 @@ export default function LoginScreen() {
       } else {
         await AsyncStorage.removeItem("rememberedEmail");
       }
-      
+
       await login(response.token, response.user);
       Alert.alert("Success", "Logged in successfully!");
     } catch (error) {
@@ -287,8 +284,8 @@ const styles = StyleSheet.create({
   cardContainer: {
     backgroundColor: "#fff",
     borderRadius: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
     marginBottom: 24,
     width: "100%",
   },
@@ -321,6 +318,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginVertical: 12,
+    gap: 7,
+    flexWrap: "wrap",
   },
   checkboxRow: {
     flexDirection: "row",
@@ -342,12 +341,12 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   checkboxLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.semiBold,
     color: "#414750",
   },
   forgotText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: fonts.semiBold,
     color: colors.primary,
   },
