@@ -29,7 +29,7 @@ const {
   destroyDocuments,
   confirmDocuments,
 } = require("../utils/childDocuments");
-const { sendBulkPushToUsers } = require("./pushNotificationController");
+const { sendBulkPushToUsers, sendPushToUser } = require("./pushNotificationController");
 const PAST_DAYS = 365;
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
@@ -3076,7 +3076,7 @@ exports.approveLeaveRequest = async (req, res) => {
   try {
     const { id } = req.params;
     const adminId = req.user?.id;
-
+    
     const leaveRequest = await LeaveRequest.findById(id);
 
     if (!leaveRequest) {
@@ -3099,7 +3099,17 @@ exports.approveLeaveRequest = async (req, res) => {
     leaveRequest.rejectionReason = "";
 
     await leaveRequest.save();
-
+    if (leaveRequest?.applicantId) {
+      await sendNotifications({
+        title: "Leave Request Approved",
+        message: "Your leave request has been approved.",
+        type: "Alert",
+        audience: "users",
+        users: [String(leaveRequest?.applicantId)],
+        createdBy: adminId,
+        sendPush: true,
+      });
+    }
     return res.status(200).json({
       success: true,
       message: "Leave request approved successfully.",
@@ -3149,7 +3159,17 @@ exports.rejectLeaveRequest = async (req, res) => {
     leaveRequest.actionedAt = new Date();
 
     await leaveRequest.save();
-
+    if (leaveRequest?.applicantId) {
+      await sendNotifications({
+        title: "Leave Request Rejected",
+        message: `Your leave request has been rejected. Reason: ${rejectionReason.trim()}`,
+        type: "Alert",
+        audience: "users",
+        users: [String(leaveRequest?.applicantId)],
+        createdBy: adminId,
+        sendPush: true,
+      });
+    }
     return res.status(200).json({
       success: true,
       message: "Leave request rejected.",
@@ -3194,10 +3214,19 @@ exports.markAllLeavesSeen = async (req, res) => {
 };
 exports.getStaffOnLeaveToday = async (req, res) => {
   try {
-    const data = await getOnLeaveToday();
-    return res
-      .status(200)
-      .json({ success: true, data, totalCount: data.length });
+    const pageNum = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limitNum = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+
+    const all = await getOnLeaveToday();
+    const start = (pageNum - 1) * limitNum;
+    const data = all.slice(start, start + limitNum);
+
+    return res.status(200).json({
+      success: true,
+      data,
+      hasMore: start + limitNum < all.length,
+      totalCount: all.length,
+    });
   } catch (error) {
     console.error("Staff On Leave Error:", error);
     return res.status(500).json({
@@ -3956,9 +3985,9 @@ exports.createBroadcast = async (req, res) => {
       status,
       sendAt: finalSendAt,
     });
-
+    let recipientUsers = [];
     if (status === "sending") {
-      const recipientUsers = await resolveRecipients(
+      recipientUsers = await resolveRecipients(
         audience,
         parsedRoles,
         parsedUsers,
@@ -3976,22 +4005,37 @@ exports.createBroadcast = async (req, res) => {
     }
 
     await notification.save();
-    if (status === "sent" && recipientUsers.length > 0) {
-      const recipientIds = recipientUsers.map((user) => String(user._id || user));
+    if (status === "sending" && recipientUsers.length > 0) {
       const payload = {
         title: title.trim(),
         body: message.trim(),
         data: {
+          screen: "Notifications",
           notificationId: String(notification._id),
           type: notifType,
         },
       };
 
-      sendBulkPushToUsers(recipientIds, payload).catch((err) =>
-        console.error("Failed to send broadcast bulk push notifications:", err)
+      const results = await Promise.allSettled(
+        recipientUsers.map((user) =>
+          sendPushToUser(
+            String(user._id || user),
+            payload
+          )
+        )
       );
-    }
 
+      console.log("Push notification results:", {
+        total: results.length,
+        successful: results.filter(
+          (r) => r.status === "fulfilled"
+        ).length,
+        failed: results.filter(
+          (r) => r.status === "rejected"
+        ).length,
+      });
+    }
+    console.log(notification,"notifciation")
     return res.status(201).json({
       success: true,
       message: status === "draft"
@@ -4223,9 +4267,10 @@ exports.updateBroadcast = async (req, res) => {
         type: MIME_TO_TYPE[req.file.mimetype] || null,
       };
     }
-
+    let recipientUsers = [];
+    const shouldSendPush = deliverySchedule === "now" && broadcast.status !== "sent";
     if (broadcast.status === "sending") {
-      const recipientUsers = await resolveRecipients(
+      recipientUsers = await resolveRecipients(
         broadcast.audience,
         broadcast.roles,
         broadcast.users,
@@ -4243,6 +4288,27 @@ exports.updateBroadcast = async (req, res) => {
     }
 
     await broadcast.save();
+    let pushResults = null;
+    if (shouldSendPush && recipientUsers.length > 0) {
+      const payload = {
+        title: broadcast.title,
+        body: broadcast.message,
+        data: {
+          screen: "Notifications",
+          notificationId: String(broadcast._id),
+          type: broadcast.type,
+        },
+      };
+
+      const results = await Promise.allSettled(
+        recipientUsers.map((user) =>
+          sendPushToUser(
+            String(user._id || user),
+            payload
+          )
+        )
+      );
+    }
 
     return res
       .status(200)
@@ -4699,6 +4765,53 @@ exports.markAllNotificationsRead = async (req, res) => {
   }
 };
 
+
+const findBlockingSessions = async (therapistId, oldRule, newRule = null) => {
+  const st = await loadScheduleSettings();
+  const today = todayKey(st.tz);
+  const nowMin = clockMinutes(st.tz);
+  const [ty, tm] = today.split("-").map(Number);
+
+  const schedules = await Scheduling.find({
+    therapistId,
+    $or: [{ year: { $gt: ty } }, { year: ty, month: { $gte: tm } }],
+  }).lean();
+
+  const blocking = [];
+  for (const sc of schedules) {
+    for (const ap of sc.appointments || []) {
+      if (INACTIVE_TYPES.includes(ap.sessionType)) continue;
+
+      const date = dateKeyOf(ap.date);
+      const a = toMin(ap.startTime);
+      const b = toMin(ap.endTime);
+
+      if (date < today || (date === today && b <= nowMin)) continue;
+
+      if (!availableOnDate([oldRule], date, a, b)) continue;
+
+      if (newRule && availableOnDate([newRule], date, a, b)) continue;
+
+      blocking.push({ date, startTime: ap.startTime, endTime: ap.endTime });
+    }
+  }
+
+  blocking.sort((x, y) =>
+    x.date === y.date
+      ? x.startTime.localeCompare(y.startTime)
+      : x.date.localeCompare(y.date)
+  );
+  return blocking;
+};
+const blockedMessage = (action, list) => {
+  const sample = list
+    .slice(0, 3)
+    .map((s) => `${s.date} ${to12(s.startTime)}-${to12(s.endTime)}`)
+    .join(", ");
+  return `Cannot ${action} this availability: ${list.length} upcoming session(s) are scheduled in it (${sample}${
+    list.length > 3 ? ", ..." : ""
+  }). Cancel or reschedule them first.`;
+};
 exports.getAvailability = async (req, res) => {
   try {
     const { therapistId } = req.query;
@@ -4797,29 +4910,40 @@ exports.updateAvailability = async (req, res) => {
       });
     }
 
-    // TODO (sessions step): if future sessions fall outside the new window, block or warn here.
+    if (existing.isActive) {
+      const deactivating = req.body.isActive !== undefined && !req.body.isActive;
+      const blocking = await findBlockingSessions(
+        existing.therapistId,
+        existing.toObject(),
+        deactivating ? null : rule,
+      );
+      if (blocking.length) {
+        return res.status(409).json({
+          success: false,
+          message: blockedMessage("update", blocking),
+          sessions: blocking,
+        });
+      }
+    }
+
     Object.assign(existing, rule);
     if (req.body.isActive !== undefined) {
       existing.isActive = !!req.body.isActive;
     }
     await existing.save();
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Availability updated.",
-        data: existing,
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Availability updated.",
+      data: existing,
+    });
   } catch (error) {
     console.error("Update Availability Error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to update availability.",
-        error: error.message,
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update availability.",
+      error: error.message,
+    });
   }
 };
 exports.deleteAvailability = async (req, res) => {
@@ -4829,25 +4953,35 @@ exports.deleteAvailability = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid id." });
     }
 
-    // TODO (sessions step): block if future sessions depend on this window.
-    const deleted = await TherapistAvailability.findByIdAndDelete(id);
-    if (!deleted) {
+    const existing = await TherapistAvailability.findById(id).lean();
+    if (!existing) {
       return res
         .status(404)
         .json({ success: false, message: "Availability not found." });
     }
+
+    if (existing.isActive) {
+      const blocking = await findBlockingSessions(existing.therapistId, existing, null);
+      if (blocking.length) {
+        return res.status(409).json({
+          success: false,
+          message: blockedMessage("delete", blocking),
+          sessions: blocking,
+        });
+      }
+    }
+
+    await TherapistAvailability.deleteOne({ _id: id });
     return res
       .status(200)
       .json({ success: true, message: "Availability deleted." });
   } catch (error) {
     console.error("Delete Availability Error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to delete availability.",
-        error: error.message,
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete availability.",
+      error: error.message,
+    });
   }
 };
 
@@ -6666,27 +6800,41 @@ const validateServiceIds = async (value, { allowInactive = false } = {}) => {
 
 exports.getServices = async (req, res) => {
   try {
-    const { search = "", includeInactive } = req.query;
-    const filter = {
-      ...(includeInactive !== "true" && { isActive: true }),
-      ...(search && {
-        label: { $regex: search, $options: "i" },
-      }),
-    };
-    const list = await Service.find(filter)
-      .sort({ createdAt: 1 })
-      .lean();
+    const { search = "", includeInactive, status, page, limit } = req.query;
+
+    const filter = {};
+
+    if (status === "active") filter.isActive = true;
+    else if (status === "inactive") filter.isActive = false;
+    else if (status !== "all" && includeInactive !== "true") filter.isActive = true;
+
+    const term = String(search).trim();
+    if (term) filter.label = { $regex: escapeRegex(term), $options: "i" };
+
+    const query = Service.find(filter).sort({ createdAt: 1, _id: 1 }).lean();
+
+    if (page === undefined) {
+      const list = await query;
+      return res.status(200).json({ success: true, data: list.map(shapeService) });
+    }
+
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
+
+    const [totalCount, list] = await Promise.all([
+      Service.countDocuments(filter),
+      query.skip((pageNum - 1) * limitNum).limit(limitNum),
+    ]);
 
     return res.status(200).json({
       success: true,
       data: list.map(shapeService),
+      hasMore: pageNum * limitNum < totalCount,
+      totalCount,
     });
   } catch (error) {
     console.error("getServices:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch services.",
-    });
+    return res.status(500).json({ success: false, message: "Failed to fetch services." });
   }
 };
 
@@ -6759,14 +6907,13 @@ exports.deleteService = async (req, res) => {
     const id = String(doc._id);
     const [inBatch, inPackage, inTherapist] = await Promise.all([
       Batch.exists({ speciality: id }),
-      Package.exists({ specialities: id }),
       TherapistAssignment.exists({ specialty: id }),
     ]);
 
-    if (inBatch || inPackage || inTherapist) {
+    if (inBatch || inTherapist) {
       return res.status(409).json({
         success: false,
-        message: "This service is used by batches, packages or therapists. Deactivate it instead.",
+        message: "This service is used by batches or therapists. Deactivate it instead.",
       });
     }
 
@@ -6958,6 +7105,7 @@ exports.sendFeedbackReminderNotification = async (req, res) => {
       audience: "users",
       users: uniqueRecipients,
       createdBy: senderId,
+      sendPush:true
     });
 
     return res.status(200).json({

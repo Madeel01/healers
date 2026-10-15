@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -12,27 +12,33 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Feather from '@expo/vector-icons/Feather';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
+} from "react-native";
 import {
-  colors,
-  fonts,
-} from '../../styles/theme';
-import { addFeedbackReply, getFeedbackReplies, getFeedbackRequests, deleteFeedback, sendFeedbackReminder } from '../../api/admin/api';
-import { formatTo12Hour } from '../../utils/hoursformat';
-import { AuthContext } from '../../context/AuthContext';
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import Feather from "@expo/vector-icons/Feather";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+
+import BottomBar from "../../components/BottomBar";
+import TopBar from "../../components/TopBar";
+import { colors, fonts } from "../../styles/theme";
+import {
+  addFeedbackReply,
+  getFeedbackReplies,
+  getFeedbackRequests,
+  deleteFeedback,
+  sendFeedbackReminder,
+} from "../../api/admin/api";
+import { formatTo12Hour } from "../../utils/hoursformat";
+import { AuthContext } from "../../context/AuthContext";
 
 // UI tab label -> backend status value expected by getAdminFeedbackManagement
 const TAB_TO_STATUS = {
-  'All Feedback': 'all',
-  Pending: 'pending',
-  New: 'new',
+  "All Feedback": "all",
+  Pending: "pending",
+  New: "new",
 };
 const MOOD_OPTIONS = [
   { id: "Frustrated", label: "Frustrated", emoji: "😔" },
@@ -41,30 +47,30 @@ const MOOD_OPTIONS = [
   { id: "Excited", label: "Excited", emoji: "🤩" },
 ];
 
-const DEFAULT_AVATAR = 'https://i.pravatar.cc/150?img=1';
+const DEFAULT_AVATAR = "https://i.pravatar.cc/150?img=1";
 
 function mapFeedbackItem(item, status) {
-  if (status === 'pending') {
+  if (status === "pending") {
     const person = item.therapistId || item.childId || {};
     return {
       id: item.appointmentId,
-      name: person.fullName || 'Unknown',
-      role: item.therapistId ? 'Parent' : 'Therapist',
-      status: 'New',
+      name: person.fullName || "Unknown",
+      role: item.therapistId ? "Parent" : "Therapist",
+      status: "New",
       rating: null,
-      comment: `Session on ${formatDate(item.session?.date)} (${item.session?.startTime || ''} - ${item.session?.endTime || ''}) is awaiting feedback.`,
+      comment: `Session on ${formatDate(item.session?.date)} (${item.session?.startTime || ""} - ${item.session?.endTime || ""}) is awaiting feedback.`,
       avatar: DEFAULT_AVATAR,
-      primaryAction: 'Send Reminder',
-      primaryIcon: 'bell',
-      actionType: 'primary',
-      secondaryAction: 'Delete',
-      secondaryIcon: 'trash-2',
-      tab:"pending"
+      primaryAction: "Send Reminder",
+      primaryIcon: "bell",
+      actionType: "primary",
+      secondaryAction: "Delete",
+      secondaryIcon: "trash-2",
+      tab: "pending",
     };
   }
 
   const person = item.therapistId || item.childId || {};
-  const role = item.therapistId ? 'Parent' : 'Therapist';
+  const role = item.therapistId ? "Parent" : "Therapist";
 
   const createdAt = new Date(item.createdAt);
   const now = new Date();
@@ -78,33 +84,33 @@ function mapFeedbackItem(item, status) {
   const itemDate = new Date(createdAt);
   itemDate.setHours(0, 0, 0, 0);
 
-  const isNew = itemDate.getTime() === today.getTime() ||
-                itemDate.getTime() === yesterday.getTime();
+  const isNew =
+    itemDate.getTime() === today.getTime() ||
+    itemDate.getTime() === yesterday.getTime();
 
   return {
     id: item._id,
-    name: person.fullName || 'Unknown',
+    name: person.fullName || "Unknown",
     role,
-    rating: typeof item.rating === 'number' ? item.rating : 0,
+    rating: typeof item.rating === "number" ? item.rating : 0,
     comment: item?.notes?.trim() || item?.notes,
     avatar: DEFAULT_AVATAR,
-    primaryAction: item.isRespond ? 'View Reply' : 'Reply',
-    primaryIcon: item.isRespond ? undefined : 'corner-up-left',
-    actionType: item.isRespond ? 'outline' : 'primary',
-    secondaryAction: 'Delete',
-    secondaryIcon: 'trash-2',
+    primaryAction: item.isRespond ? "View Reply" : "Reply",
+    primaryIcon: item.isRespond ? undefined : "corner-up-left",
+    actionType: item.isRespond ? "outline" : "primary",
+    secondaryAction: "Delete",
+    secondaryIcon: "trash-2",
     isRespond: item.isRespond === true,
     isNew,
-    childName: item.childId?.fullName || 'Unknown',
-    startTime: item.appointment?.startTime || '--:--',
-    moodLabel: item.mood || 'No reaction',
-    moodEmoji:
-      MOOD_OPTIONS.find((m) => m.id === item.mood)?.emoji || '🙂',
+    childName: item.childId?.fullName || "Unknown",
+    startTime: item.appointment?.startTime || "--:--",
+    moodLabel: item.mood || "No reaction",
+    moodEmoji: MOOD_OPTIONS.find((m) => m.id === item.mood)?.emoji || "🙂",
   };
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return 'an upcoming date';
+  if (!dateStr) return "an upcoming date";
   try {
     return new Date(dateStr).toLocaleDateString();
   } catch {
@@ -115,9 +121,9 @@ function formatDate(dateStr) {
 export default function FeedbackScreen({ navigation }) {
   // const insets = useSafeAreaInsets();
   const { user } = useContext(AuthContext);
-  const [activeTab, setActiveTab] = useState('All Feedback');
+  const [activeTab, setActiveTab] = useState("All Feedback");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [activeBottomTab, setActiveBottomTab] = useState('');
+  const [activeBottomTab, setActiveBottomTab] = useState("");
 
   const [feedbackItems, setFeedbackItems] = useState([]);
   const [stats, setStats] = useState({
@@ -132,49 +138,51 @@ export default function FeedbackScreen({ navigation }) {
   const [replyModalVisible, setReplyModalVisible] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [replies, setReplies] = useState([]);
-  const [replyText, setReplyText] = useState('');
+  const [replyText, setReplyText] = useState("");
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [sendingReminderId, setSendingReminderId] = useState(null);
 
-  const status = TAB_TO_STATUS[activeTab] || 'all';
+  const status = TAB_TO_STATUS[activeTab] || "all";
 
-  const fetchFeedback = useCallback(async ({ isRefresh = false } = {}) => {
-    isRefresh ? setRefreshing(true) : setLoading(true);
-    setError(null);
-    try {
+  const fetchFeedback = useCallback(
+    async ({ isRefresh = false } = {}) => {
+      isRefresh ? setRefreshing(true) : setLoading(true);
+      setError(null);
+      try {
+        const response = await getFeedbackRequests({ status });
+        const payload = response?.data ?? [];
 
-      const response = await getFeedbackRequests({ status });
-      const payload = response?.data ?? [];
+        if (!payload?.success) {
+          throw new Error(payload?.message || "Failed to load feedback");
+        }
 
-      if (!payload?.success) {
-        throw new Error(payload?.message || 'Failed to load feedback');
+        const mapped = (payload.data || []).map((item) =>
+          mapFeedbackItem(item, status),
+        );
+
+        setFeedbackItems(mapped);
+        setStats({
+          pendingFeedback: payload.stats?.pendingFeedback ?? 0,
+          sinceYesterdayFeedback: payload.stats?.sinceYesterdayFeedback ?? 0,
+          averageSatisfaction: payload.stats?.averageSatisfaction ?? 0,
+        });
+      } catch (err) {
+        console.error("Failed to fetch feedback:", err);
+        setError(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Something went wrong while loading feedback.",
+        );
+        setFeedbackItems([]);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-
-      const mapped = (payload.data || []).map((item) =>
-        mapFeedbackItem(item, status),
-      );
-
-      setFeedbackItems(mapped);
-      setStats({
-        pendingFeedback: payload.stats?.pendingFeedback ?? 0,
-        sinceYesterdayFeedback: payload.stats?.sinceYesterdayFeedback ?? 0,
-        averageSatisfaction: payload.stats?.averageSatisfaction ?? 0,
-      });
-    } catch (err) {
-      console.error('Failed to fetch feedback:', err);
-      setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          'Something went wrong while loading feedback.',
-      );
-      setFeedbackItems([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [status]);
+    },
+    [status],
+  );
 
   useEffect(() => {
     fetchFeedback();
@@ -184,12 +192,12 @@ export default function FeedbackScreen({ navigation }) {
     const stars = [];
 
     for (let i = 1; i <= 5; i++) {
-      let iconName = 'star-o';
+      let iconName = "star-o";
 
       if (rating >= i) {
-        iconName = 'star';
+        iconName = "star";
       } else if (rating >= i - 0.5) {
-        iconName = 'star-half-o';
+        iconName = "star-half-o";
       }
 
       stars.push(
@@ -214,13 +222,12 @@ export default function FeedbackScreen({ navigation }) {
     try {
       const response = await getFeedbackReplies(item.id);
       const sortedReplies = [...(response.data?.replies || [])].sort(
-        (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+        (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
       );
-
 
       setReplies(sortedReplies);
     } catch (error) {
-      console.error('Failed to load replies:', error);
+      console.error("Failed to load replies:", error);
     } finally {
       setLoadingReplies(false);
     }
@@ -232,22 +239,20 @@ export default function FeedbackScreen({ navigation }) {
     setReplyModalVisible(false);
     setSelectedFeedback(null);
     setReplies([]);
-    setReplyText('');
+    setReplyText("");
 
     await refreshFeedback();
   };
 
-
-
   const handleDeleteFeedback = (item) => {
     Alert.alert(
-      'Delete Feedback',
-      'This will permanently remove this feedback. Continue?',
+      "Delete Feedback",
+      "This will permanently remove this feedback. Continue?",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Delete',
-          style: 'destructive',
+          text: "Delete",
+          style: "destructive",
           onPress: async () => {
             try {
               setDeletingId(item.id);
@@ -255,8 +260,11 @@ export default function FeedbackScreen({ navigation }) {
               // setFeedbackItems((prev) => prev.filter((i) => i.id !== item.id));
               await refreshFeedback();
             } catch (error) {
-              console.error('Failed to delete feedback:', error);
-              Alert.alert('Error', 'Could not delete this feedback. Please try again.');
+              console.error("Failed to delete feedback:", error);
+              Alert.alert(
+                "Error",
+                "Could not delete this feedback. Please try again.",
+              );
             } finally {
               setDeletingId(null);
             }
@@ -266,38 +274,58 @@ export default function FeedbackScreen({ navigation }) {
     );
   };
   const handleSendReminder = async (item) => {
-  Alert.alert(
-    "Send Feedback Reminder",
-    `Send a feedback request alert to ${item.name}?`,
-    [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Send Alert",
-        onPress: async () => {
-          try {
-            setSendingReminderId(item.id);
-            const res = await sendFeedbackReminder(item.id); 
+    try {
+      setSendingReminderId(item.id);
+      const res = await sendFeedbackReminder(item.id);
 
-            if (res?.success) {
-              Alert.alert("Success", res.message || "Feedback reminder sent successfully!");
-            } else {
-              Alert.alert("Error", res?.message || "Could not send reminder.");
-            }
-          } catch (error) {
-            console.error("Failed to send reminder:", error);
-            Alert.alert(
-              "Error",
-              error?.response?.data?.message || "Failed to send reminder alert."
-            );
-          } finally {
-            setSendingReminderId(null);
-          }
-        },
-      },
-    ]
-  );
-};
+      if (res?.success) {
+        Alert.alert(
+          "Success",
+          res.message || "Feedback reminder sent successfully!",
+        );
+      } else {
+        Alert.alert("Error", res?.message || "Could not send reminder.");
+      }
+    } catch (error) {
+      console.error("Failed to send reminder:", error);
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message || "Failed to send reminder alert.",
+      );
+    } finally {
+      setSendingReminderId(null);
+    }
+    // Alert.alert(
+    //   "Send Feedback Reminder",
+    //   `Send a feedback request alert to ${item.name}?`,
+    //   [
+    //     { text: "Cancel", style: "cancel" },
+    //     {
+    //       text: "Send Alert",
+    //       onPress: async () => {
+    //         try {
+    //           setSendingReminderId(item.id);
+    //           const res = await sendFeedbackReminder(item.id);
 
+    //           if (res?.success) {
+    //             Alert.alert("Success", res.message || "Feedback reminder sent successfully!");
+    //           } else {
+    //             Alert.alert("Error", res?.message || "Could not send reminder.");
+    //           }
+    //         } catch (error) {
+    //           console.error("Failed to send reminder:", error);
+    //           Alert.alert(
+    //             "Error",
+    //             error?.response?.data?.message || "Failed to send reminder alert."
+    //           );
+    //         } finally {
+    //           setSendingReminderId(null);
+    //         }
+    //       },
+    //     },
+    //   ]
+    // );
+  };
 
   return (
     <SafeAreaView style={[styles.mainContainer]}>
@@ -305,7 +333,7 @@ export default function FeedbackScreen({ navigation }) {
         navigation={navigation}
         isNotificationOpen={isNotificationOpen}
         onToggleNotification={setIsNotificationOpen}
-        headerTitle={'Manage Feedback'}
+        headerTitle={"Manage Feedback"}
       />
       <ScrollView
         style={styles.scrollArea}
@@ -334,7 +362,7 @@ export default function FeedbackScreen({ navigation }) {
           <View
             style={[
               styles.metricIconBg,
-              { backgroundColor: 'rgba(22,105,169,.1)' },
+              { backgroundColor: "rgba(22,105,169,.1)" },
             ]}
           >
             <MaterialCommunityIcons
@@ -356,7 +384,7 @@ export default function FeedbackScreen({ navigation }) {
           <View
             style={[
               styles.metricIconBg,
-              { backgroundColor: 'rgba(255,220,196,.3)' },
+              { backgroundColor: "rgba(255,220,196,.3)" },
             ]}
           >
             <Feather name="smile" size={28} color="#7A3E00" />
@@ -439,7 +467,7 @@ export default function FeedbackScreen({ navigation }) {
                                 : styles.newBadgeText,
                             ]}
                           >
-                            {item.isRespond ? 'Responded' : 'New'}
+                            {item.isRespond ? "Responded" : "New"}
                           </Text>
                         </View>
                       </View>
@@ -448,7 +476,7 @@ export default function FeedbackScreen({ navigation }) {
                     </View>
 
                     {/* RIGHT SIDE */}
-                    {item.tab !== 'pending' && (
+                    {item.tab !== "pending" && (
                       <View style={styles.appointmentInfo}>
                         <Text style={styles.detailLine}>
                           <Text style={styles.detailLabel}>For: </Text>
@@ -470,35 +498,46 @@ export default function FeedbackScreen({ navigation }) {
                 </View>
               </View>
 
-              <Text style={item.comment?styles.commentText:styles.notesText}>{item.comment??item.notes}</Text>
-              
+              <Text
+                style={item.comment ? styles.commentText : styles.notesText}
+              >
+                {item.comment ?? item.notes}
+              </Text>
 
               <View style={styles.cardActionsRow}>
                 <TouchableOpacity
                   style={[
                     styles.actionBtn,
-                    item.actionType === 'primary' ? styles.primaryBtn : styles.outlineBtn,
+                    item.actionType === "primary"
+                      ? styles.primaryBtn
+                      : styles.outlineBtn,
                   ]}
                   disabled={sendingReminderId === item.id}
                   onPress={() => {
                     if (
-                      item.primaryAction === 'Reply' ||
-                      item.primaryAction === 'View Reply'
+                      item.primaryAction === "Reply" ||
+                      item.primaryAction === "View Reply"
                     ) {
                       handleViewFeedback(item);
-                    } else if (item.primaryAction === 'Send Reminder') {
+                    } else if (item.primaryAction === "Send Reminder") {
                       handleSendReminder(item);
                     }
                   }}
                 >
                   {sendingReminderId === item.id ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" style={styles.btnIcon} />
+                    <ActivityIndicator
+                      size="small"
+                      color="#FFFFFF"
+                      style={styles.btnIcon}
+                    />
                   ) : (
                     item.primaryIcon && (
                       <Feather
                         name={item.primaryIcon}
                         size={16}
-                        color={item.actionType === 'primary' ? '#ffffff' : '#0B4A6F'}
+                        color={
+                          item.actionType === "primary" ? "#ffffff" : "#0B4A6F"
+                        }
                         style={styles.btnIcon}
                       />
                     )
@@ -507,33 +546,41 @@ export default function FeedbackScreen({ navigation }) {
                   <Text
                     style={[
                       styles.actionBtnText,
-                      item.actionType === 'primary'
+                      item.actionType === "primary"
                         ? styles.primaryBtnText
                         : styles.outlineBtnText,
                     ]}
                   >
-                    {sendingReminderId === item.id ? 'Sending...' : item.primaryAction}
+                    {sendingReminderId === item.id
+                      ? "Sending..."
+                      : item.primaryAction}
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
                     styles.actionBtn,
-                    deletingId === item.id ? styles.deleteBtnSending : styles.deleteBtn,
-                    item.tab === 'pending' && styles.deleteBtnPending,
+                    deletingId === item.id
+                      ? styles.deleteBtnSending
+                      : styles.deleteBtn,
+                    item.tab === "pending" && styles.deleteBtnPending,
                   ]}
-                  disabled={item.tab === 'pending' || deletingId === item.id}
+                  disabled={item.tab === "pending" || deletingId === item.id}
                   onPress={() => {
-                    if (item.tab !== 'pending') {
+                    if (item.tab !== "pending") {
                       handleDeleteFeedback(item);
                     }
                   }}
                 >
                   {deletingId === item.id ? (
-                    <ActivityIndicator size="small" color="#DC2626" style={styles.btnIcon} />
+                    <ActivityIndicator
+                      size="small"
+                      color="#DC2626"
+                      style={styles.btnIcon}
+                    />
                   ) : (
                     <Feather
-                      name={item.secondaryIcon || 'trash-2'}
+                      name={item.secondaryIcon || "trash-2"}
                       size={16}
                       color="#FFFFFF"
                       style={styles.btnIcon}
@@ -542,10 +589,12 @@ export default function FeedbackScreen({ navigation }) {
                   <Text
                     style={[
                       styles.secondaryGrayBtnText,
-                      deletingId === item.id ? styles.deleteBtnTextSending : styles.deleteBtnText,
+                      deletingId === item.id
+                        ? styles.deleteBtnTextSending
+                        : styles.deleteBtnText,
                     ]}
                   >
-                    {item.secondaryAction || 'Delete'}
+                    {item.secondaryAction || "Delete"}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -560,21 +609,12 @@ export default function FeedbackScreen({ navigation }) {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.replyModal}>
-
             {/* HEADER */}
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Feedback Replies
-              </Text>
+              <Text style={styles.modalTitle}>Feedback Replies</Text>
 
-              <TouchableOpacity
-                onPress={() => setReplyModalVisible(false)}
-              >
-                <Feather
-                  name="x"
-                  size={22}
-                  color="#334155"
-                />
+              <TouchableOpacity onPress={() => setReplyModalVisible(false)}>
+                <Feather name="x" size={22} color="#334155" />
               </TouchableOpacity>
             </View>
 
@@ -600,20 +640,16 @@ export default function FeedbackScreen({ navigation }) {
               contentContainerStyle={{ paddingVertical: 10 }}
             >
               {loadingReplies ? (
-                <ActivityIndicator
-                  size="small"
-                  color={colors.primary}
-                />
+                <ActivityIndicator size="small" color={colors.primary} />
               ) : replies.length === 0 ? (
-                <Text style={styles.noRepliesText}>
-                  No replies yet.
-                </Text>
+                <Text style={styles.noRepliesText}>No replies yet.</Text>
               ) : (
                 replies.map((reply) => {
                   // const isMyReply = reply.repliedBy.id === user.id;
-                  const senderId = typeof reply.repliedBy === 'object' 
-                    ? (reply.repliedBy?.id || reply.repliedBy?._id) 
-                    : reply.repliedBy;
+                  const senderId =
+                    typeof reply.repliedBy === "object"
+                      ? reply.repliedBy?.id || reply.repliedBy?._id
+                      : reply.repliedBy;
 
                   const currentUserId = user?.id || user?._id;
 
@@ -629,23 +665,40 @@ export default function FeedbackScreen({ navigation }) {
                       <View
                         style={[
                           styles.replyBubble,
-                          isMyReply ? styles.myReplyBubble : styles.otherReplyBubble,
+                          isMyReply
+                            ? styles.myReplyBubble
+                            : styles.otherReplyBubble,
                         ]}
                       >
-                        <Text style={[styles.replySender, isMyReply && styles.myReplySenderText]}>
+                        <Text
+                          style={[
+                            styles.replySender,
+                            isMyReply && styles.myReplySenderText,
+                          ]}
+                        >
                           {isMyReply
-                            ? 'You'
+                            ? "You"
                             : reply.repliedBy?.fullName || reply.repliedByRole}
                         </Text>
 
-                        <Text style={[styles.replyMessage, isMyReply && styles.myReplyMessageText]}>
+                        <Text
+                          style={[
+                            styles.replyMessage,
+                            isMyReply && styles.myReplyMessageText,
+                          ]}
+                        >
                           {reply.message}
                         </Text>
 
-                        <Text style={[styles.replyTime, isMyReply && styles.myReplyTimeText]}>
+                        <Text
+                          style={[
+                            styles.replyTime,
+                            isMyReply && styles.myReplyTimeText,
+                          ]}
+                        >
                           {new Date(reply.createdAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
+                            hour: "2-digit",
+                            minute: "2-digit",
                           })}
                         </Text>
                       </View>
@@ -678,20 +731,18 @@ export default function FeedbackScreen({ navigation }) {
 
                     const response = await addFeedbackReply(
                       selectedFeedback.id,
-                      replyText.trim()
+                      replyText.trim(),
                     );
 
                     setReplies(
                       [...(response.data?.replies || [])].sort(
-                        (a, b) =>
-                          new Date(a.createdAt) -
-                          new Date(b.createdAt)
-                      )
+                        (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+                      ),
                     );
 
-                    setReplyText('');
+                    setReplyText("");
                   } catch (error) {
-                    console.error('Failed to send reply:', error);
+                    console.error("Failed to send reply:", error);
                   } finally {
                     setSendingReply(false);
                   }
@@ -699,26 +750,18 @@ export default function FeedbackScreen({ navigation }) {
                 style={styles.sendReplyBtn}
               >
                 {sendingReply ? (
-                  <ActivityIndicator
-                    size="small"
-                    color="#FFFFFF"
-                  />
+                  <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Feather
-                    name="send"
-                    size={18}
-                    color="#FFFFFF"
-                  />
+                  <Feather name="send" size={18} color="#FFFFFF" />
                 )}
               </TouchableOpacity>
             </View>
-
           </View>
         </View>
       </Modal>
 
       <BottomBar
-        activeTab={''}
+        activeTab={""}
         setActiveTab={setActiveBottomTab}
         onOpenNotifications={setIsNotificationOpen}
       />
@@ -729,7 +772,7 @@ export default function FeedbackScreen({ navigation }) {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: "#F1F5F9",
   },
   scrollArea: {
     flex: 1,
@@ -740,10 +783,10 @@ const styles = StyleSheet.create({
   },
 
   metricCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 20,
     marginBottom: 14,
@@ -764,28 +807,28 @@ const styles = StyleSheet.create({
     lineHeight: 36,
   },
   metricValue2: {
-    color: '#7A3E00',
+    color: "#7A3E00",
   },
   trendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   trendText: {
     fontSize: 14,
     fontFamily: fonts.regular,
-    color: '#006B58',
+    color: "#006B58",
   },
   metricIconBg: {
     width: 64,
     height: 64,
     borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   starRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 2,
     marginTop: 4,
   },
@@ -794,7 +837,7 @@ const styles = StyleSheet.create({
   },
 
   tabsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginVertical: 20,
   },
@@ -802,11 +845,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
   },
   activeTabButton: {
-    backgroundColor: '#0B4A6F',
+    backgroundColor: "#0B4A6F",
   },
   tabText: {
     fontSize: 14,
@@ -815,20 +858,20 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   activeTabText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
 
   centerState: {
     paddingVertical: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   errorText: {
     fontSize: 14,
     fontFamily: fonts.regular,
-    color: '#DC2626',
+    color: "#DC2626",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   retryBtn: {
     backgroundColor: colors.primary,
@@ -837,7 +880,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   retryBtnText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontFamily: fonts.semiBold,
     fontSize: 14,
   },
@@ -848,13 +891,13 @@ const styles = StyleSheet.create({
   },
 
   feedbackCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 20,
     marginBottom: 14,
   },
   cardHeader: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 10,
   },
   userAvatar: {
@@ -867,9 +910,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   nameBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
     gap: 6,
   },
   userName: {
@@ -885,17 +928,17 @@ const styles = StyleSheet.create({
   },
   tagBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 
-  parentBadgeBg: { backgroundColor: '#D1FAE5' },
-  parentBadgeText: { color: '#059669' },
-  therapistBadgeBg: { backgroundColor: '#FFEDD5' },
-  therapistBadgeText: { color: '#C2410C' },
-  newBadgeBg: { backgroundColor: '#E0F2FE' },
-  newBadgeText: { color: '#0284C7' },
-  respondedBadgeBg: { backgroundColor: '#E2E8F0' },
-  respondedBadgeText: { color: '#64748B' },
+  parentBadgeBg: { backgroundColor: "#D1FAE5" },
+  parentBadgeText: { color: "#059669" },
+  therapistBadgeBg: { backgroundColor: "#FFEDD5" },
+  therapistBadgeText: { color: "#C2410C" },
+  newBadgeBg: { backgroundColor: "#E0F2FE" },
+  newBadgeText: { color: "#0284C7" },
+  respondedBadgeBg: { backgroundColor: "#E2E8F0" },
+  respondedBadgeText: { color: "#64748B" },
 
   commentText: {
     fontSize: 16,
@@ -903,28 +946,28 @@ const styles = StyleSheet.create({
     color: colors.blackFont,
     lineHeight: 22,
     marginBottom: 14,
-    marginLeft:60,
+    marginLeft: 60,
   },
   notesText: {
     fontSize: 16,
     fontFamily: fonts.regular,
     color: colors.blackFont,
-    marginLeft:30,
-    backgroundColor:"#8e9289",
-    marginLeft:60,
+    marginLeft: 30,
+    backgroundColor: "#8e9289",
+    marginLeft: 60,
   },
 
   cardActionsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   actionBtn: {
     flex: 1,
     height: 40,
     borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   btnIcon: {
     marginRight: 6,
@@ -938,18 +981,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   primaryBtnText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
   outlineBtn: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#0B4A6F',
+    borderColor: "#0B4A6F",
   },
   outlineBtnText: {
     color: colors.primary,
   },
   secondaryGrayBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: "#F1F5F9",
   },
   secondaryGrayBtnText: {
     fontSize: 14,
@@ -958,9 +1001,9 @@ const styles = StyleSheet.create({
     color: colors.blackFont,
   },
   headerMainRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
 
   headerLeft: {
@@ -969,7 +1012,7 @@ const styles = StyleSheet.create({
   },
 
   appointmentInfo: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     marginLeft: 10,
   },
 
@@ -978,7 +1021,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 18,
-    textAlign: 'right',
+    textAlign: "right",
   },
 
   detailLabel: {
@@ -986,22 +1029,22 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
   },
 
   replyModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
-    height: '85%',
+    height: "85%",
     padding: 18,
   },
 
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 14,
   },
 
@@ -1012,7 +1055,7 @@ const styles = StyleSheet.create({
   },
 
   originalFeedback: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
@@ -1028,7 +1071,7 @@ const styles = StyleSheet.create({
   originalFeedbackText: {
     fontSize: 14,
     fontFamily: fonts.regular,
-    color: '#475569',
+    color: "#475569",
     lineHeight: 20,
   },
 
@@ -1037,49 +1080,49 @@ const styles = StyleSheet.create({
   },
 
   replyRow: {
-    width: '100%',
+    width: "100%",
     marginVertical: 4,
   },
 
   adminReplyRow: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
 
   otherReplyRow: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
 
   replyBubble: {
-    maxWidth: '80%',
+    maxWidth: "80%",
     paddingHorizontal: 13,
     paddingVertical: 9,
     borderRadius: 16,
   },
 
   adminReplyBubble: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: "#E0F2FE",
     borderTopRightRadius: 3,
   },
   myReplyBubble: {
-    backgroundColor: '#0B4A6F', 
-    borderBottomRightRadius: 2, 
+    backgroundColor: "#0B4A6F",
+    borderBottomRightRadius: 2,
   },
 
   otherReplyBubble: {
-    backgroundColor: '#F1F5F9',
-    borderBottomLeftRadius: 2,   
+    backgroundColor: "#F1F5F9",
+    borderBottomLeftRadius: 2,
   },
 
   replySender: {
     fontSize: 11,
     fontFamily: fonts.semiBold,
-    color: '#64748B',
+    color: "#64748B",
     marginBottom: 2,
   },
 
   myReplySenderText: {
-    color: '#93C5FD', // Light accent color for your header name
-    textAlign: 'right',
+    color: "#93C5FD", // Light accent color for your header name
+    textAlign: "right",
   },
 
   replyMessage: {
@@ -1090,39 +1133,39 @@ const styles = StyleSheet.create({
   },
 
   myReplyMessageText: {
-    color: '#FFFFFF', // White text on dark primary bubble
+    color: "#FFFFFF", // White text on dark primary bubble
   },
 
   replyTime: {
     fontSize: 10,
     fontFamily: fonts.regular,
-    color: '#94A3B8',
+    color: "#94A3B8",
     marginTop: 4,
   },
 
   myReplyTimeText: {
-    color: '#E2E8F0',
-    textAlign: 'right',
+    color: "#E2E8F0",
+    textAlign: "right",
   },
   myReplyRow: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
 
   noRepliesText: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 14,
     fontFamily: fonts.regular,
-    color: '#64748B',
+    color: "#64748B",
     marginTop: 30,
   },
 
   replyInputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "flex-end",
     gap: 8,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: "#E2E8F0",
   },
 
   replyInput: {
@@ -1130,7 +1173,7 @@ const styles = StyleSheet.create({
     minHeight: 42,
     maxHeight: 90,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: "#CBD5E1",
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 9,
@@ -1144,22 +1187,22 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 10,
     backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   deleteBtn: {
-    backgroundColor: '#ad1c1ce0',
+    backgroundColor: "#ad1c1ce0",
   },
   deleteBtnText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
   deleteBtnSending: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#ad1c1ce0',
+    borderColor: "#ad1c1ce0",
   },
   deleteBtnTextSending: {
-    color: '#ad1c1ce0',
+    color: "#ad1c1ce0",
   },
   deleteBtnPending: {
     opacity: 0.5,

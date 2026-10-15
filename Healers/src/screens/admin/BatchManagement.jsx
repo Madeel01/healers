@@ -11,6 +11,8 @@ import {
   TouchableOpacity,
   RefreshControl,
   View,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import {
   SafeAreaView,
@@ -559,171 +561,176 @@ export default function BatchManagementScreen({ navigation }) {
         animationType="slide"
         onRequestClose={() => setIsFormModalOpen(false)}
       >
-        <View
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setIsFormModalOpen(false)}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+          style={{ flex: 1 }}
         >
-          <View activeOpacity={1} style={styles.formModalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {editingBatchId ? "Edit Batch" : "Create Batch"}
-              </Text>
-              <TouchableOpacity onPress={() => setIsFormModalOpen(false)}>
-                <Feather name="x" size={20} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              style={{ maxHeight: 480 }}
-              keyboardShouldPersistTaps="handled"
-            >
-              <Text style={styles.fieldLabel}>Batch Name</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. Morning Speech Batch"
-                placeholderTextColor="#94A3B8"
-                value={form.batchName}
-                onChangeText={(text) =>
-                  setForm((p) => ({ ...p, batchName: text }))
-                }
-              />
-
-              <Text style={styles.fieldLabel}>Speciality</Text>
-              <TouchableOpacity
-                style={styles.dropdownSelector}
-                onPress={() => setIsSpecialityModalOpen(true)}
-              >
-                <Text
-                  style={
-                    form.speciality.length
-                      ? styles.dropdownValueText
-                      : styles.multiSelectPlaceholder
-                  }
-                >
-                  {form.speciality.length
-                    ? `${form.speciality.length} speciality(ies) selected`
-                    : "Select speciality"}
+          <View
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setIsFormModalOpen(false)}
+          >
+            <View activeOpacity={1} style={styles.formModalCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  {editingBatchId ? "Edit Batch" : "Create Batch"}
                 </Text>
-                <Feather name="chevron-down" size={18} color="#64748B" />
-              </TouchableOpacity>
+                <TouchableOpacity onPress={() => setIsFormModalOpen(false)}>
+                  <Feather name="x" size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
 
-              {form.speciality.length > 0 && (
-                <View style={styles.selectedTagsContainer}>
-                  {form.speciality.map((spec) => (
-                    <View
-                      key={spec.id}
-                      style={[styles.tagBadge, { backgroundColor: spec.bg }]}
-                    >
-                      <Text
-                        style={[styles.tagBadgeText, { color: spec.color }]}
-                      >
-                        {spec.label}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => toggleSpecialitySelection(spec)}
-                      >
-                        <Feather name="x" size={12} color={spec.color} />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              <View style={{ height: 16 }} />
-
-              <Text style={styles.fieldLabel}>Date From</Text>
-              <TouchableOpacity
-                style={styles.dropdownSelector}
-                onPress={() => openDateModal("dateFrom")}
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={{ maxHeight: 480 }}
+                keyboardShouldPersistTaps="handled"
               >
-                <Text
-                  style={
-                    form.dateFrom
-                      ? styles.dropdownValueText
-                      : styles.multiSelectPlaceholder
+                <Text style={styles.fieldLabel}>Batch Name</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. Morning Speech Batch"
+                  placeholderTextColor="#94A3B8"
+                  value={form.batchName}
+                  onChangeText={(text) =>
+                    setForm((p) => ({ ...p, batchName: text }))
                   }
+                />
+
+                <Text style={styles.fieldLabel}>Speciality</Text>
+                <TouchableOpacity
+                  style={styles.dropdownSelector}
+                  onPress={() => setIsSpecialityModalOpen(true)}
                 >
-                  {form.dateFrom || "Select date"}
-                </Text>
-                <Feather name="calendar" size={18} color="#64748B" />
-              </TouchableOpacity>
-
-              <View style={{ height: 16 }} />
-
-              <Text style={styles.fieldLabel}>Date To</Text>
-              <TouchableOpacity
-                style={styles.dropdownSelector}
-                onPress={() => openDateModal("dateTo")}
-              >
-                <Text
-                  style={
-                    form.dateTo
-                      ? styles.dropdownValueText
-                      : styles.multiSelectPlaceholder
-                  }
-                >
-                  {form.dateTo || "Select date"}
-                </Text>
-                <Feather name="calendar" size={18} color="#64748B" />
-              </TouchableOpacity>
-
-              <View style={{ height: 16 }} />
-
-              <Text style={styles.fieldLabel}>Max Children</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. 10"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-                value={form.maxChild}
-                onChangeText={(text) =>
-                  setForm((p) => ({
-                    ...p,
-                    maxChild: text.replace(/[^0-9]/g, ""),
-                  }))
-                }
-              />
-              <Text style={styles.fieldLabel}>Batch Fee</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. 100"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-                value={form.fee}
-                onChangeText={(text) =>
-                  setForm((p) => ({
-                    ...p,
-                    fee: text.replace(/[^0-9]/g, ""),
-                  }))
-                }
-              />
-            </ScrollView>
-
-            <View style={styles.bottomActionsRow}>
-              <TouchableOpacity
-                style={styles.saveDraftBtn}
-                onPress={() => setIsFormModalOpen(false)}
-              >
-                <Text style={styles.saveDraftText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.sendBroadcastBtn}
-                onPress={handleSave}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.sendBroadcastText}>
-                    {editingBatchId ? "Update" : "Create"}
+                  <Text
+                    style={
+                      form.speciality.length
+                        ? styles.dropdownValueText
+                        : styles.multiSelectPlaceholder
+                    }
+                  >
+                    {form.speciality.length
+                      ? `${form.speciality.length} speciality(ies) selected`
+                      : "Select speciality"}
                   </Text>
+                  <Feather name="chevron-down" size={18} color="#64748B" />
+                </TouchableOpacity>
+
+                {form.speciality.length > 0 && (
+                  <View style={styles.selectedTagsContainer}>
+                    {form.speciality.map((spec) => (
+                      <View
+                        key={spec.id}
+                        style={[styles.tagBadge, { backgroundColor: spec.bg }]}
+                      >
+                        <Text
+                          style={[styles.tagBadgeText, { color: spec.color }]}
+                        >
+                          {spec.label}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => toggleSpecialitySelection(spec)}
+                        >
+                          <Feather name="x" size={12} color={spec.color} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
                 )}
-              </TouchableOpacity>
+
+                <View style={{ height: 16 }} />
+
+                <Text style={styles.fieldLabel}>Date From</Text>
+                <TouchableOpacity
+                  style={styles.dropdownSelector}
+                  onPress={() => openDateModal("dateFrom")}
+                >
+                  <Text
+                    style={
+                      form.dateFrom
+                        ? styles.dropdownValueText
+                        : styles.multiSelectPlaceholder
+                    }
+                  >
+                    {form.dateFrom || "Select date"}
+                  </Text>
+                  <Feather name="calendar" size={18} color="#64748B" />
+                </TouchableOpacity>
+
+                <View style={{ height: 16 }} />
+
+                <Text style={styles.fieldLabel}>Date To</Text>
+                <TouchableOpacity
+                  style={styles.dropdownSelector}
+                  onPress={() => openDateModal("dateTo")}
+                >
+                  <Text
+                    style={
+                      form.dateTo
+                        ? styles.dropdownValueText
+                        : styles.multiSelectPlaceholder
+                    }
+                  >
+                    {form.dateTo || "Select date"}
+                  </Text>
+                  <Feather name="calendar" size={18} color="#64748B" />
+                </TouchableOpacity>
+
+                <View style={{ height: 16 }} />
+
+                <Text style={styles.fieldLabel}>Max Children</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. 10"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="number-pad"
+                  value={form.maxChild}
+                  onChangeText={(text) =>
+                    setForm((p) => ({
+                      ...p,
+                      maxChild: text.replace(/[^0-9]/g, ""),
+                    }))
+                  }
+                />
+                {/* <Text style={styles.fieldLabel}>Batch Fee</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. 100"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="number-pad"
+                  value={form.fee}
+                  onChangeText={(text) =>
+                    setForm((p) => ({
+                      ...p,
+                      fee: text.replace(/[^0-9]/g, ""),
+                    }))
+                  }
+                /> */}
+              </ScrollView>
+
+              <View style={styles.bottomActionsRow}>
+                <TouchableOpacity
+                  style={styles.saveDraftBtn}
+                  onPress={() => setIsFormModalOpen(false)}
+                >
+                  <Text style={styles.saveDraftText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.sendBroadcastBtn}
+                  onPress={handleSave}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.sendBroadcastText}>
+                      {editingBatchId ? "Update" : "Create"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Speciality Multi-select Modal */}
@@ -1369,7 +1376,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   modalTitle: {
     fontSize: 18,
@@ -1571,7 +1578,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: fonts.semiBold,
     color: "#0F172A",
-    marginBottom: 16,
+    marginBottom: 12,
   },
   detailSection: {
     marginBottom: 14,

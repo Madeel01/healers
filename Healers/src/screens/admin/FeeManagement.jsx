@@ -37,6 +37,7 @@ const PAGE_LIMIT = 3;
 export default function FeeManagementScreen({ navigation }) {
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [totalPackages, setTotalPackages] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchPackages = useCallback(async () => {
@@ -45,6 +46,7 @@ export default function FeeManagementScreen({ navigation }) {
 
       if (response?.success) {
         setPackages(response.data || []);
+        setTotalPackages(response.total || 0)
       }
     } catch (error) {
       console.error(
@@ -163,7 +165,7 @@ export default function FeeManagementScreen({ navigation }) {
         </Text>
 
         <Text style={styles.pageDescription}>
-          Monitor fee structures, track recurring payments, and manage therapist commissions for your healthcare
+          Monitor fee structures, track recurring payments for your healthcare
           facility.
         </Text>
 
@@ -171,26 +173,26 @@ export default function FeeManagementScreen({ navigation }) {
           <View style={styles.cardHeader}>
             <View style={styles.iconSquareBlue}>
               <Feather
-                name="video"
+                name="package"
                 size={18}
                 color={colors.primary}
               />
             </View>
 
-            <Text style={styles.greenBadgeText}>
+            {/* <Text style={styles.greenBadgeText}>
               +4% vs last mo
-            </Text>
+            </Text> */}
           </View>
 
           <Text style={styles.cardLabel}>
-            Active Plans
+            Total Packages
           </Text>
 
           <Text style={styles.cardValueLarge}>
-            60 Total
+            {totalPackages}
           </Text>
 
-          <View style={styles.pillRow}>
+          {/* <View style={styles.pillRow}>
             <View style={styles.pill}>
               <Text style={styles.pillText}>
                 42 Monthly
@@ -202,10 +204,10 @@ export default function FeeManagementScreen({ navigation }) {
                 18 Per-Session
               </Text>
             </View>
-          </View>
+          </View> */}
         </View>
 
-        <View style={styles.card}>
+        {/* <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.iconSquareGreen}>
               <Feather
@@ -238,9 +240,9 @@ export default function FeeManagementScreen({ navigation }) {
               ]}
             />
           </View>
-        </View>
+        </View> */}
 
-        <View style={styles.card}>
+        {/* <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.iconSquareOrange}>
               <MaterialCommunityIcons
@@ -274,7 +276,7 @@ export default function FeeManagementScreen({ navigation }) {
               12 Invoices awaiting approval
             </Text>
           </View>
-        </View>
+        </View> */}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
@@ -460,6 +462,10 @@ const styles = StyleSheet.create({
   },
 
   card: {
+    display:"flex",
+    flexDirection:"row",
+    justifyContent:"space-between",
+    alignItems:"flex-end",
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 20,

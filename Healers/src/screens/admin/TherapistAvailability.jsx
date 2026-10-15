@@ -270,7 +270,12 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
   const doDelete = async (rule) => {
     setDeletingId(rule._id);
     try {
-      await deleteAvailability(rule._id);
+      const res = await deleteAvailability(rule._id);
+      if(!res.data.success){
+        console.log(res,"ressss");
+        Alert.alert(res?.data?.message);
+        return;
+      }
       setRules((prev) => prev.filter((r) => r._id !== rule._id));
     } catch (e) {
       Alert.alert("Could not delete", e?.response?.data?.message || "Please try again.");

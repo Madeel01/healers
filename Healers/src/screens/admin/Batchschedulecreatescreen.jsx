@@ -60,6 +60,7 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
   const [blocked, setBlocked] = useState({});
   const [picked, setPicked] = useState({}); 
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [activeKey, setActiveKey] = useState(null);
 
   const [review, setReview] = useState(null);
   const [resolution, setResolution] = useState({}); 
@@ -138,6 +139,7 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
       setOptions(map);
       setBlocked(res.blocked || {});
       setPicked({});
+      setActiveKey(team[0]?.key || null);
       setStep(2);
     } catch (e) {
       Alert.alert("Error", e?.response?.data?.message || "Could not load slots.");
@@ -181,11 +183,12 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
       const { [key]: _drop, ...rest } = p;
       return rest;
     });
+    if (activeKey === key) setActiveKey(next[0]?.key || null);
     if (!next.length) setStep(1);
   };
 
   const pickedCount = (key) => DAYS.reduce((n, d) => n + (picked[key]?.[d]?.length || 0), 0);
-
+  const activeTeam = team.find((t) => t.key === activeKey) || team[0];
   const buildPlans = (skipMap = {}) =>
     team
       .filter((t) => skipMap[t.key] !== "remove")
@@ -327,71 +330,123 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
           )}
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.hint}>
-            {minutes} minute sessions. A time picked for one therapist is locked for everyone else, so
-            the children never have two sessions at once.
-          </Text>
-
-          {team.map((t) => {
-            const m = specMeta(t.speciality);
-            const count = pickedCount(t.key);
-            return (
-              <View key={t.key} style={styles.card}>
-                <View style={styles.cardHead}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.therapistName}>{t.name}</Text>
-                    <View style={[styles.chip, { backgroundColor: m.bg, marginTop: 4 }]}>
-                      <Text style={[styles.chipText, { color: m.color }]}>{m.label}</Text>
+        <>
+          {/* therapists selector (always visible on top) */}
+          <View style={styles.tabsWrap}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tabsContent}
+            >
+              {team.map((t) => {
+                const m = specMeta(t.speciality);
+                const count = pickedCount(t.key);
+                const on = activeTeam?.key === t.key;
+                return (
+                  <TouchableOpacity
+                    key={t.key}
+                    style={[styles.tab, on && styles.tabOn]}
+                    onPress={() => setActiveKey(t.key)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={{ maxWidth: 120 }}>
+                      <Text style={[styles.tabName, on && styles.tabNameOn]} numberOfLines={1}>
+                        {t.name}
+                      </Text>
+                      <Text style={[styles.tabSpec, { color: on ? "#E0F2FE" : m.color }]} numberOfLines={1}>
+                        {m.label}
+                      </Text>
                     </View>
-                  </View>
-                  <Text style={styles.countText}>{count} picked</Text>
-                  <TouchableOpacity style={styles.iconBtn} onPress={() => removeFromTeam(t.key)}>
-                    <Feather name="x" size={16} color="#64748B" />
+                    <View style={[styles.tabBadge, count > 0 && styles.tabBadgeFilled, on && styles.tabBadgeOn]}>
+                      <Feather
+                        name="check-circle"
+                        size={12}
+                        color={on ? "#FFFFFF" : count > 0 ? "#15803D" : "#94A3B8"}
+                      />
+                      <Text
+                        style={[
+                          styles.tabBadgeText,
+                          count > 0 && { color: "#15803D" },
+                          on && { color: "#FFFFFF" },
+                        ]}
+                      >
+                        {count}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
-                </View>
+                );
+              })}
+            </ScrollView>
+          </View>
 
-                {DAYS.map((d) => {
-                  const slots = options[t.key]?.[d] || [];
-                  return (
-                    <View key={d} style={styles.dayRow}>
-                      <Text style={[styles.dayLabel, !slots.length && styles.muted]}>{d}</Text>
-                      <View style={{ flex: 1 }}>
-                        {slots.length === 0 ? (
-                          <Text style={styles.muted}>No slot available on {FULL_DAY[d]}</Text>
-                        ) : (
-                          <View style={styles.slotWrap}>
-                            {slots.map((s) => {
-                              const on = isPicked(t.key, d, s);
-                              const taken = !on && !!takenReason(t.key, d, s);
-                              return (
-                                <TouchableOpacity
-                                  key={s.startTime}
-                                  style={[styles.slot, on && styles.slotOn, taken && styles.slotTaken]}
-                                  onPress={() => toggleSlot(t.key, d, s)}
-                                >
-                                  <Text
-                                    style={[
-                                      styles.slotText,
-                                      on && styles.slotTextOn,
-                                      taken && styles.slotTextTaken,
-                                    ]}
-                                  >
-                                    {label(s)}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-                        )}
+          {/* selected therapist schedule */}
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <Text style={styles.hint}>
+              {minutes} minute sessions. A time picked for one therapist is locked for everyone else, so
+              the children never have two sessions at once.
+            </Text>
+
+            {activeTeam && (() => {
+              const t = activeTeam;
+              const m = specMeta(t.speciality);
+              const count = pickedCount(t.key);
+              return (
+                <View key={t.key} style={styles.card}>
+                  <View style={styles.cardHead}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.therapistName}>{t.name}</Text>
+                      <View style={[styles.chip, { backgroundColor: m.bg, marginTop: 4 }]}>
+                        <Text style={[styles.chipText, { color: m.color }]}>{m.label}</Text>
                       </View>
                     </View>
-                  );
-                })}
-              </View>
-            );
-          })}
-        </ScrollView>
+                    <Text style={styles.countText}>{count} picked</Text>
+                    <TouchableOpacity style={styles.iconBtn} onPress={() => removeFromTeam(t.key)}>
+                      <Feather name="x" size={16} color="#64748B" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {DAYS.map((d) => {
+                    const slots = options[t.key]?.[d] || [];
+                    return (
+                      <View key={d} style={styles.dayRow}>
+                        <Text style={[styles.dayLabel, !slots.length && styles.muted]}>{d}</Text>
+                        <View style={{ flex: 1 }}>
+                          {slots.length === 0 ? (
+                            <Text style={styles.muted}>No slot available on {FULL_DAY[d]}</Text>
+                          ) : (
+                            <View style={styles.slotWrap}>
+                              {slots.map((s) => {
+                                const on = isPicked(t.key, d, s);
+                                const taken = !on && !!takenReason(t.key, d, s);
+                                return (
+                                  <TouchableOpacity
+                                    key={s.startTime}
+                                    style={[styles.slot, on && styles.slotOn, taken && styles.slotTaken]}
+                                    onPress={() => toggleSlot(t.key, d, s)}
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.slotText,
+                                        on && styles.slotTextOn,
+                                        taken && styles.slotTextTaken,
+                                      ]}
+                                    >
+                                      {label(s)}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })()}
+          </ScrollView>
+        </>
       )}
 
       <View style={styles.footer}>
@@ -663,4 +718,38 @@ const styles = StyleSheet.create({
   segBtnOn: { backgroundColor: "#FFFFFF" },
   segText: { fontSize: 12, fontFamily: fonts.semiBold, color: "#B91C1C" },
   segTextOn: { color: "#7F1D1D" },
+  tabsWrap: {
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+    marginTop: 8,
+  },
+  tabsContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 10 },
+  tab: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    backgroundColor: "#F8FAFC",
+  },
+  tabOn: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
+  tabName: { fontSize: 13, fontFamily: fonts.semiBold, color: "#0F172A" },
+  tabNameOn: { color: "#FFFFFF" },
+  tabSpec: { fontSize: 11, fontFamily: fonts.regular, marginTop: 1 },
+  tabBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: "#F1F5F9",
+  },
+  tabBadgeFilled: { backgroundColor: "#DCFCE7" },
+  tabBadgeOn: { backgroundColor: "rgba(255,255,255,0.2)" },
+  tabBadgeText: { fontSize: 12, fontFamily: fonts.semiBold, color: "#94A3B8" },
 });

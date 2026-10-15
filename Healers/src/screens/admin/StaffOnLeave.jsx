@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ScrollView, StyleSheet, Text, View, Alert, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -6,7 +6,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import TopBar from "../../components/TopBar";
 import { colors, commonStyles, fonts } from "../../styles/theme";
 import { getStaffOnLeaveToday } from "../../api/admin/api";
-
+const LIMIT = 10;
 const formatDate = (d) =>
   new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 const formatDateRange = (start, end) =>
@@ -17,23 +17,56 @@ const formatDateRange = (start, end) =>
 export default function StaffOnLeaveScreen({ navigation }) {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const requestIdRef = useRef(0);
+
+  const loadStaff = async (pageNum = 1) => {
+    const isFirst = pageNum === 1;
+    const requestId = ++requestIdRef.current;
+
+    if (isFirst) setLoading(true);
+    else setLoadingMore(true);
+
+    try {
+      const response = await getStaffOnLeaveToday({ page: pageNum, limit: LIMIT });
+      if (requestId !== requestIdRef.current) return;
+
+      const list = response?.data?.data || [];
+      setStaff((prev) =>
+        isFirst
+          ? list
+          : [...prev, ...list.filter((i) => !prev.some((p) => p._id === i._id))]
+      );
+      setPage(pageNum);
+      setHasMore(Boolean(response?.data?.hasMore));
+    } catch (error) {
+      if (requestId !== requestIdRef.current) return;
+      console.log("Failed to fetch staff on leave:", error);
+      Alert.alert("Error", "Could not load staff on leave.");
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    }
+  };
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const response = await getStaffOnLeaveToday();
-        setStaff(response.data.data);
-      } catch (error) {
-        console.log("Failed to fetch staff on leave:", error);
-        Alert.alert("Error", "Could not load staff on leave.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    loadStaff(1);
   }, []);
+
+  const handleScroll = ({ nativeEvent }) => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    const nearBottom =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - 120;
+
+    if (nearBottom && hasMore && !loading && !loadingMore) {
+      loadStaff(page + 1);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
@@ -44,8 +77,15 @@ export default function StaffOnLeaveScreen({ navigation }) {
         headerTitle={"Staff on Leave Today"}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 30 }} />}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={200}
+      >
+        {loading && (
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 30 }} />
+        )}
 
         {!loading && staff.length === 0 && (
           <View style={styles.emptyState}>
@@ -53,8 +93,7 @@ export default function StaffOnLeaveScreen({ navigation }) {
           </View>
         )}
 
-        {!loading &&
-          staff.map((item) => (
+        {staff.map((item) => (
             <View key={item._id} style={styles.card}>
               <Text style={styles.name}>{item.applicantId.fullName}</Text>
               <Text style={styles.role}>{item.role}</Text>
@@ -69,6 +108,9 @@ export default function StaffOnLeaveScreen({ navigation }) {
               <Text style={styles.leaveType}>{item.leaveType}</Text>
             </View>
           ))}
+          {loadingMore && (
+          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
+        )}
       </ScrollView>
     </SafeAreaView>
   );

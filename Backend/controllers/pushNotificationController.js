@@ -104,7 +104,7 @@ exports.sendPushToUser = async (userId, payload) => {
       message: "No registered devices found for this user",
     };
   }
-
+  console.log(devices,"devicesssss")
   const tokens = devices.map((device) => device.pushToken);
 
   const data = Object.fromEntries(

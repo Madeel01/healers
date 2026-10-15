@@ -3,7 +3,9 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -1008,72 +1010,78 @@ export default function BatchScheduleScreen({ navigation, route }) {
 
       {/* add children */}
       <Modal visible={childModal} transparent animationType="slide" onRequestClose={() => setChildModal(false)}>
-        <View style={styles.overlay}>
-          <View style={styles.sheet}>
-            <View style={styles.sheetHeader}>
-              <View>
-                <Text style={styles.sheetTitle}>Add children</Text>
-                <Text style={styles.sheetSub}>
-                  {spotsLeft} spot{spotsLeft === 1 ? "" : "s"} left · they join all upcoming sessions
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => setChildModal(false)}>
-                <Feather name="x" size={22} color="#64748B" />
-              </TouchableOpacity>
-            </View>
+        <KeyboardAvoidingView
+                  behavior={Platform.OS === "ios" ? "padding" : "padding"}
+                  style={{ flex: 1 }}
+                >
 
-            <View style={styles.searchBox}>
-              <Feather name="search" size={16} color="#94A3B8" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search child..."
-                placeholderTextColor="#94A3B8"
-                value={search}
-                onChangeText={setSearch}
-              />
-            </View>
+              <View style={styles.overlay}>
+                <View style={styles.sheet}>
+                  <View style={styles.sheetHeader}>
+                    <View>
+                      <Text style={styles.sheetTitle}>Add children</Text>
+                      <Text style={styles.sheetSub}>
+                        {spotsLeft} spot{spotsLeft === 1 ? "" : "s"} left · they join all upcoming sessions
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setChildModal(false)}>
+                      <Feather name="x" size={22} color="#64748B" />
+                    </TouchableOpacity>
+                  </View>
 
-            {optLoading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 8 }} />}
+                  <View style={styles.searchBox}>
+                    <Feather name="search" size={16} color="#94A3B8" />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Search child..."
+                      placeholderTextColor="#94A3B8"
+                      value={search}
+                      onChangeText={setSearch}
+                    />
+                  </View>
 
-            <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
-              {!optLoading && options.length === 0 && <Text style={styles.muted}>No children found.</Text>}
-              {options.map((c) => {
-                const on = picked.includes(c._id);
-                const full = !on && picked.length >= spotsLeft;
-                return (
+                  {optLoading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 8 }} />}
+
+                  <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
+                    {!optLoading && options.length === 0 && <Text style={styles.muted}>No children found.</Text>}
+                    {options.map((c) => {
+                      const on = picked.includes(c._id);
+                      const full = !on && picked.length >= spotsLeft;
+                      return (
+                        <TouchableOpacity
+                          key={c._id}
+                          style={[styles.pickRow, full && { opacity: 0.4 }]}
+                          disabled={full}
+                          onPress={() => setPicked((p) => (on ? p.filter((x) => x !== c._id) : [...p, c._id]))}
+                        >
+                          <View style={[styles.checkbox, on && styles.checkboxOn]}>
+                            {on && <Feather name="check" size={12} color="#FFF" />}
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.personName}>{c.fullName}</Text>
+                            {!!c.fatherName && <Text style={styles.personSub}>Parent: {c.fatherName}</Text>}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+
                   <TouchableOpacity
-                    key={c._id}
-                    style={[styles.pickRow, full && { opacity: 0.4 }]}
-                    disabled={full}
-                    onPress={() => setPicked((p) => (on ? p.filter((x) => x !== c._id) : [...p, c._id]))}
+                    style={[styles.primaryBtn, (!picked.length || busy) && { opacity: 0.5 }]}
+                    disabled={!picked.length || busy}
+                    onPress={addChildren}
                   >
-                    <View style={[styles.checkbox, on && styles.checkboxOn]}>
-                      {on && <Feather name="check" size={12} color="#FFF" />}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.personName}>{c.fullName}</Text>
-                      {!!c.fatherName && <Text style={styles.personSub}>Parent: {c.fatherName}</Text>}
-                    </View>
+                    {busy ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.primaryBtnText}>
+                        {picked.length ? `Add ${picked.length} child${picked.length === 1 ? "" : "ren"}` : "Select children"}
+                      </Text>
+                    )}
                   </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            <TouchableOpacity
-              style={[styles.primaryBtn, (!picked.length || busy) && { opacity: 0.5 }]}
-              disabled={!picked.length || busy}
-              onPress={addChildren}
-            >
-              {busy ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.primaryBtnText}>
-                  {picked.length ? `Add ${picked.length} child${picked.length === 1 ? "" : "ren"}` : "Select children"}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
+                </View>
+              </View>
+                </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

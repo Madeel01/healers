@@ -76,7 +76,6 @@ const groupByDate = (list) => {
 
 const isInactive = (s) => s.sessionType === "cancel" || s.sessionType === "postponed";
 
-// attended / absent chip; "Not marked" only for sessions that already happened
 const attendanceMeta = (s) => {
   if (isInactive(s)) return null;
   if (s.attendance === "Complete") return ATT.Complete;
@@ -692,7 +691,7 @@ const styles = StyleSheet.create({
   summary: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: 16, marginBottom: 14 },
   title: { fontSize: 19, fontFamily: fonts.semiBold, color: "#0F172A" },
   subtitle: { fontSize: 13, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8, marginBottom:7, },
   chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start" },
   chipText: { fontSize: 11, fontFamily: fonts.semiBold },
 

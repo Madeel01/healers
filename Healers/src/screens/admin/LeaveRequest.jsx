@@ -1,39 +1,35 @@
-import React, {
-  useEffect,
-  useState,
-} from 'react';
+import React, { useEffect, useState, useRef } from "react";
 
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useIsFocused } from '@react-navigation/native';
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useIsFocused } from "@react-navigation/native";
 
 import {
   approveLeaveRequest,
   getLeaveRequests,
   markAllLeavesSeen,
   rejectLeaveRequest,
-} from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
-import {
-  colors,
-  commonStyles,
-  fonts,
-} from '../../styles/theme';
+} from "../../api/admin/api";
+import BottomBar from "../../components/BottomBar";
+import TopBar from "../../components/TopBar";
+import { colors, commonStyles, fonts } from "../../styles/theme";
 
-const formatNames = (names) => names.length > 2 ? `${names.slice(0, 2).join(", ")}...` : names.join(", ");
+const formatNames = (names) =>
+  names.length > 2 ? `${names.slice(0, 2).join(", ")}...` : names.join(", ");
 
 export default function LeaveRequestsScreen({ navigation }) {
   // const insets = useSafeAreaInsets();
@@ -56,16 +52,29 @@ export default function LeaveRequestsScreen({ navigation }) {
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
   const [reasonTarget, setReasonTarget] = useState(null);
   const isFocused = useIsFocused();
+  const LIMIT = 10;
 
-  const fetchRequests = async (tab = selectedTab) => {
-    setLoading(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const requestIdRef = useRef(0);
+
+  const fetchRequests = async (tab = selectedTab, pageNum = 1) => {
+    const isFirst = pageNum === 1;
+    const requestId = ++requestIdRef.current;
+
+    if (isFirst) setLoading(true);
+    else setLoadingMore(true);
 
     try {
-      const response = await getLeaveRequests({ status: tab.toLowerCase() });
+      const response = await getLeaveRequests({
+        status: tab.toLowerCase(),
+        page: pageNum,
+        limit: LIMIT,
+      });
+      if (requestId !== requestIdRef.current) return;
 
-      const data = response?.data?.data || [];
-
-      const formatted = response.data.data.map((item) => ({
+      const list = (response?.data?.data || []).map((item) => ({
         id: item._id,
         name: item.applicantId?.fullName,
         role: item.role,
@@ -77,14 +86,23 @@ export default function LeaveRequestsScreen({ navigation }) {
         rejectedBy: item.approved_by?.fullName,
       }));
 
-      setRequests(formatted);
-      setStats(response.data.stats);
+      setRequests((prev) =>
+        isFirst
+          ? list
+          : [...prev, ...list.filter((i) => !prev.some((p) => p.id === i.id))],
+      );
+      if (response.data.stats) setStats(response.data.stats);
+      setPage(pageNum);
+      setHasMore(Boolean(response.data.hasMore));
     } catch (error) {
+      if (requestId !== requestIdRef.current) return;
       console.log("Failed to fetch leave requests:", error);
-
       Alert.alert("Error", "Could not load leave requests.");
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   };
 
@@ -102,7 +120,13 @@ export default function LeaveRequestsScreen({ navigation }) {
     markSeen();
   }, [isFocused]);
 
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+  const formatDate = (d) =>
+    d
+      ? new Date(d).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        })
+      : "";
 
   const formatDateRange = (start, end) =>
     new Date(start).toDateString() === new Date(end).toDateString()
@@ -112,45 +136,41 @@ export default function LeaveRequestsScreen({ navigation }) {
   const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
   useEffect(() => {
-    fetchRequests(selectedTab);
+    setRequests([]);
+    setHasMore(true);
+    setPage(1);
+    fetchRequests(selectedTab, 1);
   }, [selectedTab]);
 
   const handleApprove = async (item) => {
     // console.log(item,"called");
-    Alert.alert(
-      "Approve Request",
-      `Approve ${item.name}'s leave request?`,
-      [
-        { text: "Cancel", style: "cancel" },
+    Alert.alert("Approve Request", `Approve ${item.name}'s leave request?`, [
+      { text: "Cancel", style: "cancel" },
 
-        {
-          text: "Approve",
+      {
+        text: "Approve",
 
-          onPress: async () => {
-            setActioningId(item.id);
+        onPress: async () => {
+          setActioningId(item.id);
 
-            try {
-              await approveLeaveRequest(item.id);
+          try {
+            await approveLeaveRequest(item.id);
 
-              await fetchRequests(selectedTab);
+            await fetchRequests(selectedTab);
 
-              Alert.alert(
-                "Approved",
-                `${item.name}'s leave has been approved.`,
-              );
-            } catch (error) {
-              console.log("Failed to approve:", error);
+            Alert.alert("Approved", `${item.name}'s leave has been approved.`);
+          } catch (error) {
+            console.log("Failed to approve:", error);
 
-              const msg = error?.response?.data?.message;
+            const msg = error?.response?.data?.message;
 
-              Alert.alert("Error", msg || "Could not approve this request.");
-            } finally {
-              setActioningId(null);
-            }
-          },
+            Alert.alert("Error", msg || "Could not approve this request.");
+          } finally {
+            setActioningId(null);
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const openRejectModal = (item) => {
@@ -197,6 +217,15 @@ export default function LeaveRequestsScreen({ navigation }) {
       setActioningId(null);
     }
   };
+  const handleScroll = ({ nativeEvent }) => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    const nearBottom =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - 120;
+
+    if (nearBottom && hasMore && !loading && !loadingMore) {
+      fetchRequests(selectedTab, page + 1);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
@@ -211,39 +240,30 @@ export default function LeaveRequestsScreen({ navigation }) {
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={200}
       >
         <View style={styles.metricCard}>
           <View style={styles.metricTextContainer}>
             <Text style={styles.metricTitle}>Pending Requests</Text>
 
-            <Text style={styles.metricValue}>
-              {stats.pendingCount}
-            </Text>
+            <Text style={styles.metricValue}>{stats.pendingCount}</Text>
 
             <View style={styles.trendContainer}>
-              {stats.pendingCount >= stats.pendingSinceYesterday
-                ? (
-                  <MaterialIcons
-                    name="trending-up"
-                    size={16}
-                    color="#006B58"
-                  />
-                )
-                : (
-                  <MaterialIcons
-                    name="trending-down"
-                    size={16}
-                    color="#6b0005"
-                  />
-                )}
+              {stats.pendingCount >= stats.pendingSinceYesterday ? (
+                <MaterialIcons name="trending-up" size={16} color="#006B58" />
+              ) : (
+                <MaterialIcons name="trending-down" size={16} color="#6b0005" />
+              )}
 
               <Text
                 style={[
                   styles.trendText,
                   {
-                    color: stats.pendingCount >= stats.pendingSinceYesterday
-                      ? "#006B58"
-                      : "#6b0005",
+                    color:
+                      stats.pendingCount >= stats.pendingSinceYesterday
+                        ? "#006B58"
+                        : "#6b0005",
                   },
                 ]}
               >
@@ -269,11 +289,20 @@ export default function LeaveRequestsScreen({ navigation }) {
         >
           <View style={styles.metricTextContainer}>
             <Text style={styles.metricTitle}>Staff on Leave Today</Text>
-            <Text style={[styles.metricValue, styles.metricValue2]}>{stats.onLeaveToday}</Text>
-            <Text style={styles.metricSubText}>{formatNames(stats.onLeaveNames)}</Text>
+            <Text style={[styles.metricValue, styles.metricValue2]}>
+              {stats.onLeaveToday}
+            </Text>
+            <Text style={styles.metricSubText}>
+              {formatNames(stats.onLeaveNames)}
+            </Text>
           </View>
 
-          <View style={[styles.metricIconBox, { backgroundColor: "rgba(0,107,88,.1)" }]}>
+          <View
+            style={[
+              styles.metricIconBox,
+              { backgroundColor: "rgba(0,107,88,.1)" },
+            ]}
+          >
             <MaterialIcons name="event-busy" size={26} color="#006B58" />
           </View>
         </TouchableOpacity>
@@ -300,13 +329,9 @@ export default function LeaveRequestsScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
-
-        {loading && (
-          <ActivityIndicator
-            size="large"
-            color={colors.primary}
-            style={{ marginVertical: 30 }}
-          />
+        
+        {loading && requests.length === 0 && (
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 30 }} />
         )}
 
         {!loading && requests.length === 0 && (
@@ -317,8 +342,7 @@ export default function LeaveRequestsScreen({ navigation }) {
           </View>
         )}
 
-        {!loading
-          && requests.map((item) => (
+        {requests.map((item) => (
             <View key={item.id} style={styles.requestCard}>
               <View style={styles.userInfoRow}>
                 <View style={styles.userDetails}>
@@ -334,8 +358,8 @@ export default function LeaveRequestsScreen({ navigation }) {
                     item.status === "Approved"
                       ? { backgroundColor: "#D1FAE5" }
                       : item.status === "Rejected"
-                      ? { backgroundColor: "#FEE2E2" }
-                      : { backgroundColor: "#FEF3C7" },
+                        ? { backgroundColor: "#FEE2E2" }
+                        : { backgroundColor: "#FEF3C7" },
                   ]}
                 >
                   <Text
@@ -345,8 +369,8 @@ export default function LeaveRequestsScreen({ navigation }) {
                       item.status === "Approved"
                         ? { color: "#059669" }
                         : item.status === "Rejected"
-                        ? { color: "#DC2626" }
-                        : { color: "#D97706" },
+                          ? { color: "#DC2626" }
+                          : { color: "#D97706" },
                     ]}
                   >
                     {item.status}
@@ -366,13 +390,11 @@ export default function LeaveRequestsScreen({ navigation }) {
                 </Text>
               </View>
 
-              {
-                /* {!!item.reason && (
+              {/* {!!item.reason && (
 
                 <Text style={styles.reasonText}>Reason: {item.reason}</Text>
 
-              )} */
-              }
+              )} */}
 
               {item.status === "Rejected" && (
                 <TouchableOpacity
@@ -382,7 +404,9 @@ export default function LeaveRequestsScreen({ navigation }) {
                     setIsReasonModalOpen(true);
                   }}
                 >
-                  <Text style={styles.rejectButtonText}>View Rejection Reason</Text>
+                  <Text style={styles.rejectButtonText}>
+                    View Rejection Reason
+                  </Text>
                 </TouchableOpacity>
               )}
 
@@ -413,6 +437,9 @@ export default function LeaveRequestsScreen({ navigation }) {
               )}
             </View>
           ))}
+          {loadingMore && (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
+          )}
       </ScrollView>
 
       <Modal
@@ -421,59 +448,65 @@ export default function LeaveRequestsScreen({ navigation }) {
         transparent
         onRequestClose={closeRejectModal}
       >
-        {isRejectModalOpen && (
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={closeRejectModal}
-          >
-            <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Reject Leave Request</Text>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
+          {isRejectModalOpen && (
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={closeRejectModal}
+            >
+              <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Reject Leave Request</Text>
 
-                <TouchableOpacity onPress={closeRejectModal}>
-                  <MaterialIcons name="close" size={22} color="#64748B" />
-                </TouchableOpacity>
-              </View>
+                  <TouchableOpacity onPress={closeRejectModal}>
+                    <MaterialIcons name="close" size={22} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
 
-              <Text style={styles.modalSubtitle}>
-                {rejectTarget?.name}'s request for {rejectTarget?.leaveType}
-              </Text>
+                <Text style={styles.modalSubtitle}>
+                  {rejectTarget?.name}'s request for {rejectTarget?.leaveType}
+                </Text>
 
-              <Text style={styles.fieldLabel}>
-                Reason for rejection <Text style={styles.requiredText}>*</Text>
-              </Text>
+                <Text style={styles.fieldLabel}>
+                  Reason for rejection{" "}
+                  <Text style={styles.requiredText}>*</Text>
+                </Text>
 
-              <TextInput
-                style={styles.reasonInput}
-                placeholder="Explain why this request is being rejected..."
-                placeholderTextColor="#94A3B8"
-                value={rejectionReason}
-                onChangeText={setRejectionReason}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
+                <TextInput
+                  style={styles.reasonInput}
+                  placeholder="Explain why this request is being rejected..."
+                  placeholderTextColor="#94A3B8"
+                  value={rejectionReason}
+                  onChangeText={setRejectionReason}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
 
-              <TouchableOpacity
-                style={[
-                  styles.confirmRejectButton,
-                  actioningId === rejectTarget?.id && { opacity: 0.6 },
-                ]}
-                onPress={handleConfirmReject}
-                disabled={actioningId === rejectTarget?.id}
-              >
-                {actioningId === rejectTarget?.id
-                  ? <ActivityIndicator size="small" color="#FFFFFF" />
-                  : (
+                <TouchableOpacity
+                  style={[
+                    styles.confirmRejectButton,
+                    actioningId === rejectTarget?.id && { opacity: 0.6 },
+                  ]}
+                  onPress={handleConfirmReject}
+                  disabled={actioningId === rejectTarget?.id}
+                >
+                  {actioningId === rejectTarget?.id ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
                     <Text style={styles.confirmRejectButtonText}>
                       Confirm Rejection
                     </Text>
                   )}
+                </TouchableOpacity>
               </TouchableOpacity>
             </TouchableOpacity>
-          </TouchableOpacity>
-        )}
+          )}
+        </KeyboardAvoidingView>
       </Modal>
       <Modal
         visible={isReasonModalOpen}
@@ -502,7 +535,9 @@ export default function LeaveRequestsScreen({ navigation }) {
             <Text style={styles.reasonDisplay}>{reasonTarget?.rejectedBy}</Text>
 
             <Text style={styles.fieldLabel}>Reason</Text>
-            <Text style={styles.reasonDisplay}>{reasonTarget?.rejectionReason}</Text>
+            <Text style={styles.reasonDisplay}>
+              {reasonTarget?.rejectionReason}
+            </Text>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>

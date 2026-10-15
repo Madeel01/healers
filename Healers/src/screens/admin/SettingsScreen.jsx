@@ -232,7 +232,7 @@ export default function SettingsScreen({ navigation }) {
       ) : (
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
         >
           <ScrollView
             contentContainerStyle={styles.content}
@@ -364,8 +364,9 @@ export default function SettingsScreen({ navigation }) {
               </View>
             </View>
 
+          </ScrollView>
             <TouchableOpacity
-              style={[styles.saveButton, saving && { opacity: 0.6 }]}
+              style={[styles.saveButton,saving && { opacity: 0.6 }]}
               activeOpacity={0.85}
               onPress={handleSave}
               disabled={saving}
@@ -376,7 +377,6 @@ export default function SettingsScreen({ navigation }) {
                 <Text style={styles.saveButtonText}>Save Settings</Text>
               )}
             </TouchableOpacity>
-          </ScrollView>
         </KeyboardAvoidingView>
       )}
 
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 6,
+    margin: 10,
   },
   saveButtonText: { fontSize: 15, fontFamily: fonts.semiBold, color: "#FFFFFF" },
 });

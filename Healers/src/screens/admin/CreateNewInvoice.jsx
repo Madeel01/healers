@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -541,576 +542,580 @@ export default function CreateNewInvoiceScreen({ navigation }) {
         navigation={navigation}
         headerTitle="Create New Invoice"
       />
+      <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Feather
+                name="user-check"
+                size={18}
+                color={colors.primary}
+              />
 
-      <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Feather
-              name="user-check"
-              size={18}
-              color={colors.primary}
-            />
+              <Text style={styles.cardHeaderTitle}>
+                Client Selection
+              </Text>
+            </View>
 
-            <Text style={styles.cardHeaderTitle}>
-              Client Selection
+            <Text style={styles.inputLabel}>
+              Select Child
             </Text>
-          </View>
 
-          <Text style={styles.inputLabel}>
-            Select Child
-          </Text>
+            {!selectedChild
+              ? (
+                <>
+                  <View style={styles.searchContainer}>
+                    <Feather
+                      name="search"
+                      size={18}
+                      color="#64748B"
+                      style={styles.searchIcon}
+                    />
 
-          {!selectedChild
-            ? (
-              <>
-                <View style={styles.searchContainer}>
-                  <Feather
-                    name="search"
-                    size={18}
-                    color="#64748B"
-                    style={styles.searchIcon}
-                  />
+                    <TextInput
+                      style={styles.searchInput}
+                      value={childSearch}
+                      onChangeText={setChildSearch}
+                      placeholder="Search child by name, email, phone or father..."
+                      placeholderTextColor="#94A3B8"
+                      autoCorrect={false}
+                      autoCapitalize="none"
+                    />
 
-                  <TextInput
-                    style={styles.searchInput}
-                    value={childSearch}
-                    onChangeText={setChildSearch}
-                    placeholder="Search child by name, email, phone or father..."
-                    placeholderTextColor="#94A3B8"
-                    autoCorrect={false}
-                    autoCapitalize="none"
-                  />
-
-                  {childrenLoading
-                    ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={colors.primary}
-                      />
-                    )
-                    : childSearch
-                    ? (
-                      <TouchableOpacity
-                        onPress={() => setChildSearch("")}
-                      >
-                        <Feather
-                          name="x"
-                          size={18}
-                          color="#94A3B8"
-                        />
-                      </TouchableOpacity>
-                    )
-                    : null}
-                </View>
-
-                <View style={styles.childrenList}>
-                  {childrenLoading && children.length === 0
-                    ? (
-                      <View style={styles.childLoadingContainer}>
+                    {childrenLoading
+                      ? (
                         <ActivityIndicator
                           size="small"
                           color={colors.primary}
                         />
-
-                        <Text style={styles.childLoadingText}>
-                          Loading children...
-                        </Text>
-                      </View>
-                    )
-                    : children.length === 0
-                    ? (
-                      <View style={styles.noChildrenContainer}>
-                        <View style={styles.emptyIconCircle}>
+                      )
+                      : childSearch
+                      ? (
+                        <TouchableOpacity
+                          onPress={() => setChildSearch("")}
+                        >
                           <Feather
-                            name="users"
-                            size={24}
+                            name="x"
+                            size={18}
                             color="#94A3B8"
                           />
+                        </TouchableOpacity>
+                      )
+                      : null}
+                  </View>
+
+                  <View style={styles.childrenList}>
+                    {childrenLoading && children.length === 0
+                      ? (
+                        <View style={styles.childLoadingContainer}>
+                          <ActivityIndicator
+                            size="small"
+                            color={colors.primary}
+                          />
+
+                          <Text style={styles.childLoadingText}>
+                            Loading children...
+                          </Text>
                         </View>
+                      )
+                      : children.length === 0
+                      ? (
+                        <View style={styles.noChildrenContainer}>
+                          <View style={styles.emptyIconCircle}>
+                            <Feather
+                              name="users"
+                              size={24}
+                              color="#94A3B8"
+                            />
+                          </View>
 
-                        <Text style={styles.noChildrenTitle}>
-                          No children found
-                        </Text>
+                          <Text style={styles.noChildrenTitle}>
+                            No children found
+                          </Text>
 
-                        <Text style={styles.noChildrenText}>
-                          Try another name, email, phone, father name or CNIC.
-                        </Text>
-                      </View>
-                    )
-                    : (
-                      <>
-                        {children.map((child) => {
-                          const childId = child._id || child.id;
+                          <Text style={styles.noChildrenText}>
+                            Try another name, email, phone, father name or CNIC.
+                          </Text>
+                        </View>
+                      )
+                      : (
+                        <>
+                          {children.map((child) => {
+                            const childId = child._id || child.id;
 
-                          return (
+                            return (
+                              <TouchableOpacity
+                                key={String(childId)}
+                                style={styles.childSearchItem}
+                                activeOpacity={0.7}
+                                onPress={() => handleSelectChild(child)}
+                              >
+                                {child.profileImage
+                                  ? (
+                                    <Image
+                                      source={{ uri: child.profileImage }}
+                                      style={styles.searchAvatar}
+                                    />
+                                  )
+                                  : (
+                                    <View style={styles.avatarFallback}>
+                                      <Text style={styles.avatarFallbackText}>
+                                        {getInitials(child.fullName)}
+                                      </Text>
+                                    </View>
+                                  )}
+
+                                <View style={styles.childSearchInfo}>
+                                  <Text
+                                    style={styles.childSearchName}
+                                    numberOfLines={1}
+                                  >
+                                    {child.fullName}
+                                  </Text>
+
+                                  <Text
+                                    style={styles.childSearchMeta}
+                                    numberOfLines={1}
+                                  >
+                                    {child.fatherName
+                                      ? `Father: ${child.fatherName}`
+                                      : "Father information not available"}
+                                  </Text>
+
+                                  <Text
+                                    style={styles.childSearchEmail}
+                                    numberOfLines={1}
+                                  >
+                                    {child.email || child.phone || "No contact information"}
+                                  </Text>
+
+                                  {child.package && (
+                                    <Text
+                                      style={styles.packageSearchText}
+                                      numberOfLines={1}
+                                    >
+                                      Package: {child.package.name}
+                                      {" • "}
+                                      PKR {formatMoney(
+                                        // child.discountedPrice !== null && child.discountedPrice !== undefined;  ? child.discountedPrice
+                                        child.package.price,
+                                      )}
+                                    </Text>
+                                  )}
+                                </View>
+
+                                <Feather
+                                  name="chevron-right"
+                                  size={20}
+                                  color="#94A3B8"
+                                />
+                              </TouchableOpacity>
+                            );
+                          })}
+
+                          {childHasMore && (
                             <TouchableOpacity
-                              key={String(childId)}
-                              style={styles.childSearchItem}
+                              style={styles.loadMoreChildrenBtn}
                               activeOpacity={0.7}
-                              onPress={() => handleSelectChild(child)}
+                              disabled={childrenLoadingMore}
+                              onPress={handleLoadMoreChildren}
                             >
-                              {child.profileImage
+                              {childrenLoadingMore
                                 ? (
-                                  <Image
-                                    source={{ uri: child.profileImage }}
-                                    style={styles.searchAvatar}
+                                  <ActivityIndicator
+                                    size="small"
+                                    color={colors.primary}
                                   />
                                 )
                                 : (
-                                  <View style={styles.avatarFallback}>
-                                    <Text style={styles.avatarFallbackText}>
-                                      {getInitials(child.fullName)}
+                                  <>
+                                    <Feather
+                                      name="plus-circle"
+                                      size={16}
+                                      color={colors.primary}
+                                    />
+
+                                    <Text style={styles.loadMoreChildrenText}>
+                                      Load More
                                     </Text>
-                                  </View>
+                                  </>
                                 )}
-
-                              <View style={styles.childSearchInfo}>
-                                <Text
-                                  style={styles.childSearchName}
-                                  numberOfLines={1}
-                                >
-                                  {child.fullName}
-                                </Text>
-
-                                <Text
-                                  style={styles.childSearchMeta}
-                                  numberOfLines={1}
-                                >
-                                  {child.fatherName
-                                    ? `Father: ${child.fatherName}`
-                                    : "Father information not available"}
-                                </Text>
-
-                                <Text
-                                  style={styles.childSearchEmail}
-                                  numberOfLines={1}
-                                >
-                                  {child.email || child.phone || "No contact information"}
-                                </Text>
-
-                                {child.package && (
-                                  <Text
-                                    style={styles.packageSearchText}
-                                    numberOfLines={1}
-                                  >
-                                    Package: {child.package.name}
-                                    {" • "}
-                                    PKR {formatMoney(
-                                      // child.discountedPrice !== null && child.discountedPrice !== undefined;  ? child.discountedPrice
-                                      child.package.price,
-                                    )}
-                                  </Text>
-                                )}
-                              </View>
-
-                              <Feather
-                                name="chevron-right"
-                                size={20}
-                                color="#94A3B8"
-                              />
                             </TouchableOpacity>
-                          );
-                        })}
-
-                        {childHasMore && (
-                          <TouchableOpacity
-                            style={styles.loadMoreChildrenBtn}
-                            activeOpacity={0.7}
-                            disabled={childrenLoadingMore}
-                            onPress={handleLoadMoreChildren}
-                          >
-                            {childrenLoadingMore
-                              ? (
-                                <ActivityIndicator
-                                  size="small"
-                                  color={colors.primary}
-                                />
-                              )
-                              : (
-                                <>
-                                  <Feather
-                                    name="plus-circle"
-                                    size={16}
-                                    color={colors.primary}
-                                  />
-
-                                  <Text style={styles.loadMoreChildrenText}>
-                                    Load More
-                                  </Text>
-                                </>
-                              )}
-                          </TouchableOpacity>
-                        )}
-                      </>
-                    )}
-                </View>
-              </>
-            )
-            : (
-              <View style={styles.selectedChildCard}>
-                {selectedChild.profileImage
-                  ? (
-                    <Image
-                      source={{
-                        uri: selectedChild.profileImage,
-                      }}
-                      style={styles.avatar}
-                    />
-                  )
-                  : (
-                    <View style={styles.selectedAvatarFallback}>
-                      <Text style={styles.avatarFallbackText}>
-                        {getInitials(selectedChild.fullName)}
-                      </Text>
-                    </View>
-                  )}
-
-                <View style={styles.childInfo}>
-                  <Text
-                    style={styles.childName}
-                    numberOfLines={1}
-                  >
-                    {selectedChild.fullName}
-                  </Text>
-
-                  <Text
-                    style={styles.childSubtext}
-                    numberOfLines={1}
-                  >
-                    {selectedChild.fatherName
-                      ? `Father: ${selectedChild.fatherName}`
-                      : "Father information not available"}
-                  </Text>
-
-                  {!!selectedChild.fatherCnic && (
-                    <Text
-                      style={styles.childEmail}
-                      numberOfLines={1}
-                    >
-                      CNIC: {selectedChild.fatherCnic}
-                    </Text>
-                  )}
-
-                  {!!selectedChild.email && (
-                    <Text
-                      style={styles.childEmail}
-                      numberOfLines={1}
-                    >
-                      {selectedChild.email}
-                    </Text>
-                  )}
-
-                  {!!selectedChild.package && (
-                    <View
-                      style={styles.packageBadge}
-                    >
-                      <Feather
-                        name="package"
-                        size={12}
-                        color="#0369A1"
-                      />
-
-                      <Text
-                        style={styles.packageBadgeText}
-                        numberOfLines={1}
-                      >
-                        {selectedChild.package.name}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.selectedActions}>
-                  <Feather
-                    name="check-circle"
-                    size={20}
-                    color="#059669"
-                  />
-
-                  <TouchableOpacity
-                    style={styles.changeChildBtn}
-                    onPress={handleChangeChild}
-                  >
-                    <Feather
-                      name="edit-2"
-                      size={14}
-                      color={colors.primary}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Feather
-              name="file-text"
-              size={18}
-              color={colors.primary}
-            />
-
-            <Text style={styles.cardHeaderTitle}>
-              Billing Details
-            </Text>
-          </View>
-
-          <View style={styles.row}>
-            <View style={styles.halfColumn}>
-              <Text style={styles.inputLabel}>
-                Invoice Date
-              </Text>
-
-              <TouchableOpacity
-                style={styles.dateInput}
-                activeOpacity={0.7}
-                onPress={() => setShowInvoiceDatePicker(true)}
-              >
-                <Text style={styles.dateText}>
-                  {invoiceDate}
-                </Text>
-
-                <Feather
-                  name="calendar"
-                  size={18}
-                  color={colors.primary}
-                />
-              </TouchableOpacity>
-
-              {showInvoiceDatePicker && (
-                <DateTimePicker
-                  value={parseDate(invoiceDate)}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "inline" : "default"}
-                  maximumDate={new Date()}
-                  onValueChange={(event, selectedDate) => {
-                    if (Platform.OS === "android") {
-                      setShowInvoiceDatePicker(false);
-                    }
-
-                    if (event.type === "dismissed") {
-                      return;
-                    }
-
-                    if (selectedDate) {
-                      setInvoiceDate(formatDate(selectedDate));
-                    }
-                  }}
-                />
-              )}
-            </View>
-
-            <View style={styles.halfColumn}>
-              <Text style={styles.inputLabel}>
-                Due Date
-              </Text>
-
-              <TouchableOpacity
-                style={styles.dateInput}
-                activeOpacity={0.7}
-                onPress={() => setShowDueDatePicker(true)}
-              >
-                <Text style={styles.dateText}>
-                  {dueDate}
-                </Text>
-
-                <Feather
-                  name="calendar"
-                  size={18}
-                  color={colors.primary}
-                />
-              </TouchableOpacity>
-
-              {showDueDatePicker && (
-                <DateTimePicker
-                  value={parseDate(dueDate)}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "inline" : "default"}
-                  minimumDate={parseDate(invoiceDate)}
-                  onValueChange={(event, selectedDate) => {
-                    if (Platform.OS === "android") {
-                      setShowDueDatePicker(false);
-                    }
-
-                    if (event.type === "dismissed") {
-                      return;
-                    }
-
-                    if (selectedDate) {
-                      setDueDate(formatDate(selectedDate));
-                    }
-                  }}
-                />
-              )}
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Feather
-              name="shopping-bag"
-              size={18}
-              color={colors.primary}
-            />
-
-            <Text style={styles.cardHeaderTitle}>
-              Services & Items
-            </Text>
-          </View>
-
-          {items.map((item, index) => {
-            const itemBase = (Number(item.sessions) || 0) * (Number(item.rate) || 0);
-            const itemDiscount = Math.min(Math.max(Number(item.discount) || 0, 0), 100);
-            const itemTotal = itemBase * (1 - itemDiscount / 100);
-
-            return (
-              <View
-                key={item.id}
-                style={styles.itemBox}
-              >
-                <Text style={styles.itemNumber}>
-                  Item {index + 1}
-                </Text>
-
-                <Text style={styles.inputLabel}>
-                  Service Package
-                </Text>
-
-                <View style={styles.packageDisplay}>
-                  <View style={styles.packageIcon}>
-                    <Feather
-                      name="package"
-                      size={17}
-                      color="#0369A1"
-                    />
-                  </View>
-
-                  <View style={styles.packageDisplayInfo}>
-                    <Text
-                      style={[
-                        styles.packageName,
-                        !item.package
-                        && styles.packageEmpty,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.package || "No package assigned"}
-                    </Text>
-
-                    {!!item.packageType && (
-                      <Text style={styles.packageType}>
-                        {formatPackageType(item.packageType)}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-
-                {selectedChild?.package && item.packageId === selectedChild.package._id && (
-                  <View style={styles.priceInfoBox}>
-                    <View style={styles.priceInfoRow}>
-                      <Text style={styles.priceInfoLabel}>
-                        Package Price
-                      </Text>
-
-                      <Text style={styles.priceInfoValue}>
-                        PKR {formatMoney(selectedChild.package.price)}
-                      </Text>
-                    </View>
-
-                    {selectedChild.discountedPrice !== null
-                      && selectedChild.discountedPrice !== undefined
-                      && (
-                        <View style={styles.priceInfoRow}>
-                          <Text style={styles.discountPriceLabel}>
-                            Child Discount
-                          </Text>
-
-                          <Text style={styles.discountPriceValue}>
-                            - PKR {formatMoney(selectedChild.discountedPrice)}
-                          </Text>
-                        </View>
+                          )}
+                        </>
                       )}
                   </View>
-                )}
+                </>
+              )
+              : (
+                <View style={styles.selectedChildCard}>
+                  {selectedChild.profileImage
+                    ? (
+                      <Image
+                        source={{
+                          uri: selectedChild.profileImage,
+                        }}
+                        style={styles.avatar}
+                      />
+                    )
+                    : (
+                      <View style={styles.selectedAvatarFallback}>
+                        <Text style={styles.avatarFallbackText}>
+                          {getInitials(selectedChild.fullName)}
+                        </Text>
+                      </View>
+                    )}
 
-                <View style={styles.summaryDivider} />
+                  <View style={styles.childInfo}>
+                    <Text
+                      style={styles.childName}
+                      numberOfLines={1}
+                    >
+                      {selectedChild.fullName}
+                    </Text>
 
-                <View style={styles.summaryTotalRow}>
-                  <Text style={styles.totalLabel}>
-                    Total Amount
-                  </Text>
+                    <Text
+                      style={styles.childSubtext}
+                      numberOfLines={1}
+                    >
+                      {selectedChild.fatherName
+                        ? `Father: ${selectedChild.fatherName}`
+                        : "Father information not available"}
+                    </Text>
 
-                  <Text style={styles.totalValue}>
-                    PKR {formatMoney(totalAmount)}
-                  </Text>
+                    {!!selectedChild.fatherCnic && (
+                      <Text
+                        style={styles.childEmail}
+                        numberOfLines={1}
+                      >
+                        CNIC: {selectedChild.fatherCnic}
+                      </Text>
+                    )}
+
+                    {!!selectedChild.email && (
+                      <Text
+                        style={styles.childEmail}
+                        numberOfLines={1}
+                      >
+                        {selectedChild.email}
+                      </Text>
+                    )}
+
+                    {!!selectedChild.package && (
+                      <View
+                        style={styles.packageBadge}
+                      >
+                        <Feather
+                          name="package"
+                          size={12}
+                          color="#0369A1"
+                        />
+
+                        <Text
+                          style={styles.packageBadgeText}
+                          numberOfLines={1}
+                        >
+                          {selectedChild.package.name}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.selectedActions}>
+                    <Feather
+                      name="check-circle"
+                      size={20}
+                      color="#059669"
+                    />
+
+                    <TouchableOpacity
+                      style={styles.changeChildBtn}
+                      onPress={handleChangeChild}
+                    >
+                      <Feather
+                        name="edit-2"
+                        size={14}
+                        color={colors.primary}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            );
-          })}
-        </View>
+              )}
+          </View>
 
-        <TouchableOpacity
-          style={[
-            styles.draftBtn,
-            submitting && styles.disabledButton,
-          ]}
-          activeOpacity={0.8}
-          disabled={submitting}
-          onPress={() => handleSubmitInvoice("Draft")}
-        >
-          {submitting
-            ? (
-              <ActivityIndicator
-                size="small"
-                color="#00497B"
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Feather
+                name="file-text"
+                size={18}
+                color={colors.primary}
               />
-            )
-            : (
-              <Text style={styles.draftBtnText}>
-                Save as Draft
+
+              <Text style={styles.cardHeaderTitle}>
+                Billing Details
               </Text>
-            )}
-        </TouchableOpacity>
+            </View>
 
-        <TouchableOpacity
-          style={[
-            styles.generateBtn,
-            submitting && styles.disabledButton,
-          ]}
-          activeOpacity={0.8}
-          disabled={submitting}
-          onPress={() => handleSubmitInvoice("Pending")}
-        >
-          {submitting
-            ? (
-              <ActivityIndicator
-                size="small"
-                color="#FFFFFF"
+            <View style={styles.row}>
+              <View style={styles.halfColumn}>
+                <Text style={styles.inputLabel}>
+                  Invoice Date
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.dateInput}
+                  activeOpacity={0.7}
+                  onPress={() => setShowInvoiceDatePicker(true)}
+                >
+                  <Text style={styles.dateText}>
+                    {invoiceDate}
+                  </Text>
+
+                  <Feather
+                    name="calendar"
+                    size={18}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+
+                {showInvoiceDatePicker && (
+                  <DateTimePicker
+                    value={parseDate(invoiceDate)}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "inline" : "default"}
+                    maximumDate={new Date()}
+                    onValueChange={(event, selectedDate) => {
+                      if (Platform.OS === "android") {
+                        setShowInvoiceDatePicker(false);
+                      }
+
+                      if (event.type === "dismissed") {
+                        return;
+                      }
+
+                      if (selectedDate) {
+                        setInvoiceDate(formatDate(selectedDate));
+                      }
+                    }}
+                  />
+                )}
+              </View>
+
+              <View style={styles.halfColumn}>
+                <Text style={styles.inputLabel}>
+                  Due Date
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.dateInput}
+                  activeOpacity={0.7}
+                  onPress={() => setShowDueDatePicker(true)}
+                >
+                  <Text style={styles.dateText}>
+                    {dueDate}
+                  </Text>
+
+                  <Feather
+                    name="calendar"
+                    size={18}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+
+                {showDueDatePicker && (
+                  <DateTimePicker
+                    value={parseDate(dueDate)}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "inline" : "default"}
+                    minimumDate={parseDate(invoiceDate)}
+                    onValueChange={(event, selectedDate) => {
+                      if (Platform.OS === "android") {
+                        setShowDueDatePicker(false);
+                      }
+
+                      if (event.type === "dismissed") {
+                        return;
+                      }
+
+                      if (selectedDate) {
+                        setDueDate(formatDate(selectedDate));
+                      }
+                    }}
+                  />
+                )}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Feather
+                name="shopping-bag"
+                size={18}
+                color={colors.primary}
               />
-            )
-            : (
-              <>
-                <Feather
-                  name="send"
-                  size={16}
+
+              <Text style={styles.cardHeaderTitle}>
+                Services & Items
+              </Text>
+            </View>
+
+            {items.map((item, index) => {
+              const itemBase = (Number(item.sessions) || 0) * (Number(item.rate) || 0);
+              const itemDiscount = Math.min(Math.max(Number(item.discount) || 0, 0), 100);
+              const itemTotal = itemBase * (1 - itemDiscount / 100);
+
+              return (
+                <View
+                  key={item.id}
+                  style={styles.itemBox}
+                >
+                  <Text style={styles.itemNumber}>
+                    Item {index + 1}
+                  </Text>
+
+                  <Text style={styles.inputLabel}>
+                    Service Package
+                  </Text>
+
+                  <View style={styles.packageDisplay}>
+                    <View style={styles.packageIcon}>
+                      <Feather
+                        name="package"
+                        size={17}
+                        color="#0369A1"
+                      />
+                    </View>
+
+                    <View style={styles.packageDisplayInfo}>
+                      <Text
+                        style={[
+                          styles.packageName,
+                          !item.package
+                          && styles.packageEmpty,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.package || "No package assigned"}
+                      </Text>
+
+                      {!!item.packageType && (
+                        <Text style={styles.packageType}>
+                          {formatPackageType(item.packageType)}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+
+                  {selectedChild?.package && item.packageId === selectedChild.package._id && (
+                    <View style={styles.priceInfoBox}>
+                      <View style={styles.priceInfoRow}>
+                        <Text style={styles.priceInfoLabel}>
+                          Package Price
+                        </Text>
+
+                        <Text style={styles.priceInfoValue}>
+                          PKR {formatMoney(selectedChild.package.price)}
+                        </Text>
+                      </View>
+
+                      {selectedChild.discountedPrice !== null
+                        && selectedChild.discountedPrice !== undefined
+                        && (
+                          <View style={styles.priceInfoRow}>
+                            <Text style={styles.discountPriceLabel}>
+                              Child Discount
+                            </Text>
+
+                            <Text style={styles.discountPriceValue}>
+                              - PKR {formatMoney(selectedChild.discountedPrice)}
+                            </Text>
+                          </View>
+                        )}
+                    </View>
+                  )}
+
+                  <View style={styles.summaryDivider} />
+
+                  <View style={styles.summaryTotalRow}>
+                    <Text style={styles.totalLabel}>
+                      Total Amount
+                    </Text>
+
+                    <Text style={styles.totalValue}>
+                      PKR {formatMoney(totalAmount)}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.draftBtn,
+              submitting && styles.disabledButton,
+            ]}
+            activeOpacity={0.8}
+            disabled={submitting}
+            onPress={() => handleSubmitInvoice("Draft")}
+          >
+            {submitting
+              ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#00497B"
+                />
+              )
+              : (
+                <Text style={styles.draftBtnText}>
+                  Save as Draft
+                </Text>
+              )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.generateBtn,
+              submitting && styles.disabledButton,
+            ]}
+            activeOpacity={0.8}
+            disabled={submitting}
+            onPress={() => handleSubmitInvoice("Pending")}
+          >
+            {submitting
+              ? (
+                <ActivityIndicator
+                  size="small"
                   color="#FFFFFF"
                 />
+              )
+              : (
+                <>
+                  <Feather
+                    name="send"
+                    size={16}
+                    color="#FFFFFF"
+                  />
 
-                <Text
-                  style={styles.generateBtnText}
-                >
-                  Generate Invoice
-                </Text>
-              </>
-            )}
-        </TouchableOpacity>
-      </ScrollView>
+                  <Text
+                    style={styles.generateBtnText}
+                  >
+                    Generate Invoice
+                  </Text>
+                </>
+              )}
+          </TouchableOpacity>
+        </ScrollView>
+        </KeyboardAvoidingView>
 
       <BottomBar activeTab="" />
     </SafeAreaView>

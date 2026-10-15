@@ -8,6 +8,7 @@ import React, {
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Alert,
   Image,
   Modal,
@@ -18,6 +19,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -1025,6 +1027,10 @@ export default function TherapistsScreen({ navigation }) {
           resetTherapistForm();
         }}
       >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <View
           style={styles.modalOverlay}
           activeOpacity={1}
@@ -1047,7 +1053,13 @@ export default function TherapistsScreen({ navigation }) {
                   <Feather name="x" size={22} color="#64748B" />
                 </TouchableOpacity>
               </View>
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView 
+              showsVerticalScrollIndicator={false} 
+              keyboardShouldPersistTaps="handled"
+              style={{ flexShrink: 1 }}
+              contentContainerStyle={{ paddingBottom: 24 }}
+              // keyboardDismissMode="on-drag"
+            >
 
               <Text style={styles.fieldLabel}>Full Name <Text style={styles.requiredText}>*</Text></Text>
               <TextInput
@@ -1184,6 +1196,7 @@ export default function TherapistsScreen({ navigation }) {
               </View>
           </View>
         </View>
+      </KeyboardAvoidingView>
       </Modal>
 
       <Modal

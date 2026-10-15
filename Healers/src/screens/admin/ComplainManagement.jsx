@@ -359,7 +359,7 @@ export default function ComplainManagementScreen({ navigation }) {
       <Modal visible={!!chatComplaint} transparent animationType="slide" onRequestClose={closeChat}>
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
         >
           <View style={styles.chatSheet}>
             <View style={styles.chatHeader}>
@@ -455,7 +455,7 @@ export default function ComplainManagementScreen({ navigation }) {
       <Modal visible={!!item} transparent animationType="slide" onRequestClose={closeDetails}>
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
         >
           <View style={styles.detailSheet}>
             <View style={styles.modalHeader}>

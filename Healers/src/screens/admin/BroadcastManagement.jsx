@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   RefreshControl,
@@ -45,6 +46,7 @@ import {
   fonts,
 } from '../../styles/theme';
 import BroadcastDetailModal from './components/BroadcastDetailModal';
+import { sendPushNotificationApi } from '../../api/pushNotificationApi';
 
 const LIMIT = 20;
 
@@ -816,6 +818,10 @@ export default function BroadcastManagementScreen({ navigation }) {
             <Text style={styles.modalTopBarTitle}>New Broadcast</Text>
             <View style={{ width: 22 }} />
           </View>
+          <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
 
           <ScrollView
             contentContainerStyle={styles.scrollContent}
@@ -1126,39 +1132,40 @@ export default function BroadcastManagementScreen({ navigation }) {
             </View>
           </ScrollView>
           {/* Bottom Actions */}
-          <View style={styles.bottomActionsRow}>
-            <TouchableOpacity
-              style={styles.saveDraftBtn}
-              disabled={submitting}
-              onPress={() => submit("draft")}
-            >
-              <Text style={styles.saveDraftText}>Save Draft</Text>
-            </TouchableOpacity>
+            <View style={styles.bottomActionsRow}>
+              <TouchableOpacity
+                style={styles.saveDraftBtn}
+                disabled={submitting}
+                onPress={() => submit("draft")}
+              >
+                <Text style={styles.saveDraftText}>Save Draft</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.sendBroadcastBtn}
-              disabled={submitting}
-              onPress={() => submit("send")}
-            >
-              {submitting ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <>
-                  <Feather
-                    name="send"
-                    size={16}
-                    color="#FFFFFF"
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text style={styles.sendBroadcastText}>
-                    {deliverySchedule === "Schedule Later"
-                      ? "Schedule"
-                      : "Send Broadcast"}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={styles.sendBroadcastBtn}
+                disabled={submitting}
+                onPress={() => submit("send")}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <>
+                    <Feather
+                      name="send"
+                      size={16}
+                      color="#FFFFFF"
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.sendBroadcastText}>
+                      {deliverySchedule === "Schedule Later"
+                        ? "Schedule"
+                        : "Send Broadcast"}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+        </KeyboardAvoidingView>
         </SafeAreaView>
 
         <Modal
@@ -1167,7 +1174,7 @@ export default function BroadcastManagementScreen({ navigation }) {
           animationType="fade"
           onRequestClose={() => setIsGroupModalOpen(false)}
         >
-          <TouchableOpacity
+          <View
             style={styles.modalOverlay}
             activeOpacity={1}
             onPress={() => setIsGroupModalOpen(false)}
@@ -1204,7 +1211,7 @@ export default function BroadcastManagementScreen({ navigation }) {
                 </TouchableOpacity>
               ))}
             </View>
-          </TouchableOpacity>
+          </View>
         </Modal>
 
         <Modal
@@ -1213,7 +1220,11 @@ export default function BroadcastManagementScreen({ navigation }) {
           animationType="slide"
           onRequestClose={() => setIsMultiSelectModalOpen(false)}
         >
-          <TouchableOpacity
+          <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
+          <View
             style={styles.modalOverlay}
             activeOpacity={1}
             onPress={() => setIsMultiSelectModalOpen(false)}
@@ -1221,7 +1232,7 @@ export default function BroadcastManagementScreen({ navigation }) {
             <TouchableOpacity activeOpacity={1} style={styles.modalContentCard}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>
-                  Select {config.role === "Child" ? "Users" : "Therapists"}
+                  Select {config.role === "Child" ? "Users" : "Users"}
                 </Text>
                 <TouchableOpacity
                   onPress={() => setIsMultiSelectModalOpen(false)}
@@ -1289,7 +1300,8 @@ export default function BroadcastManagementScreen({ navigation }) {
                 <Text style={styles.confirmBtnText}>Done</Text>
               </TouchableOpacity>
             </TouchableOpacity>
-          </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
         </Modal>
       </Modal>
       <Modal
@@ -1298,7 +1310,11 @@ export default function BroadcastManagementScreen({ navigation }) {
         animationType="slide"
         onRequestClose={() => setIsBatchModalOpen(false)}
       >
-        <TouchableOpacity
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
+        <View
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setIsBatchModalOpen(false)}
@@ -1350,7 +1366,8 @@ export default function BroadcastManagementScreen({ navigation }) {
               <Text style={styles.confirmBtnText}>Done</Text>
             </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
+        </View>
+        </KeyboardAvoidingView>
       </Modal>
       <BroadcastDetailModal
         visible={isDetailOpen}

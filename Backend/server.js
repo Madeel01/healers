@@ -28,7 +28,12 @@ mongoose
   .then(() => {
     console.log("MongoDB Connected Successfully");
     // require("./jobs/cleanupPendingUploads")();
-    // require("./jobs/scheduledBroadcasts").start();
+    try {
+      require("./jobs/appointmentReminderJob").start();
+      require("./jobs/scheduledBroadcasts").start();
+    } catch (err) {
+      console.error("Scheduled broadcast startup error:", err);
+    }
   })
   .catch((err) => {
     console.error("MongoDB Connection Error:", err.message);

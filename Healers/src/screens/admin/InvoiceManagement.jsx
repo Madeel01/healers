@@ -1290,7 +1290,7 @@ export default function InvoiceManagementScreen({
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
         >
           <View style={styles.paymentModalContent}>
             <ScrollView

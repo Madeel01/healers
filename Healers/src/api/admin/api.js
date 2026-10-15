@@ -124,7 +124,7 @@ export const rejectLeaveRequest = (id, rejectionReason) =>
   apiClient.put(`/admin/leave-requests/${id}/reject`, { rejectionReason });
 export const markAllLeavesSeen = () =>
   apiClient.patch("/admin/leave-requests/mark-all-seen");
-export const getStaffOnLeaveToday = () => apiClient.get("/admin/leave-requests/on-leave-today");
+export const getStaffOnLeaveToday = (params) => apiClient.get("/admin/leave-requests/on-leave-today",{ params });
 
 ///////////////////// Feedback Request API's /////////////////////////////
 export const getFeedbackRequests = (params) => apiClient.get(`/admin/feedback/${params.status}`);

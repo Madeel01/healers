@@ -76,10 +76,11 @@ exports.sendNotifications = async ({
       body: message,
       data: {},
     };
-
-    sendBulkPushToUsers(recipientIds, payload).catch((err) =>
+    console.log("sending request");
+    const test = sendBulkPushToUsers(recipientIds, payload).catch((err) =>
       console.error("Failed to send bulk push notifications:", err)
     );
+    console.log("sending request after",test,"test");
   }
 
   return notification;

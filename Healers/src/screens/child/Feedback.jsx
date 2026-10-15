@@ -8,7 +8,9 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -1069,208 +1071,214 @@ export default function ChildFeedback({ navigation }) {
         animationType="slide"
         onRequestClose={() => setReplyModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.replyModal}>
-            <View
-              style={styles.modalHeader}
-            >
-              <Text
-                style={styles.modalTitle}
-              >
-                Feedback Replies
-              </Text>
+        <KeyboardAvoidingView
+                  style={{ flex: 1 }}
+                  behavior={Platform.OS === "ios" ? "padding" : "padding"}
+                >
 
-              <TouchableOpacity
-                onPress={() =>
-                  setReplyModalVisible(
-                    false,
-                  )}
-              >
-                <Feather
-                  name="x"
-                  size={22}
-                  color="#334155"
-                />
-              </TouchableOpacity>
-            </View>
-
-            {selectedFeedback && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.replyModal}>
               <View
-                style={styles.originalFeedback}
+                style={styles.modalHeader}
               >
                 <Text
-                  style={styles.originalFeedbackName}
+                  style={styles.modalTitle}
                 >
-                  {selectedFeedback.name}
+                  Feedback Replies
                 </Text>
 
-                <Text
-                  style={styles.originalFeedbackText}
+                <TouchableOpacity
+                  onPress={() =>
+                    setReplyModalVisible(
+                      false,
+                    )}
                 >
-                  {selectedFeedback.comment
-                    || "No message"}
-                </Text>
-
-                <Text
-                  style={styles.originalFeedbackText}
-                >
-                  Appt: {formatFeedbackDate(
-                    selectedFeedback.date,
-                  )}
-                  {selectedFeedback.startTime
-                      && selectedFeedback.startTime
-                        !== "--:--"
-                    ? `, ${
-                      formatTo12Hour(
-                        selectedFeedback.startTime,
-                      )
-                    }`
-                    : ""}
-                </Text>
-              </View>
-            )}
-
-            <ScrollView
-              style={styles.repliesList}
-              contentContainerStyle={{
-                paddingVertical: 10,
-              }}
-            >
-              {loadingReplies
-                ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={colors.primary}
+                  <Feather
+                    name="x"
+                    size={22}
+                    color="#334155"
                   />
-                )
-                : replies.length === 0
-                ? (
+                </TouchableOpacity>
+              </View>
+
+              {selectedFeedback && (
+                <View
+                  style={styles.originalFeedback}
+                >
                   <Text
-                    style={styles.noRepliesText}
+                    style={styles.originalFeedbackName}
                   >
-                    No replies yet.
+                    {selectedFeedback.name}
                   </Text>
-                )
-                : (
-                  replies.map((reply) => {
-                    const replyUserId = reply.repliedBy?._id
-                      || reply.repliedBy?.id
-                      || reply.repliedBy;
 
-                    const currentUserId = user?._id || user?.id;
+                  <Text
+                    style={styles.originalFeedbackText}
+                  >
+                    {selectedFeedback.comment
+                      || "No message"}
+                  </Text>
 
-                    const isMyReply = String(
-                      replyUserId,
-                    )
-                      === String(currentUserId);
+                  <Text
+                    style={styles.originalFeedbackText}
+                  >
+                    Appt: {formatFeedbackDate(
+                      selectedFeedback.date,
+                    )}
+                    {selectedFeedback.startTime
+                        && selectedFeedback.startTime
+                          !== "--:--"
+                      ? `, ${
+                        formatTo12Hour(
+                          selectedFeedback.startTime,
+                        )
+                      }`
+                      : ""}
+                  </Text>
+                </View>
+              )}
 
-                    return (
-                      <View
-                        key={reply._id}
-                        style={[
-                          styles.replyRow,
-                          isMyReply
-                            ? styles.myReplyRow
-                            : styles.otherReplyRow,
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.replyBubble,
-                            isMyReply
-                              ? styles.myReplyBubble
-                              : styles.otherReplyBubble,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.replySender,
-                              isMyReply
-                              && styles.myReplySenderText,
-                            ]}
-                          >
-                            {isMyReply
-                              ? "You"
-                              : reply.repliedBy
-                                ?.fullName
-                                || reply.repliedByRole}
-                          </Text>
-
-                          <Text
-                            style={[
-                              styles.replyMessage,
-                              isMyReply
-                              && styles.myReplyMessageText,
-                            ]}
-                          >
-                            {reply.message}
-                          </Text>
-
-                          <Text
-                            style={[
-                              styles.replyTime,
-                              isMyReply
-                              && styles.myReplyTimeText,
-                            ]}
-                          >
-                            {new Date(
-                              reply.createdAt,
-                            ).toLocaleTimeString(
-                              [],
-                              {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              },
-                            )}
-                          </Text>
-                        </View>
-                      </View>
-                    );
-                  })
-                )}
-            </ScrollView>
-
-            <View
-              style={styles.replyInputRow}
-            >
-              <TextInput
-                value={replyText}
-                onChangeText={setReplyText}
-                placeholder="Write a reply..."
-                placeholderTextColor="#94A3B8"
-                multiline
-                style={styles.replyInput}
-              />
-
-              <TouchableOpacity
-                disabled={sendingReply
-                  || !replyText.trim()}
-                onPress={handleSendReply}
-                style={[
-                  styles.sendReplyBtn,
-                  (sendingReply
-                    || !replyText.trim())
-                  && styles.sendReplyBtnDisabled,
-                ]}
+              <ScrollView
+                style={styles.repliesList}
+                contentContainerStyle={{
+                  paddingVertical: 10,
+                }}
               >
-                {sendingReply
+                {loadingReplies
                   ? (
                     <ActivityIndicator
                       size="small"
-                      color="#FFFFFF"
+                      color={colors.primary}
                     />
                   )
+                  : replies.length === 0
+                  ? (
+                    <Text
+                      style={styles.noRepliesText}
+                    >
+                      No replies yet.
+                    </Text>
+                  )
                   : (
-                    <Feather
-                      name="send"
-                      size={18}
-                      color="#FFFFFF"
-                    />
+                    replies.map((reply) => {
+                      const replyUserId = reply.repliedBy?._id
+                        || reply.repliedBy?.id
+                        || reply.repliedBy;
+
+                      const currentUserId = user?._id || user?.id;
+
+                      const isMyReply = String(
+                        replyUserId,
+                      )
+                        === String(currentUserId);
+
+                      return (
+                        <View
+                          key={reply._id}
+                          style={[
+                            styles.replyRow,
+                            isMyReply
+                              ? styles.myReplyRow
+                              : styles.otherReplyRow,
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.replyBubble,
+                              isMyReply
+                                ? styles.myReplyBubble
+                                : styles.otherReplyBubble,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.replySender,
+                                isMyReply
+                                && styles.myReplySenderText,
+                              ]}
+                            >
+                              {isMyReply
+                                ? "You"
+                                : reply.repliedBy
+                                  ?.fullName
+                                  || reply.repliedByRole}
+                            </Text>
+
+                            <Text
+                              style={[
+                                styles.replyMessage,
+                                isMyReply
+                                && styles.myReplyMessageText,
+                              ]}
+                            >
+                              {reply.message}
+                            </Text>
+
+                            <Text
+                              style={[
+                                styles.replyTime,
+                                isMyReply
+                                && styles.myReplyTimeText,
+                              ]}
+                            >
+                              {new Date(
+                                reply.createdAt,
+                              ).toLocaleTimeString(
+                                [],
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    })
                   )}
-              </TouchableOpacity>
+              </ScrollView>
+
+              <View
+                style={styles.replyInputRow}
+              >
+                <TextInput
+                  value={replyText}
+                  onChangeText={setReplyText}
+                  placeholder="Write a reply..."
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                  style={styles.replyInput}
+                />
+
+                <TouchableOpacity
+                  disabled={sendingReply
+                    || !replyText.trim()}
+                  onPress={handleSendReply}
+                  style={[
+                    styles.sendReplyBtn,
+                    (sendingReply
+                      || !replyText.trim())
+                    && styles.sendReplyBtnDisabled,
+                  ]}
+                >
+                  {sendingReply
+                    ? (
+                      <ActivityIndicator
+                        size="small"
+                        color="#FFFFFF"
+                      />
+                    )
+                    : (
+                      <Feather
+                        name="send"
+                        size={18}
+                        color="#FFFFFF"
+                      />
+                    )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+                </KeyboardAvoidingView>
       </Modal>
 
       <ChildBottomBar

@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   detailLabel: { fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 },
   detailValue: { fontSize: 14, color: '#0F172A', fontWeight: '600' },
-  actionsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, },
+  actionsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom:25, },
   editBtn: {
     flex: 1, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center',
     height: 44, borderRadius: 12, borderWidth: 1.5, borderColor: colors.primary,

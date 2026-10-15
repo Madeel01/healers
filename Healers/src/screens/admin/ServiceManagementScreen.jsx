@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -12,7 +14,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import Feather from "@expo/vector-icons/Feather";
 
 import BottomBar from "../../components/BottomBar";
@@ -27,13 +32,23 @@ import {
 import ColorPicker from "react-native-wheel-color-picker";
 
 const PRESETS = [
-  "#C2410C", "#991B1B", "#065F46", "#854D0E",
-  "#1D4ED8", "#6D28D9", "#9D174D", "#155E75",
+  "#C2410C",
+  "#991B1B",
+  "#065F46",
+  "#854D0E",
+  "#1D4ED8",
+  "#6D28D9",
+  "#9D174D",
+  "#155E75",
 ];
 
 const hexToRgb = (hex) => {
   let h = hex.replace("#", "");
-  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length === 3)
+    h = h
+      .split("")
+      .map((c) => c + c)
+      .join("");
   const n = parseInt(h, 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 };
@@ -43,11 +58,20 @@ const tint = (hex, amount = 0.85) => {
   const mix = (c) => Math.round(c + (255 - c) * amount);
   return (
     "#" +
-    [mix(r), mix(g), mix(b)].map((v) => v.toString(16).padStart(2, "0")).join("")
+    [mix(r), mix(g), mix(b)]
+      .map((v) => v.toString(16).padStart(2, "0"))
+      .join("")
   );
 };
 
 const emptyForm = { label: "", color: PRESETS[0] };
+const LIMIT = 10;
+
+const STATUS_FILTERS = [
+  { label: "All", value: "all" },
+  { label: "Active", value: "active" },
+  { label: "Inactive", value: "inactive" },
+];
 
 export default function ServiceManagementScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -64,25 +88,87 @@ export default function ServiceManagementScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [isColorOpen, setIsColorOpen] = useState(false);
   const [tempColor, setTempColor] = useState(PRESETS[0]);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [draftStatus, setDraftStatus] = useState("all");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const requestIdRef = useRef(0);
 
-  const fetchItems = useCallback(async (isRefresh = false) => {
+  const fetchItems = async ({ pageNum = 1, isRefresh = false } = {}) => {
+    const requestId = ++requestIdRef.current;
+    const isFirst = pageNum === 1;
+
+    if (isRefresh) setRefreshing(true);
+    else if (isFirst) setLoading(true);
+    else setLoadingMore(true);
+
     try {
-      isRefresh ? setRefreshing(true) : setLoading(true);
-      const res = await getServices({ includeInactive: true });
-      if (res.success) setItems(res.data || []);
+      const res = await getServices({
+        page: pageNum,
+        limit: LIMIT,
+        search: search.trim(),
+        status: statusFilter,
+      });
+      if (requestId !== requestIdRef.current) return;
+
+      if (res.success) {
+        const list = res.data || [];
+        setItems((prev) =>
+          isFirst
+            ? list
+            : [
+                ...prev,
+                ...list.filter((i) => !prev.some((p) => p.id === i.id)),
+              ],
+        );
+        setPage(pageNum);
+        setHasMore(Boolean(res.hasMore));
+      }
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       console.log("Fetch services error:", err);
       Alert.alert("Error", "Failed to load services.");
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+        setLoadingMore(false);
+      }
     }
-  }, []);
+  };
 
   useEffect(() => {
-    const unsub = navigation.addListener("focus", () => fetchItems());
+    const t = setTimeout(() => fetchItems({ pageNum: 1 }), 350);
+    return () => clearTimeout(t);
+  }, [search, statusFilter]);
+
+  useEffect(() => {
+    const unsub = navigation.addListener("focus", () =>
+      fetchItems({ pageNum: 1 }),
+    );
     return unsub;
-  }, [navigation, fetchItems]);
+  }, [navigation, search, statusFilter]);
+
+  const handleScroll = ({ nativeEvent }) => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    const nearBottom =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - 120;
+    if (nearBottom && hasMore && !loading && !loadingMore && !refreshing) {
+      fetchItems({ pageNum: page + 1 });
+    }
+  };
+
+  const openFilter = () => {
+    setDraftStatus(statusFilter);
+    setIsFilterOpen(true);
+  };
+  const applyFilter = () => {
+    setStatusFilter(draftStatus);
+    setIsFilterOpen(false);
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -114,24 +200,34 @@ export default function ServiceManagementScreen({ navigation }) {
 
       if (res.success) {
         setIsFormOpen(false);
-        fetchItems();
+        fetchItems({ pageNum: 1 });
       } else {
         Alert.alert("Error", res.message || "Something went wrong.");
       }
     } catch (err) {
-      Alert.alert("Error", err?.response?.data?.message || "Failed to save service.");
+      Alert.alert(
+        "Error",
+        err?.response?.data?.message || "Failed to save service.",
+      );
     } finally {
       setSaving(false);
     }
   };
 
   const handleToggleActive = async (item, value) => {
-    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, isActive: value } : i)));
+    setItems((prev) =>
+      prev.map((i) => (i.id === item.id ? { ...i, isActive: value } : i)),
+    );
     try {
       const res = await updateService(item.id, { isActive: value });
       if (!res.success) throw new Error(res.message);
+      if (statusFilter !== "all") {
+        setItems((prev) => prev.filter((i) => i.id !== item.id));
+      }
     } catch (err) {
-      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, isActive: !value } : i)));
+      setItems((prev) =>
+        prev.map((i) => (i.id === item.id ? { ...i, isActive: !value } : i)),
+      );
       Alert.alert("Error", "Failed to update status.");
     }
   };
@@ -152,7 +248,10 @@ export default function ServiceManagementScreen({ navigation }) {
             }
           } catch (err) {
             // 409 jab service use mein ho
-            Alert.alert("Cannot delete", err?.response?.data?.message || "Failed to delete.");
+            Alert.alert(
+              "Cannot delete",
+              err?.response?.data?.message || "Failed to delete.",
+            );
           }
         },
       },
@@ -167,63 +266,114 @@ export default function ServiceManagementScreen({ navigation }) {
         onToggleNotification={setIsNotificationOpen}
         headerTitle={"Services"}
       />
-
-      {loading ? (
-        <View style={styles.centerFill}>
-          <ActivityIndicator size="large" color={colors.primary} />
+      <View style={styles.searchRow}>
+        <View style={styles.searchBox}>
+          <Feather name="search" size={18} color="#94A3B8" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search services..."
+            placeholderTextColor="#94A3B8"
+            value={search}
+            onChangeText={setSearch}
+          />
         </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => fetchItems(true)}
-              colors={[colors.primary]}
-            />
-          }
-        >
-          {items.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Feather name="briefcase" size={32} color="#94A3B8" />
-              <Text style={styles.emptyText}>No services yet</Text>
-              <Text style={styles.emptySub}>Tap + to add your first service.</Text>
-            </View>
-          ) : (
-            items.map((item) => (
-              <View key={item.id} style={[styles.card, !item.isActive && { opacity: 0.55 }]}>
-                <View style={styles.cardTop}>
-                  <View style={[styles.badge, { backgroundColor: item.bg }]}>
-                    <Text style={[styles.badgeText, { color: item.color }]}>{item.label}</Text>
-                  </View>
-                  <View style={styles.actions}>
-                    <TouchableOpacity style={styles.iconBtn} onPress={() => openEdit(item)}>
-                      <Feather name="edit-2" size={16} color="#0B4A6F" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconBtn} onPress={() => handleDelete(item)}>
-                      <Feather name="trash-2" size={16} color="#EF4444" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
+        <TouchableOpacity style={styles.filterBtn} onPress={openFilter}>
+          <Feather name="sliders" size={20} color="#0B4A6F" />
+          {statusFilter !== "all" && <View style={styles.filterDot} />}
+        </TouchableOpacity>
+      </View>
 
-                <View style={styles.cardBottom}>
-                  <View style={styles.switchRow}>
-                    <Text style={styles.switchLabel}>{item.isActive ? "Active" : "Inactive"}</Text>
-                    <Switch
-                      value={item.isActive}
-                      onValueChange={(v) => handleToggleActive(item, v)}
-                      trackColor={{ true: colors.primary }}
-                    />
-                  </View>
-                </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        onScroll={handleScroll}
+        scrollEventThrottle={200}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchItems({ pageNum: 1, isRefresh: true })}
+            colors={[colors.primary]}
+          />
+        }
+      >
+        {loading && items.length === 0 && (
+          <ActivityIndicator
+            size="large"
+            color={colors.primary}
+            style={{ marginVertical: 40 }}
+          />
+        )}
+
+        {!loading && items.length === 0 && (
+          <View style={styles.emptyState}>
+            <Feather name="briefcase" size={32} color="#94A3B8" />
+            <Text style={styles.emptyText}>
+              {search || statusFilter !== "all"
+                ? "No services match"
+                : "No services yet"}
+            </Text>
+            <Text style={styles.emptySub}>
+              {search || statusFilter !== "all"
+                ? "Try a different search or filter."
+                : "Tap + to add your first service."}
+            </Text>
+          </View>
+        )}
+        {items.map((item) => (
+          <View
+            key={item.id}
+            style={[styles.card, !item.isActive && { opacity: 0.55 }]}
+          >
+            <View style={styles.cardTop}>
+              <View style={[styles.badge, { backgroundColor: item.bg }]}>
+                <Text style={[styles.badgeText, { color: item.color }]}>
+                  {item.label}
+                </Text>
               </View>
-            ))
-          )}
-        </ScrollView>
-      )}
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={styles.iconBtn}
+                  onPress={() => openEdit(item)}
+                >
+                  <Feather name="edit-2" size={16} color="#0B4A6F" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.iconBtn}
+                  onPress={() => handleDelete(item)}
+                >
+                  <Feather name="trash-2" size={16} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            </View>
 
-      <TouchableOpacity style={[styles.fab, { bottom: insets.bottom + 90 }]} onPress={openCreate}>
+            <View style={styles.cardBottom}>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>
+                  {item.isActive ? "Active" : "Inactive"}
+                </Text>
+                <Switch
+                  value={item.isActive}
+                  onValueChange={(v) => handleToggleActive(item, v)}
+                  trackColor={{ true: colors.primary }}
+                />
+              </View>
+            </View>
+          </View>
+        ))}
+        {loadingMore && (
+          <ActivityIndicator
+            size="small"
+            color={colors.primary}
+            style={{ marginVertical: 16 }}
+          />
+        )}
+      </ScrollView>
+      <TouchableOpacity
+        style={[styles.fab, { bottom: insets.bottom + 90 }]}
+        onPress={openCreate}
+      >
         <Feather name="plus" size={26} color="#FFFFFF" />
       </TouchableOpacity>
 
@@ -233,124 +383,219 @@ export default function ServiceManagementScreen({ navigation }) {
         animationType="slide"
         onRequestClose={() => setIsFormOpen(false)}
       >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
+          <View style={styles.overlay}>
+            <View style={styles.formCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  {editing ? "Edit Service" : "Add Service"}
+                </Text>
+                <TouchableOpacity onPress={() => setIsFormOpen(false)}>
+                  <Feather name="x" size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.fieldLabel}>Service Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Counselling"
+                placeholderTextColor="#94A3B8"
+                value={form.label}
+                onChangeText={(t) => setForm((p) => ({ ...p, label: t }))}
+              />
+
+              <Text style={styles.fieldLabel}>Color</Text>
+              <TouchableOpacity
+                style={styles.colorSelector}
+                onPress={() => {
+                  setTempColor(form.color);
+                  setIsColorOpen(true);
+                }}
+              >
+                <View
+                  style={[styles.colorDot, { backgroundColor: form.color }]}
+                />
+                <Text style={styles.colorHex}>{form.color.toUpperCase()}</Text>
+                <Feather name="chevron-right" size={18} color="#64748B" />
+              </TouchableOpacity>
+
+              <Text style={styles.fieldLabel}>Preview</Text>
+              <View
+                style={[
+                  styles.badge,
+                  {
+                    backgroundColor: tint(form.color),
+                    alignSelf: "flex-start",
+                  },
+                ]}
+              >
+                <Text style={[styles.badgeText, { color: form.color }]}>
+                  {form.label.trim() || "Service"}
+                </Text>
+              </View>
+
+              <View style={styles.bottomRow}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setIsFormOpen(false)}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.saveBtn}
+                  onPress={handleSave}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.saveText}>
+                      {editing ? "Update" : "Create"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+      <Modal
+        visible={isColorOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsColorOpen(false)}
+      >
         <View style={styles.overlay}>
           <View style={styles.formCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{editing ? "Edit Service" : "Add Service"}</Text>
-              <TouchableOpacity onPress={() => setIsFormOpen(false)}>
+              <Text style={styles.modalTitle}>Pick a Color</Text>
+              <TouchableOpacity onPress={() => setIsColorOpen(false)}>
                 <Feather name="x" size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.fieldLabel}>Service Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Counselling"
-              placeholderTextColor="#94A3B8"
-              value={form.label}
-              onChangeText={(t) => setForm((p) => ({ ...p, label: t }))}
-            />
+            <View style={styles.pickerWrap}>
+              <ColorPicker
+                color={tempColor}
+                onColorChangeComplete={(c) => setTempColor(c)}
+                thumbSize={28}
+                sliderSize={28}
+                noSnap
+                row={false}
+                swatches={false}
+              />
+            </View>
 
-            <Text style={styles.fieldLabel}>Color</Text>
-            <TouchableOpacity
-            style={styles.colorSelector}
-            onPress={() => {
-                setTempColor(form.color);
-                setIsColorOpen(true);
-            }}
+            <Text style={styles.fieldLabel}>Quick picks</Text>
+            <View style={styles.presetRow}>
+              {PRESETS.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  onPress={() => setTempColor(c)}
+                  style={[
+                    styles.presetDot,
+                    {
+                      backgroundColor: c,
+                      borderColor:
+                        tempColor.toLowerCase() === c.toLowerCase()
+                          ? "#0F172A"
+                          : "transparent",
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+
+            <View
+              style={[
+                styles.badge,
+                {
+                  backgroundColor: tint(tempColor),
+                  alignSelf: "flex-start",
+                  marginTop: 12,
+                },
+              ]}
             >
-            <View style={[styles.colorDot, { backgroundColor: form.color }]} />
-            <Text style={styles.colorHex}>{form.color.toUpperCase()}</Text>
-            <Feather name="chevron-right" size={18} color="#64748B" />
-            </TouchableOpacity>
-
-            <Text style={styles.fieldLabel}>Preview</Text>
-            <View style={[styles.badge, { backgroundColor: tint(form.color), alignSelf: "flex-start" }]}>
-                <Text style={[styles.badgeText, { color: form.color }]}>
-                    {form.label.trim() || "Service"}
-                </Text>
+              <Text style={[styles.badgeText, { color: tempColor }]}>
+                {form.label.trim() || "Service"}
+              </Text>
             </View>
 
             <View style={styles.bottomRow}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsFormOpen(false)}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setIsColorOpen(false)}
+              >
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
-                {saving ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.saveText}>{editing ? "Update" : "Create"}</Text>
-                )}
+              <TouchableOpacity
+                style={styles.saveBtn}
+                onPress={() => {
+                  setForm((p) => ({ ...p, color: tempColor }));
+                  setIsColorOpen(false);
+                }}
+              >
+                <Text style={styles.saveText}>Use Color</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
       <Modal
-    visible={isColorOpen}
-    transparent
-    animationType="fade"
-    onRequestClose={() => setIsColorOpen(false)}
-    >
-    <View style={styles.overlay}>
-        <View style={styles.formCard}>
-        <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Pick a Color</Text>
-            <TouchableOpacity onPress={() => setIsColorOpen(false)}>
-            <Feather name="x" size={20} color="#64748B" />
-            </TouchableOpacity>
-        </View>
+        visible={isFilterOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsFilterOpen(false)}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.formCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter</Text>
+              <TouchableOpacity onPress={() => setIsFilterOpen(false)}>
+                <Feather name="x" size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
 
-        <View style={styles.pickerWrap}>
-            <ColorPicker
-            color={tempColor}
-            onColorChangeComplete={(c) => setTempColor(c)}
-            thumbSize={28}
-            sliderSize={28}
-            noSnap
-            row={false}
-            swatches={false}
-            />
-        </View>
+            <Text style={styles.fieldLabel}>Status</Text>
+            <View style={styles.statusWrap}>
+              {STATUS_FILTERS.map((opt) => {
+                const on = draftStatus === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.statusChip, on && styles.statusChipOn]}
+                    onPress={() => setDraftStatus(opt.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.statusChipText,
+                        on && styles.statusChipTextOn,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
-        <Text style={styles.fieldLabel}>Quick picks</Text>
-        <View style={styles.presetRow}>
-            {PRESETS.map((c) => (
-            <TouchableOpacity
-                key={c}
-                onPress={() => setTempColor(c)}
-                style={[
-                styles.presetDot,
-                { backgroundColor: c, borderColor: tempColor.toLowerCase() === c.toLowerCase() ? "#0F172A" : "transparent" },
-                ]}
-            />
-            ))}
+            <View style={styles.bottomRow}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setDraftStatus("all")}
+              >
+                <Text style={styles.cancelText}>Reset</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={applyFilter}>
+                <Text style={styles.saveText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-
-        <View style={[styles.badge, { backgroundColor: tint(tempColor), alignSelf: "flex-start", marginTop: 12 }]}>
-            <Text style={[styles.badgeText, { color: tempColor }]}>
-            {form.label.trim() || "Service"}
-            </Text>
-        </View>
-
-        <View style={styles.bottomRow}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsColorOpen(false)}>
-            <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-            style={styles.saveBtn}
-            onPress={() => {
-                setForm((p) => ({ ...p, color: tempColor }));
-                setIsColorOpen(false);
-            }}
-            >
-            <Text style={styles.saveText}>Use Color</Text>
-            </TouchableOpacity>
-        </View>
-        </View>
-    </View>
-    </Modal>
-
+      </Modal>
       <BottomBar
         activeTab={""}
         setActiveTab={setActiveBottomTab}
@@ -365,7 +610,12 @@ const styles = StyleSheet.create({
   centerFill: { flex: 1, alignItems: "center", justifyContent: "center" },
   scrollContent: { padding: 16, paddingBottom: 120 },
   emptyState: { alignItems: "center", paddingVertical: 60, gap: 6 },
-  emptyText: { fontSize: 15, fontFamily: fonts.semiBold, color: "#334155", marginTop: 8 },
+  emptyText: {
+    fontSize: 15,
+    fontFamily: fonts.semiBold,
+    color: "#334155",
+    marginTop: 8,
+  },
   emptySub: { fontSize: 12, fontFamily: fonts.regular, color: "#94A3B8" },
 
   card: {
@@ -379,7 +629,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 8,
   },
-  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  cardTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   cardBottom: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -462,7 +716,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  cancelText: { fontSize: 16, fontFamily: fonts.semiBold, color: colors.primary },
+  cancelText: {
+    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    color: colors.primary,
+  },
   saveBtn: {
     flex: 1.3,
     height: 48,
@@ -480,10 +738,68 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 48,
     gap: 10,
-    },
-    colorDot: { width: 22, height: 22, borderRadius: 11 },
-    colorHex: { flex: 1, fontSize: 15, fontFamily: fonts.regular, color: "#0F172A" },
-    pickerWrap: { height: 280, marginBottom: 8 },
-    presetRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-    presetDot: { width: 30, height: 30, borderRadius: 15, borderWidth: 2 },
+  },
+  colorDot: { width: 22, height: 22, borderRadius: 11 },
+  colorHex: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: fonts.regular,
+    color: "#0F172A",
+  },
+  pickerWrap: { height: 280, marginBottom: 8 },
+  presetRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  presetDot: { width: 30, height: 30, borderRadius: 15, borderWidth: 2 },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    height: 48,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    backgroundColor: "#FFFFFF",
+  },
+  searchInput: { flex: 1, fontSize: 15, color: "#0F172A" },
+  filterBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterDot: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "#EF4444",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+  },
+  statusWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
+  statusChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  statusChipOn: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
+  statusChipText: { fontSize: 13, fontWeight: "600", color: "#475569" },
+  statusChipTextOn: { color: "#FFFFFF" },
 });
