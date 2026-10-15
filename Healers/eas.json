@@ -1,4 +1,3 @@
-
 {
   "cli": {
     "version": ">= 22.0.0",
@@ -10,6 +9,9 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
       }
     },
     "preview": {
