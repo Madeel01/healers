@@ -282,7 +282,7 @@ export default function AssignedChildrenScreen({ navigation }) {
 
           <View style={styles.badgesRow}>
             <View style={styles.ageBadge}>
-              <Text style={styles.ageBadgeText}>Age {activeChild?.age || "8"}</Text>
+              <Text style={styles.ageBadgeText}>Age {activeChild?.age || "-"}</Text>
             </View>
             <View style={styles.therapistBadge}>
               <Text style={styles.therapistBadgeText}>Therapist : {user?.fullName || user?.name || "Dr Sarah"}</Text>
