@@ -89,8 +89,21 @@ const groupByDate = (list) => {
   return out;
 };
 const today = dateToKey(new Date());
-const isPastSession = (s) => s.date < today;
-const isEditableSession = (s) => s.date >= today;
+const toMin = (t) => {
+  const [h, m] = String(t || "0:0").split(":").map(Number);
+  return h * 60 + m;
+};
+
+const nowMinutes = () => {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
+};
+
+const isPastSession = (s) => {
+  const todayKey = dateToKey(new Date());
+  return s.date < todayKey || (s.date === todayKey && toMin(s.endTime) <= nowMinutes());
+};
+const isEditableSession = (s) => !isPastSession(s);
 const isBatchEnded = (batch) => {
   if (!batch?.dateTo) return false;
   return batch.dateTo.slice(0, 10) < today;
@@ -239,13 +252,8 @@ export default function BatchScheduleScreen({ navigation, route }) {
   );
 
   const upcomingAll = useMemo(
-    () =>
-      sessions.filter(
-        (s) =>
-          s.date >= today &&
-          s.status !== "cancelled"
-      ),
-    [sessions, today]
+    () => sessions.filter((s) => !isPastSession(s) && s.status !== "cancelled"),
+    [sessions, tick],
   );
 
   const timetable = useMemo(() => {
@@ -266,9 +274,14 @@ export default function BatchScheduleScreen({ navigation, route }) {
   const filtered = therapistFilter
     ? sessions.filter((s) => s.therapistId === therapistFilter)
     : sessions;
-  const upcoming = filtered.filter((s) => s.date >= today);
-  const past = filtered.filter((s) => s.date < today).reverse();
+  const upcoming = filtered.filter((s) => !isPastSession(s));
+  const past = filtered.filter((s) => isPastSession(s)).reverse();
+  const [tick, setTick] = useState(0);
 
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
   const relLabel = (key) => {
     if (key === today) return "Today";
     const t = new Date();

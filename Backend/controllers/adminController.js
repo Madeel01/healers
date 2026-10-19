@@ -417,6 +417,7 @@ const analyzePlan = async (batch, body) => {
 
   const st = await loadScheduleSettings();
   const today = todayKey(st.tz);
+  const nowMin = clockMinutes(st.tz);
   const { from, to } = planRange(batch, today);
 
   if (from > to) {
@@ -470,7 +471,7 @@ const analyzePlan = async (batch, body) => {
 
       for (const slot of p.slots) {
         if (slot.day !== day) continue;
-
+        if (date === today && toMin(slot.startTime) <= nowMin) continue;
         all.push({
           therapistId,
           therapistName: names.get(therapistId) || "",
@@ -794,6 +795,11 @@ const freeSlotsForDate = ({ batch, therapistId, date, minutes }) =>
     minDate: dateKeyOf(batch.dateFrom),
     maxDate: dateKeyOf(batch.dateTo),
   });
+  const ensureTherapistChildren = (assignment, childIds) =>
+    TherapistAssignment.updateOne(
+      { therapistId: assignment.therapistId, specialty: assignment.speciality },
+      { $addToSet: { childIds: { $each: childIds } } },
+    );
 const loadBatchAndAssignment = async (batchId, assignmentId) => {
   if (!mongoose.isValidObjectId(batchId) || !mongoose.isValidObjectId(assignmentId)) {
     return { status: 400, message: "Invalid batchId or assignmentId." };
@@ -5383,6 +5389,14 @@ exports.saveBatchSchedule = async (req, res) => {
         },
       },
     );
+    await Promise.all(
+      r.plans.map((p) =>
+        TherapistAssignment.updateOne(
+          { therapistId: p.therapistId, specialty: p.speciality },
+          { $addToSet: { childIds: { $each: r.children } } },
+        ),
+      ),
+    );
 
     return res.status(201).json({
       success: true,
@@ -5468,7 +5482,7 @@ exports.getBatchEligibleChildren = async (req, res) => {
 exports.updateBatchChildren = async (req, res) => {
   try {
     const batch = await Batch.findById(req.params.batchId)
-      .select("childrenIds maxChild dateTo")
+      .select("childrenIds therapistIds maxChild dateTo")
       .lean();
 
     if (!batch) {
@@ -5477,7 +5491,7 @@ exports.updateBatchChildren = async (req, res) => {
         message: "Batch not found.",
       });
     }
-
+    
     const normalizeIds = (value) => [
       ...new Set(
         (Array.isArray(value) ? value : [])
@@ -5485,7 +5499,15 @@ exports.updateBatchChildren = async (req, res) => {
           .map(String),
       ),
     ];
+    const st = await loadScheduleSettings();
+        const today = todayKey(st.tz);
 
+        const nowTime = new Intl.DateTimeFormat("en-GB", {
+          timeZone: st.tz,
+          hour: "2-digit",
+          minute: "2-digit",
+          hourCycle: "h23",
+        }).format(new Date());
     const remove = normalizeIds(req.body.removeChildIds);
     const add = normalizeIds(req.body.addChildIds);
 
@@ -5541,7 +5563,114 @@ exports.updateBatchChildren = async (req, res) => {
         },
       },
     );
+    const therapistIds = batch.therapistIds || [];
 
+    if (therapistIds.length > 0) {
+      const therapistFilter = {
+        therapistId: { $in: therapistIds },
+      };
+
+      if (actualAdd.length > 0) {
+        await TherapistAssignment.updateMany(
+          therapistFilter,
+          {
+            $addToSet: {
+              childIds: { $each: actualAdd },
+            },
+          }
+        );
+      }
+
+      if (actualRemove.length > 0) {
+
+        const removeFromTherapist = [];
+        const keepInTherapist = [];
+
+        for (const childId of actualRemove) {
+          const childObjectId =
+            new mongoose.Types.ObjectId(childId);
+
+          const schedules = await Scheduling.find({
+            "appointments.children.childId": childObjectId,
+          })
+            .select("appointments")
+            .lean();
+
+          let hasPastAppointment = false;
+          let hasFutureCustomAppointment = false;
+
+          for (const schedule of schedules) {
+            for (const ap of schedule.appointments || []) {
+              const hasChild = (ap.children || []).some(
+                (c) => String(c.childId) === childId
+              );
+
+              if (!hasChild) continue;
+
+              const appointmentDate = dateKeyOf(ap.date);
+
+              if (
+                appointmentDate < today ||
+                (
+                  appointmentDate === today &&
+                  ap.startTime < nowTime
+                )
+              ) {
+                hasPastAppointment = true;
+                break;
+              }
+
+              if (
+                appointmentDate > today ||
+                (
+                  appointmentDate === today &&
+                  ap.startTime >= nowTime
+                )
+              ) {
+                if (ap.type === "custom") {
+                  hasFutureCustomAppointment = true;
+                }
+              }
+            }
+
+            if (hasPastAppointment) break;
+          }
+
+          if (
+            hasPastAppointment ||
+            hasFutureCustomAppointment
+          ) {
+            keepInTherapist.push({
+              childId,
+              reason: hasPastAppointment
+                ? "Child has a past appointment."
+                : "Child has a future custom appointment.",
+            });
+          } else {
+            removeFromTherapist.push(childObjectId);
+          }
+        }
+
+        if (removeFromTherapist.length > 0) {
+          await TherapistAssignment.updateMany(
+            therapistFilter,
+            {
+              $pull: {
+                childIds: {
+                  $in: removeFromTherapist,
+                },
+              },
+            }
+          );
+        }
+
+        console.log("Removed from therapist assignments:",
+          removeFromTherapist.map(String));
+
+        console.log("Kept in therapist assignments:",
+          keepInTherapist);
+      }
+    }
     const assignments = await BatchAssignment.find({
       batchId: batch._id,
     })
@@ -5570,56 +5699,87 @@ exports.updateBatchChildren = async (req, res) => {
       },
     );
 
-    const st = await loadScheduleSettings();
-
-    const today = todayKey(st.tz);
     const batchEnd = dateKeyOf(batch.dateTo);
 
     if (actualRemove.length) {
-      await Scheduling.updateMany(
-        {
-          appointments: {
-            $elemMatch: {
-              type: "batch",
-              batchId: batch._id,
-              date: {
-                $gte: utcMidnight(today),
-                $lte: utcMidnight(batchEnd),
+      const schedules = await Scheduling.find({
+        appointments: {
+          $elemMatch: {
+            type: "batch",
+            batchId: batch._id,
+            date: {
+              $gte: utcMidnight(today),
+              $lte: utcMidnight(batchEnd),
+            },
+            children: {
+              $elemMatch: {
+                childId: {
+                  $in: actualRemove.map(
+                    (id) => new mongoose.Types.ObjectId(id)
+                  ),
+                },
+                attendance_status: "Pending",
               },
-              children: {
-                $elemMatch: {
-                  childId: {
-                    $in: actualRemove,
+            },
+          },
+        },
+      }).select("appointments");
+
+      const ops = [];
+
+      for (const schedule of schedules) {
+        for (const ap of schedule.appointments) {
+          if (
+            ap.type !== "batch" ||
+            String(ap.batchId) !== String(batch._id)
+          ) {
+            continue;
+          }
+
+          const appointmentDate = dateKeyOf(ap.date);
+
+          if (appointmentDate < today) continue;
+
+          if (appointmentDate > today && appointmentDate > batchEnd) {
+            continue;
+          }
+
+          if (
+            appointmentDate === today &&
+            toMin(ap.endTime) <= toMin(nowTime)
+          ) {
+            continue;
+          }
+
+          ops.push({
+            updateOne: {
+              filter: {
+                _id: schedule._id,
+                "appointments._id": ap._id,
+              },
+              update: {
+                $pull: {
+                  "appointments.$.children": {
+                    childId: {
+                      $in: actualRemove.map(
+                        (id) => new mongoose.Types.ObjectId(id)
+                      ),
+                    },
+                    attendance_status: "Pending",
                   },
-                  attendance_status: "Pending",
                 },
               },
             },
-          },
-        },
-        {
-          $pull: {
-            "appointments.$[appointment].children": {
-              childId: {
-                $in: actualRemove,
-              },
-              attendance_status: "Pending",
-            },
-          },
-        },
-        {
-          arrayFilters: [
-            {
-              "appointment.type": "batch",
-              "appointment.batchId": batch._id,
-              "appointment.date": {
-                $gte: utcMidnight(today),
-                $lte: utcMidnight(batchEnd),
-              },
-            },
-          ],
-        },
-      );
+          });
+        }
+      }
+
+      for (let i = 0; i < ops.length; i += 500) {
+        await Scheduling.bulkWrite(
+          ops.slice(i, i + 500),
+          { ordered: false }
+        );
+      }
     }
 
     if (!actualAdd.length) {
@@ -5663,10 +5823,19 @@ exports.updateBatchChildren = async (req, res) => {
       "appointments.date": { $gte: utcMidnight(today) },
     });
 
+    const eligibleAps = upcomingAps.filter((ap) => {
+      const appointmentDate = dateKeyOf(ap.date);
+
+      if (appointmentDate > today) return true;
+      if (appointmentDate < today) return false;
+
+      return toMin(ap.endTime) > toMin(nowTime);
+    });
+
     const skipped = [];
     const ops = [];
 
-    for (const ap of upcomingAps) {
+    for (const ap of eligibleAps) {
       const date = dateKeyOf(ap.date);
       const already = new Set((ap.children || []).map((c) => String(c.childId)));
       const toAdd = [];
@@ -5732,82 +5901,73 @@ exports.removeBatchAssignment = async (req, res) => {
   try {
     const { batchId, assignmentId } = req.params;
 
-    if (
-      !mongoose.isValidObjectId(batchId)
-      || !mongoose.isValidObjectId(assignmentId)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid batchId or assignmentId.",
-      });
+    if (!mongoose.isValidObjectId(batchId) || !mongoose.isValidObjectId(assignmentId)) {
+      return res.status(400).json({ success: false, message: "Invalid batchId or assignmentId." });
     }
 
-    const assignment = await BatchAssignment.findOne({
-      _id: assignmentId,
-      batchId,
-    })
-      .select("_id therapistId batchId")
+    const assignment = await BatchAssignment.findOne({ _id: assignmentId, batchId })
+      .select("_id therapistId batchId speciality childIds")
       .lean();
 
     if (!assignment) {
-      return res.status(404).json({
-        success: false,
-        message: "Batch assignment not found.",
-      });
+      return res.status(404).json({ success: false, message: "Batch assignment not found." });
     }
 
     const st = await loadScheduleSettings();
     const today = todayKey(st.tz);
-
+    const nowTime = new Intl.DateTimeFormat("en-GB", {
+      timeZone: st.tz,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(new Date());
+    const nowMin = toMin(nowTime);
     const schedules = await Scheduling.find({
       "appointments.batchAssignmentId": assignment._id,
     })
-      .select("_id appointments._id appointments.date appointments.batchAssignmentId")
+      .select("_id appointments._id appointments.date appointments.endTime appointments.batchAssignmentId")
       .lean();
 
     const futureAppointmentIds = [];
+    const scheduleIds = [];
 
     for (const schedule of schedules) {
-      for (const appointment of schedule.appointments || []) {
-        if (
-          String(appointment.batchAssignmentId)
-            !== String(assignment._id)
-        ) {
-          continue;
-        }
+      let touched = false;
 
-        if (dateKeyOf(appointment.date) < today) {
-          continue;
-        }
+      for (const ap of schedule.appointments || []) {
+        if (String(ap.batchAssignmentId) !== String(assignment._id)) continue;
 
-        futureAppointmentIds.push(
-          appointment._id,
-        );
+        const date = dateKeyOf(ap.date);
+        const isPast =
+          date < today || (date === today && toMin(ap.endTime) <= nowMin);
+        if (isPast) continue; 
+
+        futureAppointmentIds.push(ap._id);
+        touched = true;
       }
+
+      if (touched) scheduleIds.push(schedule._id);
     }
+
     let removedAppointments = 0;
 
     if (futureAppointmentIds.length) {
       removedAppointments = futureAppointmentIds.length;
 
       await Scheduling.updateMany(
-        {},
-        {
-          $pull: {
-            appointments: {
-              _id: {
-                $in: futureAppointmentIds,
-              },
-            },
-          },
-        },
+        { _id: { $in: scheduleIds } },
+        { $pull: { appointments: { _id: { $in: futureAppointmentIds } } } },
       );
       await Scheduling.deleteMany({
+        _id: { $in: scheduleIds },
         appointments: { $size: 0 },
       });
     }
 
-    const hasPast = await Scheduling.exists({ "appointments.batchAssignmentId": assignment._id });
+    const hasPast = await Scheduling.exists({
+      "appointments.batchAssignmentId": assignment._id,
+    });
+
     if (hasPast) {
       return res.json({
         success: true,
@@ -5815,6 +5975,7 @@ exports.removeBatchAssignment = async (req, res) => {
         data: { removedAppointments },
       });
     }
+
     await BatchAssignment.deleteOne({ _id: assignment._id });
 
     const therapistStillAssigned = await BatchAssignment.exists({
@@ -5825,37 +5986,64 @@ exports.removeBatchAssignment = async (req, res) => {
     if (!therapistStillAssigned) {
       await Batch.updateOne(
         { _id: batchId },
+        { $pull: { therapistIds: assignment.therapistId } },
+      );
+    }
+
+    const childIds = assignment.childIds || [];
+    const keptChildren = [];
+    let removedChildren = 0;
+
+    if (childIds.length) {
+      const busy = await Scheduling.aggregate([
         {
-          $pull: {
-            therapistIds: assignment.therapistId,
+          $match: {
+            therapistId: assignment.therapistId,
+            "appointments.children.childId": { $in: childIds },
           },
         },
-      );
+        { $unwind: "$appointments" },
+        { $match: { "appointments.children.childId": { $in: childIds } } },
+        { $unwind: "$appointments.children" },
+        { $match: { "appointments.children.childId": { $in: childIds } } },
+        { $group: { _id: "$appointments.children.childId" } },
+      ]);
+
+      const busySet = new Set(busy.map((b) => String(b._id)));
+      const removable = childIds.filter((id) => !busySet.has(String(id)));
+
+      for (const id of childIds) {
+        if (busySet.has(String(id))) {
+          keptChildren.push({
+            childId: String(id),
+            reason: "Child has appointments with this therapist.",
+          });
+        }
+      }
+
+      if (removable.length) {
+        await TherapistAssignment.updateOne(
+          { therapistId: assignment.therapistId, specialty: assignment.speciality },
+          { $pull: { childIds: { $in: removable } } },
+        );
+        removedChildren = removable.length;
+      }
     }
 
     return res.json({
       success: true,
       message: "Batch assignment removed.",
       data: {
-        assignmentId: String(
-          assignment._id,
-        ),
-        therapistId: String(
-          assignment.therapistId,
-        ),
+        assignmentId: String(assignment._id),
+        therapistId: String(assignment.therapistId),
         removedAppointments,
+        removedChildren,
+        keptChildren,
       },
     });
   } catch (error) {
-    console.error(
-      "removeBatchAssignment:",
-      error,
-    );
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to remove batch assignment.",
-    });
+    console.error("removeBatchAssignment:", error);
+    return res.status(500).json({ success: false, message: "Failed to remove batch assignment." });
   }
 };
 exports.getBatchScheduleData = async (req, res) => {
@@ -5983,7 +6171,7 @@ exports.createAdditionalSession = async (req, res) => {
       sessionType: "additional",
       childIds: batch.childrenIds || [],
     });
-
+    
     return res.status(201).json({
       success: true,
       message: "Additional class created.",
@@ -6380,6 +6568,14 @@ exports.createChildCustomAppointment = async (req, res) => {
       },
       { upsert: true },
     );
+    await TherapistAssignment.updateMany(
+      { therapistId: new mongoose.Types.ObjectId(therapistId) },
+      {
+        $addToSet: {
+          childIds: new mongoose.Types.ObjectId(childId),
+        },
+      }
+    );
 
     return res.status(201).json({
       success: true,
@@ -6431,6 +6627,24 @@ exports.deleteChildCustomAppointment = async (req, res) => {
     }
 
     await doc.save();
+    const otherAppointment = await Scheduling.exists({
+      therapistId: doc.therapistId,
+      "appointments.children.childId": new mongoose.Types.ObjectId(childId),
+    });
+    const otherBatchAssignment = await BatchAssignment.exists({
+      therapistId: doc.therapistId,
+      childIds: new mongoose.Types.ObjectId(childId),
+    });
+    if (!otherAppointment && !otherBatchAssignment) {
+      await TherapistAssignment.updateMany(
+        { therapistId: doc.therapistId },
+        {
+          $pull: {
+            childIds: new mongoose.Types.ObjectId(childId),
+          },
+        }
+      );
+    }
 
     return res.json({ success: true, message: "Appointment cancelled." });
   } catch (error) {
