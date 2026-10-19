@@ -196,6 +196,8 @@ export default function AssignedChildrenScreen({ navigation }) {
 
     return `${formattedDate}, ${timeString}`;
   };
+
+  console.log("rr",programs)
   return (
     <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
       <TopBar navigation={navigation} headerTitle={"Assigned Children"} />

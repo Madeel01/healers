@@ -24,6 +24,12 @@ export const getChildPrograms = async (childId, therapistId) => {
   });
   return response.data;
 };
+export const getChildProgramSpeciality = async (childId, therapistId) => {
+  const response = await apiClient.get(`/therapist/get_child_programs/speciality/${childId}`, {
+    params: { therapistId },
+  });
+  return response.data;
+};
 
 export const AddPrograms = async (payload) => {
   const response = await apiClient.post("/therapist/add_programs", payload);

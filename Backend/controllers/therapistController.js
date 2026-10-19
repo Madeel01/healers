@@ -265,7 +265,7 @@ exports.getTherapistUser = async (req, res) => {
 };
 
 
-exports.getChildPrograms = async (req, res) => {
+exports.getChildProgramsSpeciality = async (req, res) => {
   try {
     const therapistId =
       req.query.therapistId ||
@@ -462,35 +462,35 @@ exports.getChildPrograms = async (req, res) => {
 };
 
 
-// exports.getChildPrograms = async (req, res) => {
-//   try {
-//     const { childId } = req.params;
-//     const therapistId = req.query.therapistId || req.user?._id || req.user?.id;
+exports.getChildPrograms = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const therapistId = req.query.therapistId || req.user?._id || req.user?.id;
 
-//     if (!childId || !therapistId) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Both childId and therapistId are required.",
-//       });
-//     }
+    if (!childId || !therapistId) {
+      return res.status(400).json({
+        success: false,
+        message: "Both childId and therapistId are required.",
+      });
+    }
 
-//     const programs = await Program.find({
-//       userId: childId,
-//       therapistId: therapistId,
-//     }).sort({ createdAt: -1 });
+    const programs = await Program.find({
+      userId: childId,
+      therapistId: therapistId,
+    }).sort({ createdAt: -1 });
 
-//     return res.status(200).json({
-//       success: true,
-//       count: programs.length,
-//       data: programs,
-//     });
-//   } catch (error) {
-//     return res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-//   }
-// };
+    return res.status(200).json({
+      success: true,
+      count: programs.length,
+      data: programs,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 exports.AddPrograms = async (req, res) => {
   try {
