@@ -35,6 +35,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import {
   createChild,
+  createPackage,
   getAllPackages,
   getParents,
   updateChild,
@@ -64,7 +65,7 @@ const ACTIVE_OPTIONS = [
 const DOCUMENTS = [
   { key: "cnicFront", label: "CNIC Front", hint: "Parent CNIC, front side" },
   { key: "cnicBack", label: "CNIC Back", hint: "Parent CNIC, back side" },
-  { key: "form", label: "Form", hint: "Admission form" },
+  { key: "form", label: "Intake Form", hint: "Intake form" },
   { key: "birthCertificate", label: "B.C", hint: "Birth certificate" },
   { key: "slc", label: "SLC", hint: "School leaving certificate" },
 ];
@@ -104,7 +105,7 @@ const buildInitialForm = (child) => ({
   name: child?.name || "",
   fatherCnic: child?.fatherCnic?.replace(/\D/g, "") || "",
   fatherName: child?.fatherName || "",
-  dateOfBirth: fromYMD(child?.dateOfBirth),
+  dateOfBirth: child?.dateOfBirth ? fromYMD(child?.dateOfBirth) : "",
   gender: child ? child.gender || "" : "Male",
   diagnosis: child?.diagnosis || "",
   address: child?.address || "",
@@ -201,6 +202,12 @@ function PackagePickerModal({ visible, selectedId, onClose, onSelect }) {
   const requestIdRef = useRef(0);
   const loadingMoreRef = useRef(false);
 
+  // create-new-package state
+  const [mode, setMode] = useState("list"); // "list" | "create"
+  const [newName, setNewName] = useState("");
+  const [newRate, setNewRate] = useState("");
+  const [creating, setCreating] = useState(false);
+
   const fetchResults = async (pageNum, term) => {
     const requestId = ++requestIdRef.current;
     const isFirst = pageNum === 1;
@@ -246,91 +253,205 @@ function PackagePickerModal({ visible, selectedId, onClose, onSelect }) {
       setSearch("");
       setResults([]);
       setHasMore(true);
+      setMode("list");
+      setNewName("");
+      setNewRate("");
     }
   }, [visible]);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || mode !== "list") return;
     const t = setTimeout(() => fetchResults(1, search), 300);
     return () => clearTimeout(t);
-  }, [search, visible]);
+  }, [search, visible, mode]);
 
   const onEndReached = () => {
     if (loading || loadingMoreRef.current || !hasMore) return;
     fetchResults(page + 1, search);
   };
 
+  const handleCreate = async () => {
+    if (creating) return;
+
+    const price = Number(newRate);
+    if (!newName.trim()) {
+      Alert.alert("Validation", "Package name is required.");
+      return;
+    }
+    if (!newRate.trim() || !Number.isFinite(price) || price <= 0) {
+      Alert.alert("Validation", "Please enter a valid monthly rate.");
+      return;
+    }
+
+    try {
+      setCreating(true);
+      const res = await createPackage({
+        name: newName.trim(),
+        type: "per-month",
+        price,
+      });
+
+      if (!res?.success) {
+        Alert.alert("Error", res?.message || "Failed to create package.");
+        return;
+      }
+
+      const created = res.data;
+      const createdId = created?._id || created?.id;
+
+      if (createdId) {
+        // auto-select the new package and close the picker
+        onSelect({
+          _id: createdId,
+          name: created?.name ?? newName.trim(),
+          price: created?.price ?? price,
+        });
+      } else {
+        // backend didn't return the doc: go back to the list and reload it
+        setMode("list");
+        setSearch("");
+        fetchResults(1, "");
+      }
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message || "Failed to create package.",
+      );
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const isCreate = mode === "create";
+
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={isCreate ? () => setMode("list") : onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.pickerContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Package</Text>
+            {isCreate && (
+              <TouchableOpacity onPress={() => setMode("list")} style={{ marginRight: 10 }}>
+                <Feather name="arrow-left" size={22} color="#64748B" />
+              </TouchableOpacity>
+            )}
+            <Text style={[styles.modalTitle, { flex: 1 }]}>
+              {isCreate ? "New Package" : "Select Package"}
+            </Text>
             <TouchableOpacity onPress={onClose}>
               <Feather name="x" size={22} color="#64748B" />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.pickerSearchBox}>
-            <Feather name="search" size={18} color="#94A3B8" />
-            <TextInput
-              style={styles.pickerSearchInput}
-              placeholder="Search packages..."
-              placeholderTextColor="#94A3B8"
-              value={search}
-              onChangeText={setSearch}
-            />
-          </View>
+          {isCreate ? (
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <Text style={styles.fieldLabelFirst}>Package Name</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g., Behavioral Therapy Basic"
+                placeholderTextColor="#94A3B8"
+                value={newName}
+                onChangeText={setNewName}
+              />
 
-          {loading ? (
-            <ActivityIndicator
-              size="small"
-              color={colors.primary}
-              style={{ marginVertical: 30 }}
-            />
+              <Text style={styles.fieldLabel}>Monthly Rate (PKR)</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g., 15000"
+                placeholderTextColor="#94A3B8"
+                keyboardType="numeric"
+                value={newRate}
+                onChangeText={(t) => setNewRate(t.replace(/[^0-9.]/g, ""))}
+              />
+
+              <TouchableOpacity
+                style={[styles.primaryBtn, { flex: 0, marginTop: 20 }, creating && { opacity: 0.6 }]}
+                onPress={handleCreate}
+                disabled={creating}
+                activeOpacity={0.85}
+              >
+                {creating ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.primaryBtnText}>Create & Select</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
           ) : (
-            <FlatList
-              data={results}
-              keyExtractor={(item) => String(item._id)}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              onEndReached={onEndReached}
-              onEndReachedThreshold={0.3}
-              ListEmptyComponent={
-                <Text style={styles.pickerEmpty}>
-                  {search ? "No packages match your search." : "No packages created yet."}
-                </Text>
-              }
-              ListFooterComponent={
-                loadingMore ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={colors.primary}
-                    style={{ marginVertical: 12 }}
-                  />
-                ) : null
-              }
-              renderItem={({ item }) => {
-                const on = selectedId === item._id;
-                return (
-                  <TouchableOpacity
-                    style={[styles.packageOption, on && styles.packageOptionOn]}
-                    activeOpacity={0.8}
-                    onPress={() => onSelect(item)}
-                  >
-                    <View style={[styles.radio, on && styles.radioOn]}>
-                      {on && <View style={styles.radioDot} />}
-                    </View>
-                    <Text style={styles.packageOptionName} numberOfLines={1}>
-                      {item.name}
+            <>
+              <View style={styles.pickerSearchBox}>
+                <Feather name="search" size={18} color="#94A3B8" />
+                <TextInput
+                  style={styles.pickerSearchInput}
+                  placeholder="Search packages..."
+                  placeholderTextColor="#94A3B8"
+                  value={search}
+                  onChangeText={setSearch}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.createPackageRow}
+                activeOpacity={0.8}
+                onPress={() => {
+                  setNewName(search.trim()); // prefill with what they searched
+                  setMode("create");
+                }}
+              >
+                <Feather name="plus-circle" size={18} color={colors.primary} />
+                <Text style={styles.createPackageText}>Create new package</Text>
+              </TouchableOpacity>
+
+              {loading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={colors.primary}
+                  style={{ marginVertical: 30 }}
+                />
+              ) : (
+                <FlatList
+                  data={results}
+                  keyExtractor={(item) => String(item._id)}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                  onEndReached={onEndReached}
+                  onEndReachedThreshold={0.3}
+                  ListEmptyComponent={
+                    <Text style={styles.pickerEmpty}>
+                      {search ? "No packages match your search." : "No packages created yet."}
                     </Text>
-                    <Text style={styles.packageOptionPrice}>
-                      PKR {Number(item.price || 0).toLocaleString()}/mo
-                    </Text>
-                  </TouchableOpacity>
-                );
-              }}
-            />
+                  }
+                  ListFooterComponent={
+                    loadingMore ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={colors.primary}
+                        style={{ marginVertical: 12 }}
+                      />
+                    ) : null
+                  }
+                  renderItem={({ item }) => {
+                    const on = selectedId === item._id;
+                    return (
+                      <TouchableOpacity
+                        style={[styles.packageOption, on && styles.packageOptionOn]}
+                        activeOpacity={0.8}
+                        onPress={() => onSelect(item)}
+                      >
+                        <View style={[styles.radio, on && styles.radioOn]}>
+                          {on && <View style={styles.radioDot} />}
+                        </View>
+                        <Text style={styles.packageOptionName} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                        <Text style={styles.packageOptionPrice}>
+                          PKR {Number(item.price || 0).toLocaleString()}/mo
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              )}
+            </>
           )}
         </View>
       </View>
@@ -341,6 +462,7 @@ function PackagePickerModal({ visible, selectedId, onClose, onSelect }) {
 export default function ChildFormScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const editingChild = route?.params?.child || null;
+  const returnScreen = route?.params?.screen || null;
   const isEditMode = !!editingChild;
 
   const [step, setStep] = useState(1);
@@ -395,17 +517,19 @@ export default function ChildFormScreen({ navigation, route }) {
       setFetchingParent(false);
       return;
     }
-
+    const cnic = `${cleanCnic.slice(0, 5)}-${cleanCnic.slice(5, 12)}-${cleanCnic.slice(12)}`;
     const currentRequestId = ++parentRequestIdRef.current;
 
     (async () => {
       setFetchingParent(true);
       try {
-        const response = await getParents({ cnic: cleanCnic });
+        const response = await getParents({
+          cnic: cnic,
+          type: "cnic",
+        });
         if (currentRequestId !== parentRequestIdRef.current) return;
 
-        const parentList = response?.data?.data || response?.data || [];
-        const parent = Array.isArray(parentList) ? parentList[0] : parentList;
+        const parent = response?.data;
         setField("fatherName", parent?.parentName || "");
       } catch (error) {
         if (currentRequestId === parentRequestIdRef.current) {
@@ -507,7 +631,6 @@ export default function ChildFormScreen({ navigation, route }) {
     }
     if (!form.fatherName.trim()) return fail("Please enter the parent's name.");
 
-    if (!form.dateOfBirth && !isEditMode) return fail("Please select the date of birth.");
     if (form.dateOfBirth && form.dateOfBirth > new Date()) {
       return fail("Date of birth cannot be in the future.");
     }
@@ -651,11 +774,42 @@ export default function ChildFormScreen({ navigation, route }) {
       };
       if (isEditMode) {
         await updateChild(editingChild.id, payload);
-      } else {
-        await createChild(payload);
+        navigation.navigate(`${returnScreen?"AllUsers":"Children"}`, { refresh: Date.now() });
+        return;
       }
 
-      navigation.navigate("Children", { refresh: Date.now() });
+      const res = await createChild(payload);
+      const newChildId =
+            res?.data?.data?._id ||
+            res?.data?.data?.id ||
+            res?.data?._id ||
+            res?.data?.id;
+
+      const goBackToList = () => navigation.navigate(`${returnScreen?"AllUsers":"Children"}`, { refresh: Date.now() });
+
+      if (!newChildId) {
+        goBackToList();
+        return;
+      }
+
+      Alert.alert(
+        "Child added",
+        "Do you want to create a schedule for this child now?",
+        [
+          { text: "Not now", style: "cancel", onPress: goBackToList },
+          {
+            text: "Create schedule",
+            onPress: () => {
+              goBackToList(); 
+              navigation.navigate("ChildCustomAppointment", {
+                childId: newChildId,
+                childName: form.name.trim(),
+              });
+            },
+          },
+        ],
+        { cancelable: false },
+      );
     } catch (error) {
       console.log("Failed to save child:", error);
       Alert.alert(
@@ -818,8 +972,7 @@ export default function ChildFormScreen({ navigation, route }) {
               />
 
               <Text style={styles.fieldLabel}>
-                Date of Birth{" "}
-                {!isEditMode && <Text style={styles.requiredText}>*</Text>}
+                Date of Birth
               </Text>
               <TouchableOpacity
                 style={styles.selectorRow}
@@ -1413,4 +1566,12 @@ const styles = StyleSheet.create({
   radioOn: { borderColor: "#0B4A6F" },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#0B4A6F" },
   docMetaPending: { color: "#B45309" },
+  createPackageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  createPackageText: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.primary },
 });

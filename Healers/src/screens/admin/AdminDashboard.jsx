@@ -202,7 +202,10 @@ export default function AdminDashboard() {
           end={{ x: 0.5, y: 1 }}
           style={styles.statsGrid}
         >
-          <View style={[styles.statCard, { backgroundColor: "#0061A5" }]}>
+          <TouchableOpacity style={[styles.statCard, { backgroundColor: "#0061A5" }]}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate("Children")}
+          >
             <View style={[styles.cardIconContainer, { backgroundColor: "#D1E4FF" }]}>
               <FontAwesome5 name="child" size={22} color={colors.primary} />
             </View>
@@ -210,9 +213,12 @@ export default function AdminDashboard() {
             <Text style={styles.statValueLight}>
               {stats.totalChild.toLocaleString()}
             </Text>
-          </View>
+          </TouchableOpacity>
 
-          <View style={[styles.statCard, { backgroundColor: "#2892D9" }]}>
+          <TouchableOpacity style={[styles.statCard, { backgroundColor: "#2892D9" }]}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate("Therapist")}
+          >
             <View style={[styles.cardIconContainer, { backgroundColor: colors.primary }]}>
               <MaterialIcons name="man" size={22} color="#49A7E6" />
             </View>
@@ -220,17 +226,17 @@ export default function AdminDashboard() {
             <Text style={styles.statValueLight}>
               {stats.therapistCount.toLocaleString()}
             </Text>
-          </View>
+          </TouchableOpacity>
 
-          <View style={[styles.statCard, { backgroundColor: "#f39c12" }]}>
+          <TouchableOpacity style={[styles.statCard, { backgroundColor: "#f39c12" }]} onPress={() => navigation.navigate("AllUsers")}>
             <View style={[styles.cardIconContainer, { backgroundColor: colors.white }]}>
-              <MaterialCommunityIcons name="message" size={22} color="#F58B2A" />
+              <MaterialCommunityIcons name="account-group" size={22} color="#F58B2A" />
             </View>
             <Text style={styles.statLabelLight}>Total Users</Text>
             <Text style={styles.statValueLight}>
               {stats.totalUsers.toLocaleString()}
             </Text>
-          </View>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.statCard, { backgroundColor: "#fff" }]}

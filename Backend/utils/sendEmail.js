@@ -19,7 +19,7 @@ const sendEmail = async ({ to, subject, html }) => {
     console.log("📧 Sending email to:", to);
 
     const info = await transporter.sendMail({
-      from: `"MobileApp Healer" <${process.env.SMTP_USER}>`,
+      from: `"Healer" <${process.env.SMTP_USER}>`,
       to,
       subject,
       html,

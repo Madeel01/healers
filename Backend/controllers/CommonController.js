@@ -122,7 +122,26 @@ exports.getParents = async (req, res) => {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit, 10) || 5, 50);
     const search = (req.query.search || "").trim();
+    if (req.query.type === "cnic") {
+      const cnic = req.query.cnic || "";
 
+      const parent = await User.findOne({
+        role: "Child",
+        fatherCnic: cnic,
+        fatherName: { $nin: ["", null] },
+      }).select("fatherName fatherCnic");
+
+      return res.status(200).json({
+        success: true,
+        cnic,
+        data: parent
+          ? {
+              parentName: parent.fatherName,
+              parentCnic: parent.fatherCnic,
+            }
+          : null,
+      });
+    }
     const match = {
       role: "Child",
       fatherName: { $nin: ["", null] },

@@ -245,7 +245,8 @@ export default function TherapistsScreen({ navigation }) {
             const previous = therapists;
             // setTherapists((prev) => prev.filter((item) => item.id !== therapist.id));
             try {
-              await deleteTherapist(therapist.id);
+              const response = await deleteTherapist(therapist.id);
+              const res = response?.data;
               if (res?.deactivated) {
                 Alert.alert(
                   "Marked Inactive",
