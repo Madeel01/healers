@@ -29,6 +29,7 @@ import {
 } from '../../api/child/api';
 import BottomBar from '../../components/BottomBar';
 import ChildBottomBar from '../../components/ChildBottomBar';
+import TherapistBottomBar from '../../components/TherapistBottomBar';
 import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
@@ -109,132 +110,118 @@ export default function ComplaintsScreen({
     setSubmitting,
   ] = useState(false);
 
-  const pageRef =
-    useRef(1);
+  const pageRef = useRef(1);
 
-  const hasMoreRef =
-    useRef(true);
+  const hasMoreRef = useRef(true);
 
-  const loadingMoreRef =
-    useRef(false);
+  const loadingMoreRef = useRef(false);
 
-  const firstLoadRef =
-    useRef(true);
+  const firstLoadRef = useRef(true);
 
-  const endReachedRef =
-    useRef(false);
+  const endReachedRef = useRef(false);
 
-  const fetchComplaints =
-    useCallback(
-      async (
-        pageNumber = 1,
-        loadMore = false,
-        showLoader = true,
-      ) => {
-        if (loadMore) {
-          if (
-            loadingMoreRef.current
-            || !hasMoreRef.current
-          ) {
-            return;
-          }
-
-          loadingMoreRef.current =
-            true;
-
-          setLoadingMore(true);
-        } else if (showLoader) {
-          setLoading(true);
+  const fetchComplaints = useCallback(
+    async (
+      pageNumber = 1,
+      loadMore = false,
+      showLoader = true,
+    ) => {
+      if (loadMore) {
+        if (
+          loadingMoreRef.current
+          || !hasMoreRef.current
+        ) {
+          return;
         }
 
-        try {
-          const response =
-            await getMyComplaintsApi(
-              pageNumber,
-              PAGE_LIMIT,
-            );
+        loadingMoreRef.current = true;
 
-          if (!response?.success) {
-            return;
-          }
+        setLoadingMore(true);
+      } else if (showLoader) {
+        setLoading(true);
+      }
 
-          const newItems =
-            response.data || [];
+      try {
+        const response = await getMyComplaintsApi(
+          pageNumber,
+          PAGE_LIMIT,
+        );
 
-          if (pageNumber === 1) {
-            setComplaints(
-              newItems,
-            );
-          } else {
-            setComplaints(
-              (previous) => {
-                const ids =
-                  new Set(
-                    previous.map(
-                      (item) =>
-                        String(
-                          item._id,
-                        ),
+        if (!response?.success) {
+          return;
+        }
+
+        const newItems = response.data || [];
+
+        if (pageNumber === 1) {
+          setComplaints(
+            newItems,
+          );
+        } else {
+          setComplaints(
+            (previous) => {
+              const ids = new Set(
+                previous.map(
+                  (item) =>
+                    String(
+                      item._id,
                     ),
-                  );
+                ),
+              );
 
-                const unique =
-                  newItems.filter(
-                    (item) =>
-                      !ids.has(
-                        String(
-                          item._id,
-                        ),
-                      ),
-                  );
+              const unique = newItems.filter(
+                (item) =>
+                  !ids.has(
+                    String(
+                      item._id,
+                    ),
+                  ),
+              );
 
-                return [
-                  ...previous,
-                  ...unique,
-                ];
-              },
-            );
-          }
-
-          pageRef.current =
-            pageNumber;
-
-          hasMoreRef.current =
-            Boolean(
-              response.hasMore,
-            );
-
-          setTotal(
-            response.total || 0,
+              return [
+                ...previous,
+                ...unique,
+              ];
+            },
           );
-        } catch (error) {
-          console.log(
-            "get complaints:",
-            error?.response?.data
-              || error?.message,
-          );
-
-          Alert.alert(
-            "Error",
-            error?.response?.data
-              ?.message
-              || "Failed to load complaints.",
-          );
-        } finally {
-          setLoading(false);
-
-          setRefreshing(false);
-
-          if (loadMore) {
-            loadingMoreRef.current =
-              false;
-
-            setLoadingMore(false);
-          }
         }
-      },
-      [],
-    );
+
+        pageRef.current = pageNumber;
+
+        hasMoreRef.current = Boolean(
+          response.hasMore,
+        );
+
+        setTotal(
+          response.total || 0,
+        );
+      } catch (error) {
+        console.log(
+          "get complaints:",
+          error?.response?.data
+            || error?.message,
+        );
+
+        Alert.alert(
+          "Error",
+          error?.response?.data
+            ?.message
+            || "Failed to load complaints.",
+        );
+      } finally {
+        setLoading(false);
+
+        setRefreshing(false);
+
+        if (loadMore) {
+          loadingMoreRef.current = false;
+
+          setLoadingMore(false);
+        }
+      }
+    },
+    [],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -242,11 +229,9 @@ export default function ComplaintsScreen({
 
       hasMoreRef.current = true;
 
-      loadingMoreRef.current =
-        false;
+      loadingMoreRef.current = false;
 
-      endReachedRef.current =
-        false;
+      endReachedRef.current = false;
 
       fetchComplaints(
         1,
@@ -254,8 +239,7 @@ export default function ComplaintsScreen({
         firstLoadRef.current,
       );
 
-      firstLoadRef.current =
-        false;
+      firstLoadRef.current = false;
     }, [fetchComplaints]),
   );
 
@@ -273,8 +257,7 @@ export default function ComplaintsScreen({
 
     hasMoreRef.current = true;
 
-    endReachedRef.current =
-      false;
+    endReachedRef.current = false;
 
     fetchComplaints(
       1,
@@ -291,8 +274,7 @@ export default function ComplaintsScreen({
       return;
     }
 
-    const nextPage =
-      pageRef.current + 1;
+    const nextPage = pageRef.current + 1;
 
     fetchComplaints(
       nextPage,
@@ -308,15 +290,13 @@ export default function ComplaintsScreen({
       return;
     }
 
-    endReachedRef.current =
-      true;
+    endReachedRef.current = true;
 
     handleLoadMore();
   };
 
   const handleMomentumBegin = () => {
-    endReachedRef.current =
-      false;
+    endReachedRef.current = false;
   };
 
   const resetForm = () => {
@@ -357,16 +337,13 @@ export default function ComplaintsScreen({
     try {
       setSubmitting(true);
 
-      const response =
-        await createComplaintApi({
-          title:
-            title.trim(),
+      const response = await createComplaintApi({
+        title: title.trim(),
 
-          description:
-            description.trim(),
+        description: description.trim(),
 
-          priority,
-        });
+        priority,
+      });
 
       if (response?.success) {
         setShowCreateModal(false);
@@ -377,8 +354,7 @@ export default function ComplaintsScreen({
 
         hasMoreRef.current = true;
 
-        endReachedRef.current =
-          false;
+        endReachedRef.current = false;
 
         await fetchComplaints(
           1,
@@ -424,11 +400,9 @@ export default function ComplaintsScreen({
   const renderComplaint = ({
     item,
   }) => {
-    const resolved =
-      item.status === "Resolved";
+    const resolved = item.status === "Resolved";
 
-    const high =
-      item.priority === "High";
+    const high = item.priority === "High";
 
     return (
       <TouchableOpacity
@@ -438,8 +412,7 @@ export default function ComplaintsScreen({
           navigation.navigate(
             "ComplaintDetails",
             {
-              complaintId:
-                item._id,
+              complaintId: item._id,
             },
           )}
       >
@@ -457,23 +430,17 @@ export default function ComplaintsScreen({
           </View>
 
           <View
-            style={
-              styles.cardMain
-            }
+            style={styles.cardMain}
           >
             <Text
-              style={
-                styles.cardTitle
-              }
+              style={styles.cardTitle}
               numberOfLines={1}
             >
               {item.title}
             </Text>
 
             <Text
-              style={
-                styles.date
-              }
+              style={styles.date}
             >
               {formatDate(
                 item.createdAt,
@@ -489,9 +456,7 @@ export default function ComplaintsScreen({
         </View>
 
         <Text
-          style={
-            styles.description
-          }
+          style={styles.description}
           numberOfLines={2}
         >
           {item.description}
@@ -502,18 +467,15 @@ export default function ComplaintsScreen({
         />
 
         <View
-          style={
-            styles.badgeRow
-          }
+          style={styles.badgeRow}
         >
           <View
             style={[
               styles.badge,
               {
-                backgroundColor:
-                  resolved
-                    ? "#ECFDF5"
-                    : "#FFF7ED",
+                backgroundColor: resolved
+                  ? "#ECFDF5"
+                  : "#FFF7ED",
               },
             ]}
           >
@@ -521,10 +483,9 @@ export default function ComplaintsScreen({
               style={[
                 styles.dot,
                 {
-                  backgroundColor:
-                    resolved
-                      ? "#10B981"
-                      : "#F97316",
+                  backgroundColor: resolved
+                    ? "#10B981"
+                    : "#F97316",
                 },
               ]}
             />
@@ -533,10 +494,9 @@ export default function ComplaintsScreen({
               style={[
                 styles.badgeText,
                 {
-                  color:
-                    resolved
-                      ? "#047857"
-                      : "#C2410C",
+                  color: resolved
+                    ? "#047857"
+                    : "#C2410C",
                 },
               ]}
             >
@@ -548,35 +508,29 @@ export default function ComplaintsScreen({
             style={[
               styles.badge,
               {
-                backgroundColor:
-                  high
-                    ? "#FEE2E2"
-                    : "#F1F5F9",
+                backgroundColor: high
+                  ? "#FEE2E2"
+                  : "#F1F5F9",
               },
             ]}
           >
             <Feather
-              name={
-                high
-                  ? "alert-circle"
-                  : "flag"
-              }
+              name={high
+                ? "alert-circle"
+                : "flag"}
               size={12}
-              color={
-                high
-                  ? "#DC2626"
-                  : "#64748B"
-              }
+              color={high
+                ? "#DC2626"
+                : "#64748B"}
             />
 
             <Text
               style={[
                 styles.badgeText,
                 {
-                  color:
-                    high
-                      ? "#DC2626"
-                      : "#64748B",
+                  color: high
+                    ? "#DC2626"
+                    : "#64748B",
                 },
               ]}
             >
@@ -586,22 +540,16 @@ export default function ComplaintsScreen({
 
           {item.messageCount > 0 && (
             <View
-              style={
-                styles.messageCount
-              }
+              style={styles.messageCount}
             >
               <Feather
                 name="message-circle"
                 size={13}
-                color={
-                  colors.primary
-                }
+                color={colors.primary}
               />
 
               <Text
-                style={
-                  styles.messageCountText
-                }
+                style={styles.messageCountText}
               >
                 {item.messageCount}
               </Text>
@@ -611,32 +559,24 @@ export default function ComplaintsScreen({
 
         {item.lastMessage && (
           <View
-            style={
-              styles.lastMessage
-            }
+            style={styles.lastMessage}
           >
             <Text
-              style={
-                styles.lastMessageRole
-              }
+              style={styles.lastMessageRole}
             >
               {item.lastMessage
-                .senderRole
-                === "Admin"
+                  .senderRole
+                  === "Admin"
                 ? "Admin"
                 : "You"}
             </Text>
 
             <Text
-              style={
-                styles.lastMessageText
-              }
+              style={styles.lastMessageText}
               numberOfLines={1}
             >
-              {
-                item.lastMessage
-                  .text
-              }
+              {item.lastMessage
+                .text}
             </Text>
           </View>
         )}
@@ -664,14 +604,10 @@ export default function ComplaintsScreen({
         </View>
 
         <View
-          style={
-            styles.totalBadge
-          }
+          style={styles.totalBadge}
         >
           <Text
-            style={
-              styles.totalText
-            }
+            style={styles.totalText}
           >
             {total}
           </Text>
@@ -679,11 +615,8 @@ export default function ComplaintsScreen({
       </View>
 
       <TouchableOpacity
-        style={
-          styles.addButton
-        }
-        onPress={() =>
-          setShowCreateModal(true)}
+        style={styles.addButton}
+        onPress={() => setShowCreateModal(true)}
       >
         <Feather
           name="plus-circle"
@@ -692,9 +625,7 @@ export default function ComplaintsScreen({
         />
 
         <Text
-          style={
-            styles.addButtonText
-          }
+          style={styles.addButtonText}
         >
           Add Complaint
         </Text>
@@ -713,17 +644,13 @@ export default function ComplaintsScreen({
       />
 
       <Text
-        style={
-          styles.emptyTitle
-        }
+        style={styles.emptyTitle}
       >
         No Complaints
       </Text>
 
       <Text
-        style={
-          styles.emptyText
-        }
+        style={styles.emptyText}
       >
         You haven't submitted any complaints yet.
       </Text>
@@ -743,9 +670,7 @@ export default function ComplaintsScreen({
 
     return (
       <View
-        style={
-          styles.footerLoader
-        }
+        style={styles.footerLoader}
       >
         <ActivityIndicator
           size="small"
@@ -753,9 +678,7 @@ export default function ComplaintsScreen({
         />
 
         <Text
-          style={
-            styles.footerText
-          }
+          style={styles.footerText}
         >
           Loading more...
         </Text>
@@ -776,38 +699,25 @@ export default function ComplaintsScreen({
       />
 
       {loading
-        && complaints.length === 0
+          && complaints.length === 0
         ? (
           <View
-            style={
-              styles.loader
-            }
+            style={styles.loader}
           >
             <ActivityIndicator
               size="large"
-              color={
-                colors.primary
-              }
+              color={colors.primary}
             />
           </View>
         )
         : (
           <FlatList
             data={complaints}
-            keyExtractor={(item) =>
-              String(item._id)}
-            renderItem={
-              renderComplaint
-            }
-            ListHeaderComponent={
-              renderHeader
-            }
-            ListEmptyComponent={
-              renderEmpty
-            }
-            ListFooterComponent={
-              renderFooter
-            }
+            keyExtractor={(item) => String(item._id)}
+            renderItem={renderComplaint}
+            ListHeaderComponent={renderHeader}
+            ListEmptyComponent={renderEmpty}
+            ListFooterComponent={renderFooter}
             ItemSeparatorComponent={() => (
               <View
                 style={{
@@ -815,29 +725,15 @@ export default function ComplaintsScreen({
                 }}
               />
             )}
-            contentContainerStyle={
-              styles.listContent
-            }
-            showsVerticalScrollIndicator={
-              false
-            }
-            onEndReached={
-              handleEndReached
-            }
-            onEndReachedThreshold={
-              0.15
-            }
-            onMomentumScrollBegin={
-              handleMomentumBegin
-            }
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.15}
+            onMomentumScrollBegin={handleMomentumBegin}
             refreshControl={
               <RefreshControl
-                refreshing={
-                  refreshing
-                }
-                onRefresh={
-                  handleRefresh
-                }
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
                 colors={[
                   colors.primary,
                 ]}
@@ -847,46 +743,32 @@ export default function ComplaintsScreen({
         )}
 
       <Modal
-        visible={
-          showCreateModal
-        }
+        visible={showCreateModal}
         transparent
         animationType="fade"
-        onRequestClose={
-          closeModal
-        }
+        onRequestClose={closeModal}
       >
         <TouchableWithoutFeedback
           onPress={closeModal}
         >
           <View
-            style={
-              styles.overlay
-            }
+            style={styles.overlay}
           >
             <TouchableWithoutFeedback>
               <View
-                style={
-                  styles.modal
-                }
+                style={styles.modal}
               >
                 <View
-                  style={
-                    styles.modalHeader
-                  }
+                  style={styles.modalHeader}
                 >
                   <Text
-                    style={
-                      styles.modalTitle
-                    }
+                    style={styles.modalTitle}
                   >
                     Add Complaint
                   </Text>
 
                   <TouchableOpacity
-                    onPress={
-                      closeModal
-                    }
+                    onPress={closeModal}
                   >
                     <Feather
                       name="x"
@@ -897,51 +779,39 @@ export default function ComplaintsScreen({
                 </View>
 
                 <Text
-                  style={
-                    styles.label
-                  }
+                  style={styles.label}
                 >
                   Title
                 </Text>
 
                 <TextInput
-                  style={
-                    styles.input
-                  }
+                  style={styles.input}
                   value={title}
-                  onChangeText={
-                    setTitle
-                  }
+                  onChangeText={setTitle}
                   placeholder="Complaint title"
                   placeholderTextColor="#94A3B8"
                   maxLength={120}
                 />
 
                 <Text
-                  style={
-                    styles.label
-                  }
+                  style={styles.label}
                 >
                   Priority
                 </Text>
 
                 <View
-                  style={
-                    styles.priorityRow
-                  }
+                  style={styles.priorityRow}
                 >
                   {PRIORITIES.map(
                     (item) => (
                       <TouchableOpacity
-                        key={
-                          item.value
-                        }
+                        key={item.value}
                         style={[
                           styles.priorityButton,
 
                           priority
                             === item.value
-                            && styles.priorityActive,
+                          && styles.priorityActive,
                         ]}
                         onPress={() =>
                           setPriority(
@@ -954,7 +824,7 @@ export default function ComplaintsScreen({
 
                             priority
                               === item.value
-                              && styles.priorityActiveText,
+                            && styles.priorityActiveText,
                           ]}
                         >
                           {item.label}
@@ -965,9 +835,7 @@ export default function ComplaintsScreen({
                 </View>
 
                 <Text
-                  style={
-                    styles.label
-                  }
+                  style={styles.label}
                 >
                   Description
                 </Text>
@@ -977,12 +845,8 @@ export default function ComplaintsScreen({
                     styles.input,
                     styles.textArea,
                   ]}
-                  value={
-                    description
-                  }
-                  onChangeText={
-                    setDescription
-                  }
+                  value={description}
+                  onChangeText={setDescription}
                   placeholder="Describe your complaint..."
                   placeholderTextColor="#94A3B8"
                   multiline
@@ -991,40 +855,24 @@ export default function ComplaintsScreen({
                 />
 
                 <View
-                  style={
-                    styles.modalButtons
-                  }
+                  style={styles.modalButtons}
                 >
                   <TouchableOpacity
-                    style={
-                      styles.cancel
-                    }
-                    disabled={
-                      submitting
-                    }
-                    onPress={
-                      closeModal
-                    }
+                    style={styles.cancel}
+                    disabled={submitting}
+                    onPress={closeModal}
                   >
                     <Text
-                      style={
-                        styles.cancelText
-                      }
+                      style={styles.cancelText}
                     >
                       Cancel
                     </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={
-                      styles.submit
-                    }
-                    disabled={
-                      submitting
-                    }
-                    onPress={
-                      handleCreate
-                    }
+                    style={styles.submit}
+                    disabled={submitting}
+                    onPress={handleCreate}
                   >
                     {submitting
                       ? (
@@ -1042,9 +890,7 @@ export default function ComplaintsScreen({
                           />
 
                           <Text
-                            style={
-                              styles.submitText
-                            }
+                            style={styles.submitText}
                           >
                             Submit
                           </Text>
@@ -1058,17 +904,12 @@ export default function ComplaintsScreen({
         </TouchableWithoutFeedback>
       </Modal>
 
-      {role === "Child"
-        ? (
-          <ChildBottomBar
-            activeTab=""
-          />
-        )
-        : (
-          <BottomBar
-            activeTab=""
-          />
-        )}
+      {role === "Therapist"
+        ? <TherapistBottomBar activeTab="" />
+        : role === "Admin"
+        ? <BottomBar activeTab="" />
+        : <ChildBottomBar activeTab="" />}
+        
     </SafeAreaView>
   );
 }
@@ -1118,8 +959,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      "rgba(0,80,134,0.10)",
+    backgroundColor: "rgba(0,80,134,0.10)",
   },
 
   totalText: {
@@ -1293,8 +1133,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     padding: 20,
-    backgroundColor:
-      "rgba(15,23,42,0.45)",
+    backgroundColor: "rgba(15,23,42,0.45)",
   },
 
   modal: {

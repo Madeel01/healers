@@ -12,7 +12,7 @@ const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role, permissions: user.permissions },
     process.env.JWT_SECRET,
-    { expiresIn: "3d" },
+    { expiresIn: "7d" },
   );
 };
 

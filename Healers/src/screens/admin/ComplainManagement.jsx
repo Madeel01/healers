@@ -361,7 +361,7 @@ export default function ComplainManagementScreen({ navigation }) {
           style={styles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : "padding"}
         >
-          <View style={styles.chatSheet}>
+          <View style={[styles.chatSheet, { paddingBottom: insets.bottom }]}>
             <View style={styles.chatHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.chatTitle} numberOfLines={1}>
@@ -457,7 +457,7 @@ export default function ComplainManagementScreen({ navigation }) {
           style={styles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : "padding"}
         >
-          <View style={styles.detailSheet}>
+          <View style={[styles.detailSheet, { paddingBottom: insets.bottom }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Complaint details</Text>
               <TouchableOpacity onPress={closeDetails} hitSlop={8}>

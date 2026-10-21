@@ -27,10 +27,12 @@ const {
   addTherapistFeedbackReply,
   getFeedbackReplies,
   updateFeedbackVisibility,
+  getChildProgramsSpeciality,
 } = require("../controllers/therapistController");
 
 router.get("/dashboard-stats", protect, getDashboardStats);
 router.get("/get_therapist_user", protect, getTherapistUser);
+router.get("/get_child_programs/speciality/:childId", protect, getChildProgramsSpeciality);
 router.get("/get_child_programs/:childId", protect, getChildPrograms);
 router.post("/delete_program/:programId/add_goal", protect, addGoalToProgram);
 router.post("/add_programs", protect, AddPrograms);

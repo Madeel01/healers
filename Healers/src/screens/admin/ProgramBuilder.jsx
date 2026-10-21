@@ -34,7 +34,7 @@ import {
   AddPrograms,
   deleteGoalApi,
   deleteProgramApi,
-  getChildPrograms,
+  getChildProgramSpeciality,
 } from '../../api/therapist/api';
 import BottomBar from '../../components/BottomBar';
 import TopBar from '../../components/TopBar';
@@ -216,7 +216,7 @@ export default function ProgramBuilderScreen({ navigation }) {
     setLoadingPrograms(true);
 
     try {
-      const response = await getChildPrograms(childId, therapistId);
+      const response = await getChildProgramSpeciality(childId, therapistId);
       if (requestId !== programRequestRef.current) return;
       if (!response?.success) {
         setPrograms([]);
