@@ -30,11 +30,13 @@ const {
   confirmDocuments,
 } = require("../utils/childDocuments");
 const { sendBulkPushToUsers, sendPushToUser } = require("./pushNotificationController");
+const sendEmail = require("../utils/sendEmail");
 const PAST_DAYS = 365;
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
   { path: "resolvedBy", select: "fullName" },
 ];
+const ROLES = ["Admin", "Therapist", "Child"];
 
 const normalizeName = (name) => name?.trim().replace(/\s+/g, " ").toLowerCase();
 const normalizeCnic = (v = "") => {
@@ -953,130 +955,220 @@ exports.getAdminOverview = async (req, res) => {
   }
 };
 
-exports.getTherapistsUsers = async (req, res) => {
+
+exports.getAllUsers = async (req, res) => {
   try {
-    const userId = req.user.id || req.user._id;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 5;
-    const skip = (page - 1) * limit;
-    const { search, specialty, status } = req.query;
+    const { page = 1, limit = 10, search = "", role = "all", status = "all" } = req.query;
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.min(parseInt(limit, 10) || 10, 50);
 
-    const matchStage = { role: "Therapist" };
+    const filter = {};
+    if (ROLES.includes(role)) filter.role = role;
+    if (status === "active") filter.isActive = true;
+    else if (status === "inactive") filter.isActive = false;
 
-    if (search) {
-      matchStage.$or = [
-        { fullName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-      ];
-    }
-    if (status === "active") {
-      matchStage.isActive = true;
-    } else if (status === "inactive") {
-      matchStage.isActive = false;
-    }
-    const pipeline = [
-      { $match: matchStage },
-      { $sort: { createdAt: -1 } },
-      {
-        $lookup: {
-          from: "therapistassignments",
-          let: { userId: "$_id" },
-          pipeline: [
-            {
-              $match: {
-                $expr: { $eq: [{ $toObjectId: "$therapistId" }, "$$userId"] },
-              },
-            },
-          ],
-          as: "assignments",
-        },
-      },
-      {
-        $lookup: {
-          from: "conversations",
-          let: { therapistId: "$_id" },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    {
-                      $in: [
-                        new mongoose.Types.ObjectId(userId),
-                        "$participants",
-                      ],
-                    },
-                    { $in: ["$$therapistId", "$participants"] },
-                    { $eq: [{ $size: "$participants" }, 2] },
-                  ],
-                },
-              },
-            },
-            { $project: { _id: 1 } },
-            { $limit: 1 },
-          ],
-          as: "conversation",
-        },
-      },
-      {
-        $project: {
-          fullName: 1,
-          email: 1,
-          phone: 1,
-          role: 1,
-          profileImage:1,
-          isOnline:1,
-          lastActive:1,
-          isLogin: 1,
-          createdAt: 1,
-          isActive: 1,
-          specialties: "$assignments.specialty",
-          maxChildren: { $max: "$assignments.maxChildren" },
-          conversationId: {
-            $ifNull: [
-              { $arrayElemAt: ["$conversation._id", 0] },
-              null,
-            ],
-          },
-          assignedChildren: {
-            $sum: {
-              $map: {
-                input: "$assignments",
-                as: "a",
-                in: { $size: { $ifNull: ["$$a.childIds", []] } },
-              },
-            },
-          },
-        },
-      },
-    ];
-
-    if (specialty && specialty !== "All") {
-      pipeline.push({
-        $match: { specialties: specialty },
-      });
+    const q = String(search).trim();
+    if (q) {
+      const rx = { $regex: escapeRegex(q), $options: "i" };
+      filter.$or = [{ fullName: rx }, { email: rx }, { phone: rx }];
     }
 
-    pipeline.push({ $skip: skip }, { $limit: limit });
+    const [total, users, grouped] = await Promise.all([
+      User.countDocuments(filter),
+      User.find(filter)
+          .select(
+            "fullName email phone role isActive isOnline profileImage createdAt address permissions " +
+            "fatherName fatherCnic age gender diagnosis dateOfBirth documents packageId discountedPrice"
+          )
+          .populate("packageId", "name price type")
+          .sort({ createdAt: -1 })
+          .skip((pageNum - 1) * limitNum)
+          .limit(limitNum)
+          .lean(),
+      User.aggregate([{ $group: { _id: "$role", count: { $sum: 1 } } }]),
+    ]);
+    const therapistIds = users.filter((u) => u.role === "Therapist").map((u) => u._id);
+      if (therapistIds.length) {
+        const assigns = await TherapistAssignment.find({ therapistId: { $in: therapistIds } })
+          .select("therapistId specialty")
+          .lean();
 
-    const therapists = await User.aggregate(pipeline);
-    const specialties = await TherapistAssignment.distinct("specialty");
+        const map = {};
+        assigns.forEach((a) => {
+          const key = String(a.therapistId);
+          (map[key] = map[key] || []).push(a.specialty);
+        });
+        users.forEach((u) => {
+          if (u.role === "Therapist") u.specialties = (map[String(u._id)] || []).filter(Boolean);
+        });
+      }
+
+    const roleCounts = Object.fromEntries(grouped.map((g) => [g._id, g.count]));
 
     return res.status(200).json({
       success: true,
-      page,
-      count: therapists.length,
-      hasMore: therapists.length === limit,
-      data: therapists,
-      specialties: specialties,
+      data: users,
+      roleCounts,
+      hasMore: pageNum * limitNum < total,
+      totalCount: total,
     });
   } catch (error) {
-    console.log("Get Therapists Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to get therapists",
-      error: error.message,
+    console.error("Get All Users Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch users." });
+  }
+};
+const PASSWORD_RX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+const PHONE_RX = /^(03\d{9}|\+923\d{9})$/;
+const normalizePhone = (p) => (p.startsWith("+92") ? "0" + p.slice(3) : p);
+exports.createAdmin = async (req, res) => {
+  try {
+    const { fullName, email, phone, address, password, isActive, permissions } = req.body;
+
+    if (!fullName?.trim() || !email || !phone || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name, email, phone and password are required.",
+      });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+      return res.status(400).json({ success: false, message: "Enter a valid email address." });
+    }
+    const cleanPhone = phone.trim();
+    if (!PHONE_RX.test(cleanPhone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number must be in 03011234567 or +923011234567 format.",
+      });
+    }
+    if (!PASSWORD_RX.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters and contain 1 lowercase, 1 uppercase, and 1 special character.",
+      });
+    }
+    if (await User.exists({ email: cleanEmail })) {
+      return res.status(409).json({ success: false, message: "An account with this email already exists." });
+    }
+
+    const user = await User.create({
+      fullName: fullName.trim(),
+      email: cleanEmail,
+      phone: normalizePhone(cleanPhone),
+      address: address?.trim() || null,
+      password: await bcrypt.hash(password, 10),
+      role: "Admin",
+      agreeTerms: true,
+      isActive: isActive ?? true,
+      permissions: Array.isArray(permissions) ? permissions : [],
     });
+
+    const data = user.toObject();
+    delete data.password;
+
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: "Your Admin Account Has Been Created - Healer",
+        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; color: #333;">
+          <h2 style="color: #2563eb;">Welcome to Healer!</h2>
+          <p>Dear ${user.fullName},</p>
+          <p>An administrator account has been created for you with this email address. Please use the password shared with you by your administrator to sign in.</p>
+          <p>Best regards,<br/>Healer Team</p></div>`,
+      });
+    } catch (e) {
+      console.error("Admin welcome email failed:", e.message);
+    }
+
+    return res.status(201).json({ success: true, message: "Admin created successfully.", data });
+  } catch (error) {
+    console.error("Create Admin Error:", error);
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: "An account with this email already exists." });
+    }
+    return res.status(500).json({ success: false, message: "Failed to create admin." });
+  }
+};
+exports.updateAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, email, phone, address, password, isActive } = req.body;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid admin id." });
+    }
+    if (isActive === false && String(req.user.id || req.user._id) === id) {
+      return res.status(400).json({ success: false, message: "You cannot deactivate your own account." });
+    }
+
+    const user = await User.findOne({ _id: id, role: "Admin" });
+    if (!user) return res.status(404).json({ success: false, message: "Admin not found." });
+
+    if (fullName?.trim()) user.fullName = fullName.trim();
+    if (address !== undefined) user.address = address?.trim() || null;
+
+    if (email) {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+        return res.status(400).json({ success: false, message: "Enter a valid email address." });
+      }
+      if (await User.exists({ _id: { $ne: id }, email: cleanEmail })) {
+        return res.status(409).json({ success: false, message: "An account with this email already exists." });
+      }
+      user.email = cleanEmail;
+    }
+    if (phone) {
+      if (!PHONE_RX.test(phone.trim())) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number must be in 03011234567 or +923011234567 format.",
+        });
+      }
+      user.phone = normalizePhone(phone.trim());
+    }
+    if (password) {
+      if (!PASSWORD_RX.test(password)) {
+        return res.status(400).json({
+          success: false,
+          message: "Password must be at least 8 characters and contain 1 lowercase, 1 uppercase, and 1 special character.",
+        });
+      }
+      user.password = await bcrypt.hash(password, 10);
+    }
+    if (typeof isActive === "boolean") user.isActive = isActive;
+
+    await user.save();
+    const data = user.toObject();
+    delete data.password;
+    return res.status(200).json({ success: true, message: "Admin updated successfully.", data });
+  } catch (error) {
+    console.error("Update Admin Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to update admin." });
+  }
+};
+exports.deleteAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid admin id." });
+    }
+    if (String(req.user.id || req.user._id) === id) {
+      return res.status(400).json({ success: false, message: "You cannot delete your own account." });
+    }
+
+    const user = await User.findOne({ _id: id, role: "Admin" });
+    if (!user) return res.status(404).json({ success: false, message: "Admin not found." });
+
+    const adminCount = await User.countDocuments({ role: "Admin" });
+    if (adminCount <= 1) {
+      return res.status(400).json({ success: false, message: "You cannot delete the last admin." });
+    }
+
+    await User.deleteOne({ _id: id });
+    return res.status(200).json({ success: true, deleted: true, message: "Admin deleted." });
+  } catch (error) {
+    console.error("Delete Admin Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to delete admin." });
   }
 };
 
@@ -1800,6 +1892,132 @@ exports.assignTherapistsUsers = async (req, res) => {
   }
 };
 
+exports.getTherapistsUsers = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
+    const { search, specialty, status } = req.query;
+
+    const matchStage = { role: "Therapist" };
+
+    if (search) {
+      matchStage.$or = [
+        { fullName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+    if (status === "active") {
+      matchStage.isActive = true;
+    } else if (status === "inactive") {
+      matchStage.isActive = false;
+    }
+    const pipeline = [
+      { $match: matchStage },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: "therapistassignments",
+          let: { userId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: [{ $toObjectId: "$therapistId" }, "$$userId"] },
+              },
+            },
+          ],
+          as: "assignments",
+        },
+      },
+      {
+        $lookup: {
+          from: "conversations",
+          let: { therapistId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    {
+                      $in: [
+                        new mongoose.Types.ObjectId(userId),
+                        "$participants",
+                      ],
+                    },
+                    { $in: ["$$therapistId", "$participants"] },
+                    { $eq: [{ $size: "$participants" }, 2] },
+                  ],
+                },
+              },
+            },
+            { $project: { _id: 1 } },
+            { $limit: 1 },
+          ],
+          as: "conversation",
+        },
+      },
+      {
+        $project: {
+          fullName: 1,
+          email: 1,
+          phone: 1,
+          role: 1,
+          profileImage:1,
+          isOnline:1,
+          lastActive:1,
+          isLogin: 1,
+          createdAt: 1,
+          isActive: 1,
+          specialties: "$assignments.specialty",
+          maxChildren: { $max: "$assignments.maxChildren" },
+          conversationId: {
+            $ifNull: [
+              { $arrayElemAt: ["$conversation._id", 0] },
+              null,
+            ],
+          },
+          assignedChildren: {
+            $sum: {
+              $map: {
+                input: "$assignments",
+                as: "a",
+                in: { $size: { $ifNull: ["$$a.childIds", []] } },
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    if (specialty && specialty !== "All") {
+      pipeline.push({
+        $match: { specialties: specialty },
+      });
+    }
+
+    pipeline.push({ $skip: skip }, { $limit: limit });
+
+    const therapists = await User.aggregate(pipeline);
+    const specialties = await TherapistAssignment.distinct("specialty");
+
+    return res.status(200).json({
+      success: true,
+      page,
+      count: therapists.length,
+      hasMore: therapists.length === limit,
+      data: therapists,
+      specialties: specialties,
+    });
+  } catch (error) {
+    console.log("Get Therapists Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get therapists",
+      error: error.message,
+    });
+  }
+};
 exports.createTherapist = async (req, res) => {
   try {
     const { name, specialty, email, phone, address, password, isActive } = req.body;
@@ -1836,7 +2054,7 @@ exports.createTherapist = async (req, res) => {
         .json({ success: false, message: "Phone number is required." });
     }
     const phoneTrimmed = phone.trim();
-    const phoneRegex = /^(030\d{8}|\+923\d{9})$/;
+    const phoneRegex = /^(03\d{9}|\+923\d{9})$/;
     if (!phoneRegex.test(phoneTrimmed)) {
       return res.status(400).json({
         success: false,
@@ -1873,7 +2091,33 @@ exports.createTherapist = async (req, res) => {
       // maxChildren: maxChildren && maxChildren > 0 ? parseInt(maxChildren, 10) : 15,
       childIds: [],
     });
+    const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; color: #333;">
+          <h2 style="color: #2563eb;">Welcome to Healer!</h2>
 
+          <p>Dear ${name},</p>
+
+          <p>
+            Your account has been successfully created.
+            You can now use your registered credentials to access your account.
+          </p>
+
+          <div style="background: #f3f4f6; padding: 16px; border-radius: 8px;">
+            <p><strong>Name:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Password:</strong> ${password}</p>
+          </div>
+
+          <p>If you need assistance, please contact our support team.</p>
+
+          <p>Best regards,<br/>Healer Team</p>
+        </div>
+      `
+    await sendEmail({
+      to: email,
+      subject: "Your Account Has Been Created - Healer",
+      html: html,
+    });
     return res.status(201).json({
       success: true,
       data: {
@@ -2122,7 +2366,26 @@ exports.deleteTherapist = async (req, res) => {
 
       user.isActive = false;
       await user.save();
+      const html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; color: #333;">
 
+            <p>Dear ${user?.fullName},</p>
+
+            <p>
+              Your account has been deactivated.
+              You will no longer be able to access your account.
+            </p>
+
+            <p>If you need assistance, please contact our support team.</p>
+
+            <p>Best regards,<br/>Healer Team</p>
+          </div>
+        `
+      await sendEmail({
+        to: user?.email,
+        subject: "Your Account Has Been Deactivated - Healer",
+        html: html,
+      });
       return res.status(200).json({
         success: true,
         deactivated: true,
@@ -2134,7 +2397,26 @@ exports.deleteTherapist = async (req, res) => {
     await Scheduling.deleteMany({ therapistId: user._id });
     await TherapistAssignment.deleteOne({ therapistId: user._id });
     await User.deleteOne({ _id: user._id });
+    const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; color: #333;">
 
+          <p>Dear ${user?.fullName},</p>
+
+          <p>
+            Your account has been deleted.
+            You will no longer be able to access your account.
+          </p>
+
+          <p>If you need assistance, please contact our support team.</p>
+
+          <p>Best regards,<br/>Healer Team</p>
+        </div>
+      `
+    await sendEmail({
+      to: user?.email,
+      subject: "Your Account Has Been Deleted - Healer",
+      html: html,
+    });
     return res.status(200).json({
       success: true,
       deleted: true,
@@ -2502,12 +2784,17 @@ exports.createChild = async (req, res) => {
     if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
       return res.status(400).json({ success: false, message: "Enter a valid email address." });
     }
-    if (!dateOfBirth) {
-      return res.status(400).json({ success: false, message: "Date of birth is required." });
-    }
-    const dob = new Date(dateOfBirth);
-    if (isNaN(dob.getTime()) || dob > new Date()) {
-      return res.status(400).json({ success: false, message: "Enter a valid date of birth." });
+    let dob = null;
+
+    if (dateOfBirth) {
+      dob = new Date(dateOfBirth);
+
+      if (isNaN(dob.getTime()) || dob > new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: "Enter a valid date of birth.",
+        });
+      }
     }
     if (!["Male", "Female"].includes(gender)) {
       return res.status(400).json({ success: false, message: "Gender must be Male or Female." });
@@ -2544,7 +2831,7 @@ exports.createChild = async (req, res) => {
       fatherName,
       fatherCnic: cnic,
       dateOfBirth: dob,
-      age: calcAge(dob),
+      age: dob ? calcAge(dob) : null,
       gender,
       diagnosis: (diagnosis || "").trim(),
       email: cleanEmail,
@@ -2553,14 +2840,40 @@ exports.createChild = async (req, res) => {
       password: hashedPassword,
       role: "Child",
       agreeTerms: true,
-      isActive: isActive ?? true,
+      isActive: isActive ?? false,
       documents: sanitizeDocuments(documents),
       ...packageFields,
     });
     await confirmDocuments(child.documents);
     const data = child.toObject();
     delete data.password;
-    console.log(child);
+    const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; color: #333;">
+          <h2 style="color: #2563eb;">Welcome to Healer!</h2>
+
+          <p>Dear ${fullName},</p>
+
+          <p>
+            Your account has been successfully created.
+            You can now use your registered credentials to access your account.
+          </p>
+
+          <div style="background: #f3f4f6; padding: 16px; border-radius: 8px;">
+            <p><strong>Name:</strong> ${fullName}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Password:</strong> ${password}</p>
+          </div>
+
+          <p>If you need assistance, please contact our support team.</p>
+
+          <p>Best regards,<br/>Healer Team</p>
+        </div>
+      `
+    await sendEmail({
+      to: child.email,
+      subject: "Your Account Has Been Created - Healer",
+      html: html,
+    });
     return res.status(201).json({
       success: true,
       message: "Child created successfully.",
@@ -2831,7 +3144,7 @@ exports.deleteChild = async (req, res) => {
     const now = new Date();
 
     const [child, activeBatch] = await Promise.all([
-      User.findOne({ _id: childId, role: "Child" }).select("documents").lean(),
+      User.findOne({ _id: childId, role: "Child" }).select("documents fullName email").lean(),
       Batch.findOne({
         childrenIds: childId,
         dateFrom: { $lte: now },
@@ -2923,7 +3236,26 @@ exports.deleteChild = async (req, res) => {
 
     if (hasPastData) {
       await User.updateOne({ _id: childId }, { $set: { isActive: false } });
+      const html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; color: #333;">
 
+            <p>Dear ${child?.fullName},</p>
+
+            <p>
+              Your account has been deactivated.
+              You will no longer be able to access your account.
+            </p>
+
+            <p>If you need assistance, please contact our support team.</p>
+
+            <p>Best regards,<br/>Healer Team</p>
+          </div>
+        `
+      await sendEmail({
+        to: child?.email,
+        subject: "Your Account Has Been Deactivated - Healer",
+        html: html,
+      });
       return res.status(200).json({
         success: true,
         message:
@@ -2938,7 +3270,26 @@ exports.deleteChild = async (req, res) => {
       User.deleteOne({ _id: childId, role: "Child" }),
       destroyDocuments(Object.values(child.documents || {}).filter(Boolean)),
     ]);
+    const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; color: #333;">
 
+          <p>Dear ${child?.fullName},</p>
+
+          <p>
+            Your account has been deleted.
+            You will no longer be able to access your account.
+          </p>
+
+          <p>If you need assistance, please contact our support team.</p>
+
+          <p>Best regards,<br/>Healer Team</p>
+        </div>
+      `
+    await sendEmail({
+      to: child?.email,
+      subject: "Your Account Has Been Deleted - Healer",
+      html: html,
+    });
     return res.status(200).json({
       success: true,
       message: "Child deleted permanently (no past records found).",

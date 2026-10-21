@@ -78,6 +78,9 @@ const {
   sendFeedbackReminderNotification,
   markAllLeavesSeen,
   uploadChildDocument,
+  getAllUsers,
+  createAdmin,
+  updateAdmin,
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
@@ -100,7 +103,10 @@ router.get("/schedule", protect, getSessions);
 router.get("/overview", getAdminOverview);
 router.get("/get_therapists", protect, getTherapistsUsers);
 router.get("/get_therapists_child", assignTherapistsUsers);
-router.get("/users", getUsersByRole);
+router.get("/users", protect, getUsersByRole);
+router.get("/all_users", protect, getAllUsers);
+router.post("/admins", protect, createAdmin);
+router.put("/admins/:id", protect, updateAdmin);
 router.get("/program/therapists", protect, getProgramTherapists);
 router.get("/program/therapists/:therapistId/children", protect, getProgramTherapistChildren);
 router.post("/therapists", protect, createTherapist);

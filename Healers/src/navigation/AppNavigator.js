@@ -73,6 +73,8 @@ import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
 import ChildFormScreen from '../screens/admin/ChildForm';
 import ChildDetailsScreen from '../screens/admin/ChildDetailsScreen';
+import AllUsersScreen from '../screens/admin/AllUsersScreen';
+import AdminFormScreen from '../screens/admin/AdminFormScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -129,6 +131,8 @@ function AdminStack() {
       <Stack.Screen name="ChildForm" component={ChildFormScreen} />
       <Stack.Screen name="ChildDetails" component={ChildDetailsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SendPushNotification" component={SendPushNotificationScreen} />
+      <Stack.Screen name="AllUsers" component={AllUsersScreen} />
+      <Stack.Screen name="AdminForm" component={AdminFormScreen} />
     </Stack.Navigator>
   );
 }

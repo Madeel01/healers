@@ -4,6 +4,24 @@ export const Overview = async () => {
   const response = await apiClient.get("/admin/overview");
   return response.data;
 };
+
+export const getAllUsers = async (params) => {
+  const res = await apiClient.get("/admin/all_users", { params });
+  return res.data;
+};
+export const createAdmin = async (payload) => {
+  const res = await apiClient.post("/admin/admins", payload);
+  return res.data;
+};
+export const updateAdmin = async (id, payload) => {
+  const res = await apiClient.put(`/admin/admins/${id}`, payload);
+  return res.data;
+};
+export const deleteAdmin = async (id) => {
+  const res = await apiClient.delete(`/admin/admins/${id}`);
+  return res.data;
+};
+
 export const getTherapistSchedule = async (therapistId, params) => {
   const res = await apiClient.get(`/admin/therapists/${therapistId}/schedule`, { params });
   return res.data;
