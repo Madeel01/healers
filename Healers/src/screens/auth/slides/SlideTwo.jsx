@@ -17,6 +17,7 @@ import {
   commonStyles,
   fonts,
 } from '../../../styles/theme';
+import { fontSize } from '../../../utils/responsive';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -136,7 +137,7 @@ const styles = StyleSheet.create({
     height: 36,
   },
   headerBrand: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.bold,
     color: "#0B4A6F",
   },
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
     height: 25,
   },
   skipText: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontFamily: fonts.semiBold,
     color: "#334155",
   },
@@ -170,10 +171,10 @@ const styles = StyleSheet.create({
   badgeText: {
     color: "#0B4A6F",
     fontWeight: "600",
-    fontSize: 13,
+    fontSize: fontSize(13),
   },
   title: {
-    fontSize: 26,
+    fontSize: fontSize(26),
     fontWeight: "800",
     color: "#181C1E",
     marginVertical: 16,
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
     color: "#4CB99F",
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     color: "#414750",
     fontFamily: fonts.regular,
     lineHeight: 24,
@@ -220,13 +221,13 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontWeight: "700",
   },
   stepsText: {
     marginTop: 30,
     textAlign: "center",
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#94A3B8",
     fontFamily: fonts.semiBold,
     backgroundColor: "#f7fafd",

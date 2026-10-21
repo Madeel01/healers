@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Feather from '@expo/vector-icons/Feather';
@@ -27,13 +26,17 @@ import {
 
 import { Overview } from '../../api/admin/api';
 import { UnreadSummary } from '../../api/child/api';
-import BottomBar from '../../components/BottomBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 import Administration from './components/Administration';
 import Fee from './components/Fee';
 
@@ -132,7 +135,7 @@ export default function AdminDashboard() {
     ? senderName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
     : "MSG";
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
+    <View style={[commonStyles.container]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -239,20 +242,6 @@ export default function AdminDashboard() {
             </View>
             <Text style={styles.gridCardTitle}>Messages</Text>
           </TouchableOpacity>
-
-          {
-            /* <LinearGradient
-            colors={["#F8B88B", "#FCEADE", "rgba(255, 255, 255, 0.4)"]}
-            locations={[0, 0.6, 1]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={styles.statCard}
-          >
-            <Text style={styles.statLabelDark}>
-              Sessions : {String(stats.sessionCount)}
-            </Text>
-          </LinearGradient>*/
-          }
         </LinearGradient>
 
         <Fee customstyles={styles} />
@@ -350,22 +339,17 @@ export default function AdminDashboard() {
           <AntDesign name="file-text" size={24} color="#717781" />
         </TouchableOpacity>
       </ScrollView>
-
-      <BottomBar />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingHorizontal: wp(16),
+    paddingBottom: hp(24),
   },
   headerRow: {
     flexDirection: "row",
@@ -392,14 +376,14 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: fontSize(22),
     lineHeight: 20,
     fontFamily: fonts.semiBold,
     color: colors.primary,
     width: 180,
   },
   headerDate: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#414750",
     fontFamily: fonts.regular,
   },
@@ -412,21 +396,21 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.blackFont,
     lineHeight: 24,
     marginTop: 10,
   },
   sectionHeadTitle: {
-    fontSize: 24,
+    fontSize: fontSize(24),
     fontFamily: fonts.semiBold,
     color: "#181C1E",
     lineHeight: 32,
     marginVertical: 10,
   },
   sectionSubtitle: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#777D87",
     marginBottom: 14,
   },
@@ -463,21 +447,21 @@ const styles = StyleSheet.create({
   },
   statLabelLight: {
     color: colors.white,
-    fontSize: 14,
+    fontSize: fontSize(14),
     marginTop: 5,
     fontFamily: fonts.regular,
     lineHeight: 20,
   },
   statValueLight: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     lineHeight: 20,
     marginTop: 3,
   },
   statLabelDark: {
     color: "#181C1E",
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     textAlign: "center",
   },
@@ -501,15 +485,16 @@ const styles = StyleSheet.create({
   quickActionText: {
     flex: 1,
     marginLeft: 12,
+    paddingRight:hp(10)
   },
   quickActionTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#181C1E",
     lineHeight: 20,
   },
   quickActionSub: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#414750",
     fontFamily: fonts.regular,
   },
@@ -523,7 +508,7 @@ const styles = StyleSheet.create({
   },
 
   avatarFallbackText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
   },
@@ -548,7 +533,7 @@ const styles = StyleSheet.create({
     borderColor: "#FFFFFF",
   },
   gridCardTitle: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#191C20",
     textAlign: "center",
@@ -580,7 +565,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   messageBannerTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#191C20",
     lineHeight: 24,
@@ -592,7 +577,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   badgeNewText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontWeight: "700",
     color: "#FFFFFF",
   },
@@ -613,7 +598,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   msgAvatarText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#7CB342",
     lineHeight: 24,
@@ -622,13 +607,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   teacherName: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#191C20",
     lineHeight: 24,
   },
   messageSnippet: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 20,

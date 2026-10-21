@@ -18,27 +18,27 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 
 import {
   deleteChildCustomAppointment,
+  getServices,
   getSessions,
   getUsersByRole,
-  getServices,
 } from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
   fonts,
 } from '../../styles/theme';
 import { formatTo12Hour } from '../../utils/hoursformat';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const LIMIT = 15;
 
@@ -87,7 +87,7 @@ const attendanceSummary = (children = []) => {
 };
 
 // ---------- card (declared outside the screen so it never remounts) ----------
-function SessionCard({ s, onPress,specMeta }) {
+function SessionCard({ s, onPress, specMeta }) {
   const isCustom = s.type === "custom";
   const spec = !isCustom && s.speciality ? specMeta(s.speciality) : null;
   const tm = TYPE_META[s.sessionType];
@@ -133,24 +133,32 @@ function SessionCard({ s, onPress,specMeta }) {
           {isCustom
             ? (
               <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
-                <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom</Text>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.chipText, { color: "#6B21A8" }]}>
+                  Custom
+                </Text>
               </View>
             )
             : (
               spec && (
                 <View style={[styles.chip, { backgroundColor: spec.bg }]}>
-                  <Text style={[styles.chipText, { color: spec.color }]}>{spec.label}</Text>
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.chipText, { color: spec.color }]}>
+                    {spec.label}
+                  </Text>
                 </View>
               )
             )}
           {tm && (
             <View style={[styles.chip, { backgroundColor: tm.bg }]}>
-              <Text style={[styles.chipText, { color: tm.color }]}>{tm.label}</Text>
+              <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.chipText, { color: tm.color }]}>
+                {tm.label}
+              </Text>
             </View>
           )}
           {attChip && (
             <View style={[styles.chip, { backgroundColor: attChip.bg }]}>
-              <Text style={[styles.chipText, { color: attChip.color }]}>{attChip.label}</Text>
+              <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.chipText, { color: attChip.color }]}>
+                {attChip.label}
+              </Text>
             </View>
           )}
         </View>
@@ -169,7 +177,7 @@ export default function ScheduleScreen({ navigation }) {
   const [type, setType] = useState("all");
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
-  const [services, setServices] = useState([])
+  const [services, setServices] = useState([]);
 
   const [items, setItems] = useState([]);
   const [today, setToday] = useState(dateToKey(new Date()));
@@ -195,7 +203,7 @@ export default function ScheduleScreen({ navigation }) {
         const res = await getServices({ search: "" });
 
         const activeServices = res.data.filter(
-          (service) => service.isActive === true
+          (service) => service.isActive === true,
         );
 
         setServices(activeServices);
@@ -210,7 +218,7 @@ export default function ScheduleScreen({ navigation }) {
     (id) => {
       return (
         services.find(
-          (service) => service.id === id
+          (service) => service.id === id,
         ) || {
           label: id,
           bg: "#E0F2FE",
@@ -218,7 +226,7 @@ export default function ScheduleScreen({ navigation }) {
         }
       );
     },
-    [services]
+    [services],
   );
 
   // debounce the search box
@@ -242,7 +250,7 @@ export default function ScheduleScreen({ navigation }) {
           Alert.alert("Error", res?.message || "Could not load the schedule.");
           return;
         }
-        
+
         if (res.today) setToday(res.today);
         setHasMore(!!res.hasMore);
         setPage(pageNum);
@@ -363,14 +371,7 @@ export default function ScheduleScreen({ navigation }) {
   const detailKids = detail?.children || [];
 
   return (
-    <SafeAreaView style={styles.main}>
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle="Manage Schedule"
-      />
-
+    <View style={styles.main}>
       {/* search + filters */}
       <View style={styles.filters}>
         <View style={styles.searchBox}>
@@ -459,15 +460,13 @@ export default function ScheduleScreen({ navigation }) {
         )}
 
       <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + 90 }]}
+        style={[styles.fab]}
         activeOpacity={0.85}
         onPress={openPicker}
       >
-        <Feather name="plus" size={20} color="#FFFFFF" />
+        <Feather name="plus" size={fontSize(16)} color="#FFFFFF" />
         <Text style={styles.fabText}>New appointment</Text>
       </TouchableOpacity>
-
-      <BottomBar activeTab="Schedule" onOpenNotifications={setIsNotificationOpen} />
 
       {/* ---------- session details ---------- */}
       <Modal visible={!!detail} transparent animationType="slide" onRequestClose={() => setDetail(null)}>
@@ -609,7 +608,7 @@ export default function ScheduleScreen({ navigation }) {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -627,27 +626,27 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 46,
+    height: hp(46),
   },
-  searchInput: { flex: 1, fontSize: 14, color: "#0F172A" },
+  searchInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
 
   tabs: { flexDirection: "row", backgroundColor: "#E2E8F0", borderRadius: 12, padding: 4, marginTop: 10 },
-  tab: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: "center" },
+  tab: { flex: 1, paddingVertical: hp(9), borderRadius: wp(9), alignItems: "center" },
   tabActive: { backgroundColor: "#FFFFFF" },
-  tabText: { fontSize: 13, fontFamily: fonts.semiBold, color: "#64748B" },
+  tabText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#64748B" },
   tabTextActive: { color: "#0B4A6F" },
 
   typeRow: { flexDirection: "row", gap: 8, marginTop: 10, marginBottom: 4 },
   typeChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingHorizontal: wp(20),
+    paddingVertical: hp(7),
+    borderRadius: wp(16),
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
   typeChipActive: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
-  typeText: { fontSize: 12, fontFamily: fonts.semiBold, color: "#475569" },
+  typeText: { fontSize: fontSize(12), fontFamily: fonts.semiBold, color: "#475569" },
   typeTextActive: { color: "#FFFFFF" },
 
   listContent: { padding: 16, paddingBottom: 170, flexGrow: 1 },
@@ -659,8 +658,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     paddingHorizontal: 2,
   },
-  dayTitle: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
-  dayRel: { fontSize: 11, fontFamily: fonts.semiBold, color: colors.primary },
+  dayTitle: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
+  dayRel: { fontSize: fontSize(11), fontFamily: fonts.semiBold, color: colors.primary },
 
   card: {
     flexDirection: "row",
@@ -673,37 +672,44 @@ const styles = StyleSheet.create({
   },
   cardCancelled: { backgroundColor: "#FFF7F7" },
   bar: { width: 4, alignSelf: "stretch", borderRadius: 2 },
-  time: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
+  time: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
   struck: { textDecorationLine: "line-through", color: "#94A3B8" },
-  title: { fontSize: 13, fontFamily: fonts.semiBold, color: "#334155", marginTop: 2 },
-  meta: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
-  attLine: { fontSize: 11, fontFamily: fonts.regular, color: "#94A3B8", marginTop: 3 },
+  title: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#334155", marginTop: 2 },
+  meta: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  attLine: { fontSize: fontSize(11), fontFamily: fonts.regular, color: "#94A3B8", marginTop: 3 },
 
-  chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start" },
-  chipText: { fontSize: 11, fontFamily: fonts.semiBold },
+  chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start", maxWidth: wp(100) },
+  chipText: { fontSize: fontSize(11), fontFamily: fonts.semiBold },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
 
   empty: { alignItems: "center", paddingVertical: 60, gap: 6 },
-  emptyTitle: { fontSize: 15, fontFamily: fonts.semiBold, color: "#334155", marginTop: 6 },
-  emptySub: { fontSize: 12, fontFamily: fonts.regular, color: "#94A3B8", textAlign: "center", paddingHorizontal: 30 },
+  emptyTitle: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#334155", marginTop: 6 },
+  emptySub: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    color: "#94A3B8",
+    textAlign: "center",
+    paddingHorizontal: 30,
+  },
 
   fab: {
     position: "absolute",
     right: 20,
-    height: 50,
-    paddingHorizontal: 18,
-    borderRadius: 25,
+    bottom: 10,
+    height: hp(45),
+    paddingHorizontal: wp(16),
+    borderRadius: wp(25),
     backgroundColor: colors.primary,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 3,
     elevation: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 5,
   },
-  fabText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  fabText: { fontSize: fontSize(11), fontFamily: fonts.semiBold, color: "#FFFFFF", lineHeight: 20 },
 
   overlay: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.4)", justifyContent: "flex-end" },
   sheet: {
@@ -715,10 +721,16 @@ const styles = StyleSheet.create({
     maxHeight: "88%",
   },
   sheetHeader: { flexDirection: "row", alignItems: "flex-start" },
-  sheetTitle: { fontSize: 19, fontFamily: fonts.semiBold, color: "#0F172A" },
-  sheetSub: { fontSize: 13, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
-  sheetSection: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 16, marginBottom: 4 },
-  muted: { fontSize: 13, fontFamily: fonts.regular, color: "#94A3B8", marginVertical: 12 },
+  sheetTitle: { fontSize: fontSize(18), fontFamily: fonts.semiBold, color: "#0F172A" },
+  sheetSub: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  sheetSection: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+    marginTop: 16,
+    marginBottom: 4,
+  },
+  muted: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#94A3B8", marginVertical: 12 },
 
   detailRow: {
     flexDirection: "row",
@@ -729,8 +741,14 @@ const styles = StyleSheet.create({
     borderTopColor: "#F1F5F9",
     marginTop: 4,
   },
-  detailLabel: { fontSize: 13, fontFamily: fonts.regular, color: "#64748B" },
-  detailValue: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A", maxWidth: "65%", textAlign: "right" },
+  detailLabel: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#64748B" },
+  detailValue: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+    maxWidth: "65%",
+    textAlign: "right",
+  },
 
   childRow: {
     flexDirection: "row",
@@ -748,7 +766,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  childName: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
+  childName: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
   avatar: {
     width: 32,
     height: 32,
@@ -757,7 +775,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { fontSize: 13, fontFamily: fonts.semiBold, color: "#0B4A6F" },
+  avatarText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#0B4A6F" },
 
   dangerBtn: {
     marginTop: 14,
@@ -768,5 +786,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  dangerText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#EF4444" },
+  dangerText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#EF4444" },
 });

@@ -17,198 +17,224 @@ import {
   colors,
   fonts,
 } from '../../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../../utils/responsive';
 
-export default function Administration({ customstyles, leaveCount = 0 }) {
+const administrationItems = [
+  {
+    title: "Program Builder",
+    subtitle: "Create and manage Programs",
+    route: "ProgramBuilder",
+    backgroundColor: "#DBEAFE",
+    iconBackground: "#1669A9",
+    icon: "plus",
+    iconType: "Entypo",
+  },
+  {
+    title: "Batch Management",
+    subtitle: "Create and manage batches",
+    route: "BatchManagment",
+    backgroundColor: "#E6CFF9",
+    iconBackground: "#DC9EE8",
+    icon: "dynamic-feed",
+    iconType: "MaterialIcons",
+  },
+  {
+    title: "Leave Requests",
+    subtitle: "Approve or reject leave requests",
+    route: "LeaveRequest",
+    backgroundColor: "#F9DDCF",
+    iconBackground: "#E8B79E",
+    icon: "event-note",
+    iconType: "MaterialIcons",
+    showBadge: true,
+  },
+  {
+    title: "Therapist Management",
+    subtitle: "Manage therapist accounts",
+    route: "Therapist",
+    backgroundColor: "#D6EAF8",
+    iconBackground: colors.primary,
+    icon: "message",
+    iconType: "MaterialIcons",
+  },
+  {
+    title: "Feedback Management",
+    subtitle: "View and manage feedback",
+    route: "Feedback",
+    backgroundColor: "#FDD7D7",
+    iconBackground: "rgba(216,82,67,.2)",
+    icon: "message",
+    iconType: "MaterialIcons",
+    iconColor: "#D85243",
+  },
+  {
+    title: "Broadcast Management",
+    subtitle: "Manage fees and payments",
+    route: "BroadcastManagement",
+    backgroundColor: "#6DDDC2",
+    iconBackground: "#006B58",
+    icon: "broadcast",
+    iconType: "MaterialCommunityIcons",
+  },
+];
+
+const iconComponents = {
+  Entypo,
+  MaterialIcons,
+  MaterialCommunityIcons,
+};
+
+export default function Administration({
+  customstyles,
+  leaveCount = 0,
+}) {
   const navigation = useNavigation();
+
   return (
     <View style={styles.container}>
-      <Text style={[customstyles?.sectionTitle, styles.sectionHeader]}>
+      <Text
+        style={[
+          customstyles?.sectionTitle,
+          styles.sectionHeader,
+        ]}
+      >
         Administration
       </Text>
 
-      <TouchableOpacity
-        style={[styles.adminBanner, { backgroundColor: "#DBEAFE" }]}
-        onPress={() => navigation.navigate("ProgramBuilder")}
-      >
-        <View style={[styles.adminIconBox, { backgroundColor: "#1669A9" }]}>
-          <Entypo name="plus" size={22} color="#FFFFFF" />
-        </View>
+      {administrationItems.map((item) => {
+        const IconComponent = iconComponents[item.iconType];
 
-        <View style={styles.adminTextContainer}>
-          <View style={{ width: "70%" }}>
-            <Text style={styles.adminBannerTitle}>Program Builder</Text>
-            <Text style={styles.adminBannerSub}>Create and manage Programs</Text>
-          </View>
+        return (
+          <TouchableOpacity
+            key={item.route}
+            activeOpacity={0.8}
+            style={[
+              styles.adminBanner,
+              { backgroundColor: item.backgroundColor },
+            ]}
+            onPress={() => navigation.navigate(item.route)}
+          >
+            <View
+              style={[
+                styles.adminIconBox,
+                { backgroundColor: item.iconBackground },
+              ]}
+            >
+              <IconComponent
+                name={item.icon}
+                size={fontSize(22)}
+                color={item.iconColor || "#FFFFFF"}
+              />
+            </View>
 
-          <AntDesign name="file-text" size={24} color="#717781" />
-        </View>
-      </TouchableOpacity>
+            <View style={styles.adminTextContainer}>
+              <Text style={styles.adminBannerTitle}>
+                {item.title}
+              </Text>
 
-      <TouchableOpacity
-        style={[styles.adminBanner, { backgroundColor: "#e6cff9" }]}
-        onPress={() => navigation.navigate("BatchManagment")}
-      >
-        <View style={[styles.adminIconBox, { backgroundColor: "#dc9ee8" }]}>
-          <MaterialIcons name="dynamic-feed" size={22} color="#FFFFFF" />
-        </View>
+              <Text style={styles.adminBannerSub}>
+                {item.subtitle}
+              </Text>
+            </View>
 
-        <View style={styles.adminTextContainer}>
-          <View style={{ width: "70%" }}>
-            <Text style={styles.adminBannerTitle}>Batch Management</Text>
-            <Text style={styles.adminBannerSub}>Create and manage batches</Text>
-          </View>
+            <View style={styles.rightContainer}>
+              {item.showBadge && Number(leaveCount) > 0 && (
+                <View style={styles.leaveBadge}>
+                  <Text style={styles.leaveBadgeText}>
+                    {Number(leaveCount) > 99
+                      ? "99+"
+                      : leaveCount}
+                  </Text>
+                </View>
+              )}
 
-          <AntDesign name="file-text" size={24} color="#717781" />
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.adminBanner, { backgroundColor: "#F9DDCF" }]}
-        onPress={() => navigation.navigate("LeaveRequest")}
-      >
-        <View style={[styles.adminIconBox, { backgroundColor: "#E8B79E" }]}>
-          <MaterialIcons name="event-note" size={22} color="#FFFFFF" />
-        </View>
-
-        <View style={[styles.adminTextContainer, { flex: 1, flexWrap: "nowrap" }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.adminBannerTitle}>Leave Requests</Text>
-            <Text style={styles.adminBannerSub}>
-              Approve or reject leave requests
-            </Text>
-          </View>
-
-          <View style={styles.leaveRightContainer}>
-            {Number(leaveCount) > 0 && (
-              <View style={styles.leaveBadge}>
-                <Text style={styles.leaveBadgeText}>
-                  {Number(leaveCount) > 99 ? "99+" : leaveCount}
-                </Text>
-              </View>
-            )}
-
-            <AntDesign name="file-text" size={24} color="#717781" />
-          </View>
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.adminBanner, { backgroundColor: "#D6EAF8" }]}
-        onPress={() => navigation.navigate("Therapist")}
-      >
-        <View style={[styles.adminIconBox, { backgroundColor: colors.primary }]}>
-          <MaterialIcons name="message" size={22} color="#FFFFFF" />
-        </View>
-
-        <View style={styles.adminTextContainer}>
-          <View style={{ width: "74%" }}>
-            <Text style={styles.adminBannerTitle}>Therapist Management</Text>
-            <Text style={styles.adminBannerSub}>Manage therapist accounts</Text>
-          </View>
-
-          <AntDesign name="file-text" size={24} color="#717781" />
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.adminBanner, { backgroundColor: "#FDD7D7" }]}
-        onPress={() => navigation.navigate("Feedback")}
-      >
-        <View style={[styles.adminIconBox, { backgroundColor: "rgba(216,82,67,.2)" }]}>
-          <MaterialIcons name="message" size={22} color="#FFFFFF" />
-        </View>
-
-        <View style={styles.adminTextContainer}>
-          <View style={{ width: "75%" }}>
-            <Text style={styles.adminBannerTitle}>Feedback Management</Text>
-            <Text style={styles.adminBannerSub}>View and manage feedback</Text>
-          </View>
-
-          <AntDesign name="file-text" size={24} color="#717781" />
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.adminBanner, { backgroundColor: "#6DDDC2" }]}
-        onPress={() => navigation.navigate("BroadcastManagement")}
-      >
-        <View style={[styles.adminIconBox, { backgroundColor: "#006B58" }]}>
-          <MaterialCommunityIcons name="broadcast" size={22} color="#FFFFFF" />
-        </View>
-
-        <View style={styles.adminTextContainer}>
-          <View style={{ width: "75%" }}>
-            <Text style={styles.adminBannerTitle}>Broadcast Management</Text>
-            <Text style={styles.adminBannerSub}>Manage fees and payments</Text>
-          </View>
-
-          <AntDesign name="file-text" size={24} color="#717781" />
-        </View>
-      </TouchableOpacity>
+              <AntDesign
+                name="file-text"
+                size={fontSize(22)}
+                color="#717781"
+              />
+            </View>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 10,
+    marginVertical: hp(10),
   },
   sectionHeader: {
-    marginBottom: 10,
+    marginBottom: hp(10),
   },
   adminBanner: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 16,
-    flexWrap: "wrap",
-    marginBottom: 10,
+    width: "100%",
+    minHeight: hp(82),
+    paddingHorizontal: wp(14),
+    paddingVertical: hp(16),
+    borderRadius: wp(16),
+    marginBottom: hp(10),
   },
   adminIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    justifyContent: "center",
+    width: wp(42),
+    height: wp(42),
+    borderRadius: wp(12),
     alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   adminTextContainer: {
-    marginLeft: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 10,
+    flex: 1,
+    minWidth: 0,
+    marginLeft: wp(12),
+    marginRight: wp(8),
+    paddingRight: wp(35),
+    justifyContent: "center",
   },
   adminBannerTitle: {
-    fontSize: 16,
-    fontFamily: fonts.regular,
+    fontSize: fontSize(16),
+    fontFamily: fonts.medium,
     color: "#181C1E",
-    lineHeight: 24,
+    lineHeight: fontSize(22),
+    marginBottom: hp(4),
+    flexShrink: 1,
   },
   adminBannerSub: {
-    fontSize: 14,
-    color: "#414750",
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
+    color: "#414750",
+    lineHeight: fontSize(20),
+    flexShrink: 1,
+    paddingBottom:0,
+
   },
-  leaveRightContainer: {
+  rightContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "flex-end",
+    gap: wp(6),
+    flexShrink: 0,
   },
-
   leaveBadge: {
     backgroundColor: "#EF4444",
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    justifyContent: "center",
+    minWidth: wp(24),
+    height: wp(24),
+    borderRadius: wp(12),
+    paddingHorizontal: wp(6),
     alignItems: "center",
+    justifyContent: "center",
   },
-
   leaveBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
+    color: "#FFFFFF",
     textAlign: "center",
   },
 });

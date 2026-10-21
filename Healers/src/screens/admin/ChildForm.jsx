@@ -1,4 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import {
   ActivityIndicator,
   Alert,
@@ -15,26 +23,32 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
+} from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import Feather from "@expo/vector-icons/Feather";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import * as DocumentPicker from "expo-document-picker";
-import * as ImagePicker from "expo-image-picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
+} from 'react-native-safe-area-context';
+
+import Feather from '@expo/vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import {
   createChild,
-  updateChild,
-  getParents,
   getAllPackages,
+  getParents,
+  updateChild,
   uploadChildDocument,
-} from "../../api/admin/api";
-import { colors, fonts } from "../../styles/theme";
-import { uploadToCloudinary } from "../../utils/cloudinaryUpload";
+} from '../../api/admin/api';
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const PKG_LIMIT = 5;
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -1089,7 +1103,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E2E8F0",
     backgroundColor: "#FFFFFF",
   },
-  headerTitle: { fontSize: 16, fontFamily: fonts.semiBold, color: colors.primary },
+  headerTitle: {  fontSize: fontSize(16), fontFamily: fonts.semiBold, color: colors.primary },
 
   stepper: {
     flexDirection: "row",
@@ -1097,23 +1111,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 14,
     paddingHorizontal: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#fff",
   },
-  stepItem: { width: 96, alignItems: "center" },
+  stepItem: { width: wp(90), alignItems: "center" },
   stepCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: wp(26),
+    height: hp(26),
+    borderRadius: wp(13),
     backgroundColor: "#E2E8F0",
     alignItems: "center",
     justifyContent: "center",
   },
   stepCircleOn: { backgroundColor: "#0B4A6F" },
-  stepNum: { fontSize: 13, fontFamily: fonts.semiBold, color: "#64748B" },
+  stepNum: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#64748B",lineHeight:18, },
   stepNumOn: { color: "#FFFFFF" },
   stepLabel: {
     marginTop: 6,
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#94A3B8",
     textAlign: "center",
@@ -1123,14 +1137,15 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 2,
     marginTop: 12,
-    marginHorizontal: -34,
+    marginHorizontal: `-${wp(32)}`,
     backgroundColor: "#E2E8F0",
+    
   },
   stepLineOn: { backgroundColor: "#0B4A6F" },
 
-  scrollContent: { padding: 16, paddingBottom: 24 },
+  scrollContent: { padding: wp(16), paddingBottom: hp(20)},
   stepIntro: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#475569",
     lineHeight: 20,
@@ -1151,19 +1166,19 @@ const styles = StyleSheet.create({
 
   requiredText: { color: "red" },
   fieldLabel: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: fontSize(13),
+    fontFamily:fonts.semiBold,
     color: "#475569",
     marginBottom: 6,
     marginTop: 14,
   },
   fieldLabelFirst: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: fontSize(13),
+    fontFamily:fonts.semiBold,
     color: "#475569",
     marginBottom: 6,
   },
-  helperText: { fontSize: 12, color: "#64748B", marginBottom: 6 },
+  helperText: {  fontSize: fontSize(12), color: "#64748B", marginBottom: 6 },
 
   formInput: {
     backgroundColor: "#F8FAFC",
@@ -1171,8 +1186,8 @@ const styles = StyleSheet.create({
     borderColor: "#CBD5E1",
     borderRadius: 12,
     paddingHorizontal: 14,
-    height: 46,
-    fontSize: 14,
+    height: hp(46),
+    fontSize: fontSize(14),
     color: "#0F172A",
   },
   textArea: {
@@ -1182,8 +1197,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingTop: 12,
-    height: 90,
-    fontSize: 14,
+    height: hp(90),
+     fontSize: fontSize(14),
     color: "#0F172A",
   },
   inputWithLoader: {
@@ -1193,13 +1208,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#CBD5E1",
     borderRadius: 12,
-    height: 46,
+    height: hp(46),
   },
   formInputFlex: {
     flex: 1,
     paddingHorizontal: 14,
     height: "100%",
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#0F172A",
   },
   passwordBox: {
@@ -1210,25 +1225,25 @@ const styles = StyleSheet.create({
     borderColor: "#CBD5E1",
     borderRadius: 12,
     paddingHorizontal: 14,
-    height: 46,
+    height: hp(46),
   },
-  passwordInput: { flex: 1, fontSize: 14, color: "#0F172A" },
+  passwordInput: { flex: 1,  fontSize: fontSize(14), color: "#0F172A" },
 
   selectorRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    height: 46,
+    height: hp(46),
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#CBD5E1",
     backgroundColor: "#F8FAFC",
   },
-  selectorText: { flex: 1, fontSize: 14, color: "#94A3B8" },
+  selectorText: { flex: 1, fontSize: fontSize(14), color: "#94A3B8" },
   pickerDone: { alignSelf: "flex-end", paddingVertical: 8, paddingHorizontal: 4 },
   readOnlyBox: { justifyContent: "center", backgroundColor: "#F1F5F9" },
-  readOnlyText: { fontSize: 14, color: "#475569" },
+  readOnlyText: { fontSize: fontSize(14), color: "#475569" },
 
   segmentWrap: {
     flexDirection: "row",
@@ -1244,7 +1259,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   segmentItemOn: { backgroundColor: "#0B4A6F" },
-  segmentText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#475569" },
+  segmentText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#475569" },
   segmentTextOn: { color: "#FFFFFF" },
 
   selectedPackageCard: {
@@ -1258,7 +1273,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   changeButton: { paddingHorizontal: 10, paddingVertical: 6 },
-  changeButtonText: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary },
+  changeButtonText: {  fontSize: fontSize(13), fontFamily: fonts.semiBold, color: colors.primary },
 
   docCard: {
     backgroundColor: "#FFFFFF",
@@ -1272,8 +1287,8 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   docHeader: { marginBottom: 10 },
-  docLabel: { fontSize: 16, fontFamily: fonts.semiBold, color: "#0F172A" },
-  docHint: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  docLabel: {  fontSize: fontSize(16), fontFamily: fonts.semiBold, color: "#0F172A" },
+  docHint: {  fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
   docEmpty: {
     alignItems: "center",
     justifyContent: "center",
@@ -1285,8 +1300,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F4F7",
     gap: 4,
   },
-  docEmptyText: { fontSize: 14, fontFamily: fonts.regular, color: "#181C1E" },
-  docEmptySub: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B" },
+  docEmptyText: { fontSize: fontSize(14), fontFamily: fonts.regular, color: "#181C1E" },
+  docEmptySub: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B" },
   docFile: {
     flexDirection: "row",
     alignItems: "center",
@@ -1297,9 +1312,9 @@ const styles = StyleSheet.create({
   },
   docThumb: { width: 48, height: 48, borderRadius: 8, backgroundColor: "#E2E8F0" },
   docThumbPdf: { alignItems: "center", justifyContent: "center", backgroundColor: "#FEE2E2" },
-  docName: { fontSize: 13, fontWeight: "600", color: "#334155" },
-  docMeta: { fontSize: 11, color: "#64748B", marginTop: 2 },
-  docActionText: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary },
+  docName: { fontSize: fontSize(13), fontFamily:fonts.semiBold, color: "#334155" },
+  docMeta: {  fontSize: fontSize(11), color: "#64748B", marginTop: 2 },
+  docActionText: {  fontSize: fontSize(13), fontFamily: fonts.semiBold, color: colors.primary },
 
   footer: {
     flexDirection: "row",
@@ -1318,7 +1333,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryBtnText: { color: "#FFFFFF", fontSize: 15, fontFamily: fonts.semiBold },
+  primaryBtnText: { color: "#FFFFFF", fontSize: fontSize(15), fontFamily: fonts.semiBold },
   secondaryBtn: {
     flex: 1,
     height: 48,
@@ -1337,7 +1352,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  outlineBtnText: { color: colors.primary, fontSize: 15, fontFamily: fonts.semiBold },
+  outlineBtnText: { color: colors.primary, fontSize: fontSize(15), fontFamily: fonts.semiBold },
 
   modalOverlay: {
     flex: 1,
@@ -1350,7 +1365,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  modalTitle: { fontSize: 20, fontWeight: "800", color: "#0F172A" },
+  modalTitle: { fontSize: fontSize(18), fontFamily:fonts.semiBold, color: "#0F172A" },
   pickerContent: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 28,
@@ -1370,8 +1385,8 @@ const styles = StyleSheet.create({
     borderColor: "#CBD5E1",
     backgroundColor: "#F8FAFC",
   },
-  pickerSearchInput: { flex: 1, fontSize: 14, color: "#0F172A" },
-  pickerEmpty: { textAlign: "center", marginTop: 30, fontSize: 14, color: "#64748B" },
+  pickerSearchInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
+  pickerEmpty: { textAlign: "center", marginTop: 30, fontSize: fontSize(14), color: "#64748B" },
   packageOption: {
     flexDirection: "row",
     alignItems: "center",
@@ -1384,8 +1399,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   packageOptionOn: { borderColor: "#0B4A6F", backgroundColor: "#FFFFFF" },
-  packageOptionName: { flex: 1, fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
-  packageOptionPrice: { fontSize: 12, fontFamily: fonts.regular, color: "#475569" },
+  packageOptionName: { flex: 1, fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
+  packageOptionPrice: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#475569" },
   radio: {
     width: 20,
     height: 20,

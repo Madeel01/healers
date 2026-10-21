@@ -29,15 +29,16 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import ChildBottomBar from '../../components/ChildBottomBar';
-import TherapistBottomBar from '../../components/TherapistBottomBar';
-import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 import NotificationDetailModal from './components/NotificationDetailModal';
 
 const PAGE_SIZE = 15;
@@ -249,12 +250,6 @@ export default function NotificationScreen({ navigation }) {
         if (activeMenuId) setActiveMenuId(null);
       }}
     >
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle={"Manage Notifications"}
-      />
 
       <View style={styles.summaryRow}>
         <Text style={styles.summaryText}>
@@ -436,11 +431,11 @@ export default function NotificationScreen({ navigation }) {
         onClose={() => setIsDetailOpen(false)}
       />
 
-      {user?.role === "Therapist"
+      {/* {user?.role === "Therapist"
         ? <TherapistBottomBar activeTab="Notifications" />
         : user?.role === "Admin"
         ? <BottomBar activeTab="Notifications" />
-        : <ChildBottomBar activeTab="Notifications" />}
+        : <ChildBottomBar activeTab="Notifications" />} */}
     </SafeAreaView>
   );
 }
@@ -452,35 +447,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 14,
+    paddingHorizontal: wp(20),
     paddingBottom: 4,
   },
   deleteButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: wp(30),
+    height: hp(30),
+    borderRadius:wp(15),
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 8,
   },
-  summaryText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#334155" },
+  summaryText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#334155" },
   markAllBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 4 },
-  markAllText: { fontSize: 13, fontWeight: "700", color: colors.primary },
+  markAllText: {fontSize: fontSize(13), fontFamily:fonts.semiBold, color: colors.primary },
 
   filterScroll: { flexGrow: 0, marginTop: 10 },
   filterRow: { paddingHorizontal: 20, gap: 8, paddingBottom: 4 },
   filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 18,
-    backgroundColor: "#F1F5F9",
+    paddingHorizontal: wp(16),
+    paddingVertical: hp(7),
+    borderRadius: wp(14),
+    backgroundColor: "#e9e9e9",
   },
-  filterChipText: { fontSize: 12, fontWeight: "600", color: "#475569" },
+  filterChipText: {fontSize: fontSize(12), fontFamily:fonts.semiBold, color: "#475569" },
   filterChipTextActive: { color: "#FFFFFF" },
 
   scrollArea: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
+  scrollContent: { paddingHorizontal: wp(20), paddingTop: 12, paddingBottom: 12 },
 
   card: {
     flexDirection: "row",
@@ -510,20 +504,20 @@ const styles = StyleSheet.create({
 
   cardBody: { flex: 1 },
   cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  cardTitle: { flex: 1, fontSize: 15, fontFamily: fonts.semiBold, color: "#334155" },
+  cardTitle: { flex: 1,fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#334155" },
   cardTitleUnread: { color: "#0F172A" },
-  cardTime: { fontSize: 11, color: "#94A3B8" },
+  cardTime: {fontSize: fontSize(11), color: "#94A3B8" },
 
-  cardMessage: { fontSize: 13, color: "#64748B", lineHeight: 18, marginTop: 3 },
+  cardMessage: {fontSize: fontSize(13), color: "#64748B", lineHeight: 18, marginTop: 3 },
 
   cardFooterRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" },
   typeTag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  typeTagText: { fontSize: 10, fontWeight: "700" },
+  typeTagText: { fontSize: fontSize(10), fontFamily:fonts.semiBold },
 
   attachmentRow: { flexDirection: "row", alignItems: "center", gap: 4, maxWidth: 140 },
-  attachmentText: { fontSize: 11, color: "#64748B" },
+  attachmentText: { fontSize: fontSize(11), color: "#64748B" },
 
-  fromText: { fontSize: 11, color: "#94A3B8", marginLeft: "auto" },
+  fromText: { fontSize: fontSize(11), color: "#94A3B8", marginLeft: "auto" },
 
   unreadDot: {
     width: 8,
@@ -536,6 +530,6 @@ const styles = StyleSheet.create({
 
   centerLoader: { marginVertical: 40 },
   emptyContainer: { alignItems: "center", paddingVertical: 60, paddingHorizontal: 20 },
-  emptyTitle: { fontSize: 16, fontWeight: "600", color: "#334155", marginTop: 12 },
-  emptyText: { fontSize: 13, color: "#64748B", textAlign: "center", marginTop: 6, lineHeight: 19 },
+  emptyTitle: { ffontSize: fontSize(16), fontFamily:fonts.semiBold, color: "#334155", marginTop: 12 },
+  emptyText: {fontSize: fontSize(13),color: "#64748B", textAlign: "center", marginTop: 6, lineHeight: 19 },
 });

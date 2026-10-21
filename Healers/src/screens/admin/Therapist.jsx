@@ -1,17 +1,16 @@
 import React, {
+  useContext,
   useEffect,
-  useState,
   useRef,
-  useContext
+  useState,
 } from 'react';
 
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Alert,
-  Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -19,33 +18,45 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Platform,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import {
   assignChildrenToTherapist,
   createTherapist,
   deleteTherapist,
+  getServices,
   getUsersByRole,
   therapistUsers,
   updateTherapist,
-  getServices,
 } from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
+import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
+  commonStyles,
   fonts,
 } from '../../styles/theme';
-import { AuthContext } from '../../context/AuthContext';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
+
 const AVATAR_COLORS = [
-  "#0B4A6F", "#7C3AED", "#DC2626", "#059669",
-  "#D97706", "#DB2777", "#2563EB", "#0891B2",
-  "#65A30D", "#9333EA", "#EA580C", "#0D9488",
+  "#0B4A6F",
+  "#7C3AED",
+  "#DC2626",
+  "#059669",
+  "#D97706",
+  "#DB2777",
+  "#2563EB",
+  "#0891B2",
+  "#65A30D",
+  "#9333EA",
+  "#EA580C",
+  "#0D9488",
 ];
 const getAvatarColor = (str = "") => {
   let hash = 0;
@@ -114,7 +125,7 @@ export default function TherapistsScreen({ navigation }) {
   const [hasMore, setHasMore] = useState(true);
   const [saving, setSaving] = useState(false);
   const [touchedChildIds, setTouchedChildIds] = useState([]);
-  const [services, setServices] = useState([])
+  const [services, setServices] = useState([]);
 
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -122,8 +133,7 @@ export default function TherapistsScreen({ navigation }) {
   const [selectedDays, setSelectedDays] = useState(["Mon", "Fri"]);
 
   const [newTherapist, setNewTherapist] = useState({});
-  const [editingTherapistId, setEditingTherapistId] = useState(null); 
-  
+  const [editingTherapistId, setEditingTherapistId] = useState(null);
 
   // ---- Assign Child modal state ----
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -144,8 +154,7 @@ export default function TherapistsScreen({ navigation }) {
   const [draftSpecialty, setDraftSpecialty] = useState("All");
   const [draftStatus, setDraftStatus] = useState("all");
 
-  const activeFilterCount =
-    (selectedFilter !== "All" ? 1 : 0) + (statusFilter !== "all" ? 1 : 0);
+  const activeFilterCount = (selectedFilter !== "All" ? 1 : 0) + (statusFilter !== "all" ? 1 : 0);
 
   const openFilterModal = () => {
     setDraftSpecialty(selectedFilter);
@@ -187,7 +196,7 @@ export default function TherapistsScreen({ navigation }) {
         const res = await getServices({ search: "" });
 
         const activeServices = res.data.filter(
-          (service) => service.isActive === true
+          (service) => service.isActive === true,
         );
 
         setServices(activeServices);
@@ -203,8 +212,7 @@ export default function TherapistsScreen({ navigation }) {
 
     setNewTherapist({
       name: therapist.name || "",
-      specialty:
-        therapist.specialties?.[0]?.id || therapist.specialty || "",
+      specialty: therapist.specialties?.[0]?.id || therapist.specialty || "",
       // maxChildren: String(therapist.maxLoad || 0),
       specialtyBg: therapist.specialties?.[0]?.bg || "",
       specialtyColor: therapist.specialties?.[0]?.color || "",
@@ -241,8 +249,8 @@ export default function TherapistsScreen({ navigation }) {
               if (res?.deactivated) {
                 Alert.alert(
                   "Marked Inactive",
-                  res.message ||
-                    "This therapist has past appointments, so they were marked inactive instead of deleted.",
+                  res.message
+                    || "This therapist has past appointments, so they were marked inactive instead of deleted.",
                 );
               }
               await fetchTherapistData(1, true);
@@ -251,14 +259,14 @@ export default function TherapistsScreen({ navigation }) {
               // setTherapists(previous);
               Alert.alert(
                 "Cannot Delete",
-                error?.response?.data?.message ||
-                  error?.message ||
-                  "Could not delete this therapist. Please try again.",
+                error?.response?.data?.message
+                  || error?.message
+                  || "Could not delete this therapist. Please try again.",
               );
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -272,10 +280,10 @@ export default function TherapistsScreen({ navigation }) {
 
   const handleSaveTherapist = async () => {
     if (
-      !newTherapist.name ||
-      !newTherapist.email ||
-      !newTherapist.phone ||
-      saving
+      !newTherapist.name
+      || !newTherapist.email
+      || !newTherapist.phone
+      || saving
     ) {
       Alert.alert("Validation Error", "Please fill in all required fields.");
       return;
@@ -294,7 +302,7 @@ export default function TherapistsScreen({ navigation }) {
     if (!phoneRegex.test(phone)) {
       Alert.alert(
         "Validation Error",
-        "Phone number must be in 03011234567 or +923011234567 format."
+        "Phone number must be in 03011234567 or +923011234567 format.",
       );
       return;
     }
@@ -308,7 +316,7 @@ export default function TherapistsScreen({ navigation }) {
     if (password && !passwordRegex.test(password)) {
       Alert.alert(
         "Validation Error",
-        "Password must be at least 8 characters and contain 1 lowercase, 1 uppercase, and 1 special character."
+        "Password must be at least 8 characters and contain 1 lowercase, 1 uppercase, and 1 special character.",
       );
       return;
     }
@@ -324,7 +332,7 @@ export default function TherapistsScreen({ navigation }) {
       if (!password || !confirmPassword) {
         Alert.alert(
           "Error",
-          "Please fill both password fields, or leave both blank."
+          "Please fill both password fields, or leave both blank.",
         );
         return;
       }
@@ -357,19 +365,19 @@ export default function TherapistsScreen({ navigation }) {
           prev.map((item) =>
             item.id === editingTherapistId
               ? {
-                  ...item,
-                  name: updated?.name || payload.name,
-                  email: updated?.email || payload.email,
-                  phone: updated?.phone || payload.phone,
-                  address: updated?.address || payload.address,
-                  // maxChildren: updated?.maxChildren || payload.maxChildren,
-                  specialties: [
-                    {
-                      id: payload.specialty,
-                    },
-                  ],
-                  isActive: updated?.isActive ?? payload.isActive,
-                }
+                ...item,
+                name: updated?.name || payload.name,
+                email: updated?.email || payload.email,
+                phone: updated?.phone || payload.phone,
+                address: updated?.address || payload.address,
+                // maxChildren: updated?.maxChildren || payload.maxChildren,
+                specialties: [
+                  {
+                    id: payload.specialty,
+                  },
+                ],
+                isActive: updated?.isActive ?? payload.isActive,
+              }
               : item
           )
         );
@@ -407,10 +415,8 @@ export default function TherapistsScreen({ navigation }) {
       const backendMessage = error?.response?.data?.message;
       Alert.alert(
         "Error",
-        backendMessage ||
-          `Could not ${
-            isEditMode ? "update" : "create"
-          } this therapist. Please try again.`
+        backendMessage
+          || `Could not ${isEditMode ? "update" : "create"} this therapist. Please try again.`,
       );
     } finally {
       setSaving(false);
@@ -447,31 +453,31 @@ export default function TherapistsScreen({ navigation }) {
           return {
             id: specId,
             label: matched?.label || "",
-            bg: matched?.bg || '',
-            color: matched?.color || '',
+            bg: matched?.bg || "",
+            color: matched?.color || "",
           };
         });
-        
+
         return {
           id: therapist._id || therapist.id,
           name: therapist.fullName || therapist.name,
           specialties: therapistSpecialties,
           currentLoad: therapist.assignedChildren || therapist.currentLoad || 0,
-          profileImage:therapist.profileImage || "",
-          isOnline:therapist.isOnline || false,
-          lastActive:therapist.lastActive,
+          profileImage: therapist.profileImage || "",
+          isOnline: therapist.isOnline || false,
+          lastActive: therapist.lastActive,
           // maxLoad: therapist.maxChildren || therapist.maxLoad || 0,
-          email: therapist.email || '',
-          phone: therapist.phone || '',
-          address: therapist.address || '',
+          email: therapist.email || "",
+          phone: therapist.phone || "",
+          address: therapist.address || "",
           isActive: therapist.isActive ?? true,
-          conversationId:therapist.conversationId ?? null,
+          conversationId: therapist.conversationId ?? null,
         };
       });
       setTherapists((prev) => (resetList || isRefresh ? formattedTherapists : [...prev, ...formattedTherapists]));
       setPage(pageNum);
     } catch (error) {
-      console.log('Failed to fetch therapists:', error);
+      console.log("Failed to fetch therapists:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -490,14 +496,10 @@ export default function TherapistsScreen({ navigation }) {
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, selectedFilter, statusFilter]);
-  
-
-  
 
   const handleScroll = ({ nativeEvent }) => {
     const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-    const isCloseToBottom =
-      layoutMeasurement.height + contentOffset.y >= contentSize.height - 40;
+    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 40;
 
     if (isCloseToBottom && hasMore && !loadingMore && !loading && !refreshing) {
       fetchTherapistData(page + 1, false);
@@ -590,9 +592,7 @@ export default function TherapistsScreen({ navigation }) {
 
   const toggleChildSelection = (childId) => {
     setTouchedChildIds((prev) => (prev.includes(childId) ? prev : [...prev, childId]));
-    setSelectedChildIds((prev) =>
-      prev.includes(childId) ? prev.filter((id) => id !== childId) : [...prev, childId]
-    );
+    setSelectedChildIds((prev) => prev.includes(childId) ? prev.filter((id) => id !== childId) : [...prev, childId]);
   };
 
   const handleConfirmAssign = async () => {
@@ -634,21 +634,16 @@ export default function TherapistsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.mainContainer]} onTouchStart={() => {
-      if (menuTouchRef.current) {
-        menuTouchRef.current = false; 
-        return;
-      }
-      if (activeMenuId) setActiveMenuId(null);
-    }}
+    <View
+      style={[commonStyles.container]}
+      onTouchStart={() => {
+        if (menuTouchRef.current) {
+          menuTouchRef.current = false;
+          return;
+        }
+        if (activeMenuId) setActiveMenuId(null);
+      }}
     >
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle={"Manage Therapist"}
-      />      
-
       <ScrollView
         style={styles.scrollArea}
         onScrollBeginDrag={() => setActiveMenuId(null)}
@@ -669,11 +664,13 @@ export default function TherapistsScreen({ navigation }) {
       >
         <View style={styles.headerTitleContainer}>
           <View style={styles.headerTitle}>
-              <Text style={styles.pageTitle}>Therapists</Text>
-              {/* <TouchableOpacity style={styles.assignChildButton} onPress={openAssignModal}>
+            <Text style={styles.pageTitle}>Therapists</Text>
+            {
+              /* <TouchableOpacity style={styles.assignChildButton} onPress={openAssignModal}>
                 <Ionicons name="people-outline" size={18} color="#FFFFFF" />
                 <Text style={styles.assignChildButtonText}>Assign Child</Text>
-              </TouchableOpacity> */}
+              </TouchableOpacity> */
+            }
           </View>
           <Text style={styles.pageSubTitle}>
             Oversee your Therapist team and balance their caseloads.
@@ -692,7 +689,7 @@ export default function TherapistsScreen({ navigation }) {
             />
           </View>
           <TouchableOpacity style={styles.filterIconButton} onPress={openFilterModal}>
-            <Feather name="sliders" size={20} color="#0B4A6F" />
+            <Feather name="sliders" size={fontSize(20)} color="#0B4A6F" />
             {activeFilterCount > 0 && <View style={styles.filterActiveDot} />}
           </TouchableOpacity>
         </View>
@@ -700,7 +697,7 @@ export default function TherapistsScreen({ navigation }) {
         <View style={styles.tabWrap}>
           {selectedSpecilites.map((cat) => {
             const specility = services.find((item) => item.id === cat);
-            if(!specility) return;
+            if (!specility) return;
             return (
               <View
                 key={specility.id}
@@ -719,9 +716,7 @@ export default function TherapistsScreen({ navigation }) {
           })}
         </View>
 
-        {loading && (
-          <ActivityIndicator size="large" color={colors.primary} style={styles.centerLoader} />
-        )}
+        {loading && <ActivityIndicator size="large" color={colors.primary} style={styles.centerLoader} />}
 
         {!loading && therapists.length === 0 && (
           <View style={styles.emptyContainer}>
@@ -740,7 +735,8 @@ export default function TherapistsScreen({ navigation }) {
           const isMenuOpen = activeMenuId === therapist.id;
           const avatarColor = getAvatarColor(therapist.id || therapist.name);
           return (
-            <View key={therapist.id}
+            <View
+              key={therapist.id}
               style={[
                 styles.therapistCard,
                 {
@@ -750,19 +746,20 @@ export default function TherapistsScreen({ navigation }) {
               ]}
             >
               <View style={styles.cardHeaderRow}>
-                {/* <Image
+                {
+                  /* <Image
                   source={{ uri: therapist.avatar }}
                   style={styles.therapistAvatar}
-                /> */}
+                /> */
+                }
                 <View style={[styles.therapistAvatarInitial, { backgroundColor: avatarColor }]}>
                   <Text style={styles.therapistAvatarInitialText}>
                     {therapist.name?.trim()?.charAt(0)?.toUpperCase() || "?"}
                   </Text>
                 </View>
                 <View style={styles.therapistInfo}>
-                  
                   <View style={{ flexDirection: "row", alignItems: "center", flex: 1, flexWrap: "wrap" }}>
-                    <Text style={styles.therapistName}>
+                    <Text style={styles.therapistName} numberOfLines={1} ellipsizeMode="tail">
                       {therapist.name}
                     </Text>
 
@@ -782,13 +779,12 @@ export default function TherapistsScreen({ navigation }) {
                     }}
                   >
                     {(therapist.specialties || []).map((speciality) => {
-                      const specialityId =
-                        typeof speciality === "object"
-                          ? speciality.id
-                          : speciality;
+                      const specialityId = typeof speciality === "object"
+                        ? speciality.id
+                        : speciality;
 
                       const service = services.find(
-                        (item) => item.id === specialityId
+                        (item) => item.id === specialityId,
                       );
 
                       if (!service) {
@@ -818,9 +814,7 @@ export default function TherapistsScreen({ navigation }) {
                         </View>
                       );
                     })}
-
                   </View>
-
                 </View>
 
                 <View
@@ -865,7 +859,8 @@ export default function TherapistsScreen({ navigation }) {
                 </View>
               </View>
 
-              {/* <View style={styles.loadRow}>
+              {
+                /* <View style={styles.loadRow}>
                 <Text style={styles.loadLabel}>Current Load</Text>
                 <Text style={styles.loadValue}>
                   {therapist.currentLoad}/{therapist.maxLoad} <Text style={styles.loadSubText}>Childs</Text>
@@ -879,30 +874,34 @@ export default function TherapistsScreen({ navigation }) {
                   end={{ x: 1, y: 0 }}
                   style={[styles.progressBar, { width: loadPercentage }]}
                 />
-              </View> */}
+              </View> */
+              }
 
               <View style={styles.cardActionsRow}>
-                <TouchableOpacity style={styles.scheduleButton} onPress={() =>
-                  navigation.navigate("TherapistSchedule", {
-                    therapistId: therapist.id,
-                    therapistName: therapist.name,
-                    isActive:therapist.isActive
-                  })
-                }>
+                <TouchableOpacity
+                  style={styles.scheduleButton}
+                  onPress={() =>
+                    navigation.navigate("TherapistSchedule", {
+                      therapistId: therapist.id,
+                      therapistName: therapist.name,
+                      isActive: therapist.isActive,
+                    })}
+                >
                   <Text style={styles.scheduleButtonText}>View Schedule</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.mailButton}
+                <TouchableOpacity
+                  style={styles.mailButton}
                   onPress={() =>
-                      navigation?.navigate("ChatDetails", {
-                        conversationId:therapist.conversationId,
-                        receiverId: therapist.id,
-                        partnerName: therapist.name,
-                        partnerImage: therapist.profileImage,
-                        isOnline: therapist.isOnline,
-                        lastSeen: therapist.lastActive,
-                        currentUserId: userId,
-                      })}
+                    navigation?.navigate("ChatDetails", {
+                      conversationId: therapist.conversationId,
+                      receiverId: therapist.id,
+                      partnerName: therapist.name,
+                      partnerImage: therapist.profileImage,
+                      isOnline: therapist.isOnline,
+                      lastSeen: therapist.lastActive,
+                      currentUserId: userId,
+                    })}
                 >
                   <Feather name="mail" size={20} color="#0B4A6F" />
                 </TouchableOpacity>
@@ -911,16 +910,14 @@ export default function TherapistsScreen({ navigation }) {
           );
         })}
 
-        {loadingMore && (
-          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
-        )}
+        {loadingMore && <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />}
 
         {/* Spacer so the FAB never covers the last card */}
         <View style={{ height: 90 }} />
       </ScrollView>
 
-      <TouchableOpacity style={[styles.fab, { bottom: insets.bottom + 90 }]} onPress={openAddModal} activeOpacity={0.8}>
-        <Feather name="plus" size={30} color="#fff" />
+      <TouchableOpacity style={[styles.fab]} onPress={openAddModal} activeOpacity={0.8}>
+        <Feather name="plus" size={fontSize(30)} color="#fff" />
       </TouchableOpacity>
 
       <Modal
@@ -1027,19 +1024,19 @@ export default function TherapistsScreen({ navigation }) {
           resetTherapistForm();
         }}
       >
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <View
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => {
-            setIsAddModalOpen(false);
-            resetTherapistForm();
-          }}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <View activeOpacity={1} style={styles.modalContent}>
+          <View
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => {
+              setIsAddModalOpen(false);
+              resetTherapistForm();
+            }}
+          >
+            <View activeOpacity={1} style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>
                   {isEditMode ? "Edit Therapist" : "Add New Therapist"}
@@ -1053,26 +1050,27 @@ export default function TherapistsScreen({ navigation }) {
                   <Feather name="x" size={22} color="#64748B" />
                 </TouchableOpacity>
               </View>
-            <ScrollView 
-              showsVerticalScrollIndicator={false} 
-              keyboardShouldPersistTaps="handled"
-              style={{ flexShrink: 1 }}
-              contentContainerStyle={{ paddingBottom: 24 }}
-              // keyboardDismissMode="on-drag"
-            >
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                style={{ flexShrink: 1 }}
+                contentContainerStyle={{ paddingBottom: 24 }}
+                // keyboardDismissMode="on-drag"
+              >
+                <Text style={styles.fieldLabel}>
+                  Full Name <Text style={styles.requiredText}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Dr. Sarah Chen"
+                  placeholderTextColor="#94A3B8"
+                  value={newTherapist.name}
+                  onChangeText={(t) => setNewTherapist({ ...newTherapist, name: t })}
+                />
 
-              <Text style={styles.fieldLabel}>Full Name <Text style={styles.requiredText}>*</Text></Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="Dr. Sarah Chen"
-                placeholderTextColor="#94A3B8"
-                value={newTherapist.name}
-                onChangeText={(t) => setNewTherapist({ ...newTherapist, name: t })}
-              />
-
-              <Text style={styles.fieldLabel}>Specialty</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 6 }}>
-                  {services.map((item,index) => {
+                <Text style={styles.fieldLabel}>Specialty</Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 6 }}>
+                  {services.map((item, index) => {
                     const isSelected = newTherapist.specialty === item.id;
                     return (
                       <TouchableOpacity
@@ -1080,15 +1078,16 @@ export default function TherapistsScreen({ navigation }) {
                         style={[
                           styles.tabChip,
                           { backgroundColor: item.bg },
-                          isSelected && { borderWidth: 2, borderColor: '#0B4A6F' }
+                          isSelected && { borderWidth: 2, borderColor: "#0B4A6F" },
                         ]}
                         key={item.id}
-                        onPress={() => setNewTherapist({ 
-                          ...newTherapist, 
-                          specialty: item.id,
-                        })}
+                        onPress={() =>
+                          setNewTherapist({
+                            ...newTherapist,
+                            specialty: item.id,
+                          })}
                       >
-                        <Text style={[styles.tabChipText, { color: item.color, fontWeight: '700' }]}>
+                        <Text style={[styles.tabChipText, { color: item.color, fontWeight: "700" }]}>
                           {item.label}
                         </Text>
                       </TouchableOpacity>
@@ -1096,7 +1095,8 @@ export default function TherapistsScreen({ navigation }) {
                   })}
                 </View>
 
-              {/* <Text style={styles.fieldLabel}>Max Children (Caseload Limit)</Text>
+                {
+                  /* <Text style={styles.fieldLabel}>Max Children (Caseload Limit)</Text>
               <TextInput
                 style={styles.formInput}
                 placeholder="15"
@@ -1104,99 +1104,104 @@ export default function TherapistsScreen({ navigation }) {
                 keyboardType="number-pad"
                 value={newTherapist.maxChildren}
                 onChangeText={(t) => setNewTherapist({ ...newTherapist, maxChildren: t })}
-              /> */}
-
-              <Text style={styles.fieldLabel}>Email <Text style={styles.requiredText}>*</Text></Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="therapist@example.com"
-                placeholderTextColor="#94A3B8"
-                keyboardType="email-address"
-                value={newTherapist.email}
-                onChangeText={(t) => setNewTherapist({ ...newTherapist, email: t })}
-              />
-
-              <Text style={styles.fieldLabel}>Phone <Text style={styles.requiredText}>*</Text></Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="0300 1234567"
-                placeholderTextColor="#94A3B8"
-                keyboardType="phone-pad"
-                value={newTherapist.phone}
-                onChangeText={(t) => setNewTherapist({ ...newTherapist, phone: t })}
-              />
-
-              <Text style={styles.fieldLabel}>Address</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="Address"
-                placeholderTextColor="#94A3B8"
-                value={newTherapist.address}
-                onChangeText={(t) => setNewTherapist({ ...newTherapist, address: t })}
-              />
-
-              <Text style={styles.fieldLabel}>Password <Text style={styles.requiredText}>*</Text></Text>
-              <View style={styles.passwordInputContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  secureTextEntry={!showPassword}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Enter password"
-                  placeholderTextColor="#94A3B8"
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#94A3B8" />
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.fieldLabel}>Confirm Password <Text style={styles.requiredText}>*</Text></Text>
-              <View style={styles.passwordInputContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  secureTextEntry={!showConfirmPassword}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="Confirm password"
-                  placeholderTextColor="#94A3B8"
-                />
-                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                  <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#94A3B8" />
-                </TouchableOpacity>
-              </View>
-              
-              <Text style={styles.fieldLabel}>Status</Text>
-
-              <SegmentedToggle
-                options={ACTIVE_OPTIONS}
-                value={newTherapist.isActive ?? true}
-                onChange={(value) =>
-                  setNewTherapist((prev) => ({
-                    ...prev,
-                    isActive: value,
-                  }))
+              /> */
                 }
-              />
 
-            </ScrollView>
+                <Text style={styles.fieldLabel}>
+                  Email <Text style={styles.requiredText}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="therapist@example.com"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="email-address"
+                  value={newTherapist.email}
+                  onChangeText={(t) => setNewTherapist({ ...newTherapist, email: t })}
+                />
+
+                <Text style={styles.fieldLabel}>
+                  Phone <Text style={styles.requiredText}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="0300 1234567"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="phone-pad"
+                  value={newTherapist.phone}
+                  onChangeText={(t) => setNewTherapist({ ...newTherapist, phone: t })}
+                />
+
+                <Text style={styles.fieldLabel}>Address</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Address"
+                  placeholderTextColor="#94A3B8"
+                  value={newTherapist.address}
+                  onChangeText={(t) => setNewTherapist({ ...newTherapist, address: t })}
+                />
+
+                <Text style={styles.fieldLabel}>
+                  Password <Text style={styles.requiredText}>*</Text>
+                </Text>
+                <View style={styles.passwordInputContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Enter password"
+                    placeholderTextColor="#94A3B8"
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#94A3B8" />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.fieldLabel}>
+                  Confirm Password <Text style={styles.requiredText}>*</Text>
+                </Text>
+                <View style={styles.passwordInputContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    secureTextEntry={!showConfirmPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Confirm password"
+                    placeholderTextColor="#94A3B8"
+                  />
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#94A3B8" />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.fieldLabel}>Status</Text>
+
+                <SegmentedToggle
+                  options={ACTIVE_OPTIONS}
+                  value={newTherapist.isActive ?? true}
+                  onChange={(value) =>
+                    setNewTherapist((prev) => ({
+                      ...prev,
+                      isActive: value,
+                    }))}
+                />
+              </ScrollView>
               <View style={styles.stickyButtonContainer}>
                 <TouchableOpacity
                   style={[styles.saveTherapistButton1, saving && { opacity: 0.6 }]}
                   onPress={handleSaveTherapist}
                   disabled={saving}
                 >
-                  {saving ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
+                  {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : (
                     <Text style={styles.saveTherapistText}>
                       {isEditMode ? "Save Changes" : "Save Therapist"}
                     </Text>
                   )}
                 </TouchableOpacity>
               </View>
+            </View>
           </View>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal
@@ -1227,137 +1232,138 @@ export default function TherapistsScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            {assignStep === 1 ? (
-              <>
-                <View style={styles.searchInputContainer}>
-                  <Feather name="search" size={18} color="#94A3B8" style={styles.searchIcon} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search therapists..."
-                    placeholderTextColor="#94A3B8"
-                    value={assignTherapistSearch}
-                    onChangeText={setAssignTherapistSearch}
-                  />
-                </View>
+            {assignStep === 1
+              ? (
+                <>
+                  <View style={styles.searchInputContainer}>
+                    <Feather name="search" size={18} color="#94A3B8" style={styles.searchIcon} />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Search therapists..."
+                      placeholderTextColor="#94A3B8"
+                      value={assignTherapistSearch}
+                      onChangeText={setAssignTherapistSearch}
+                    />
+                  </View>
 
-                {assignLoading && (
-                  <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
-                )}
-
-                <ScrollView style={{ maxHeight: 360, marginTop: 12 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                  {!assignLoading && assignTherapistResults.length === 0 && (
-                    <Text style={styles.emptyListText}>No therapists found.</Text>
+                  {assignLoading && (
+                    <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
                   )}
-                  {assignTherapistResults.map((t) => {
-                  return (
-                    <TouchableOpacity
-                      key={t._id || t.id}
-                      style={styles.selectableRow}
-                      onPress={() => selectTherapistForAssign(t)}
-                    >
-                      <Text style={styles.selectableRowText}>{t.fullName || t.name}</Text>
-                      <Feather name="chevron-right" size={18} color="#94A3B8" />
-                    </TouchableOpacity>
-                  )})}
-                </ScrollView>
-              </>
-            ) : (
-              <>
-                <View style={styles.searchInputContainer}>
-                  <Feather name="search" size={18} color="#94A3B8" style={styles.searchIcon} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search children..."
-                    placeholderTextColor="#94A3B8"
-                    value={assignChildSearch}
-                    onChangeText={setAssignChildSearch}
-                  />
-                </View>
 
-                {assignLoading && (
-                  <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
-                )}
+                  <ScrollView
+                    style={{ maxHeight: 360, marginTop: 12 }}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {!assignLoading && assignTherapistResults.length === 0 && (
+                      <Text style={styles.emptyListText}>No therapists found.</Text>
+                    )}
+                    {assignTherapistResults.map((t) => {
+                      return (
+                        <TouchableOpacity
+                          key={t._id || t.id}
+                          style={styles.selectableRow}
+                          onPress={() => selectTherapistForAssign(t)}
+                        >
+                          <Text style={styles.selectableRowText}>{t.fullName || t.name}</Text>
+                          <Feather name="chevron-right" size={18} color="#94A3B8" />
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </>
+              )
+              : (
+                <>
+                  <View style={styles.searchInputContainer}>
+                    <Feather name="search" size={18} color="#94A3B8" style={styles.searchIcon} />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Search children..."
+                      placeholderTextColor="#94A3B8"
+                      value={assignChildSearch}
+                      onChangeText={setAssignChildSearch}
+                    />
+                  </View>
 
-                <ScrollView style={{ maxHeight: 280, marginTop: 12 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                  {!assignLoading && assignChildResults.length === 0 && (
-                    <Text style={styles.emptyListText}>No children found.</Text>
+                  {assignLoading && (
+                    <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
                   )}
-                  {assignChildResults.map((child, index) => {
-                    const childId = child._id || child.id;
-                    const isSelected = selectedChildIds.includes(childId);
-                    return (
-                      <TouchableOpacity
-                        key={`${childId}-${index}`} // Safe unique key prevents UI duplicate warning
-                        style={styles.selectableRow}
-                        onPress={() => toggleChildSelection(childId)}
-                      >
-                        <Text style={styles.selectableRowText}>{child.fullName || child.name}</Text>
-                        <Feather
-                          name={isSelected ? "check-square" : "square"}
-                          size={18}
-                          color={isSelected ? "#0B4A6F" : "#94A3B8"}
-                        />
-                      </TouchableOpacity>
+
+                  <ScrollView
+                    style={{ maxHeight: 280, marginTop: 12 }}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {!assignLoading && assignChildResults.length === 0 && (
+                      <Text style={styles.emptyListText}>No children found.</Text>
+                    )}
+                    {assignChildResults.map((child, index) => {
+                      const childId = child._id || child.id;
+                      const isSelected = selectedChildIds.includes(childId);
+                      return (
+                        <TouchableOpacity
+                          key={`${childId}-${index}`} // Safe unique key prevents UI duplicate warning
+                          style={styles.selectableRow}
+                          onPress={() => toggleChildSelection(childId)}
+                        >
+                          <Text style={styles.selectableRowText}>{child.fullName || child.name}</Text>
+                          <Feather
+                            name={isSelected ? "check-square" : "square"}
+                            size={18}
+                            color={isSelected ? "#0B4A6F" : "#94A3B8"}
+                          />
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+
+                  {(() => {
+                    const toAdd = selectedChildIds.filter((id) => !originalAssignedIds.includes(id));
+                    const toRemove = originalAssignedIds.filter((id) =>
+                      !selectedChildIds.includes(id)
                     );
-                  })}
-                </ScrollView>
+                    const hasChanges = toAdd.length > 0 || toRemove.length > 0;
+                    const isDisabled = !hasChanges || assigning;
 
-                {(() => {
-                  const toAdd = selectedChildIds.filter((id) => !originalAssignedIds.includes(id));
-                  const toRemove = originalAssignedIds.filter((id) => !selectedChildIds.includes(id));
-                  const hasChanges = toAdd.length > 0 || toRemove.length > 0;
-                  const isDisabled = !hasChanges || assigning;
-
-                  const label = !hasChanges
-                    ? "No changes"
-                    : [
+                    const label = !hasChanges
+                      ? "No changes"
+                      : [
                         toAdd.length > 0 && `Assign ${toAdd.length}`,
                         toRemove.length > 0 && `Unassign ${toRemove.length}`,
                       ]
                         .filter(Boolean)
                         .join(" · ");
 
-                  return (
-                    <TouchableOpacity
-                      style={[styles.saveTherapistButton, isDisabled && { opacity: 0.6 }]}
-                      onPress={handleConfirmAssign}
-                      disabled={isDisabled}
-                    >
-                      {assigning ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      ) : (
-                        <Text style={styles.saveTherapistText}>{label}</Text>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })()}
-              </>
-            )}
+                    return (
+                      <TouchableOpacity
+                        style={[styles.saveTherapistButton, isDisabled && { opacity: 0.6 }]}
+                        onPress={handleConfirmAssign}
+                        disabled={isDisabled}
+                      >
+                        {assigning
+                          ? <ActivityIndicator size="small" color="#FFFFFF" />
+                          : <Text style={styles.saveTherapistText}>{label}</Text>}
+                      </TouchableOpacity>
+                    );
+                  })()}
+                </>
+              )}
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-
-      <BottomBar
-        activeTab={"Therapist"}
-        setActiveTab={setActiveBottomTab}
-        onOpenNotifications={setIsNotificationOpen}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
   scrollArea: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-    paddingTop: 10,
+    paddingHorizontal: wp(20),
+    paddingBottom: hp(20),
+    paddingTop: hp(10),
   },
   assignChildButton: {
     flexDirection: "row",
@@ -1370,7 +1376,7 @@ const styles = StyleSheet.create({
   },
   assignChildButtonText: {
     color: "#FFFFFF",
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontWeight: "700",
   },
 
@@ -1383,14 +1389,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   pageTitle: {
-    fontSize: 28,
+    fontSize: fontSize(24),
     fontFamily: fonts.bold,
     color: "#181C1E",
     marginBottom: 6,
     lineHeight: 36,
   },
   pageSubTitle: {
-    fontSize: 16,
+    fontSize: fontSize(15),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 20,
@@ -1403,15 +1409,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   searchInputContainerMain: {
-    flex:1,
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#CBD5E1",
     borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
+    paddingHorizontal: wp(14),
+    height: hp(48),
   },
   searchInputContainer: {
     flexDirection: "row",
@@ -1420,21 +1426,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#CBD5E1",
     borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
+    paddingHorizontal: wp(14),
+    height: hp(48),
   },
   searchIcon: {
     marginRight: 10,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: fontSize(15),
     color: "#0F172A",
   },
   filterIconButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: wp(48),
+    height: hp(48),
+    borderRadius: wp(12),
     borderWidth: 1,
     borderColor: "#CBD5E1",
     backgroundColor: "#FFFFFF",
@@ -1461,11 +1467,11 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   tabChipText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
   },
   filterChipText: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontFamily: fonts.regular,
   },
   activeChipText: {
@@ -1478,9 +1484,9 @@ const styles = StyleSheet.create({
 
   therapistCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: wp(24),
+    padding: wp(20),
+    marginBottom: hp(16),
     elevation: 3,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -1493,37 +1499,40 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   therapistAvatarInitial: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    marginRight: 14,
+    width: wp(64),
+    height: hp(64),
+    borderRadius: wp(16),
+    marginRight: wp(14),
     alignItems: "center",
     justifyContent: "center",
   },
   therapistAvatarInitialText: {
     color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "700",
+    fontSize: fontSize(24),
+    fontFamily: fonts.bold,
+    lineHeight: 28,
   },
   therapistInfo: {
     flex: 1,
     alignItems: "flex-start",
   },
   therapistName: {
-    fontSize: 22,
+    fontSize: fontSize(18),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
     lineHeight: 26,
     marginBottom: 5,
   },
   specialtyBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(2),
+    borderRadius: wp(10),
+    marginBottom: hp(4),
   },
   specialtyText: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: fontSize(10),
+    fontFamily: fonts.semiBold,
+    lineHeight: 22,
   },
   moreOptionsButton: {
     padding: 6,
@@ -1536,7 +1545,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingVertical: 6,
-    width: 120,
+    width: wp(120),
     elevation: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
@@ -1556,8 +1565,8 @@ const styles = StyleSheet.create({
     borderTopColor: "#F1F5F9",
   },
   menuItemText: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: fontSize(12),
+    fontFamily: fonts.semiBold,
     color: "#334155",
   },
   deleteText: {
@@ -1571,18 +1580,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   loadLabel: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: fontSize(13),
+    fontFamily: fonts.semiBold,
     color: "#475569",
   },
   loadValue: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: fontSize(14),
+    fontFamily: fonts.bold,
     color: "#0B4A6F",
   },
   loadSubText: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: fontSize(13),
+    fontFamily: fonts.semiBold,
     color: "#0B4A6F",
   },
   progressTrack: {
@@ -1605,20 +1614,20 @@ const styles = StyleSheet.create({
   scheduleButton: {
     flex: 1,
     backgroundColor: colors.primary,
-    borderRadius: 14,
-    paddingVertical: 12,
+    borderRadius: wp(14),
+    paddingVertical: hp(12),
     alignItems: "center",
     justifyContent: "center",
   },
   scheduleButtonText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     lineHeight: 20,
   },
   mailButton: {
-    width: 48,
-    height: 48,
+    width: wp(48),
+    height: hp(48),
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -1630,9 +1639,10 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 18,
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    bottom:20,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(16),
     backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
@@ -1662,7 +1672,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: fontSize(20),
     fontWeight: "800",
     color: "#0F172A",
   },
@@ -1679,15 +1689,15 @@ const styles = StyleSheet.create({
   },
   filterModalChipTextAll: {
     color: "#FFFFFF",
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontWeight: "700",
   },
   activeModalChip: {
     borderWidth: 2,
     borderColor: "#0F172A",
   },
-  requiredText:{
-    color:"red"
+  requiredText: {
+    color: "red",
   },
   fieldLabel: {
     fontSize: 13,
@@ -1703,7 +1713,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 46,
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#0F172A",
   },
 
@@ -1739,25 +1749,25 @@ const styles = StyleSheet.create({
     height: 46,
   },
   calendarInputText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#0F172A",
   },
   stickyButtonContainer: {
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    alignItems: 'center', 
+    borderTopColor: "#F1F5F9",
+    alignItems: "center",
   },
 
   saveTherapistButton1: {
-    backgroundColor: '#0B4A6F',
+    backgroundColor: "#0B4A6F",
     borderRadius: 14,
     paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%', 
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
   saveTherapistButton: {
     backgroundColor: "#0B4A6F",
@@ -1769,7 +1779,7 @@ const styles = StyleSheet.create({
   },
   saveTherapistText: {
     color: "#FFFFFF",
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontWeight: "700",
   },
 
@@ -1800,7 +1810,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#0B4A6F",
   },
   dayChipText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontWeight: "700",
     color: "#475569",
   },
@@ -1821,27 +1831,27 @@ const styles = StyleSheet.create({
   applyScheduleBtnText: {
     color: "#FFFFFF",
     fontWeight: "700",
-    fontSize: 14,
+    fontSize: fontSize(14),
   },
   centerLoader: {
     marginVertical: 30,
   },
   emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 40,
     paddingHorizontal: 20,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#334155',
+    fontSize: fontSize(18),
+    fontWeight: "600",
+    color: "#334155",
     marginTop: 12,
   },
   emptySubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
+    fontSize: fontSize(14),
+    color: "#64748B",
+    textAlign: "center",
     marginTop: 6,
     lineHeight: 20,
   },
@@ -1855,149 +1865,149 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F1F5F9",
   },
   selectableRowText: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     color: "#0F172A",
     fontWeight: "600",
   },
   emptyListText: {
     textAlign: "center",
     color: "#94A3B8",
-    fontSize: 14,
+    fontSize: fontSize(14),
     marginVertical: 24,
   },
   passwordInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: "#CBD5E1",
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 46,
   },
   passwordInput: {
     flex: 1,
-    fontSize: 14,
-    color: '#0F172A',
+    fontSize: fontSize(14),
+    color: "#0F172A",
   },
-  
-segmentWrap: {
-  flexDirection: "row",
-  backgroundColor: "#F1F5F9",
-  borderRadius: 10,
-  padding: 4,
-  marginBottom: 16,
-},
-segmentItem: {
-  flex: 1,
-  paddingVertical: 10,
-  alignItems: "center",
-  borderRadius: 8,
-},
-segmentItemOn: {
-  backgroundColor: "#0B4A6F",
-},
-segmentText: {
-  color: "#475569",
-  fontSize: 14,
-  fontWeight: "600",
-},
-segmentTextOn: {
-  color: "#FFFFFF",
-},
-statusFilterWrap: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: 8,
-  marginTop: 8,
-  marginBottom: 16,
-},
-statusFilterChip: {
-  paddingHorizontal: 16,
-  paddingVertical: 9,
-  borderRadius: 20,
-  backgroundColor: "#F1F5F9",
-  borderWidth: 1,
-  borderColor: "#E2E8F0",
-},
-statusFilterChipActive: {
-  backgroundColor: "#0B4A6F",
-  borderColor: "#0B4A6F",
-},
-statusFilterText: {
-  color: "#475569",
-  fontSize: 13,
-  fontWeight: "600",
-},
-statusFilterTextActive: {
-  color: "#FFFFFF",
-},
-inactiveBadge: {
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: "#FEE2E2",
-  paddingHorizontal: 8,
-  paddingVertical: 3,
-  borderRadius: 12,
-  marginLeft: 8,
-},
-inactiveDot: {
-  width: 6,
-  height: 6,
-  borderRadius: 3,
-  backgroundColor: "#DC2626",
-  marginRight: 5,
-},
-inactiveBadgeText: {
-  color: "#B91C1C",
-  fontSize: 11,
-  fontWeight: "700",
-},
-filterSectionTitle: {
-  fontSize: 13,
-  fontWeight: "700",
-  color: "#475569",
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
-  marginTop: 6,
-  marginBottom: 10,
-},
-filterFooter: {
-  flexDirection: "row",
-  gap: 12,
-  paddingTop: 14,
-  marginTop: 8,
-  borderTopWidth: 1,
-  borderTopColor: "#F1F5F9",
-},
-resetButton: {
-  flex: 1,
-  height: 48,
-  borderRadius: 14,
-  borderWidth: 1,
-  borderColor: "#CBD5E1",
-  alignItems: "center",
-  justifyContent: "center",
-},
-resetButtonText: { fontSize: 15, fontWeight: "700", color: "#475569" },
-applyButton: {
-  flex: 2,
-  height: 48,
-  borderRadius: 14,
-  backgroundColor: "#0B4A6F",
-  alignItems: "center",
-  justifyContent: "center",
-},
-applyButtonText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
-filterActiveDot: {
-  position: "absolute",
-  top: 8,
-  right: 8,
-  width: 9,
-  height: 9,
-  borderRadius: 5,
-  backgroundColor: "#EF4444",
-  borderWidth: 1.5,
-  borderColor: "#FFFFFF",
-},
+
+  segmentWrap: {
+    flexDirection: "row",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 16,
+  },
+  segmentItem: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  segmentItemOn: {
+    backgroundColor: "#0B4A6F",
+  },
+  segmentText: {
+    color: "#475569",
+    fontSize: fontSize(14),
+    fontWeight: "600",
+  },
+  segmentTextOn: {
+    color: "#FFFFFF",
+  },
+  statusFilterWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  statusFilterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  statusFilterChipActive: {
+    backgroundColor: "#0B4A6F",
+    borderColor: "#0B4A6F",
+  },
+  statusFilterText: {
+    color: "#475569",
+    fontSize: fontSize(13),
+    fontWeight: "600",
+  },
+  statusFilterTextActive: {
+    color: "#FFFFFF",
+  },
+  inactiveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  inactiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#DC2626",
+    marginRight: 5,
+  },
+  inactiveBadgeText: {
+    color: "#B91C1C",
+    fontSize: fontSize(11),
+    fontWeight: "700",
+  },
+  filterSectionTitle: {
+    fontSize: fontSize(13),
+    fontWeight: "700",
+    color: "#475569",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  filterFooter: {
+    flexDirection: "row",
+    gap: 12,
+    paddingTop: 14,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+  },
+  resetButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  resetButtonText: { fontSize: fontSize(15), fontWeight: "700", color: "#475569" },
+  applyButton: {
+    flex: 2,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "#0B4A6F",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  applyButtonText: { fontSize: fontSize(15), fontWeight: "700", color: "#FFFFFF" },
+  filterActiveDot: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "#EF4444",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+  },
 });

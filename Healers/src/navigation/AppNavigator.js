@@ -1,13 +1,25 @@
-import { useContext } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
+  StyleSheet,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  createNavigationContainerRef,
+  NavigationContainer,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import BottomBar from '../components/BottomBar';
+import TopBar from '../components/TopBar';
 import { AuthContext } from '../context/AuthContext';
 import AddNewPackageScreen from '../screens/admin/AddNewPackage';
 import AdminDashboard from '../screens/admin/AdminDashboard';
@@ -23,6 +35,8 @@ import BatchSessionPostponeScreen
 import BroadcastManagementScreen from '../screens/admin/BroadcastManagement';
 import ChildCustomAppointmentScreen
   from '../screens/admin/ChildCustomAppointmentScreen';
+import ChildDetailsScreen from '../screens/admin/ChildDetailsScreen';
+import ChildFormScreen from '../screens/admin/ChildForm';
 import ChildrenScreen from '../screens/admin/Children';
 import ChildScheduleScreen from '../screens/admin/ChildScheduleScreen';
 import ComplainManagementScreen from '../screens/admin/ComplainManagement';
@@ -71,133 +85,419 @@ import ProgressTrackingScreen from '../screens/therapist/ProgressTracking';
 import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
-import ChildFormScreen from '../screens/admin/ChildForm';
-import ChildDetailsScreen from '../screens/admin/ChildDetailsScreen';
 
 const Stack = createNativeStackNavigator();
+const navigationRef = createNavigationContainerRef();
+
+const DEFAULT_LAYOUT = {
+  showHeader: true,
+  showFooter: true,
+  headerTitle: "",
+};
+
+const SCREEN_LAYOUTS = {
+  Admin: {
+    AdminDashboard: { showHeader: false, showFooter: true },
+    LeaveRequest: { headerTitle: "Leave Requests" },
+    Therapist: { headerTitle: "Therapists" },
+    Children: { headerTitle: "Children" },
+    Schedule: { headerTitle: "Schedule" },
+    Feedback: { headerTitle: "Feedback" },
+    BatchManagment: { headerTitle: "Batch Management" },
+    BroadcastManagement: { headerTitle: "Broadcast Management" },
+    ComplainManagement: { headerTitle: "Complaint Management" },
+    FeeManagement: { headerTitle: "Fee Management" },
+    AddNewPackage: { headerTitle: "Add New Package" },
+    InvoiceManagement: { headerTitle: "Invoice Management" },
+    CreateNewInvoice: { headerTitle: "Create Invoice" },
+    InvoiceDetail: { headerTitle: "Invoice Details" },
+    Notifications: { headerTitle: "Notifications" },
+    TherapistAvailability: { headerTitle: "Therapist Availability" },
+    BatchSchedule: { headerTitle: "Batch Schedule" },
+    BatchScheduleCreate: { headerTitle: "Create Batch Schedule" },
+    StaffOnLeave: { headerTitle: "Staff on Leave Today" },
+    ChildMessages: { headerTitle: "Messages" },
+    ChatDetails: { showFooter: false, headerTitle: "Chat" },
+    ChildProfile: { headerTitle: "Profile" },
+    BatchSessionPostpone: { headerTitle: "Postpone Session" },
+    BatchAdditionalClass: { headerTitle: "Additional Class" },
+    TherapistSchedule: { headerTitle: "Therapist Schedule" },
+    ChildSchedule: { headerTitle: "Child Schedule" },
+    ChildCustomAppointment: { headerTitle: "Custom Appointment" },
+    AllPackages: { headerTitle: "All Packages" },
+    ServiceManagement: { headerTitle: "Service Management" },
+    ProgramBuilder: { headerTitle: "Program Builder" },
+    InvoiceView: { headerTitle: "Invoice" },
+    Settings: { headerTitle: "Settings" },
+    ChildForm: { headerTitle: "Child Form" },
+    ChildDetails: { showHeader: false, showFooter: false },
+    SendPushNotification: { headerTitle: "Send Notification" },
+  },
+  Therapist: {
+    TherapistDashboard: { showHeader: false, showFooter: true },
+    AssignedChildren: { headerTitle: "Assigned Children" },
+    FeedbackManagement: { headerTitle: "Feedback Management" },
+    AddFeedback: { headerTitle: "Add Feedback" },
+    AttendanceTracking: { headerTitle: "Attendance Tracking" },
+    WeeklyVideo: { headerTitle: "Weekly Videos" },
+    LeaveRequest: { headerTitle: "Leave Request" },
+    QuarterlyReports: { headerTitle: "Quarterly Reports" },
+    ProgressTracking: { headerTitle: "Progress Tracking" },
+    ChildMessages: { headerTitle: "Messages" },
+    ChatDetails: { showFooter: false, headerTitle: "Chat" },
+    ChildProfile: { headerTitle: "Profile" },
+    Notifications: { showFooter: false, headerTitle: "Notifications" },
+    TherapistComplaints: { headerTitle: "Complaints" },
+    ComplaintDetails: { headerTitle: "Complaint Details" },
+  },
+  Child: {
+    ChildDashboard: { showHeader: false, showFooter: true },
+    ChildFeedback: { headerTitle: "Feedback" },
+    CreateFeedback: { headerTitle: "Create Feedback" },
+    ChildAttendance: { headerTitle: "Attendance" },
+    ChildVideo: { headerTitle: "Videos" },
+    ChildMessages: { headerTitle: "Messages" },
+    ChatDetails: { showFooter: false, headerTitle: "Chat" },
+    ChildReport: { headerTitle: "Reports" },
+    Notifications: { showFooter: false, headerTitle: "Notifications" },
+    ChildProfile: { headerTitle: "Profile" },
+    ChildComplaints: { headerTitle: "Complaints" },
+    ComplaintDetails: { headerTitle: "Complaint Details" },
+    ChildInvoices: { headerTitle: "Invoices" },
+    InvoiceView: { headerTitle: "Invoice" },
+  },
+};
+
+const ACTIVE_TAB_ROUTES = {
+  Admin: {
+    AdminDashboard: "AdminDashboard",
+    Therapist: "Therapist",
+    TherapistAvailability: "Therapist",
+    TherapistSchedule: "Therapist",
+    Children: "Children",
+    ChildDetails: "Children",
+    ChildForm: "Children",
+    Schedule: "Schedule",
+    Notifications:'Notifications',
+    ChildSchedule: "Schedule",
+    BatchSchedule: "Schedule",
+    BatchScheduleCreate: "Schedule",
+    ChildCustomAppointment: "Schedule",
+    BatchSessionPostpone: "Schedule",
+    BatchAdditionalClass: "Schedule",
+    Feedback: "Feedback",
+    LeaveRequest: "Home",
+    StaffOnLeave: "Home",
+    BatchManagment: "Home",
+    BroadcastManagement: "Home",
+    ComplainManagement: "Home",
+    FeeManagement: "Home",
+    AddNewPackage: "Home",
+    InvoiceManagement: "Home",
+    CreateNewInvoice: "Home",
+    InvoiceDetail: "Home",
+    AllPackages: "Home",
+    ServiceManagement: "Home",
+    ProgramBuilder: "Home",
+    InvoiceView: "Home",
+    Settings: "Home",
+    SendPushNotification: "Home",
+  },
+  Therapist: {
+    TherapistDashboard: "Home",
+    AssignedChildren: "Children",
+    FeedbackManagement: "Feedback",
+    AddFeedback: "Feedback",
+    AttendanceTracking: "Attendance",
+    WeeklyVideo: "Videos",
+    QuarterlyReports: "Reports",
+    ProgressTracking: "Progress",
+    LeaveRequest: "Home",
+    TherapistComplaints: "Home",
+    ComplaintDetails: "Home",
+  },
+  Child: {
+    ChildDashboard: "Home",
+    ChildFeedback: "Feedback",
+    CreateFeedback: "Feedback",
+    ChildAttendance: "Attendance",
+    ChildVideo: "Videos",
+    ChildReport: "Reports",
+    ChildMessages: "Messages",
+    ChildInvoices: "Home",
+    ChildComplaints: "Home",
+    ComplaintDetails: "Home",
+  },
+};
+
+const AUTH_SCREENS = [
+  ["Onboarding", OnboardingScreen],
+  ["Welcome", WelcomeScreen],
+  ["Login", LoginScreen],
+  ["Register", RegisterScreen],
+  ["ForgotPassword", ForgotPasswordScreen],
+];
+
+const ADMIN_SCREENS = [
+  ["AdminDashboard", AdminDashboard],
+  ["LeaveRequest", LeaveRequestsScreen],
+  ["Therapist", TherapistsScreen],
+  ["Children", ChildrenScreen],
+  ["Schedule", ScheduleScreen],
+  ["Feedback", FeedbackScreen],
+  ["BatchManagment", BatchManagementScreen],
+  ["BroadcastManagement", BroadcastManagementScreen],
+  ["ComplainManagement", ComplainManagementScreen],
+  ["FeeManagement", FeeManagementScreen],
+  ["AddNewPackage", AddNewPackageScreen],
+  ["InvoiceManagement", InvoiceManagementScreen],
+  ["CreateNewInvoice", CreateNewInvoiceScreen],
+  ["InvoiceDetail", InvoiceDetailScreen],
+  ["Notifications", NotificationScreen],
+  ["TherapistAvailability", TherapistAvailabilityScreen],
+  ["BatchSchedule", BatchScheduleScreen],
+  ["BatchScheduleCreate", BatchScheduleCreateScreen],
+  ["StaffOnLeave", StaffOnLeaveScreen],
+  ["ChildMessages", MessagingScreen],
+  ["ChatDetails", ChatDetailsScreen],
+  ["ChildProfile", ChildProfileScreen],
+  ["BatchSessionPostpone", BatchSessionPostponeScreen],
+  ["BatchAdditionalClass", BatchAdditionalClassScreen],
+  ["TherapistSchedule", TherapistScheduleScreen],
+  ["ChildSchedule", ChildScheduleScreen],
+  ["ChildCustomAppointment", ChildCustomAppointmentScreen],
+  ["AllPackages", AllPackagesScreen],
+  ["ServiceManagement", ServiceManagementScreen],
+  ["ProgramBuilder", ProgramBuilderScreen],
+  ["InvoiceView", InvoiceViewScreen],
+  ["Settings", SettingsScreen],
+  ["ChildForm", ChildFormScreen],
+  ["ChildDetails", ChildDetailsScreen],
+  ["SendPushNotification", SendPushNotificationScreen],
+];
+
+const THERAPIST_SCREENS = [
+  ["TherapistDashboard", TherapistDashboard],
+  ["AssignedChildren", AssignedChildrenScreen],
+  ["FeedbackManagement", FeedbackManagementScreen],
+  ["AddFeedback", AddFeedbackScreen],
+  ["AttendanceTracking", AttendanceTrackingScreen],
+  ["WeeklyVideo", WeeklyVideoScreen],
+  ["LeaveRequest", LeaveRequestScreen],
+  ["QuarterlyReports", QuarterlyReportsScreen],
+  ["ProgressTracking", ProgressTrackingScreen],
+  ["ChildMessages", MessagingScreen],
+  ["ChatDetails", ChatDetailsScreen],
+  ["ChildProfile", ChildProfileScreen],
+  ["Notifications", NotificationScreen],
+  ["TherapistComplaints", ComplaintsScreen],
+  ["ComplaintDetails", ComplaintDetailsScreen],
+];
+
+const CHILD_SCREENS = [
+  ["ChildDashboard", ChildDashboard],
+  ["ChildFeedback", ChildFeedbackScreen],
+  ["CreateFeedback", ChildAddFeedbackScreen],
+  ["ChildAttendance", AttendanceScreen],
+  ["ChildVideo", ChildVideoScreen],
+  ["ChildMessages", MessagingScreen],
+  ["ChatDetails", ChatDetailsScreen],
+  ["ChildReport", ReportScreen],
+  ["Notifications", NotificationScreen],
+  ["ChildProfile", ChildProfileScreen],
+  ["ChildComplaints", ComplaintsScreen],
+  ["ComplaintDetails", ComplaintDetailsScreen],
+  ["ChildInvoices", ChildInvoicesScreen],
+  ["InvoiceView", InvoiceViewScreen],
+];
+
+function ScreenStack({ screens, initialRouteName }) {
+  return (
+    <Stack.Navigator
+      initialRouteName={initialRouteName}
+      screenOptions={{
+        headerShown: false,
+        animation: "slide_from_right",
+      }}
+    >
+      {screens.map(([name, component]) => (
+        <Stack.Screen
+          key={name}
+          name={name}
+          component={component}
+        />
+      ))}
+    </Stack.Navigator>
+  );
+}
 
 function AuthStack() {
   return (
-    <Stack.Navigator
+    <ScreenStack
+      screens={AUTH_SCREENS}
       initialRouteName="Onboarding"
-      screenOptions={{ headerShown: false }}
-    >
-      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-      <Stack.Screen name="Welcome" component={WelcomeScreen} />
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-    </Stack.Navigator>
+    />
   );
 }
 
 function AdminStack() {
   return (
-    <Stack.Navigator initialRouteName="AdminDashboard" screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
-      <Stack.Screen name="LeaveRequest" component={LeaveRequestsScreen} />
-      <Stack.Screen name="Therapist" component={TherapistsScreen} />
-      <Stack.Screen name="Children" component={ChildrenScreen} />
-      <Stack.Screen name="Schedule" component={ScheduleScreen} />
-      <Stack.Screen name="Feedback" component={FeedbackScreen} />
-      <Stack.Screen name="BatchManagment" component={BatchManagementScreen} />
-      <Stack.Screen name="BroadcastManagement" component={BroadcastManagementScreen} />
-      <Stack.Screen name="ComplainManagement" component={ComplainManagementScreen} />
-      <Stack.Screen name="FeeManagement" component={FeeManagementScreen} />
-      <Stack.Screen name="AddNewPackage" component={AddNewPackageScreen} />
-      <Stack.Screen name="InvoiceManagement" component={InvoiceManagementScreen} />
-      <Stack.Screen name="CreateNewInvoice" component={CreateNewInvoiceScreen} />
-      <Stack.Screen name="InvoiceDetail" component={InvoiceDetailScreen} />
-      <Stack.Screen name="Notifications" component={NotificationScreen} />
-      <Stack.Screen name="TherapistAvailability" component={TherapistAvailabilityScreen} />
-      <Stack.Screen name="BatchSchedule" component={BatchScheduleScreen} />
-      <Stack.Screen name="BatchScheduleCreate" component={BatchScheduleCreateScreen} />
-      <Stack.Screen name="StaffOnLeave" component={StaffOnLeaveScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ChildMessages" component={MessagingScreen} />
-      <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
-      <Stack.Screen name="ChildProfile" component={ChildProfileScreen} />
-      <Stack.Screen name="BatchSessionPostpone" component={BatchSessionPostponeScreen} />
-      <Stack.Screen name="BatchAdditionalClass" component={BatchAdditionalClassScreen} />
-      <Stack.Screen name="TherapistSchedule" component={TherapistScheduleScreen} />
-      <Stack.Screen name="ChildSchedule" component={ChildScheduleScreen} />
-      <Stack.Screen name="ChildCustomAppointment" component={ChildCustomAppointmentScreen} />
-      <Stack.Screen name="AllPackages" component={AllPackagesScreen} />
-      <Stack.Screen name="ServiceManagement" component={ServiceManagementScreen} />
-      <Stack.Screen name="ProgramBuilder" component={ProgramBuilderScreen} />
-      <Stack.Screen name="InvoiceView" component={InvoiceViewScreen} />
-      <Stack.Screen name="Settings" component={SettingsScreen} />
-      <Stack.Screen name="ChildForm" component={ChildFormScreen} />
-      <Stack.Screen name="ChildDetails" component={ChildDetailsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="SendPushNotification" component={SendPushNotificationScreen} />
-    </Stack.Navigator>
+    <ScreenStack
+      screens={ADMIN_SCREENS}
+      initialRouteName="AdminDashboard"
+    />
   );
 }
 
 function TherapistStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="TherapistDashboard" component={TherapistDashboard} />
-      <Stack.Screen name="AssignedChildren" component={AssignedChildrenScreen} />
-      <Stack.Screen name="FeedbackManagement" component={FeedbackManagementScreen} />
-      <Stack.Screen name="AddFeedback" component={AddFeedbackScreen} />
-      <Stack.Screen name="AttendanceTracking" component={AttendanceTrackingScreen} />
-      <Stack.Screen name="WeeklyVideo" component={WeeklyVideoScreen} />
-      <Stack.Screen name="LeaveRequest" component={LeaveRequestScreen} />
-      <Stack.Screen name="QuarterlyReports" component={QuarterlyReportsScreen} />
-      <Stack.Screen name="ProgressTracking" component={ProgressTrackingScreen} />
-      <Stack.Screen name="ChildMessages" component={MessagingScreen} />
-      <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
-      <Stack.Screen name="ChildProfile" component={ChildProfileScreen} />
-      <Stack.Screen name="Notifications" component={NotificationScreen} />
-      <Stack.Screen name="TherapistComplaints" component={ComplaintsScreen} />
-      <Stack.Screen name="ComplaintDetails" component={ComplaintDetailsScreen} />
-    </Stack.Navigator>
+    <ScreenStack
+      screens={THERAPIST_SCREENS}
+      initialRouteName="TherapistDashboard"
+    />
   );
 }
 
 function ChildStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ChildDashboard" component={ChildDashboard} />
-      <Stack.Screen name="ChildFeedback" component={ChildFeedbackScreen} />
-      <Stack.Screen name="CreateFeedback" component={ChildAddFeedbackScreen} />
-      <Stack.Screen name="ChildAttendance" component={AttendanceScreen} />
-      <Stack.Screen name="ChildVideo" component={ChildVideoScreen} />
-      <Stack.Screen name="ChildMessages" component={MessagingScreen} />
-      <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
-      <Stack.Screen name="ChildReport" component={ReportScreen} />
-      <Stack.Screen name="Notifications" component={NotificationScreen} />
-      <Stack.Screen name="ChildProfile" component={ChildProfileScreen} />
-      <Stack.Screen name="ChildComplaints" component={ComplaintsScreen} />
-      <Stack.Screen name="ComplaintDetails" component={ComplaintDetailsScreen} />
-      <Stack.Screen name="ChildInvoices" component={ChildInvoicesScreen} />
-      <Stack.Screen name="InvoiceView" component={InvoiceViewScreen} />
-    </Stack.Navigator>
+    <ScreenStack
+      screens={CHILD_SCREENS}
+      initialRouteName="ChildDashboard"
+    />
   );
+}
+
+function getActiveRoute(state) {
+  if (!state?.routes?.length) return null;
+
+  const route = state.routes[state.index ?? 0];
+
+  return route.state ? getActiveRoute(route.state) : route;
 }
 
 export default function AppNavigator() {
   const { token, userRole, isLoading } = useContext(AuthContext);
   const normalizedRole = userRole?.toString().trim();
+
+  const [layout, setLayout] = useState(DEFAULT_LAYOUT);
+  const [activeTab, setActiveTab] = useState("AdminDashboard");
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+
+  const updateLayout = useCallback(() => {
+    if (!navigationRef.isReady()) return;
+
+    const route = getActiveRoute(navigationRef.getRootState());
+
+    if (!route) return;
+
+    const routeLayout = SCREEN_LAYOUTS[normalizedRole]?.[route.name] || {};
+    const overrideLayout = route.params?.layout || {};
+
+    setLayout((previous) => {
+      const next = {
+        ...DEFAULT_LAYOUT,
+        ...routeLayout,
+        ...overrideLayout,
+      };
+
+      if (
+        previous.showHeader === next.showHeader
+        && previous.showFooter === next.showFooter
+        && previous.headerTitle === next.headerTitle
+      ) {
+        return previous;
+      }
+
+      return next;
+    });
+
+    const nextTab = ACTIVE_TAB_ROUTES[normalizedRole]?.[route.name];
+
+    if (nextTab) {
+      setActiveTab((previous) => previous === nextTab ? previous : nextTab);
+    }
+  }, [normalizedRole]);
+
+  useEffect(() => {
+    if (!token) {
+      setLayout(DEFAULT_LAYOUT);
+      setActiveTab("AdminDashboard");
+      setIsNotificationOpen(false);
+      return;
+    }
+
+    setActiveTab("AdminDashboard");
+    updateLayout();
+  }, [token, normalizedRole, updateLayout]);
+
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View style={styles.loading}>
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
+  const isAuthenticatedRole = !!token && ["Admin", "Therapist", "Child"].includes(normalizedRole);
+
   return (
-    <NavigationContainer>
-      {!token
-        ? <AuthStack />
-        : normalizedRole === "Admin"
-        ? <AdminStack />
-        : normalizedRole === "Therapist"
-        ? <TherapistStack />
-        : normalizedRole === "Child"
-        ? <ChildStack />
-        : <AuthStack />}
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={updateLayout}
+      onStateChange={updateLayout}
+    >
+      {!isAuthenticatedRole ? <AuthStack /> : (
+        <SafeAreaView style={styles.container}>
+          <View
+            style={layout.showHeader ? styles.visible : styles.hidden}
+          >
+            <TopBar
+              navigation={navigationRef}
+              headerTitle={layout.headerTitle}
+              isNotificationOpen={isNotificationOpen}
+              onToggleNotification={setIsNotificationOpen}
+            />
+          </View>
+
+          <View style={styles.content}>
+            {normalizedRole === "Admin"
+              ? <AdminStack />
+              : normalizedRole === "Therapist"
+              ? <TherapistStack />
+              : <ChildStack />}
+          </View>
+
+          <View
+            style={layout.showFooter ? styles.visible : styles.hidden}
+          >
+            <BottomBar
+              navigation={navigationRef}
+              activeTab={activeTab}
+              setActiveTab={activeTab}
+            />
+          </View>
+        </SafeAreaView>
+      )}
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+  },
+  visible: {
+    display: "flex",
+  },
+  hidden: {
+    display: "none",
+  },
+  loading: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});

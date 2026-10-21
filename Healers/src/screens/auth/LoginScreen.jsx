@@ -31,6 +31,10 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+} from '../../utils/responsive';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -269,14 +273,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontSize: 28,
+    fontSize: fontSize(28),
     fontFamily: fonts.bold,
     color: colors.primary,
     textAlign: "center",
     marginBottom: 6,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#717781",
     textAlign: "center",
@@ -293,7 +297,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#414750",
     marginBottom: 6,
@@ -309,7 +313,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#1E293B",
   },
@@ -341,19 +345,19 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   checkboxLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#414750",
   },
   forgotText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
     color: colors.primary,
   },
   loginButton: {
     backgroundColor: colors.primary,
     borderRadius: 20,
-    paddingVertical: 16,
+    paddingVertical: hp(15),
     justify: "center",
     alignItems: "center",
     marginTop: 10,
@@ -365,7 +369,7 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
   },
   biometricSection: {
@@ -376,7 +380,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#F1F5F9",
   },
   biometricLabel: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#717781",
     marginBottom: 12,
@@ -396,12 +400,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   footerText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#414750",
   },
   createAccountText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: colors.primary,
     paddingLeft: 4,

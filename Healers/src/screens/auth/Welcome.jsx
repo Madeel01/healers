@@ -19,6 +19,10 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+} from '../../utils/responsive';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -136,7 +140,7 @@ const styles = StyleSheet.create({
     height: 32,
   },
   headerBrand: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.bold,
     color: "#0B4A6F",
     letterSpacing: 0.5,
@@ -177,7 +181,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   progressChipTitle: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.bold,
     color: colors.primary,
   },
@@ -218,13 +222,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   certifiedTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.primary,
     lineHeight: 16,
   },
   certifiedSubtitle: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#414750",
     fontFamily: fonts.regular,
   },
@@ -241,7 +245,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "#00725E",
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
   },
 
@@ -249,7 +253,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 36,
+    fontSize: fontSize(36),
     fontFamily: fonts.bold,
     color: colors.primary,
     lineHeight: 40,
@@ -259,10 +263,10 @@ const styles = StyleSheet.create({
     color: "#006B58",
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     color: "#414750",
     fontFamily: fonts.regular,
-    lineHeight: 28,
+    lineHeight: hp(28),
   },
 
   actionContainer: {
@@ -282,7 +286,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
   },
   secondaryButton: {
@@ -296,7 +300,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: colors.primary,
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
   },
 });

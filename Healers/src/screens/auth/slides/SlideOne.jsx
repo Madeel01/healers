@@ -17,6 +17,11 @@ import {
   commonStyles,
   fonts,
 } from '../../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../../utils/responsive';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 export default function SlideOne({ onNext, onSkip, step, totalSteps, onDotPress }) {
@@ -61,12 +66,13 @@ export default function SlideOne({ onNext, onSkip, step, totalSteps, onDotPress 
       </View>
 
       <TouchableOpacity style={styles.primaryButton} onPress={onNext}>
-        <Text style={styles.primaryButtonText}>Get Started 
-          </Text>
-          <FontAwesome name="long-arrow-right" size={18} color="white" />
+        <Text style={styles.primaryButtonText}>
+          Get Started
+        </Text>
+        <FontAwesome name="long-arrow-right" size={18} color="white" />
       </TouchableOpacity>
 
-       <TouchableOpacity style={styles.secondaryButton} onPress={onSkip}>
+      <TouchableOpacity style={styles.secondaryButton} onPress={onSkip}>
         <Text style={styles.secondaryButtonText}>Already have an account?</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -75,22 +81,22 @@ export default function SlideOne({ onNext, onSkip, step, totalSteps, onDotPress 
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: hp(40),
     flexGrow: 1,
   },
   imageCard: {
-    height: 370,
+    height: hp(370),
     borderRadius: 24,
-    marginBottom: 20,
+    marginBottom: hp(20),
     overflow: "hidden",
     width: "100%",
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
   },
   image: {
     width: "100%",
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
   },
   subTextContainer: {
     flexDirection: "row",
@@ -105,13 +111,13 @@ const styles = StyleSheet.create({
   },
   subText: {
     color: colors.primary,
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     textTransform: "uppercase",
     letterSpacing: 1,
   },
   title: {
-    fontSize: 26,
+    fontSize: fontSize(26),
     fontWeight: "800",
     color: "#181C1E",
     marginVertical: 16,
@@ -120,7 +126,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     color: "#414750",
     fontFamily: fonts.regular,
     lineHeight: 24,
@@ -146,18 +152,18 @@ const styles = StyleSheet.create({
   primaryButton: {
     width: SCREEN_WIDTH - 40,
     backgroundColor: colors.primary || colors.primary,
-    paddingVertical: 16,
+    paddingVertical: hp(16),
     borderRadius: 14,
     marginHorizontal: "auto",
     marginTop: 24,
-    flexDirection:'row',
-    justifyContent:'center',
-    gap:10,
-    alignItems:'flex-end',
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 10,
+    alignItems: "flex-end",
   },
   primaryButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontWeight: "700",
   },
   secondaryButton: {
@@ -168,7 +174,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: colors.primary || colors.primary,
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontWeight: "600",
   },
 });

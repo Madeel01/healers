@@ -18,6 +18,7 @@ import {
   commonStyles,
   fonts,
 } from '../../../styles/theme';
+import { fontSize } from '../../../utils/responsive';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -70,7 +71,7 @@ export default function SlideThree({ onNext, onSkip, step, totalSteps, onDotPres
             </Text>
             <View style={styles.chipBar} />
           </View>
-         
+
           <Image
             source={require("../../../asstes/child.png")}
             style={styles.avatarLarge}
@@ -81,7 +82,6 @@ export default function SlideThree({ onNext, onSkip, step, totalSteps, onDotPres
         </View>
 
         <View style={[styles.avatarWrapper, { zIndex: 1 }]}>
-
           <View style={[styles.messageChip, styles.analyticsChip]}>
             <Text style={styles.chatIconText}>
               <MaterialIcons name="bar-chart" size={24} color="#006b58" />
@@ -110,7 +110,7 @@ export default function SlideThree({ onNext, onSkip, step, totalSteps, onDotPres
         <Text style={styles.title}>Stay Connected</Text>
 
         <Text style={styles.subtitle}>
-          Seamless communication between families and care teams. 
+          Seamless communication between families and care teams.
         </Text>
       </View>
 
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     height: 36,
   },
   headerBrand: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.bold,
     color: "#0B4A6F",
   },
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     height: 25,
   },
   skipText: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontFamily: fonts.semiBold,
     color: "#334155",
   },
@@ -249,12 +249,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,107,88,.1)",
   },
   roleText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.primary,
   },
   childRoleText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.primary,
   },
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   analyticsChip: {
     top: -35,
     left: -35,
-    width:80
+    width: 80,
   },
 
   chartIconBox: {
@@ -292,11 +292,11 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   chatIconText: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     color: "#FFF",
   },
   chartIconText: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     color: "#FFF",
   },
   chipBar: {
@@ -311,14 +311,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
   },
   title: {
-    fontSize: 26,
+    fontSize: fontSize(26),
     fontWeight: "800",
     color: colors.primary,
     marginBottom: 14,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     color: "#414750",
     fontFamily: fonts.regular,
     lineHeight: 22,
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontWeight: "700",
   },
 });

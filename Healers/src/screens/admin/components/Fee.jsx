@@ -19,6 +19,7 @@ import {
   colors,
   fonts,
 } from '../../../styles/theme';
+import { fontSize } from '../../../utils/responsive';
 
 const INITIAL_SUMMARY = {
   overdueFees: {
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
 
   loadingText: {
     marginTop: 12,
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#64748B",
     fontFamily: fonts.regular,
   },
@@ -303,13 +304,13 @@ const styles = StyleSheet.create({
 
   errorText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#BA1A1A",
     fontFamily: fonts.regular,
   },
 
   retryText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: colors.primary,
     fontFamily: fonts.semiBold,
   },
@@ -354,13 +355,13 @@ const styles = StyleSheet.create({
   },
 
   financeLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: colors.blackFont,
     fontFamily: fonts.regular,
   },
 
   financeAmount: {
-    fontSize: 24,
+    fontSize: fontSize(24),
     fontFamily: fonts.semiBold,
     color: "#181C1E",
     lineHeight: 32,
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
   },
 
   financeSubText: {
-    fontSize: 11,
+   fontSize: fontSize(11),
     fontFamily: fonts.semiBold,
     marginTop: 2,
   },

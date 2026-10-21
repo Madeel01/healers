@@ -1,4 +1,8 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -12,26 +16,29 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import Feather from "@expo/vector-icons/Feather";
+import Feather from '@expo/vector-icons/Feather';
+import { useRoute } from '@react-navigation/native';
 
 import {
   childUsers,
   createChild,
-  updateChild,
   deleteChild,
-  getParents,
   getAllPackages,
-} from "../../api/admin/api";
-import BottomBar from "../../components/BottomBar";
-import TopBar from "../../components/TopBar";
-import { colors, fonts } from "../../styles/theme";
-import { useRoute } from "@react-navigation/native";
+  getParents,
+  updateChild,
+} from '../../api/admin/api';
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const AVATAR_COLORS = [
   "#0B4A6F",
@@ -62,7 +69,7 @@ const initialChildState = {
   age: "",
   email: "",
   phone: "",
-  packageId: null,        
+  packageId: null,
   discountedPrice: "",
   isActive: true,
   dateOfBirth: null,
@@ -150,7 +157,7 @@ export default function ChildrenScreen({ navigation }) {
   const resetChildForm = () => {
     setNewChild(initialChildState);
     setEditingChildId(null);
-    setSelectedPackage(null);          
+    setSelectedPackage(null);
     setPassword("");
     setConfirmPassword("");
   };
@@ -197,7 +204,7 @@ export default function ChildrenScreen({ navigation }) {
   const fetchChildrenData = async (
     pageNum = 1,
     resetList = false,
-    isRefresh = false
+    isRefresh = false,
   ) => {
     const requestId = ++requestIdRef.current;
 
@@ -223,8 +230,7 @@ export default function ChildrenScreen({ navigation }) {
 
       const data = response?.data?.data || response?.data || [];
 
-      const hasMoreData =
-        response?.hasMore ?? data.length >= 5;
+      const hasMoreData = response?.hasMore ?? data.length >= 5;
 
       const formatted = data.map((child) => ({
         id: child._id || child.id,
@@ -255,7 +261,7 @@ export default function ChildrenScreen({ navigation }) {
           const existingIds = new Set(prev.map((item) => item.id));
 
           const newItems = formatted.filter(
-            (item) => !existingIds.has(item.id)
+            (item) => !existingIds.has(item.id),
           );
 
           return [...prev, ...newItems];
@@ -301,7 +307,7 @@ export default function ChildrenScreen({ navigation }) {
         setPkgResults((prev) =>
           isFirst
             ? list
-            : [...prev, ...list.filter((i) => !prev.some((p) => p._id === i._id))],
+            : [...prev, ...list.filter((i) => !prev.some((p) => p._id === i._id))]
         );
         setPkgPage(pageNum);
         setPkgHasMore(Boolean(res.hasMore));
@@ -356,7 +362,6 @@ export default function ChildrenScreen({ navigation }) {
     fetchPackageResults(pkgPage + 1, packageSearch);
   };
 
-
   const onRefresh = () => {
     loadingMoreRef.current = false;
     setPage(1);
@@ -364,7 +369,6 @@ export default function ChildrenScreen({ navigation }) {
 
     fetchChildrenData(1, true, true);
   };
-
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -378,7 +382,6 @@ export default function ChildrenScreen({ navigation }) {
     return () => clearTimeout(timer);
   }, [searchQuery, statusFilter]);
 
-
   const handleScroll = ({ nativeEvent }) => {
     const {
       layoutMeasurement,
@@ -386,23 +389,21 @@ export default function ChildrenScreen({ navigation }) {
       contentSize,
     } = nativeEvent;
 
-    const isCloseToBottom =
-      layoutMeasurement.height + contentOffset.y >=
-      contentSize.height - 100;
+    const isCloseToBottom = layoutMeasurement.height + contentOffset.y
+      >= contentSize.height - 100;
 
     if (
-      isCloseToBottom &&
-      hasMore &&
-      !loading &&
-      !refreshing &&
-      !loadingMoreRef.current
+      isCloseToBottom
+      && hasMore
+      && !loading
+      && !refreshing
+      && !loadingMoreRef.current
     ) {
       loadingMoreRef.current = true;
 
       fetchChildrenData(page + 1, false);
     }
   };
-
 
   const handleDeleteChild = (child) => {
     setActiveMenuId(null);
@@ -424,7 +425,7 @@ export default function ChildrenScreen({ navigation }) {
               setChildren(previous);
               Alert.alert(
                 "Error",
-                `${error?.response?.data?.message??"Could not delete this child. Please try again."}`,
+                `${error?.response?.data?.message ?? "Could not delete this child. Please try again."}`,
               );
             }
           },
@@ -435,20 +436,20 @@ export default function ChildrenScreen({ navigation }) {
 
   const handleSaveChild = async () => {
     if (
-      !newChild.name ||
-      !newChild.email ||
-      !newChild.phone ||
-      !newChild.fatherName ||
-      !newChild.fatherCnic ||
-      saving
+      !newChild.name
+      || !newChild.email
+      || !newChild.phone
+      || !newChild.fatherName
+      || !newChild.fatherCnic
+      || saving
     ) {
       Alert.alert("Validation Error", "Please fill in all required fields.");
       return;
     }
 
     if (
-      newChild.age &&
-      (isNaN(Number(newChild.age)) || Number(newChild.age) < 0)
+      newChild.age
+      && (isNaN(Number(newChild.age)) || Number(newChild.age) < 0)
     ) {
       Alert.alert("Validation Error", "Please enter a valid age.");
       return;
@@ -529,10 +530,9 @@ export default function ChildrenScreen({ navigation }) {
       phone: normalizedPhone,
       ...((!isEditMode || password) && { password }),
       packageId: newChild.packageId || null,
-      discountedPrice:
-        newChild.packageId && newChild.discountedPrice !== ""
-          ? Number(newChild.discountedPrice)
-          : null,
+      discountedPrice: newChild.packageId && newChild.discountedPrice !== ""
+        ? Number(newChild.discountedPrice)
+        : null,
       isActive: newChild.isActive,
       dateOfBirth: child.dateOfBirth || null,
       gender: child.gender || "",
@@ -557,8 +557,8 @@ export default function ChildrenScreen({ navigation }) {
       const backendMessage = error?.response?.data?.message;
       Alert.alert(
         "Error",
-        backendMessage ||
-          `Could not ${isEditMode ? "update" : "create"} this child. Please try again.`,
+        backendMessage
+          || `Could not ${isEditMode ? "update" : "create"} this child. Please try again.`,
       );
     } finally {
       setSaving(false);
@@ -589,10 +589,9 @@ export default function ChildrenScreen({ navigation }) {
           return;
         }
 
-        const parentList =
-          response?.data?.data ||
-          response?.data ||
-          [];
+        const parentList = response?.data?.data
+          || response?.data
+          || [];
 
         const parent = Array.isArray(parentList)
           ? parentList[0]
@@ -613,7 +612,7 @@ export default function ChildrenScreen({ navigation }) {
         if (currentRequestId === parentRequestIdRef.current) {
           console.log(
             "Parent fetch by CNIC error:",
-            error
+            error,
           );
 
           setNewChild((prev) => ({
@@ -635,9 +634,8 @@ export default function ChildrenScreen({ navigation }) {
     isEditMode,
   ]);
 
-
   return (
-    <SafeAreaView
+    <View
       style={styles.mainContainer}
       onTouchStart={() => {
         if (menuTouchRef.current) {
@@ -647,13 +645,6 @@ export default function ChildrenScreen({ navigation }) {
         if (activeMenuId) setActiveMenuId(null);
       }}
     >
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle={"Manage Children"}
-      />
-
       <ScrollView
         style={styles.scrollArea}
         onScrollBeginDrag={() => setActiveMenuId(null)}
@@ -699,7 +690,7 @@ export default function ChildrenScreen({ navigation }) {
             activeOpacity={0.8}
             onPress={() => setIsFilterOpen(true)}
           >
-            <Feather name="sliders" size={20} color="#0B4A6F" />
+            <Feather name="sliders" size={fontSize(20)} color="#0B4A6F" />
             {statusFilter !== "active" && <View style={styles.filterDot} />}
           </TouchableOpacity>
         </View>
@@ -724,8 +715,8 @@ export default function ChildrenScreen({ navigation }) {
           </View>
         )}
 
-        {!loading &&
-          children.map((child) => {
+        {!loading
+          && children.map((child) => {
             const isMenuOpen = activeMenuId === child.id;
             const avatarColor = getAvatarColor(child.id || child.name);
 
@@ -748,9 +739,8 @@ export default function ChildrenScreen({ navigation }) {
                     ]}
                   >
                     <Text style={styles.avatarInitialText}>
-                      {child.name?.trim()?.charAt(0)?.toUpperCase() || "?"} 
-                      </Text> 
-                    
+                      {child.name?.trim()?.charAt(0)?.toUpperCase() || "?"}
+                    </Text>
                   </View>
 
                   <View style={styles.childInfo}>
@@ -780,9 +770,10 @@ export default function ChildrenScreen({ navigation }) {
                       <View style={styles.packagePill}>
                         <Feather name="package" size={12} color="#0B4A6F" />
                         <Text style={styles.packagePillText} numberOfLines={1}>
-                          {child.packageName} •{" "}
-                          {child.discountedPrice != null
-                            ? `PKR ${Number(child.packagePrice - child.discountedPrice).toLocaleString()}/mo (was ${Number(child.packagePrice || 0).toLocaleString()})`
+                          {child.packageName} • {child.discountedPrice != null
+                            ? `PKR ${Number(child.packagePrice - child.discountedPrice).toLocaleString()}/mo (was ${
+                              Number(child.packagePrice || 0).toLocaleString()
+                            })`
                             : `PKR ${Number(child.packagePrice || 0).toLocaleString()}/mo`}
                         </Text>
                       </View>
@@ -803,9 +794,7 @@ export default function ChildrenScreen({ navigation }) {
                     <TouchableOpacity
                       style={styles.moreOptionsButton}
                       activeOpacity={0.7}
-                      onPress={() =>
-                        setActiveMenuId(isMenuOpen ? null : child.id)
-                      }
+                      onPress={() => setActiveMenuId(isMenuOpen ? null : child.id)}
                     >
                       <Feather name="more-vertical" size={20} color="#94A3B8" />
                     </TouchableOpacity>
@@ -855,9 +844,8 @@ export default function ChildrenScreen({ navigation }) {
                     navigation.navigate("ChildSchedule", {
                       childId: child.id,
                       childName: child.name,
-                      isActive: child.isActive
-                    })
-                  }
+                      isActive: child.isActive,
+                    })}
                 >
                   <Feather name="calendar" size={16} color="#FFFFFF" />
                   <Text style={styles.scheduleButtonText}>View Schedule</Text>
@@ -878,11 +866,11 @@ export default function ChildrenScreen({ navigation }) {
       </ScrollView>
 
       <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + 90 }]}
-        onPress={()=> navigation.navigate("ChildForm")}
+        style={[styles.fab]}
+        onPress={() => navigation.navigate("ChildForm")}
         activeOpacity={0.8}
       >
-        <Feather name="plus" size={30} color="#fff" />
+        <Feather name="plus" size={fontSize(30)} color="#fff" />
       </TouchableOpacity>
 
       <Modal
@@ -930,9 +918,7 @@ export default function ChildrenScreen({ navigation }) {
                   keyboardType="number-pad"
                   maxLength={13}
                   value={newChild.fatherCnic || ""}
-                  onChangeText={(t) =>
-                    setNewChild({ ...newChild, fatherCnic: t })
-                  }
+                  onChangeText={(t) => setNewChild({ ...newChild, fatherCnic: t })}
                 />
                 {fetchingParent && (
                   <ActivityIndicator
@@ -951,9 +937,7 @@ export default function ChildrenScreen({ navigation }) {
                 placeholder="e.g. Bilal Khan"
                 placeholderTextColor="#94A3B8"
                 value={newChild.fatherName || ""}
-                onChangeText={(t) =>
-                  setNewChild({ ...newChild, fatherName: t })
-                }
+                onChangeText={(t) => setNewChild({ ...newChild, fatherName: t })}
               />
 
               <Text style={styles.fieldLabel}>Age</Text>
@@ -992,36 +976,38 @@ export default function ChildrenScreen({ navigation }) {
 
               <Text style={styles.fieldLabel}>Fee Package (optional)</Text>
 
-              {selectedPackage ? (
-                <View style={styles.selectedPackageCard}>
-                  <View style={styles.selectedPackageInfo}>
-                    <Text style={styles.packageOptionName} numberOfLines={1}>
-                      {selectedPackage.name}
-                    </Text>
-                    <Text style={styles.packageOptionPrice}>
-                      PKR {Number(selectedPackage.price || 0).toLocaleString()}/mo
-                    </Text>
+              {selectedPackage
+                ? (
+                  <View style={styles.selectedPackageCard}>
+                    <View style={styles.selectedPackageInfo}>
+                      <Text style={styles.packageOptionName} numberOfLines={1}>
+                        {selectedPackage.name}
+                      </Text>
+                      <Text style={styles.packageOptionPrice}>
+                        PKR {Number(selectedPackage.price || 0).toLocaleString()}/mo
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity onPress={openPackagePicker} style={styles.changeButton}>
+                      <Text style={styles.changeButtonText}>Change</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={handleClearPackage} style={styles.clearButton}>
+                      <Feather name="x" size={18} color="#64748B" />
+                    </TouchableOpacity>
                   </View>
-
-                  <TouchableOpacity onPress={openPackagePicker} style={styles.changeButton}>
-                    <Text style={styles.changeButtonText}>Change</Text>
+                )
+                : (
+                  <TouchableOpacity
+                    style={styles.selectPackageButton}
+                    activeOpacity={0.8}
+                    onPress={openPackagePicker}
+                  >
+                    <Feather name="search" size={16} color="#94A3B8" />
+                    <Text style={styles.selectPackageText}>Select a package</Text>
+                    <Feather name="chevron-down" size={18} color="#94A3B8" />
                   </TouchableOpacity>
-
-                  <TouchableOpacity onPress={handleClearPackage} style={styles.clearButton}>
-                    <Feather name="x" size={18} color="#64748B" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.selectPackageButton}
-                  activeOpacity={0.8}
-                  onPress={openPackagePicker}
-                >
-                  <Feather name="search" size={16} color="#94A3B8" />
-                  <Text style={styles.selectPackageText}>Select a package</Text>
-                  <Feather name="chevron-down" size={18} color="#94A3B8" />
-                </TouchableOpacity>
-              )}
+                )}
 
               {!!selectedPackage && (
                 <>
@@ -1032,16 +1018,13 @@ export default function ChildrenScreen({ navigation }) {
                     placeholderTextColor="#94A3B8"
                     keyboardType="numeric"
                     value={newChild.discountedPrice || ""}
-                    onChangeText={(t) =>
-                      setNewChild({ ...newChild, discountedPrice: t.replace(/[^0-9.]/g, "") })
-                    }
+                    onChangeText={(t) => setNewChild({ ...newChild, discountedPrice: t.replace(/[^0-9.]/g, "") })}
                   />
                 </>
               )}
 
               <Text style={styles.fieldLabel}>
-                {isEditMode ? "New Password" : "Password"}{" "}
-                {!isEditMode && <Text style={styles.requiredText}>*</Text>}
+                {isEditMode ? "New Password" : "Password"} {!isEditMode && <Text style={styles.requiredText}>*</Text>}
               </Text>
               {isEditMode && (
                 <Text style={styles.helperText}>
@@ -1054,9 +1037,7 @@ export default function ChildrenScreen({ navigation }) {
                   secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
-                  placeholder={
-                    isEditMode ? "Enter new password" : "Enter password"
-                  }
+                  placeholder={isEditMode ? "Enter new password" : "Enter password"}
                   placeholderTextColor="#94A3B8"
                 />
                 <TouchableOpacity
@@ -1080,9 +1061,7 @@ export default function ChildrenScreen({ navigation }) {
                   secureTextEntry={!showConfirmPassword}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  placeholder={
-                    isEditMode ? "Confirm new password" : "Confirm password"
-                  }
+                  placeholder={isEditMode ? "Confirm new password" : "Confirm password"}
                   placeholderTextColor="#94A3B8"
                 />
                 <TouchableOpacity
@@ -1109,9 +1088,7 @@ export default function ChildrenScreen({ navigation }) {
                 onPress={handleSaveChild}
                 disabled={saving}
               >
-                {saving ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
+                {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : (
                   <Text style={styles.saveButtonText}>
                     {isEditMode ? "Save Changes" : "Save Child"}
                   </Text>
@@ -1148,56 +1125,58 @@ export default function ChildrenScreen({ navigation }) {
               />
             </View>
 
-            {pkgLoading ? (
-              <ActivityIndicator
-                size="small"
-                color={colors.primary}
-                style={{ marginVertical: 30 }}
-              />
-            ) : (
-              <FlatList
-                data={pkgResults}
-                keyExtractor={(item) => String(item._id)}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-                onEndReached={handlePackageEndReached}
-                onEndReachedThreshold={0.3}
-                ListEmptyComponent={
-                  <Text style={styles.pickerEmpty}>
-                    {packageSearch ? "No packages match your search." : "No packages created yet."}
-                  </Text>
-                }
-                ListFooterComponent={
-                  pkgLoadingMore ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={colors.primary}
-                      style={{ marginVertical: 12 }}
-                    />
-                  ) : null
-                }
-                renderItem={({ item }) => {
-                  const on = selectedPackage?._id === item._id;
-                  return (
-                    <TouchableOpacity
-                      style={[styles.packageOption, on && styles.packageOptionOn]}
-                      activeOpacity={0.8}
-                      onPress={() => handleSelectPackage(item)}
-                    >
-                      <View style={[styles.radio, on && styles.radioOn]}>
-                        {on && <View style={styles.radioDot} />}
-                      </View>
-                      <Text style={styles.packageOptionName} numberOfLines={1}>
-                        {item.name}
-                      </Text>
-                      <Text style={styles.packageOptionPrice}>
-                        PKR {Number(item.price || 0).toLocaleString()}/mo
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                }}
-              />
-            )}
+            {pkgLoading
+              ? (
+                <ActivityIndicator
+                  size="small"
+                  color={colors.primary}
+                  style={{ marginVertical: 30 }}
+                />
+              )
+              : (
+                <FlatList
+                  data={pkgResults}
+                  keyExtractor={(item) => String(item._id)}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                  onEndReached={handlePackageEndReached}
+                  onEndReachedThreshold={0.3}
+                  ListEmptyComponent={
+                    <Text style={styles.pickerEmpty}>
+                      {packageSearch ? "No packages match your search." : "No packages created yet."}
+                    </Text>
+                  }
+                  ListFooterComponent={pkgLoadingMore
+                    ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={colors.primary}
+                        style={{ marginVertical: 12 }}
+                      />
+                    )
+                    : null}
+                  renderItem={({ item }) => {
+                    const on = selectedPackage?._id === item._id;
+                    return (
+                      <TouchableOpacity
+                        style={[styles.packageOption, on && styles.packageOptionOn]}
+                        activeOpacity={0.8}
+                        onPress={() => handleSelectPackage(item)}
+                      >
+                        <View style={[styles.radio, on && styles.radioOn]}>
+                          {on && <View style={styles.radioDot} />}
+                        </View>
+                        <Text style={styles.packageOptionName} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                        <Text style={styles.packageOptionPrice}>
+                          PKR {Number(item.price || 0).toLocaleString()}/mo
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              )}
           </View>
         </View>
       </Modal>
@@ -1235,31 +1214,25 @@ export default function ChildrenScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </Modal>
-
-      <BottomBar
-        activeTab={"Children"}
-        setActiveTab={setActiveBottomTab}
-        onOpenNotifications={setIsNotificationOpen}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: "#F8FAFC" },
   scrollArea: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 32, paddingTop: 10 },
+  scrollContent: { paddingHorizontal:wp(20), paddingBottom:hp(20), paddingTop: 10 },
 
   headerTitleContainer: { marginBottom: 16 },
   pageTitle: {
-    fontSize: 28,
+    fontSize: fontSize(24),
     fontFamily: fonts.bold,
     color: "#181C1E",
     marginBottom: 6,
     lineHeight: 36,
   },
   pageSubTitle: {
-    fontSize: 16,
+    fontSize: fontSize(15),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 20,
@@ -1278,12 +1251,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    height: wp(48),
   },
   searchIcon: { marginRight: 10 },
-  searchInput: { flex: 1, fontSize: 15, color: "#0F172A" },
+  searchInput: { flex: 1, fontSize: fontSize(15), color: "#0F172A" },
 
   childCard: {
     backgroundColor: "#FFFFFF",
@@ -1302,22 +1275,22 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   avatarInitial: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    marginRight: 14,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(14),
+    marginRight: wp(14),
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInitialText: { color: "#FFFFFF", fontSize: 22, fontWeight: "700" },
-  childInfo: { flex: 1, },
+  avatarInitialText: { color: "#FFFFFF", fontSize: fontSize(22), fontFamily: fonts.semiBold,lineHeight:18 },
+  childInfo: { flex: 1 },
   childName: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
     marginBottom: 2,
   },
-  childMeta: { fontSize: 13, color: "#64748B" },
+  childMeta: { fontSize: fontSize(13), color: "#64748B" },
 
   moreOptionsButton: { padding: 6 },
   dropdownMenu: {
@@ -1327,10 +1300,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingVertical: 6,
-    width: 120,
-
+    width: wp(120),
     elevation: 20,
-
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
@@ -1347,7 +1318,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   deleteMenuItem: { borderTopWidth: 1, borderTopColor: "#F1F5F9" },
-  menuItemText: { fontSize: 13, fontWeight: "600", color: "#334155" },
+  menuItemText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#334155" },
   deleteText: { color: "#EF4444" },
 
   contactRow: {
@@ -1356,21 +1327,22 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 4,
   },
-  contactText: { fontSize: 13, color: "#475569" },
+  contactText: { fontSize: fontSize(13), color: "#475569" },
 
   fab: {
     position: "absolute",
     right: 18,
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    bottom:10,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(16),
     backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
     elevation: 6,
     shadowColor: "#0d162b",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.22,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.5,
     shadowRadius: 5,
   },
 
@@ -1392,12 +1364,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  modalTitle: { fontSize: 20, fontWeight: "800", color: "#0F172A" },
+  modalTitle: { fontSize: fontSize(18), fontFamily: fonts.semiBold, color: "#0F172A" },
 
   requiredText: { color: "red" },
   fieldLabel: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: fontSize(13),
+    fontFamily: fonts.semiBold,
     color: "#475569",
     marginBottom: 6,
     marginTop: 14,
@@ -1409,7 +1381,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 46,
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#0F172A",
   },
   passwordInputContainer: {
@@ -1422,7 +1394,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 46,
   },
-  passwordInput: { flex: 1, fontSize: 14, color: "#0F172A" },
+  passwordInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
 
   stickyButtonContainer: {
     paddingTop: 12,
@@ -1440,7 +1412,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: "100%",
   },
-  saveButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+  saveButtonText: { color: "#FFFFFF", fontSize: fontSize(15), fontFamily: fonts.semiBold },
 
   centerLoader: { marginVertical: 30 },
   emptyContainer: {
@@ -1450,13 +1422,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: fontSize(18),
+    fontFamily: fonts.semiBold,
     color: "#334155",
     marginTop: 12,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#64748B",
     textAlign: "center",
     marginTop: 6,
@@ -1469,13 +1441,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#CBD5E1",
     borderRadius: 12,
-    height: 46,
+    height: hp(46),
   },
   formInputFlex: {
     flex: 1,
     paddingHorizontal: 14,
     height: "100%",
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#0F172A",
   },
   scheduleButton: {
@@ -1488,8 +1460,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  scheduleButtonText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#FFFFFF" },
-  helperText: { fontSize: 12, color: "#64748B", marginBottom: 6 }, // was referenced but missing
+  scheduleButtonText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  helperText: { fontSize: fontSize(12), color: "#64748B", marginBottom: 6 }, // was referenced but missing
 
   packageOption: {
     flexDirection: "row",
@@ -1503,63 +1475,68 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   packageOptionOn: { borderColor: "#0B4A6F", backgroundColor: "#FFFFFF" },
-  packageOptionName: { flex: 1, fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
-  packageOptionPrice: { fontSize: 12, fontFamily: fonts.regular, color: "#475569" },
+  packageOptionName: { flex: 1, fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
+  packageOptionPrice: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#475569" },
 
   radio: {
-    width: 20, height: 20, borderRadius: 10, borderWidth: 2,
-    borderColor: "#CBD5E1", alignItems: "center", justifyContent: "center",
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#CBD5E1",
+    alignItems: "center",
+    justifyContent: "center",
   },
   radioOn: { borderColor: "#0B4A6F" },
   selectPackageButton: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 10,
-  height: 46,
-  paddingHorizontal: 14,
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: "#CBD5E1",
-  backgroundColor: "#F8FAFC",
-},
-selectPackageText: { flex: 1, fontSize: 14, color: "#94A3B8" },
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    height: 46,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    backgroundColor: "#F8FAFC",
+  },
+  selectPackageText: { flex: 1, fontSize: fontSize(14), color: "#94A3B8" },
 
-selectedPackageCard: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-  padding: 12,
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: "#0B4A6F",
-  backgroundColor: "#FFFFFF",
-},
-selectedPackageInfo: { flex: 1 },
-changeButton: { paddingHorizontal: 10, paddingVertical: 6 },
-changeButtonText: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary },
-clearButton: { padding: 4 },
+  selectedPackageCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#0B4A6F",
+    backgroundColor: "#FFFFFF",
+  },
+  selectedPackageInfo: { flex: 1 },
+  changeButton: { paddingHorizontal: 10, paddingVertical: 6 },
+  changeButtonText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: colors.primary },
+  clearButton: { padding: 4 },
 
-pickerContent: {
-  backgroundColor: "#FFFFFF",
-  borderTopLeftRadius: 28,
-  borderTopRightRadius: 28,
-  padding: 24,
-  height: "70%",
-},
-pickerSearchBox: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 10,
-  height: 46,
-  paddingHorizontal: 14,
-  marginBottom: 8,
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: "#CBD5E1",
-  backgroundColor: "#F8FAFC",
-},
-pickerSearchInput: { flex: 1, fontSize: 14, color: "#0F172A" },
-pickerEmpty: { textAlign: "center", marginTop: 30, fontSize: 14, color: "#64748B" },
+  pickerContent: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    height: "70%",
+  },
+  pickerSearchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    height: 46,
+    paddingHorizontal: 14,
+    marginBottom: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    backgroundColor: "#F8FAFC",
+  },
+  pickerSearchInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
+  pickerEmpty: { textAlign: "center", marginTop: 30, fontSize: fontSize(14), color: "#64748B" },
 
   packagePill: {
     flexDirection: "row",
@@ -1572,12 +1549,12 @@ pickerEmpty: { textAlign: "center", marginTop: 30, fontSize: 14, color: "#64748B
     borderRadius: 999,
     backgroundColor: "#E8F2FC",
   },
-  packagePillText: { fontSize: 11, fontFamily: fonts.semiBold, color: "#0B4A6F", flexShrink: 1 },
+  packagePillText: { fontSize: fontSize(11), fontFamily: fonts.semiBold, color: "#0B4A6F", flexShrink: 1 },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#0B4A6F" },
   filterButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: wp(48),
+    height: hp(48),
+    borderRadius: wp(12),
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#CBD5E1",
@@ -1615,9 +1592,9 @@ pickerEmpty: { textAlign: "center", marginTop: 30, fontSize: 14, color: "#64748B
   segmentItemOn: {
     backgroundColor: "#0B4A6F",
   },
-  segmentText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#475569" },
+  segmentText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#475569" },
   segmentTextOn: { color: "#FFFFFF" },
-    nameRow: {
+  nameRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -1625,7 +1602,7 @@ pickerEmpty: { textAlign: "center", marginTop: 30, fontSize: 14, color: "#64748B
   },
   childNameInline: {
     flexShrink: 1,
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
@@ -1647,7 +1624,7 @@ pickerEmpty: { textAlign: "center", marginTop: 30, fontSize: 14, color: "#64748B
     backgroundColor: "#EF4444",
   },
   inactiveBadgeText: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.semiBold,
     color: "#DC2626",
   },
