@@ -250,7 +250,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
         ),
     [assignments],
   );
-
+  const [tick, setTick] = useState(0);
   const upcomingAll = useMemo(
     () => sessions.filter((s) => !isPastSession(s) && s.status !== "cancelled"),
     [sessions, tick],
@@ -276,7 +276,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
     : sessions;
   const upcoming = filtered.filter((s) => !isPastSession(s));
   const past = filtered.filter((s) => isPastSession(s)).reverse();
-  const [tick, setTick] = useState(0);
+  
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 60 * 1000);

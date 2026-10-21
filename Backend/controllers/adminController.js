@@ -73,7 +73,21 @@ const describe = (r) =>
     : (r.slots || [])
       .map((s) => `${s.day} ${to12(s.startTime)}-${to12(s.endTime)}`)
       .join(", ");
-
+let settingsCache = { at: 0, value: null };
+const loadScheduleSettings = async () => {
+  if (settingsCache.value && Date.now() - settingsCache.at < 60 * 1000) {
+    return settingsCache.value;
+  }
+  const s = await SystemSetting.findOne().lean();
+  const value = {
+    tz: s?.timezone || "Asia/Karachi",
+    clinicStart: s?.clinicStartTime ? toMin(s.clinicStartTime) : null,
+    clinicEnd: s?.clinicEndTime ? toMin(s.clinicEndTime) : null,
+    workingDays: s?.workingDays?.length ? s.workingDays : WORKING_DAYS,
+  };
+  settingsCache = { at: Date.now(), value };
+  return value;
+};
 const timesOverlap = (a, b) =>
   toMin(a.startTime) < toMin(b.endTime)
   && toMin(b.startTime) < toMin(a.endTime);
@@ -258,23 +272,6 @@ const addDays = (key, n) =>
     .slice(0, 10);
 const sameId = (a, b) => String(a?._id || a) === String(b?._id || b);
 const utcMidnight = (key) => new Date(`${key}T00:00:00Z`);
-let settingsCache = { at: 0, value: null };
-const loadScheduleSettings = async () => {
-  if (settingsCache.value && Date.now() - settingsCache.at < 60 * 1000) {
-    return settingsCache.value;
-  }
-  const s = await SystemSetting.findOne().lean();
-  const value = {
-    tz: s?.timezone || "Asia/Karachi",
-    clinicStart: s?.clinicStartTime ? toMin(s.clinicStartTime) : null,
-    clinicEnd: s?.clinicEndTime ? toMin(s.clinicEndTime) : null,
-    breakStart: s?.breakStartTime ? toMin(s.breakStartTime) : null,
-    breakEnd: s?.breakEndTime ? toMin(s.breakEndTime) : null,
-    workingDays: s?.workingDays?.length ? s.workingDays : WORKING_DAYS,
-  };
-  settingsCache = { at: Date.now(), value };
-  return value;
-};
 
 const planRange = (batch, today) => {
   const from = dateKeyOf(batch.dateFrom);
@@ -283,7 +280,6 @@ const planRange = (batch, today) => {
 
 const insideClinic = (a, b, st) =>
   (st.clinicStart == null || (a >= st.clinicStart && b <= st.clinicEnd))
-  && !(st.breakStart != null && a < st.breakEnd && st.breakStart < b);
 
 const availableOnDate = (rules, key, a, b) => {
   const day = weekdayOf(key);
@@ -2564,7 +2560,7 @@ exports.createChild = async (req, res) => {
     await confirmDocuments(child.documents);
     const data = child.toObject();
     delete data.password;
-
+    console.log(child);
     return res.status(201).json({
       success: true,
       message: "Child created successfully.",
@@ -6645,7 +6641,6 @@ exports.deleteChildCustomAppointment = async (req, res) => {
         }
       );
     }
-
     return res.json({ success: true, message: "Appointment cancelled." });
   } catch (error) {
     console.error("deleteChildCustomAppointment:", error);
@@ -7147,8 +7142,6 @@ const DEFAULTS = {
   timezone: "Asia/Karachi",
   clinicStartTime: "09:00",
   clinicEndTime: "17:00",
-  breakStartTime: "13:00",
-  breakEndTime: "14:00",
   workingDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
 };
 
@@ -7156,7 +7149,7 @@ const EDITABLE_FIELDS = Object.keys(DEFAULTS);
 
 const isValidTimezone = (tz) => {
   try {
-    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    new Intl.DateTimeFormat("en-GB", { timeZone: tz });
     return true;
   } catch {
     return false;
@@ -7296,7 +7289,7 @@ exports.sendFeedbackReminderNotification = async (req, res) => {
     }
 
     const formattedDate = appointment.date
-      ? new Date(appointment.date).toLocaleDateString("en-US", {
+      ? new Date(appointment.date).toLocaleDateString("en-GB", {
           month: "short",
           day: "numeric",
           year: "numeric",

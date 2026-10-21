@@ -635,7 +635,6 @@ export default function ChildFormScreen({ navigation, route }) {
           DOCUMENTS.map((d) => [d.key, finalDocuments[d.key] ?? null]),
         ),
       };
-
       if (isEditMode) {
         await updateChild(editingChild.id, payload);
       } else {

@@ -33,8 +33,6 @@ const DEFAULT_FORM = {
   timezone: "Asia/Karachi",
   clinicStartTime: "09:00",
   clinicEndTime: "17:00",
-  breakStartTime: "13:00",
-  breakEndTime: "14:00",
   workingDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
 };
 
@@ -105,7 +103,6 @@ function TimeField({ label, value, onChange }) {
 
 export default function SettingsScreen({ navigation }) {
   const [form, setForm] = useState(DEFAULT_FORM);
-  const [hasBreak, setHasBreak] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -125,11 +122,8 @@ export default function SettingsScreen({ navigation }) {
             timezone: d.timezone || "Asia/Karachi",
             clinicStartTime: d.clinicStartTime || "09:00",
             clinicEndTime: d.clinicEndTime || "17:00",
-            breakStartTime: d.breakStartTime || "",
-            breakEndTime: d.breakEndTime || "",
             workingDays: d.workingDays?.length ? d.workingDays : DEFAULT_FORM.workingDays,
           });
-          setHasBreak(Boolean(d.breakStartTime && d.breakEndTime));
         }
       } catch (error) {
         console.log("Failed to load settings:", error);
@@ -142,16 +136,7 @@ export default function SettingsScreen({ navigation }) {
     load();
   }, []);
 
-  const toggleBreak = (on) => {
-    setHasBreak(on);
-    if (on) {
-      setForm((prev) => ({
-        ...prev,
-        breakStartTime: prev.breakStartTime || "13:00",
-        breakEndTime: prev.breakEndTime || "14:00",
-      }));
-    }
-  };
+  
 
   const toggleDay = (day) => {
     setForm((prev) => ({
@@ -181,18 +166,6 @@ export default function SettingsScreen({ navigation }) {
       Alert.alert("Validation Error", "Clinic end time must be after start time.");
       return;
     }
-    if (hasBreak) {
-      const bs = toMinutes(form.breakStartTime);
-      const be = toMinutes(form.breakEndTime);
-      if (be <= bs) {
-        Alert.alert("Validation Error", "Break end time must be after break start time.");
-        return;
-      }
-      if (bs < toMinutes(form.clinicStartTime) || be > toMinutes(form.clinicEndTime)) {
-        Alert.alert("Validation Error", "Break must fall within clinic working hours.");
-        return;
-      }
-    }
 
     setSaving(true);
 
@@ -205,8 +178,6 @@ export default function SettingsScreen({ navigation }) {
         timezone: form.timezone.trim() || "Asia/Karachi",
         clinicStartTime: form.clinicStartTime,
         clinicEndTime: form.clinicEndTime,
-        breakStartTime: hasBreak ? form.breakStartTime : "",
-        breakEndTime: hasBreak ? form.breakEndTime : "",
         workingDays: form.workingDays,
       });
 
@@ -288,17 +259,6 @@ export default function SettingsScreen({ navigation }) {
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
-
-              <Text style={styles.fieldLabel}>Timezone</Text>
-              <TextInput
-                style={styles.input}
-                value={form.timezone}
-                onChangeText={(t) => setField("timezone", t)}
-                placeholder="Asia/Karachi"
-                placeholderTextColor="#94A3B8"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
             </View>
 
             <View style={styles.card}>
@@ -316,30 +276,6 @@ export default function SettingsScreen({ navigation }) {
                   onChange={(v) => setField("clinicEndTime", v)}
                 />
               </View>
-
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Lunch / break time</Text>
-                <Switch
-                  value={hasBreak}
-                  onValueChange={toggleBreak}
-                  trackColor={{ true: colors.primary }}
-                />
-              </View>
-
-              {hasBreak && (
-                <View style={styles.timeRow}>
-                  <TimeField
-                    label="Break Start"
-                    value={form.breakStartTime}
-                    onChange={(v) => setField("breakStartTime", v)}
-                  />
-                  <TimeField
-                    label="Break End"
-                    value={form.breakEndTime}
-                    onChange={(v) => setField("breakEndTime", v)}
-                  />
-                </View>
-              )}
             </View>
 
             <View style={styles.card}>
