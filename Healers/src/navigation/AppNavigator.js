@@ -24,6 +24,7 @@ import { AuthContext } from '../context/AuthContext';
 import AddNewPackageScreen from '../screens/admin/AddNewPackage';
 import AdminDashboard from '../screens/admin/AdminDashboard';
 import AllPackagesScreen from '../screens/admin/AllPackages';
+import AllUsersScreen from '../screens/admin/AllUsersScreen';
 import BatchAdditionalClassScreen
   from '../screens/admin/BatchAdditionalClassScreen';
 import BatchManagementScreen from '../screens/admin/BatchManagement';
@@ -132,6 +133,7 @@ const SCREEN_LAYOUTS = {
     ChildForm: { headerTitle: "Child Form" },
     ChildDetails: { showHeader: false, showFooter: false },
     SendPushNotification: { headerTitle: "Send Notification" },
+    AllUsers: { headerTitle: "All Users" },
   },
   Therapist: {
     TherapistDashboard: { showHeader: false, showFooter: true },
@@ -186,22 +188,23 @@ const ACTIVE_TAB_ROUTES = {
     BatchSessionPostpone: "Schedule",
     BatchAdditionalClass: "Schedule",
     Feedback: "Feedback",
-    LeaveRequest: "Home",
-    StaffOnLeave: "Home",
-    BatchManagment: "Home",
-    BroadcastManagement: "Home",
-    ComplainManagement: "Home",
-    FeeManagement: "Home",
-    AddNewPackage: "Home",
-    InvoiceManagement: "Home",
-    CreateNewInvoice: "Home",
-    InvoiceDetail: "Home",
-    AllPackages: "Home",
-    ServiceManagement: "Home",
-    ProgramBuilder: "Home",
-    InvoiceView: "Home",
-    Settings: "Home",
-    SendPushNotification: "Home",
+    LeaveRequest: "AdminDashboard",
+    StaffOnLeave: "AdminDashboard",
+    BatchManagment: "AdminDashboard",
+    BroadcastManagement: "AdminDashboard",
+    ComplainManagement: "AdminDashboard",
+    FeeManagement: "AdminDashboard",
+    AddNewPackage: "AdminDashboard",
+    InvoiceManagement: "AdminDashboard",
+    CreateNewInvoice: "AdminDashboard",
+    InvoiceDetail: "AdminDashboard",
+    AllPackages: "AdminDashboard",
+    ServiceManagement: "AdminDashboard",
+    ProgramBuilder: "AdminDashboard",
+    InvoiceView: "AdminDashboard",
+    Settings: "AdminDashboard",
+    SendPushNotification: "AdminDashboard",
+    AllUsers: "AdminDashboard",
   },
   Therapist: {
     TherapistDashboard: "Home",
@@ -274,6 +277,7 @@ const ADMIN_SCREENS = [
   ["ChildForm", ChildFormScreen],
   ["ChildDetails", ChildDetailsScreen],
   ["SendPushNotification", SendPushNotificationScreen],
+  ["AllUsers", AllUsersScreen],
 ];
 
 const THERAPIST_SCREENS = [

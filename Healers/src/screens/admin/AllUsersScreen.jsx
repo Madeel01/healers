@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+
 import {
   ActivityIndicator,
   Alert,
@@ -15,28 +21,33 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
-} from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import Feather from "@expo/vector-icons/Feather";
-import { useFocusEffect } from "@react-navigation/native";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import Feather from '@expo/vector-icons/Feather';
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
-  getAllUsers,
-  createTherapist,
-  updateTherapist,
   createAdmin,
-  updateAdmin,
-  getServices,
+  createTherapist,
+  deleteAdmin,
   deleteChild,
   deleteTherapist,
-  deleteAdmin,
-} from "../../api/admin/api";
-import BottomBar from "../../components/BottomBar";
-import TopBar from "../../components/TopBar";
-import { colors, fonts } from "../../styles/theme";
+  getAllUsers,
+  getServices,
+  updateAdmin,
+  updateTherapist,
+} from '../../api/admin/api';
+import {
+  colors,
+  commonStyles,
+  fonts,
+} from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const LIMIT = 10;
 
@@ -90,13 +101,13 @@ function UserCard({ u, onMenu, services = [] }) {
   const meta = ROLE_META[u.role] || { bg: "#F1F5F9", color: "#475569" };
   const btnRef = useRef(null);
 
-  const openMenu = () =>
-    btnRef.current?.measureInWindow((x, y, w, h) => onMenu(u, { x, y, w, h }));
+  const openMenu = () => btnRef.current?.measureInWindow((x, y, w, h) => onMenu(u, { x, y, w, h }));
   return (
     <View style={styles.card}>
-      {u.profileImage ? (
-        <Image source={{ uri: u.profileImage }} style={styles.avatar} />
-      ) : (
+      <View style={[styles.roleClip, { backgroundColor: meta.bg }]}>
+        <Text style={[styles.chipText, { color: meta.color }]}>{u.role}</Text>
+      </View>
+      {u.profileImage ? <Image source={{ uri: u.profileImage }} style={styles.avatar} /> : (
         <View
           style={[
             styles.avatar,
@@ -151,7 +162,9 @@ function UserCard({ u, onMenu, services = [] }) {
                   }}
                 >
                   <Text
-                    style={{ color: s.color, fontSize: 11, fontWeight: "600" }}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={{ color: s.color, fontSize: fontSize(11), fontFamily: fonts.semiBold }}
                   >
                     {s.label}
                   </Text>
@@ -163,9 +176,6 @@ function UserCard({ u, onMenu, services = [] }) {
       </View>
 
       <View style={{ alignItems: "flex-end", gap: 4 }}>
-        <View style={[styles.chip, { backgroundColor: meta.bg }]}>
-          <Text style={[styles.chipText, { color: meta.color }]}>{u.role}</Text>
-        </View>
         {u.isActive === false && (
           <View style={[styles.chip, { backgroundColor: "#FEE2E2" }]}>
             <Text style={[styles.chipText, { color: "#B91C1C" }]}>
@@ -324,8 +334,8 @@ function UserFormModal({
     } catch (e) {
       Alert.alert(
         "Error",
-        e?.response?.data?.message ||
-          `Could not ${isEdit ? "update" : "create"} this ${role.toLowerCase()}. Please try again.`,
+        e?.response?.data?.message
+          || `Could not ${isEdit ? "update" : "create"} this ${role.toLowerCase()}. Please try again.`,
       );
     } finally {
       setSaving(false);
@@ -403,8 +413,8 @@ function UserFormModal({
                           <Text
                             style={{
                               color: item.color,
-                              fontSize: 12,
-                              fontWeight: "700",
+                              fontSize: fontSize(12),
+                              fontFamily: fonts.bold,
                             }}
                           >
                             {item.label}
@@ -477,8 +487,7 @@ function UserFormModal({
               </View>
 
               <Text style={styles.fieldLabel}>
-                {isEdit ? "Confirm New Password" : "Confirm Password"}{" "}
-                {!isEdit && req}
+                {isEdit ? "Confirm New Password" : "Confirm Password"} {!isEdit && req}
               </Text>
               <View style={styles.pwBox}>
                 <TextInput
@@ -516,9 +525,7 @@ function UserFormModal({
                 onPress={save}
                 disabled={saving}
               >
-                {saving ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
+                {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : (
                   <Text style={styles.primaryBtnText}>
                     {isEdit ? "Save Changes" : `Save ${role}`}
                   </Text>
@@ -569,8 +576,7 @@ export default function AllUsersScreen({ navigation }) {
 
   const requestRef = useRef(0);
 
-  const activeFilterCount =
-    (role !== "all" ? 1 : 0) + (status !== "all" ? 1 : 0);
+  const activeFilterCount = (role !== "all" ? 1 : 0) + (status !== "all" ? 1 : 0);
 
   useEffect(() => {
     const t = setTimeout(() => setQuery(search.trim()), 400);
@@ -642,8 +648,9 @@ export default function AllUsersScreen({ navigation }) {
   );
 
   const onEndReached = () => {
-    if (hasMore && !loading && !loadingMore && !refreshing)
+    if (hasMore && !loading && !loadingMore && !refreshing) {
       load(page + 1, "more");
+    }
   };
 
   const countFor = (id) =>
@@ -701,9 +708,9 @@ export default function AllUsersScreen({ navigation }) {
     const u = menu?.user;
     closeMenu();
     if (!u) return;
-    if (u.role === "Child")
+    if (u.role === "Child") {
       navigation.navigate("ChildForm", { child: toChildParam(u) });
-    else setForm({ visible: true, role: u.role, user: u });
+    } else setForm({ visible: true, role: u.role, user: u });
   };
   const closeForm = () => setForm((p) => ({ ...p, visible: false }));
 
@@ -733,17 +740,17 @@ export default function AllUsersScreen({ navigation }) {
       if (body?.deactivated || body?.deleted === false) {
         Alert.alert(
           "Marked Inactive",
-          body?.message ||
-            "This user has past records, so they were marked inactive instead of deleted.",
+          body?.message
+            || "This user has past records, so they were marked inactive instead of deleted.",
         );
       }
       load(1, "reset");
     } catch (e) {
       Alert.alert(
         "Cannot Delete",
-        e?.response?.data?.message ||
-          e?.message ||
-          "Could not delete this user. Please try again.",
+        e?.response?.data?.message
+          || e?.message
+          || "Could not delete this user. Please try again.",
       );
     }
   };
@@ -753,15 +760,7 @@ export default function AllUsersScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.main}>
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle="All Users"
-      />
-
-      {/* search + filter button */}
+    <View style={[commonStyles.container]}>
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
           <Feather name="search" size={18} color="#94A3B8" />
@@ -783,52 +782,52 @@ export default function AllUsersScreen({ navigation }) {
           onPress={openFilter}
           activeOpacity={0.8}
         >
-          <Feather name="sliders" size={20} color="#0B4A6F" />
+          <Feather name="sliders" size={fontSize(20)} color="#0B4A6F" />
           {activeFilterCount > 0 && <View style={styles.filterDot} />}
         </TouchableOpacity>
       </View>
 
-      {loading ? (
-        <View style={styles.centerFill}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => String(item._id)}
-          renderItem={({ item }) => (
-            <UserCard u={item} onMenu={openMenu} services={services} />
-          )}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          onEndReached={onEndReached}
-          onEndReachedThreshold={0.4}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => load(1, "refresh")}
-              colors={[colors.primary]}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Feather name="users" size={34} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>
-                {query ? "No matches found" : "No users found"}
-              </Text>
-            </View>
-          }
-          ListFooterComponent={
-            loadingMore ? (
-              <ActivityIndicator
-                color={colors.primary}
-                style={{ marginVertical: 14 }}
+      {loading
+        ? (
+          <View style={styles.centerFill}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        )
+        : (
+          <FlatList
+            data={items}
+            keyExtractor={(item) => String(item._id)}
+            renderItem={({ item }) => <UserCard u={item} onMenu={openMenu} services={services} />}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            onEndReached={onEndReached}
+            onEndReachedThreshold={0.4}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => load(1, "refresh")}
+                colors={[colors.primary]}
               />
-            ) : null
-          }
-        />
-      )}
+            }
+            ListEmptyComponent={
+              <View style={styles.empty}>
+                <Feather name="users" size={34} color="#94A3B8" />
+                <Text style={styles.emptyTitle}>
+                  {query ? "No matches found" : "No users found"}
+                </Text>
+              </View>
+            }
+            ListFooterComponent={loadingMore
+              ? (
+                <ActivityIndicator
+                  color={colors.primary}
+                  style={{ marginVertical: 14 }}
+                />
+              )
+              : null}
+          />
+        )}
 
       {/* FAB */}
       <TouchableOpacity
@@ -1075,11 +1074,9 @@ export default function AllUsersScreen({ navigation }) {
                 )}
                 <DetailRow
                   label="Joined"
-                  value={
-                    detailUser.createdAt
-                      ? new Date(detailUser.createdAt).toLocaleDateString()
-                      : ""
-                  }
+                  value={detailUser.createdAt
+                    ? new Date(detailUser.createdAt).toLocaleDateString()
+                    : ""}
                 />
               </ScrollView>
             )}
@@ -1096,14 +1093,11 @@ export default function AllUsersScreen({ navigation }) {
         services={services}
         onSaved={onSaved}
       />
-
-      <BottomBar activeTab="" onOpenNotifications={setIsNotificationOpen} />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  main: { flex: 1, backgroundColor: "#F8FAFC" },
   centerFill: { flex: 1, alignItems: "center", justifyContent: "center" },
 
   searchRow: {
@@ -1121,15 +1115,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 48,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(12),
+    height: hp(48),
   },
-  searchInput: { flex: 1, fontSize: 14, color: "#0F172A" },
+  searchInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
   filterBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: wp(48),
+    height: hp(48),
+    borderRadius: wp(12),
     borderWidth: 1,
     borderColor: "#CBD5E1",
     backgroundColor: "#FFFFFF",
@@ -1158,23 +1152,33 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
     elevation: 1,
+    position: "relative",
+  },
+  roleClip: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    padding: wp(3),
+    borderRadius: wp(5),
+    borderTopEndRadius: 16,
+    paddingRight:wp(10)
   },
   avatar: { width: 46, height: 46, borderRadius: 23 },
-  avatarText: { fontSize: 18, fontFamily: fonts.semiBold },
-  name: { fontSize: 15, fontFamily: fonts.semiBold, color: "#0F172A" },
+  avatarText: { fontSize: fontSize(18), fontFamily: fonts.semiBold },
+  name: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#0F172A" },
   meta: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
     marginTop: 2,
   },
   chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  chipText: { fontSize: 11, fontFamily: fonts.semiBold },
+  chipText: { fontSize: fontSize(10), fontFamily: fonts.medium, lineHeight: 14 },
   menuBtn: { padding: 4 },
 
   empty: { alignItems: "center", paddingVertical: 60, gap: 6 },
   emptyTitle: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontFamily: fonts.semiBold,
     color: "#334155",
     marginTop: 6,
@@ -1216,11 +1220,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 12,
   },
-  sheetTitle: { flex: 1, fontSize: 20, fontWeight: "800", color: "#0F172A" },
+  sheetTitle: { flex: 1, fontSize: 20, fontFamily: fonts.bold, color: "#0F172A" },
 
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: fontSize(13),
+    fontFamily: fonts.bold,
     color: "#475569",
     textTransform: "uppercase",
     letterSpacing: 0.6,
@@ -1237,7 +1241,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   filterChipOn: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
-  filterText: { fontSize: 13, fontFamily: fonts.semiBold, color: "#475569" },
+  filterText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#475569" },
   filterTextOn: { color: "#FFFFFF" },
   filterFooter: {
     flexDirection: "row",
@@ -1256,7 +1260,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  resetBtnText: { fontSize: 15, fontWeight: "700", color: "#475569" },
+  resetBtnText: { fontSize: fontSize(14), fontFamily: fonts.bold, color: "#475569" },
   applyBtn: {
     flex: 2,
     height: 48,
@@ -1281,7 +1285,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  optionText: { flex: 1, fontSize: 15, fontWeight: "600", color: "#0F172A" },
+  optionText: { flex: 1, fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
 
   detailRow: {
     flexDirection: "row",
@@ -1291,18 +1295,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  detailLabel: { fontSize: 13, fontWeight: "700", color: "#64748B" },
-  detailValue: { flex: 1, textAlign: "right", fontSize: 14, color: "#0F172A" },
+  detailLabel: { fontSize: fontSize(13), fontFamily: fonts.bold, color: "#64748B" },
+  detailValue: { flex: 1, textAlign: "right", fontSize: fontSize(14), color: "#0F172A" },
 
   /* form */
   fieldLabel: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: fontSize(13),
+    fontFamily: fonts.bold,
     color: "#475569",
     marginBottom: 6,
     marginTop: 14,
   },
-  helper: { fontSize: 12, color: "#64748B", marginBottom: 6 },
+  helper: { fontSize: fontSize(11), color: "#64748B", marginBottom: 6 },
   input: {
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
@@ -1310,7 +1314,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 46,
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#0F172A",
   },
   pwBox: {
@@ -1323,7 +1327,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 46,
   },
-  pwInput: { flex: 1, fontSize: 14, color: "#0F172A" },
+  pwInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
   segmentWrap: {
     flexDirection: "row",
     backgroundColor: "#F1F5F9",
@@ -1338,7 +1342,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   segmentItemOn: { backgroundColor: "#0B4A6F" },
-  segmentText: { fontSize: 14, fontWeight: "600", color: "#475569" },
+  segmentText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#475569" },
   segmentTextOn: { color: "#FFFFFF" },
   stickyFooter: {
     paddingTop: 12,
@@ -1354,7 +1358,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: "100%",
   },
-  primaryBtnText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+  primaryBtnText: { color: "#FFFFFF", fontSize: fontSize(16), fontFamily: fonts.bold },
   dropdown: {
     position: "absolute",
     width: 120,
@@ -1375,5 +1379,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   dropdownDivider: { borderTopWidth: 1, borderTopColor: "#F1F5F9" },
-  dropdownText: { fontSize: 13, fontWeight: "600", color: "#334155" },
+  dropdownText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#334155" },
 });
