@@ -5,8 +5,8 @@ import {
 
 const { width, height } = Dimensions.get("window");
 
-const BASE_WIDTH = 375;
-const BASE_HEIGHT = 812;
+const BASE_WIDTH = 380;
+const BASE_HEIGHT = 870;
 
 const scale = Math.min(Math.max(width / BASE_WIDTH, 0.85), 1.15);
 

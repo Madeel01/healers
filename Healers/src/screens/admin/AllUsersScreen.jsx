@@ -831,11 +831,11 @@ export default function AllUsersScreen({ navigation }) {
 
       {/* FAB */}
       <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + 90 }]}
+        style={[styles.fab]}
         onPress={() => setAddMenuOpen(true)}
         activeOpacity={0.8}
       >
-        <Feather name="plus" size={30} color="#fff" />
+        <Feather name="plus" size={fontSize(24)} color="#fff" />
       </TouchableOpacity>
 
       {/* Filter modal */}
@@ -1117,12 +1117,12 @@ const styles = StyleSheet.create({
     borderColor: "#CBD5E1",
     borderRadius: wp(12),
     paddingHorizontal: wp(12),
-    height: hp(48),
+   height: hp(50),
   },
   searchInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
   filterBtn: {
-    width: wp(48),
-    height: hp(48),
+    width: wp(50),
+   height: hp(50),
     borderRadius: wp(12),
     borderWidth: 1,
     borderColor: "#CBD5E1",
@@ -1142,7 +1142,7 @@ const styles = StyleSheet.create({
     borderColor: "#FFFFFF",
   },
 
-  listContent: { padding: 16, paddingBottom: 170, flexGrow: 1 },
+  listContent: { padding: 16, paddingBottom: hp(20), flexGrow: 1 },
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -1159,12 +1159,12 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     padding: wp(3),
-    borderRadius: wp(5),
-    borderTopEndRadius: 16,
-    paddingRight:wp(10)
+    borderTopEndRadius: wp(16),
+    borderBottomStartRadius: wp(16),
+    paddingHorizontal:wp(10),
   },
-  avatar: { width: 46, height: 46, borderRadius: 23 },
-  avatarText: { fontSize: fontSize(18), fontFamily: fonts.semiBold },
+  avatar: { width: wp(46), height: hp(46), borderRadius: wp(999) },
+  avatarText: { fontSize: fontSize(18), fontFamily: fonts.semiBold,lineHeight:24 },
   name: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#0F172A" },
   meta: {
     fontSize: fontSize(12),
@@ -1186,10 +1186,11 @@ const styles = StyleSheet.create({
 
   fab: {
     position: "absolute",
-    right: 18,
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    right: 10,
+    bottom:15,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(16),
     backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
@@ -1220,7 +1221,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 12,
   },
-  sheetTitle: { flex: 1, fontSize: 20, fontFamily: fonts.bold, color: "#0F172A" },
+  sheetTitle: { flex: 1, fontSize: fontSize(18), fontFamily: fonts.semiBold, color: "#0F172A" },
 
   sectionTitle: {
     fontSize: fontSize(13),
@@ -1253,7 +1254,7 @@ const styles = StyleSheet.create({
   },
   resetBtn: {
     flex: 1,
-    height: 48,
+    height: wp(48),
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#CBD5E1",
@@ -1263,7 +1264,7 @@ const styles = StyleSheet.create({
   resetBtnText: { fontSize: fontSize(14), fontFamily: fonts.bold, color: "#475569" },
   applyBtn: {
     flex: 2,
-    height: 48,
+    height: wp(48),
     borderRadius: 14,
     backgroundColor: "#0B4A6F",
     alignItems: "center",
@@ -1278,8 +1279,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F1F5F9",
   },
   optionIcon: {
-    width: 38,
-    height: 38,
+    width: wp(38),
+    height: hp(38),
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -1313,7 +1314,7 @@ const styles = StyleSheet.create({
     borderColor: "#CBD5E1",
     borderRadius: 12,
     paddingHorizontal: 14,
-    height: 46,
+    height: hp(50),
     fontSize: fontSize(14),
     color: "#0F172A",
   },
@@ -1325,7 +1326,7 @@ const styles = StyleSheet.create({
     borderColor: "#CBD5E1",
     borderRadius: 12,
     paddingHorizontal: 14,
-    height: 46,
+   height: hp(50),
   },
   pwInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
   segmentWrap: {
@@ -1336,7 +1337,7 @@ const styles = StyleSheet.create({
   },
   segmentItem: {
     flex: 1,
-    height: 40,
+    height: hp(40),
     borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
@@ -1361,7 +1362,7 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: "#FFFFFF", fontSize: fontSize(16), fontFamily: fonts.bold },
   dropdown: {
     position: "absolute",
-    width: 120,
+    width: wp(120),
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingVertical: 6,

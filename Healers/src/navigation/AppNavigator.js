@@ -86,6 +86,7 @@ import ProgressTrackingScreen from '../screens/therapist/ProgressTracking';
 import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
+import { commonStyles } from '../styles/theme';
 
 const Stack = createNativeStackNavigator();
 const navigationRef = createNavigationContainerRef();
@@ -451,7 +452,7 @@ export default function AppNavigator() {
       onStateChange={updateLayout}
     >
       {!isAuthenticatedRole ? <AuthStack /> : (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container,commonStyles.container]}>
           <View
             style={layout.showHeader ? styles.visible : styles.hidden}
           >
