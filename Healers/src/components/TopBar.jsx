@@ -197,7 +197,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,.1)",
-    marginBottom: 10,
   },
   headerIconButton: {
     padding: 6,
