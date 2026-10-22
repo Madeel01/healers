@@ -1,4 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -9,20 +14,32 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
-import Feather from "@expo/vector-icons/Feather";
+import Feather from '@expo/vector-icons/Feather';
 
 import {
   getBatchSlotOptions,
   getBatchTherapistOptions,
+  getServices,
   previewBatchSchedule,
   saveBatchSchedule,
-  getServices,
-} from "../../api/admin/api";
-import { colors, fonts } from "../../styles/theme";
-import { formatTo12Hour } from "../../utils/hoursformat";
+} from '../../api/admin/api';
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
+import { formatTo12Hour } from '../../utils/hoursformat';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
+
 const DURATIONS = [45, 60, 90, 120];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const FULL_DAY = {
@@ -47,7 +64,7 @@ const prettyDay = (k) => {
 
 export default function BatchScheduleCreateScreen({ navigation, route }) {
   const { batchId } = route.params;
-
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState(1);
   const [minutes, setMinutes] = useState(null);
 
@@ -253,18 +270,7 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.main}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => (step === 2 ? setStep(1) : navigation.goBack())}
-        >
-          <Feather name="arrow-left" size={22} color="#0F172A" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>{step === 1 ? "Session time & therapists" : "Choose weekly slots"}</Text>
-          <Text style={styles.headerSub}>Step {step} of 2</Text>
-        </View>
-      </View>
+     
       <View style={styles.progress}>
         <View style={[styles.progressBar, { flex: step }]} />
         <View style={{ flex: 2 - step }} />
@@ -466,7 +472,7 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
       </View>
 
       {/* review + conflicts */}
-      <Modal visible={!!review} transparent animationType="slide" onRequestClose={() => setReview(null)}>
+      <Modal style={{paddingBottom:insets.bottom}} visible={!!review} transparent animationType="slide" onRequestClose={() => setReview(null)}>
         <View style={styles.overlay}>
           <View style={styles.sheet}>
             {review && (
@@ -570,31 +576,28 @@ export default function BatchScheduleCreateScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   main: { flex: 1, backgroundColor: "#F8FAFC" },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 17, fontFamily: fonts.semiBold, color: "#0F172A" },
-  headerSub: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B" },
-  progress: { flexDirection: "row", height: 3, marginHorizontal: 16, backgroundColor: "#E2E8F0", borderRadius: 2 },
+   progress: { flexDirection: "row", height: 3, marginHorizontal: 16, backgroundColor: "#E2E8F0", borderRadius: 2 },
   progressBar: { backgroundColor: colors.primary, borderRadius: 2 },
 
   content: { padding: 16, paddingBottom: 120 },
-  sectionTitle: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 18, marginBottom: 8 },
-  hint: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B", lineHeight: 18, marginBottom: 8 },
-  muted: { fontSize: 12, fontFamily: fonts.regular, color: "#94A3B8" },
-  subText: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
-  note: { fontSize: 12, fontFamily: fonts.regular, color: "#B45309", marginTop: 10, lineHeight: 18 },
+  sectionTitle: { fontSize:fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 18, marginBottom: 8 },
+  hint: { fontSize:fontSize(12), fontFamily: fonts.regular, color: "#64748B", lineHeight: 18, marginBottom: 8 },
+  muted: { fontSize:fontSize(12), fontFamily: fonts.regular, color: "#94A3B8" },
+  subText: { fontSize:fontSize(12), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  note: { fontSize:fontSize(12), fontFamily: fonts.regular, color: "#B45309", marginTop: 10, lineHeight: 18 },
 
   row: { flexDirection: "row", gap: 10 },
   durBtn: {
     flex: 1,
-    height: 46,
-    borderRadius: 12,
+    height: hp(46),
+    borderRadius: wp(12),
     borderWidth: 1,
     borderColor: "#CBD5E1",
     backgroundColor: "#FFFFFF",
@@ -602,27 +605,27 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   durBtnOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  durText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#334155" },
+  durText: { fontSize:fontSize(13), fontFamily: fonts.semiBold, color: "#334155" },
   durTextOn: { color: "#FFFFFF" },
 
   card: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: 14, marginTop: 10 },
   cardHead: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6 },
   chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start" },
-  chipText: { fontSize: 11, fontFamily: fonts.semiBold },
+  chipText: { fontSize:fontSize(11), fontFamily: fonts.semiBold },
 
   therapistRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11 },
-  therapistName: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
+  therapistName: { fontSize:fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 7,
-    borderWidth: 2,
+    width: wp(22),
+    height: hp(22),
+    borderRadius:wp(6),
+    borderWidth: wp(2),
     borderColor: "#CBD5E1",
     alignItems: "center",
     justifyContent: "center",
   },
   checkboxOn: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
-  countText: { fontSize: 12, fontFamily: fonts.semiBold, color: "#0B4A6F" },
+  countText: { fontSize:fontSize(12), fontFamily: fonts.semiBold, color: "#0B4A6F" },
   iconBtn: {
     width: 32,
     height: 32,
@@ -633,7 +636,7 @@ const styles = StyleSheet.create({
   },
 
   dayRow: { flexDirection: "row", paddingVertical: 10, borderTopWidth: 1, borderTopColor: "#F1F5F9" },
-  dayLabel: { width: 42, fontSize: 13, fontFamily: fonts.semiBold, color: "#0F172A", paddingTop: 6 },
+  dayLabel: { width: 42, fontSize:fontSize(13), fontFamily: fonts.semiBold, color: "#0F172A", paddingTop: 6 },
   slotWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   slot: {
     paddingHorizontal: 10,
@@ -645,7 +648,7 @@ const styles = StyleSheet.create({
   },
   slotOn: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
   slotTaken: { backgroundColor: "#F1F5F9", borderColor: "#E2E8F0" },
-  slotText: { fontSize: 12, fontFamily: fonts.semiBold, color: "#334155" },
+  slotText: { fontSize:fontSize(12), fontFamily: fonts.semiBold, color: "#334155" },
   slotTextOn: { color: "#FFFFFF" },
   slotTextTaken: { color: "#CBD5E1", textDecorationLine: "line-through" },
 
@@ -668,7 +671,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryText: { fontSize: 15, fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  primaryText: { fontSize:fontSize(15), fontFamily: fonts.semiBold, color: "#FFFFFF" },
   secondaryBtn: {
     flex: 1,
     height: 50,
@@ -678,7 +681,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  secondaryText: { fontSize: 15, fontFamily: fonts.semiBold, color: colors.primary },
+  secondaryText: { fontSize:fontSize(15), fontFamily: fonts.semiBold, color: colors.primary },
 
   overlay: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.4)", justifyContent: "flex-end" },
   sheet: {
@@ -690,9 +693,9 @@ const styles = StyleSheet.create({
     maxHeight: "90%",
   },
   sheetHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  sheetTitle: { fontSize: 19, fontFamily: fonts.semiBold, color: "#0F172A" },
+  sheetTitle: { fontSize:fontSize(19), fontFamily: fonts.semiBold, color: "#0F172A" },
   sheetActions: { flexDirection: "row", gap: 12, marginTop: 14 },
-  bigNumber: { fontSize: 26, fontFamily: fonts.semiBold, color: "#0B4A6F" },
+  bigNumber: { fontSize:fontSize(26), fontFamily: fonts.semiBold, color: "#0B4A6F" },
   reviewRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -709,14 +712,14 @@ const styles = StyleSheet.create({
     padding: 12,
     marginTop: 10,
   },
-  conflictName: { fontSize: 14, fontFamily: fonts.semiBold, color: "#991B1B" },
-  conflictCount: { fontSize: 12, fontFamily: fonts.regular, color: "#B91C1C", marginTop: 2 },
-  conflictLine: { fontSize: 12, fontFamily: fonts.semiBold, color: "#7F1D1D" },
-  conflictReason: { fontSize: 12, fontFamily: fonts.regular, color: "#7F1D1D", marginTop: 1 },
+  conflictName: { fontSize:fontSize(14), fontFamily: fonts.semiBold, color: "#991B1B" },
+  conflictCount: { fontSize:fontSize(12), fontFamily: fonts.regular, color: "#B91C1C", marginTop: 2 },
+  conflictLine: { fontSize:fontSize(12), fontFamily: fonts.semiBold, color: "#7F1D1D" },
+  conflictReason: { fontSize:fontSize(12), fontFamily: fonts.regular, color: "#7F1D1D", marginTop: 1 },
   segment: { flexDirection: "row", backgroundColor: "#FEE2E2", borderRadius: 10, padding: 3, marginTop: 12 },
   segBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
   segBtnOn: { backgroundColor: "#FFFFFF" },
-  segText: { fontSize: 12, fontFamily: fonts.semiBold, color: "#B91C1C" },
+  segText: { fontSize:fontSize(12), fontFamily: fonts.semiBold, color: "#B91C1C" },
   segTextOn: { color: "#7F1D1D" },
   tabsWrap: {
     backgroundColor: "#FFFFFF",
@@ -737,9 +740,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   tabOn: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
-  tabName: { fontSize: 13, fontFamily: fonts.semiBold, color: "#0F172A" },
+  tabName: { fontSize:fontSize(13), fontFamily: fonts.semiBold, color: "#0F172A" },
   tabNameOn: { color: "#FFFFFF" },
-  tabSpec: { fontSize: 11, fontFamily: fonts.regular, marginTop: 1 },
+  tabSpec: { fontSize:fontSize(11), fontFamily: fonts.regular, marginTop: 1 },
   tabBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -751,5 +754,5 @@ const styles = StyleSheet.create({
   },
   tabBadgeFilled: { backgroundColor: "#DCFCE7" },
   tabBadgeOn: { backgroundColor: "rgba(255,255,255,0.2)" },
-  tabBadgeText: { fontSize: 12, fontFamily: fonts.semiBold, color: "#94A3B8" },
+  tabBadgeText: { fontSize:fontSize(12), fontFamily: fonts.semiBold, color: "#94A3B8" },
 });

@@ -24,10 +24,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -43,6 +40,7 @@ import {
 } from '../../api/admin/api';
 import {
   colors,
+  commonStyles,
   fonts,
 } from '../../styles/theme';
 import {
@@ -865,16 +863,7 @@ export default function ChildFormScreen({ navigation, route }) {
   );
 
   return (
-    <SafeAreaView style={styles.mainContainer} edges={["top", "left", "right"]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} hitSlop={10}>
-          <Feather name="arrow-left" size={22} color="#0F172A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isEditMode ? "Edit Child" : "Add New Child"}
-        </Text>
-        <View style={{ width: 22 }} />
-      </View>
+    <View style={commonStyles.container} edges={["top", "left", "right"]}>
 
       <View style={styles.stepper}>
         {STEPS.map((s, i) => {
@@ -1238,13 +1227,12 @@ export default function ChildFormScreen({ navigation, route }) {
         onClose={() => setIsPackagePickerOpen(false)}
         onSelect={handleSelectPackage}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: "#F8FAFC" },
 
   header: {
     flexDirection: "row",

@@ -28,6 +28,11 @@ import {
   commonStyles,
   fonts,
 } from '../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../utils/responsive';
 import NotificationModal from './NotificationModal';
 
 export default function TopBar({ headerTitle }) {
@@ -189,11 +194,11 @@ export default function TopBar({ headerTitle }) {
 
 const styles = StyleSheet.create({
   fixedHeader: {
-    height: 56,
+    height: wp(56),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
     backgroundColor: "#F8FAFC",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,.1)",
@@ -215,8 +220,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#DC2626",
   },
   headerTitle: {
-    fontSize: 16,
-    fontFamily: fonts.regular,
+    fontSize: fontSize(14),
+    fontFamily: fonts.medium,
     color: "#0B4A6F",
     lineHeight: 24,
   },
@@ -226,8 +231,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   avatarHeader: {
-    width: 32,
-    height: 32,
+    width: wp(32),
+    height: hp(32),
     borderRadius: 999,
   },
   modalOverlay: {
@@ -251,7 +256,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F1F5F9",
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.bold,
     color: "#0F172A",
   },
@@ -300,16 +305,17 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   avatarFallback: {
-    width: 32,
-    height: 32,
-    borderRadius: 20,
+    width: wp(38),
+    height: hp(38),
+    borderRadius: wp(999),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
   avatarFallbackText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
+    lineHeight:24
   },
 });

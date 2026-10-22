@@ -1,11 +1,29 @@
-import React, { useState, useEffect, useRef } from "react";
-import { ScrollView, StyleSheet, Text, View, Alert, ActivityIndicator } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
-import TopBar from "../../components/TopBar";
-import { colors, commonStyles, fonts } from "../../styles/theme";
-import { getStaffOnLeaveToday } from "../../api/admin/api";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+
+import { getStaffOnLeaveToday } from '../../api/admin/api';
+import {
+  colors,
+  commonStyles,
+  fonts,
+} from '../../styles/theme';
+import { fontSize } from '../../utils/responsive';
+
 const LIMIT = 10;
 const formatDate = (d) =>
   new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -70,13 +88,6 @@ export default function StaffOnLeaveScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle={"Staff on Leave Today"}
-      />
-
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -120,7 +131,7 @@ const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: "#F8FAFC" },
   scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 },
   emptyState: { padding: 30, alignItems: "center" },
-  emptyStateText: { color: "#414750", fontSize: 14, fontWeight: "500" },
+  emptyStateText: { color: "#414750", fontSize: fontSize(14), fontFamily: fonts.medium,},
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 24,
@@ -132,9 +143,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 6,
   },
-  name: { fontSize: 16, fontFamily: fonts.semiBold, color: "#181C1E", lineHeight: 20 },
-  role: { fontSize: 14, fontFamily: fonts.regular, color: "#414750", lineHeight: 20, marginBottom: 10 },
+  name: { fontSize: fontSize(16), fontFamily: fonts.semiBold, color: "#181C1E", lineHeight: 20 },
+  role: { fontSize: fontSize(14), fontFamily: fonts.regular, color: "#414750", lineHeight: 20, marginBottom: 10 },
   dateRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  dateText: { fontSize: 16, fontFamily: fonts.semiBold, color: colors.primary },
-  leaveType: { fontSize: 14, fontFamily: fonts.regular, color: "#414750" },
+  dateText: { fontSize: fontSize(16), fontFamily: fonts.semiBold, color: colors.primary },
+  leaveType: { fontSize: fontSize(14), fontFamily: fonts.regular, color: "#414750" },
 });

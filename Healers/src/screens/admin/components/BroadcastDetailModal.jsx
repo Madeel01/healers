@@ -1,24 +1,39 @@
-import React, { useState, useEffect } from 'react';
-import Feather from '@expo/vector-icons/Feather';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { colors, fonts } from '../../../styles/theme';
-import { getAssetUrl } from '../../../utils/media';
+import React, {
+  useEffect,
+  useState,
+} from 'react';
+
+import {
+  File,
+  Paths,
+} from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as IntentLauncher from 'expo-intent-launcher';
 import {
   ActivityIndicator,
-  Platform,
   Alert,
   Image,
   Linking,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as IntentLauncher from 'expo-intent-launcher';
-import * as FileSystem from 'expo-file-system/legacy';
-import { File, Paths } from 'expo-file-system';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import Feather from '@expo/vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
+import {
+  colors,
+  fonts,
+} from '../../../styles/theme';
+import { getAssetUrl } from '../../../utils/media';
+import { fontSize } from '../../../utils/responsive';
+
 const getMimeType = (filename = '') => {
   const ext = filename.split('.').pop()?.toLowerCase();
 
@@ -74,6 +89,8 @@ const audienceText = (b) => {
 };
 
 export default function BroadcastDetailModal({ visible, loading, broadcast, onClose, onEdit, onDelete }) {
+    const insets = useSafeAreaInsets();
+  
   const sc = STATUS_COLORS[broadcast?.status] || STATUS_COLORS.draft;
   const tc = TYPE_COLORS[broadcast?.type] || TYPE_COLORS.General;
   const isImage = broadcast?.attachment?.type === 'image';
@@ -138,7 +155,7 @@ export default function BroadcastDetailModal({ visible, loading, broadcast, onCl
 
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent>
+    <Modal style={{paddingBottom:insets.bottom}} visible={visible} animationType="slide" onRequestClose={onClose} transparent>
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           <View style={styles.topBar}>
@@ -270,35 +287,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
   },
-  topBarTitle: { fontSize: 16, fontFamily: fonts.semiBold, color: colors.primary },
+  topBarTitle: { fontSize:fontSize(16), fontFamily: fonts.semiBold, color: colors.primary },
   loadingBox: { paddingVertical: 60, alignItems: 'center' },
   body: { padding: 20, paddingBottom: 40 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
-  title: { flex: 1, fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  title: { flex: 1, fontSize:fontSize(16), fontFamily:fonts.semiBold, color: '#0F172A' },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { fontSize: 11, fontWeight: '700' },
-  message: { marginTop: 12, fontSize: 14, color: '#334155', lineHeight: 21 },
+  badgeText: { fontSize:fontSize(11), fontFamily:fonts.semiBold },
+  message: { marginTop: 12, fontSize:fontSize(14), color: '#334155', lineHeight: 21 },
   attachmentImage: { width: '100%', height: 200, borderRadius: 14, marginTop: 16, backgroundColor: '#F1F5F9' },
   fileRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16,
     backgroundColor: '#F1F5F9', borderRadius: 12, padding: 12,
   },
-  fileName: { flex: 1, fontSize: 13, color: '#334155', fontWeight: '600' },
+  fileName: { flex: 1, fontSize:fontSize(13), color: '#334155', fontFamily:fonts.semiBold },
   divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 18 },
   detailRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  detailLabel: { fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 },
-  detailValue: { fontSize: 14, color: '#0F172A', fontWeight: '600' },
+  detailLabel: { fontSize:fontSize(11), color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 },
+  detailValue: { fontSize:fontSize(14), color: '#0F172A', fontFamily:fonts.semiBold },
   actionsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom:25, },
   editBtn: {
     flex: 1, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center',
     height: 44, borderRadius: 12, borderWidth: 1.5, borderColor: colors.primary,
   },
-  editBtnText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
+  editBtnText: { color: colors.primary, fontFamily:fonts.semiBold, fontSize:fontSize(14) },
   deleteBtn: {
     flex: 1, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center',
     height: 44, borderRadius: 12, borderWidth: 1.5, borderColor: '#EF4444',
   },
-  deleteBtnText: { color: '#EF4444', fontWeight: '700', fontSize: 14 },
+  deleteBtnText: { color: '#EF4444', fontFamily:fonts.semiBold, fontSize:fontSize(14) },
   previewOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' },
     previewCloseBtn: { position: 'absolute', top: 50, right: 20, zIndex: 10, padding: 8 },
     previewImage: { width: '100%', height: '80%' },

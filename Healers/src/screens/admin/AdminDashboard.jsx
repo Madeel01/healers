@@ -182,10 +182,10 @@ export default function AdminDashboard() {
               style={styles.iconButton}
               onPress={() => navigation.navigate("Settings")}
             >
-              <MaterialIcons name="settings" size={22} color="#475569" />
+              <MaterialIcons name="settings" size={fontSize(22)} color="#475569" />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.iconButton, { marginLeft: 8 }]} onPress={logout}>
-              <MaterialIcons name="logout" size={20} color="#DC2626" />
+            <TouchableOpacity style={[styles.iconButton]} onPress={logout}>
+              <MaterialIcons name="logout" size={fontSize(20)} color="#DC2626" />
             </TouchableOpacity>
           </View>
         </View>
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginVertical: 12,
+    marginVertical: hp(12),
   },
   profileContainer: {
     flexDirection: "row",
@@ -369,16 +369,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   avatarContainer: {
-    width: 40,
-    height: 40,
+    width: wp(40),
+    height: wp(40),
     borderRadius: 999,
     backgroundColor: "#1669A9",
     alignItems: "center",
     justifyContent: "center",
   },
   avatar: {
-    width: 38,
-    height: 38,
+    width: wp(38),
+    height: wp(38),
     borderRadius: 999,
   },
   headerTitle: {
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: fonts.semiBold,
     color: colors.primary,
-    width: 180,
+    width: wp(180),
   },
   headerDate: {
     fontSize: fontSize(14),

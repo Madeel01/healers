@@ -1,37 +1,44 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  RefreshControl,
   View,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import Feather from "@expo/vector-icons/Feather";
+import Feather from '@expo/vector-icons/Feather';
 
-import BottomBar from "../../components/BottomBar";
-import TopBar from "../../components/TopBar";
-import { colors, fonts } from "../../styles/theme";
 import {
   createBatch,
   deleteBatch,
   getBatches,
+  getServices,
   updateBatch,
-  getBatchPackageOptions,
-  getServices
-} from "../../api/admin/api";
+} from '../../api/admin/api';
+import {
+  colors,
+  commonStyles,
+  fonts,
+} from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const MONTHS = [
   "January",
@@ -47,8 +54,7 @@ const MONTHS = [
   "November",
   "December",
 ];
-const getBatchSpecialities = (speciality) =>
-  Array.isArray(speciality) ? speciality : speciality ? [speciality] : [];
+const getBatchSpecialities = (speciality) => Array.isArray(speciality) ? speciality : speciality ? [speciality] : [];
 const emptyForm = {
   batchName: "",
   speciality: [],
@@ -62,7 +68,7 @@ export default function BatchManagementScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [activeBottomTab, setActiveBottomTab] = useState("");
-  const [services, setServices] = useState([])
+  const [services, setServices] = useState([]);
 
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +101,7 @@ export default function BatchManagementScreen({ navigation }) {
         const res = await getServices({ search: "" });
 
         const activeServices = res.data.filter(
-          (service) => service.isActive === true
+          (service) => service.isActive === true,
         );
 
         setServices(activeServices);
@@ -145,8 +151,6 @@ export default function BatchManagementScreen({ navigation }) {
     return unsubscribe;
   }, [navigation]);
 
-
-
   const openCreateModal = () => {
     setEditingBatchId(null);
     setForm(emptyForm);
@@ -159,9 +163,7 @@ export default function BatchManagementScreen({ navigation }) {
 
     setForm({
       batchName: batch.batchName || "",
-      speciality: services.filter((s) =>
-        batchSpecialities.includes(s.id),
-      ),
+      speciality: services.filter((s) => batchSpecialities.includes(s.id)),
       dateFrom: batch.dateFrom ? batch.dateFrom.substring(0, 10) : "",
       dateTo: batch.dateTo ? batch.dateTo.substring(0, 10) : "",
       maxChild: batch.maxChild ? String(batch.maxChild) : "",
@@ -279,8 +281,7 @@ export default function BatchManagementScreen({ navigation }) {
   };
 
   const pad2 = (n) => String(n).padStart(2, "0");
-  const formatDate = (year, month, day) =>
-    `${year}-${pad2(month + 1)}-${pad2(day)}`;
+  const formatDate = (year, month, day) => `${year}-${pad2(month + 1)}-${pad2(day)}`;
 
   const openDateModal = (field) => {
     const selectedDate = form[field]
@@ -360,9 +361,9 @@ export default function BatchManagementScreen({ navigation }) {
     }
 
     if (
-      dateModalField === "dateTo" &&
-      form.dateFrom &&
-      selectedDate < new Date(form.dateFrom + "T00:00:00")
+      dateModalField === "dateTo"
+      && form.dateFrom
+      && selectedDate < new Date(form.dateFrom + "T00:00:00")
     ) {
       Alert.alert("Invalid date", "Date To cannot be before Date From.");
       return;
@@ -377,13 +378,7 @@ export default function BatchManagementScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.mainContainer}>
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle={"Batch Management"}
-      />
+    <View style={[commonStyles.container, { paddingTop: hp(20) }]}>
       <View style={styles.searchRow}>
         <View style={styles.searchInputContainerMain}>
           <Feather
@@ -409,149 +404,154 @@ export default function BatchManagementScreen({ navigation }) {
             setIsFilterModalOpen(true);
           }}
         >
-          <Feather name="sliders" size={20} color="#0B4A6F" />
+          <Feather name="sliders" size={fontSize(20)} color="#0B4A6F" />
         </TouchableOpacity>
       </View>
-      {loading ? (
-        <View style={styles.centerFill}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <ScrollView
-          style={styles.scrollArea}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => fetchBatches(true)}
-              colors={[colors.primary]}
-            />
-          }
-        >
-          {batches.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Feather name="layers" size={32} color="#94A3B8" />
-              <Text style={styles.emptyStateText}>No batches yet</Text>
-              <Text style={styles.emptyStateSubText}>
-                Tap the + button to create your first batch.
-              </Text>
-            </View>
-          ) : (
-            batches
-              .filter((batch) =>
-                batch.batchName
-                  ?.toLowerCase()
-                  .includes(searchQuery.toLowerCase()),
+      {loading
+        ? (
+          <View style={styles.centerFill}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        )
+        : (
+          <ScrollView
+            style={styles.scrollArea}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => fetchBatches(true)}
+                colors={[colors.primary]}
+              />
+            }
+          >
+            {batches.length === 0
+              ? (
+                <View style={styles.emptyState}>
+                  <Feather name="layers" size={32} color="#94A3B8" />
+                  <Text style={styles.emptyStateText}>No batches yet</Text>
+                  <Text style={styles.emptyStateSubText}>
+                    Tap the + button to create your first batch.
+                  </Text>
+                </View>
               )
-              .map((batch) => {
-                const batchSpecialities = getBatchSpecialities(
-                  batch.speciality,
-                );
-                const specs = services.filter((s) =>
-                  batchSpecialities.includes(s.id),
-                );
-                return (
-                  <TouchableOpacity
-                    key={batch._id}
-                    style={styles.batchCard}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      setSelectedBatch(batch);
-                      setIsDetailModalOpen(true);
-                    }}
-                  >
-                    <View style={styles.batchCardHeader}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.batchName}>{batch.batchName}</Text>
-                        {specs.length > 0 && (
-                          <View style={styles.specBadgeRow}>
-                            {specs.map((spec) => (
-                              <View
-                                key={spec.id}
-                                style={[
-                                  styles.specBadge,
-                                  { backgroundColor: spec.bg },
-                                ]}
-                              >
-                                <Text
+              : (
+                batches
+                  .filter((batch) =>
+                    batch.batchName
+                      ?.toLowerCase()
+                      .includes(searchQuery.toLowerCase())
+                  )
+                  .map((batch) => {
+                    const batchSpecialities = getBatchSpecialities(
+                      batch.speciality,
+                    );
+                    const specs = services.filter((s) => batchSpecialities.includes(s.id));
+                    return (
+                      <TouchableOpacity
+                        key={batch._id}
+                        style={styles.batchCard}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          setSelectedBatch(batch);
+                          setIsDetailModalOpen(true);
+                        }}
+                      >
+                        <View style={styles.batchCardHeader}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.batchName}>{batch.batchName}</Text>
+                          </View>
+                          <View style={styles.cardActionsRow}>
+                            <TouchableOpacity
+                              style={styles.iconBtn}
+                              onPress={() => openEditModal(batch)}
+                            >
+                              <Feather name="edit-2" size={fontSize(16)} color="#0B4A6F" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.iconBtn}
+                              onPress={() => handleDelete(batch)}
+                            >
+                              <Feather name="trash-2" size={fontSize(16)} color="#EF4444" />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                        <View>
+                          {specs.length > 0 && (
+                            <View style={styles.specBadgeRow}>
+                              {specs.map((spec) => (
+                                <View
+                                  key={spec.id}
                                   style={[
-                                    styles.specBadgeText,
-                                    { color: spec.color },
+                                    styles.specBadge,
+                                    { backgroundColor: spec.bg },
                                   ]}
                                 >
-                                  {spec.label}
+                                  <Text
+                                    style={[
+                                      styles.specBadgeText,
+                                      { color: spec.color },
+                                    ]}
+                                  >
+                                    {spec.label}
+                                  </Text>
+                                </View>
+                              ))}
+                            </View>
+                          )}
+                        </View>
+
+                        <View style={styles.batchInfoRow}>
+                          {
+                            /* <View style={styles.batchInfoItem}>
+                                                <Feather name="calendar" size={14} color="#64748B" />
+                                                <Text style={styles.batchInfoText}>
+                                                    {MONTHS[(batch.month || 1) - 1]}
+                                                </Text>
+                                            </View> */
+                          }
+                          <View style={styles.batchInfoItem}>
+                            <Feather name="clock" size={fontSize(14)} color="#64748B" />
+                            <Text style={styles.batchInfoText}>
+                              {batch.dateFrom
+                                ? batch.dateFrom.substring(0, 10)
+                                : "-"}
+                              {" - "}
+                              {batch.dateTo ? batch.dateTo.substring(0, 10) : "-"}
+                            </Text>
+                          </View>
+                          <View style={styles.batchInfoItem}>
+                            <Feather name="users" size={fontSize(14)} color="#64748B" />
+                            <Text style={styles.batchInfoText}>
+                              Max {batch.maxChild}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {batch.therapistIds?.length > 0 && (
+                          <View style={styles.selectedTagsContainer}>
+                            {batch.therapistIds.map((t) => (
+                              <View key={t._id || t} style={styles.tagBadge}>
+                                <Text style={styles.tagBadgeText}>
+                                  {t.fullName || "Therapist"}
                                 </Text>
                               </View>
                             ))}
                           </View>
                         )}
-                      </View>
-
-                      <View style={styles.cardActionsRow}>
-                        <TouchableOpacity
-                          style={styles.iconBtn}
-                          onPress={() => openEditModal(batch)}
-                        >
-                          <Feather name="edit-2" size={16} color="#0B4A6F" />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.iconBtn}
-                          onPress={() => handleDelete(batch)}
-                        >
-                          <Feather name="trash-2" size={16} color="#EF4444" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    <View style={styles.batchInfoRow}>
-                      {/* <View style={styles.batchInfoItem}>
-                                                <Feather name="calendar" size={14} color="#64748B" />
-                                                <Text style={styles.batchInfoText}>
-                                                    {MONTHS[(batch.month || 1) - 1]}
-                                                </Text>
-                                            </View> */}
-                      <View style={styles.batchInfoItem}>
-                        <Feather name="clock" size={14} color="#64748B" />
-                        <Text style={styles.batchInfoText}>
-                          {batch.dateFrom
-                            ? batch.dateFrom.substring(0, 10)
-                            : "-"}
-                          {" - "}
-                          {batch.dateTo ? batch.dateTo.substring(0, 10) : "-"}
-                        </Text>
-                      </View>
-                      <View style={styles.batchInfoItem}>
-                        <Feather name="users" size={14} color="#64748B" />
-                        <Text style={styles.batchInfoText}>
-                          Max {batch.maxChild}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {batch.therapistIds?.length > 0 && (
-                      <View style={styles.selectedTagsContainer}>
-                        {batch.therapistIds.map((t) => (
-                          <View key={t._id || t} style={styles.tagBadge}>
-                            <Text style={styles.tagBadgeText}>
-                              {t.fullName || "Therapist"}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })
-          )}
-        </ScrollView>
-      )}
+                      </TouchableOpacity>
+                    );
+                  })
+              )}
+          </ScrollView>
+        )}
 
       <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + 90 }]}
+        style={[styles.fab]}
         onPress={openCreateModal}
       >
-        <Feather name="plus" size={26} color="#FFFFFF" />
+        <Feather name="plus" size={fontSize(26)} color="#FFFFFF" />
       </TouchableOpacity>
 
       {/* Create / Edit Batch Modal */}
@@ -591,9 +591,7 @@ export default function BatchManagementScreen({ navigation }) {
                   placeholder="e.g. Morning Speech Batch"
                   placeholderTextColor="#94A3B8"
                   value={form.batchName}
-                  onChangeText={(text) =>
-                    setForm((p) => ({ ...p, batchName: text }))
-                  }
+                  onChangeText={(text) => setForm((p) => ({ ...p, batchName: text }))}
                 />
 
                 <Text style={styles.fieldLabel}>Speciality</Text>
@@ -602,11 +600,9 @@ export default function BatchManagementScreen({ navigation }) {
                   onPress={() => setIsSpecialityModalOpen(true)}
                 >
                   <Text
-                    style={
-                      form.speciality.length
-                        ? styles.dropdownValueText
-                        : styles.multiSelectPlaceholder
-                    }
+                    style={form.speciality.length
+                      ? styles.dropdownValueText
+                      : styles.multiSelectPlaceholder}
                   >
                     {form.speciality.length
                       ? `${form.speciality.length} speciality(ies) selected`
@@ -645,11 +641,9 @@ export default function BatchManagementScreen({ navigation }) {
                   onPress={() => openDateModal("dateFrom")}
                 >
                   <Text
-                    style={
-                      form.dateFrom
-                        ? styles.dropdownValueText
-                        : styles.multiSelectPlaceholder
-                    }
+                    style={form.dateFrom
+                      ? styles.dropdownValueText
+                      : styles.multiSelectPlaceholder}
                   >
                     {form.dateFrom || "Select date"}
                   </Text>
@@ -664,11 +658,9 @@ export default function BatchManagementScreen({ navigation }) {
                   onPress={() => openDateModal("dateTo")}
                 >
                   <Text
-                    style={
-                      form.dateTo
-                        ? styles.dropdownValueText
-                        : styles.multiSelectPlaceholder
-                    }
+                    style={form.dateTo
+                      ? styles.dropdownValueText
+                      : styles.multiSelectPlaceholder}
                   >
                     {form.dateTo || "Select date"}
                   </Text>
@@ -688,10 +680,10 @@ export default function BatchManagementScreen({ navigation }) {
                     setForm((p) => ({
                       ...p,
                       maxChild: text.replace(/[^0-9]/g, ""),
-                    }))
-                  }
+                    }))}
                 />
-                {/* <Text style={styles.fieldLabel}>Batch Fee</Text>
+                {
+                  /* <Text style={styles.fieldLabel}>Batch Fee</Text>
                 <TextInput
                   style={styles.formInput}
                   placeholder="e.g. 100"
@@ -704,7 +696,8 @@ export default function BatchManagementScreen({ navigation }) {
                       fee: text.replace(/[^0-9]/g, ""),
                     }))
                   }
-                /> */}
+                /> */
+                }
               </ScrollView>
 
               <View style={styles.bottomActionsRow}>
@@ -719,9 +712,7 @@ export default function BatchManagementScreen({ navigation }) {
                   onPress={handleSave}
                   disabled={saving}
                 >
-                  {saving ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
+                  {saving ? <ActivityIndicator color="#FFFFFF" /> : (
                     <Text style={styles.sendBroadcastText}>
                       {editingBatchId ? "Update" : "Create"}
                     </Text>
@@ -770,9 +761,7 @@ export default function BatchManagementScreen({ navigation }) {
                         isSelected && styles.checkboxActive,
                       ]}
                     >
-                      {isSelected && (
-                        <Feather name="check" size={12} color="#FFF" />
-                      )}
+                      {isSelected && <Feather name="check" size={12} color="#FFF" />}
                     </View>
                     <Text style={styles.checkboxLabel}>{spec.label}</Text>
                   </TouchableOpacity>
@@ -859,10 +848,9 @@ export default function BatchManagementScreen({ navigation }) {
 
                   const isPastDate = selectedDate < today;
 
-                  const isBeforeDateFrom =
-                    dateModalField === "dateTo" &&
-                    form.dateFrom &&
-                    selectedDate < new Date(form.dateFrom + "T00:00:00");
+                  const isBeforeDateFrom = dateModalField === "dateTo"
+                    && form.dateFrom
+                    && selectedDate < new Date(form.dateFrom + "T00:00:00");
                   return (
                     <TouchableOpacity
                       key={dateStr}
@@ -870,8 +858,8 @@ export default function BatchManagementScreen({ navigation }) {
                       style={[
                         styles.calendarDayCell,
                         isSelected && styles.calendarDayCellSelected,
-                        (isPastDate || isBeforeDateFrom) &&
-                          styles.calendarDayDisabled,
+                        (isPastDate || isBeforeDateFrom)
+                        && styles.calendarDayDisabled,
                       ]}
                       onPress={() => handleSelectDate(day)}
                     >
@@ -879,8 +867,8 @@ export default function BatchManagementScreen({ navigation }) {
                         style={[
                           styles.calendarDayText,
                           isSelected && styles.calendarDayTextSelected,
-                          (isPastDate || isBeforeDateFrom) &&
-                            styles.calendarDayTextDisabled,
+                          (isPastDate || isBeforeDateFrom)
+                          && styles.calendarDayTextDisabled,
                         ]}
                       >
                         {day}
@@ -925,7 +913,7 @@ export default function BatchManagementScreen({ navigation }) {
                       setTempSpeciality((prev) =>
                         selected
                           ? prev.filter((id) => id !== spec.id)
-                          : [...prev, spec.id],
+                          : [...prev, spec.id]
                       );
                     }}
                   >
@@ -935,9 +923,7 @@ export default function BatchManagementScreen({ navigation }) {
                         selected && styles.checkboxActive,
                       ]}
                     >
-                      {selected && (
-                        <Feather name="check" size={12} color="#FFF" />
-                      )}
+                      {selected && <Feather name="check" size={12} color="#FFF" />}
                     </View>
 
                     <Text style={styles.checkboxLabel}>{spec.label}</Text>
@@ -971,7 +957,7 @@ export default function BatchManagementScreen({ navigation }) {
         >
           <View
             activeOpacity={1}
-            style={styles.bottomSheetContainer}
+            style={[styles.bottomSheetContainer, { paddingBottom: insets.bottom + 10 }]}
           >
             {/* Top Drag Indicator Line */}
             <View style={styles.dragHandle} />
@@ -1011,9 +997,7 @@ export default function BatchManagementScreen({ navigation }) {
                   <Text style={styles.detailValue}>
                     {selectedBatch.dateFrom
                       ? selectedBatch.dateFrom.substring(0, 10)
-                      : "-"}{" "}
-                    to{" "}
-                    {selectedBatch.dateTo
+                      : "-"} to {selectedBatch.dateTo
                       ? selectedBatch.dateTo.substring(0, 10)
                       : "-"}
                   </Text>
@@ -1031,7 +1015,7 @@ export default function BatchManagementScreen({ navigation }) {
                       .filter((s) =>
                         getBatchSpecialities(selectedBatch.speciality).includes(
                           s.id,
-                        ),
+                        )
                       )
                       .map((spec) => (
                         <View
@@ -1053,21 +1037,23 @@ export default function BatchManagementScreen({ navigation }) {
 
                 <View style={styles.detailSection}>
                   <Text style={styles.detailLabel}>Assigned Therapists</Text>
-                  {selectedBatch.therapistIds?.length > 0 ? (
-                    <View style={styles.selectedTagsContainer}>
-                      {selectedBatch.therapistIds.map((t) => (
-                        <View key={t._id || t} style={styles.tagBadge}>
-                          <Text style={styles.tagBadgeText}>
-                            {t.fullName || "Therapist"}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  ) : (
-                    <Text style={styles.detailValueSub}>
-                      No therapist assigned yet.
-                    </Text>
-                  )}
+                  {selectedBatch.therapistIds?.length > 0
+                    ? (
+                      <View style={styles.selectedTagsContainer}>
+                        {selectedBatch.therapistIds.map((t) => (
+                          <View key={t._id || t} style={styles.tagBadge}>
+                            <Text style={styles.tagBadgeText}>
+                              {t.fullName || "Therapist"}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )
+                    : (
+                      <Text style={styles.detailValueSub}>
+                        No therapist assigned yet.
+                      </Text>
+                    )}
                 </View>
               </ScrollView>
             )}
@@ -1095,9 +1081,9 @@ export default function BatchManagementScreen({ navigation }) {
               >
                 <Feather
                   name="user-plus"
-                  size={16}
+                  size={fontSize(16)}
                   color="#FFFFFF"
-                  style={{ marginRight: 6 }}
+                  style={{ marginRight: wp(6) }}
                 />
                 <Text style={styles.addChildrenBtnText}>Add Children</Text>
               </TouchableOpacity>
@@ -1113,9 +1099,9 @@ export default function BatchManagementScreen({ navigation }) {
               >
                 <Feather
                   name={"calendar"}
-                  size={16}
+                  size={fontSize(16)}
                   color="#0B4A6F"
-                  style={{ marginRight: 6 }}
+                  style={{ marginRight: wp(6) }}
                 />
                 <Text style={styles.scheduleBtnText}>View Schedule</Text>
               </TouchableOpacity>
@@ -1123,27 +1109,17 @@ export default function BatchManagementScreen({ navigation }) {
           </View>
         </View>
       </Modal>
-
-      <BottomBar
-        activeTab={""}
-        setActiveTab={setActiveBottomTab}
-        onOpenNotifications={setIsNotificationOpen}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
   scrollArea: {
     flex: 1,
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: hp(20),
   },
   centerFill: {
     flex: 1,
@@ -1157,13 +1133,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   emptyStateText: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontFamily: fonts.semiBold,
     color: "#334155",
     marginTop: 8,
   },
   emptyStateSubText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#94A3B8",
   },
@@ -1183,10 +1159,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 10,
+    marginBottom: hp(10),
+    gap: wp(10),
   },
   batchName: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
     marginBottom: 6,
@@ -1195,15 +1172,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
+    marginBottom: hp(20),
   },
   specBadge: {
     alignSelf: "flex-start",
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: wp(20),
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(3),
   },
   specBadgeText: {
-    fontSize: 11,
+    fontSize: fontSize(10),
     fontFamily: fonts.semiBold,
   },
   cardActionsRow: {
@@ -1211,9 +1189,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(10),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
@@ -1222,8 +1200,9 @@ const styles = StyleSheet.create({
   batchInfoRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 14,
-    marginBottom: 4,
+    gap: wp(10),
+    justifyContent: "space-between",
+    marginBottom: hp(10),
   },
   batchInfoItem: {
     flexDirection: "row",
@@ -1231,18 +1210,19 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   batchInfoText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
+    lineHeight: 18,
   },
 
   fab: {
     position: "absolute",
     right: 20,
-    bottom: 100,
-    width: 56,
-    height: 56,
-    borderRadius: 15,
+    bottom: 15,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(15),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -1254,7 +1234,7 @@ const styles = StyleSheet.create({
   },
 
   fieldLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     letterSpacing: 0.5,
@@ -1267,19 +1247,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    height: hp(54),
   },
   dropdownValueText: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
     color: "#0B4A6F",
   },
   multiSelectPlaceholder: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#94A3B8",
-    fontWeight: "500",
+    fontFamily: fonts.medium,
   },
   selectedTagsContainer: {
     flexDirection: "row",
@@ -1291,26 +1271,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#E0F2FE",
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: wp(20),
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(3),
     gap: 6,
   },
   tagBadgeText: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: fontSize(12),
+    fontFamily: fonts.medium,
     color: "#0B4A6F",
+    lineHeight:18
   },
 
   formInput: {
     backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
-    fontSize: 16,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    height: hp(54),
+    fontSize: fontSize(14),
     color: colors.blackFont,
     marginBottom: 16,
-    fontFamily: fonts.regular,
+    fontFamily: fonts.medium,
   },
 
   bottomActionsRow: {
@@ -1320,8 +1301,8 @@ const styles = StyleSheet.create({
   },
   saveDraftBtn: {
     flex: 1,
-    height: 48,
-    borderRadius: 12,
+    height: hp(48),
+    borderRadius: wp(12),
     borderWidth: 1.5,
     borderColor: colors.primary,
     backgroundColor: "#FFFFFF",
@@ -1329,22 +1310,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   saveDraftText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.primary,
     lineHeight: 24,
   },
   sendBroadcastBtn: {
     flex: 1.3,
-    height: 48,
-    borderRadius: 12,
+    height: hp(48),
+    borderRadius: wp(12),
     backgroundColor: colors.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
   },
   sendBroadcastText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
     lineHeight: 24,
@@ -1355,40 +1336,40 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(15, 23, 42, 0.4)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: wp(20),
   },
   modalContentCard: {
     width: "100%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: wp(20),
+    padding: wp(20),
     elevation: 5,
   },
   formModalCard: {
     width: "100%",
     maxHeight: "90%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: wp(20),
+    padding: wp(20),
     elevation: 5,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: hp(20),
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
+    fontSize: fontSize(18),
+    fontFamily: fonts.bold,
     color: "#0F172A",
-    marginBottom: 12,
+    lineHeight: 26,
   },
   modalOptionRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: hp(12),
     paddingHorizontal: 8,
     borderRadius: 8,
   },
@@ -1396,34 +1377,37 @@ const styles = StyleSheet.create({
     backgroundColor: "#F0F9FF",
   },
   modalOptionText: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
     color: "#334155",
+    lineHeight: 24,
   },
   modalOptionTextSelected: {
     color: "#0B4A6F",
-    fontWeight: "700",
+    fontFamily: fonts.semiBold,
   },
   checkboxActive: {
     backgroundColor: "#0B4A6F",
     borderColor: "#0B4A6F",
   },
   checkboxLabel: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
     color: "#334155",
+    lineHeight: 24,
   },
   confirmBtn: {
     backgroundColor: "#0B4A6F",
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: wp(12),
+    paddingVertical: wp(12),
     alignItems: "center",
     marginTop: 16,
   },
   confirmBtnText: {
     color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 14,
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    lineHeight: 24,
   },
 
   calendarHeader: {
@@ -1433,15 +1417,15 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   calendarNavBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(10),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },
   calendarHeaderText: {
-    fontSize: 15,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
@@ -1452,7 +1436,7 @@ const styles = StyleSheet.create({
   calendarWeekDay: {
     flex: 1,
     textAlign: "center",
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#94A3B8",
   },
@@ -1472,7 +1456,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   calendarDayText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#334155",
   },
@@ -1495,9 +1479,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    height: hp(56),
   },
 
   searchIcon: {
@@ -1506,14 +1490,15 @@ const styles = StyleSheet.create({
 
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: fontSize(14),
     color: "#0F172A",
+    fontFamily: fonts.medium,
   },
 
   filterIconButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(12),
     borderWidth: 1,
     borderColor: "#CBD5E1",
     backgroundColor: "#FFFFFF",
@@ -1524,16 +1509,16 @@ const styles = StyleSheet.create({
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: hp(10),
   },
 
   checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
+    width: wp(20),
+    height: hp(20),
+    borderRadius: wp(6),
     borderWidth: 2,
     borderColor: "#CBD5E1",
-    marginRight: 12,
+    marginRight: wp(12),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1555,11 +1540,11 @@ const styles = StyleSheet.create({
   bottomSheetContainer: {
     width: "100%",
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 28,
+    borderTopLeftRadius: wp(24),
+    borderTopRightRadius: wp(24),
+    paddingHorizontal: wp(20),
+    paddingTop: hp(12),
+    paddingBottom: hp(28),
     elevation: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
@@ -1567,7 +1552,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   dragHandle: {
-    width: 40,
+    width: wp(40),
     height: 4,
     backgroundColor: "#E2E8F0",
     borderRadius: 2,
@@ -1575,7 +1560,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   detailBatchTitle: {
-    fontSize: 18,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
     marginBottom: 12,
@@ -1584,18 +1569,17 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   detailLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
-    marginBottom: 4,
   },
   detailValue: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
   detailValueSub: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#94A3B8",
     fontStyle: "italic",
@@ -1603,29 +1587,30 @@ const styles = StyleSheet.create({
   detailActionsRow: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 16,
-    paddingTop: 12,
+    marginTop: hp(16),
+    paddingTop: hp(12),
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
   },
   addChildrenBtn: {
     flex: 1,
-    height: 46,
-    borderRadius: 12,
+    height: hp(46),
+    borderRadius: wp(12),
     backgroundColor: colors.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
   },
   addChildrenBtnText: {
-    fontSize: 14,
-    fontFamily: fonts.semiBold,
+    fontSize: fontSize(14),
+    fontFamily: fonts.medium,
     color: "#FFFFFF",
+    lineHeight: 18,
   },
   scheduleBtn: {
     flex: 1,
-    height: 46,
-    borderRadius: 12,
+    height: hp(46),
+    borderRadius: wp(12),
     borderWidth: 1.5,
     borderColor: colors.primary,
     backgroundColor: "#FFFFFF",
@@ -1634,8 +1619,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   scheduleBtnText: {
-    fontSize: 14,
-    fontFamily: fonts.semiBold,
+    fontSize: fontSize(14),
+    fontFamily: fonts.medium,
     color: colors.primary,
+    lineHeight: 18,
   },
 });
