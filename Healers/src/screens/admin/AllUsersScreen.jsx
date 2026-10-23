@@ -124,11 +124,11 @@ function UserCard({ u, onMenu, services = [] }) {
             {u.email}
           </Text>
         )}
-        {!!u.phone && (
+        {/* {!!u.phone && (
           <Text style={styles.meta} numberOfLines={1}>
             {u.phone}
           </Text>
-        )}
+        )} */}
         {u.role === "Therapist" && (u.specialties || []).length > 0 && (
           <View
             style={{

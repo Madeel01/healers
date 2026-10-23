@@ -1,4 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -13,24 +18,31 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import Feather from "@expo/vector-icons/Feather";
-import { useFocusEffect } from "@react-navigation/native";
+import Feather from '@expo/vector-icons/Feather';
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
   deleteBatchSession,
   getBatchEligibleChildren,
   getBatchScheduleData,
+  getServices,
   removeBatchAssignment,
   updateBatchChildren,
-  getServices,
-} from "../../api/admin/api";
-import BottomBar from "../../components/BottomBar";
-import TopBar from "../../components/TopBar";
-import { colors, fonts } from "../../styles/theme";
-import { formatTo12Hour } from "../../utils/hoursformat";
+} from '../../api/admin/api';
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
+import { formatTo12Hour } from '../../utils/hoursformat';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
+
 const sessionTypeLabel = (type) => {
   switch (type) {
     case "postponed":
@@ -72,12 +84,9 @@ const keyToDate = (k) => {
   return new Date(y, m - 1, d);
 };
 const weekdayOf = (k) => DAYS[(keyToDate(k).getDay() + 6) % 7];
-const prettyDay = (k) =>
-  keyToDate(k).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-const prettyFull = (k) =>
-  keyToDate(k).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const prettyDay = (k) => keyToDate(k).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+const prettyFull = (k) => keyToDate(k).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const timeRange = (s) => formatTo12Hour(`${s.startTime}-${s.endTime}`);
-
 
 const groupByDate = (list) => {
   const out = [];
@@ -113,8 +122,8 @@ export default function BatchScheduleScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const batchId = route?.params?.batchId;
   const [fabOpen, setFabOpen] = useState(false);
-  
-  const [services, setServices] = useState([])
+
+  const [services, setServices] = useState([]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -158,7 +167,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
         const res = await getServices({ search: "" });
 
         const activeServices = res.data.filter(
-          (service) => service.isActive === true
+          (service) => service.isActive === true,
         );
 
         setServices(activeServices);
@@ -173,7 +182,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
     (id) => {
       return (
         services.find(
-          (service) => service.id === id
+          (service) => service.id === id,
         ) || {
           label: id,
           bg: "#E0F2FE",
@@ -181,7 +190,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
         }
       );
     },
-    [services]
+    [services],
   );
 
   useFocusEffect(
@@ -243,11 +252,9 @@ export default function BatchScheduleScreen({ navigation, route }) {
               therapistId: a.therapistId?._id,
               therapistName: a.therapistId?.fullName || "Therapist",
               speciality: a.speciality,
-            })),
+            }))
         )
-        .sort((x, y) =>
-          x.date === y.date ? x.startTime.localeCompare(y.startTime) : x.date.localeCompare(y.date),
-        ),
+        .sort((x, y) => x.date === y.date ? x.startTime.localeCompare(y.startTime) : x.date.localeCompare(y.date)),
     [assignments],
   );
   const [tick, setTick] = useState(0);
@@ -262,11 +269,11 @@ export default function BatchScheduleScreen({ navigation, route }) {
     upcomingAll
       .filter((s) => s.sessionType !== "additional" && s.sessionType !== "alternate")
       .forEach((s) => {
-      const d = weekdayOf(s.date);
-      if (!map[d].some((x) => x.assignmentId === s.assignmentId && x.startTime === s.startTime)) {
-        map[d].push(s);
-      }
-    });
+        const d = weekdayOf(s.date);
+        if (!map[d].some((x) => x.assignmentId === s.assignmentId && x.startTime === s.startTime)) {
+          map[d].push(s);
+        }
+      });
     Object.values(map).forEach((l) => l.sort((a, b) => a.startTime.localeCompare(b.startTime)));
     return map;
   }, [upcomingAll]);
@@ -276,7 +283,6 @@ export default function BatchScheduleScreen({ navigation, route }) {
     : sessions;
   const upcoming = filtered.filter((s) => !isPastSession(s));
   const past = filtered.filter((s) => isPastSession(s)).reverse();
-  
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 60 * 1000);
@@ -309,7 +315,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
           : "They were added to every upcoming session.",
       );
     } catch (e) {
-      console.log(e)
+      console.log(e);
       Alert.alert("Could not add", e?.response?.data?.message || "Please try again.");
     } finally {
       setBusy(false);
@@ -339,7 +345,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
                     text: "OK",
                     onPress: () => load(),
                   },
-                ]
+                ],
               );
             } catch (e) {
               Alert.alert("Could not remove", e?.response?.data?.message || "Please try again.");
@@ -354,7 +360,9 @@ export default function BatchScheduleScreen({ navigation, route }) {
   const removeTherapist = (a) =>
     Alert.alert(
       "Remove therapist",
-      `Remove ${a.therapistId?.fullName || "this therapist"} (${specMeta(a.speciality).label}) and their upcoming sessions?`,
+      `Remove ${a.therapistId?.fullName || "this therapist"} (${
+        specMeta(a.speciality).label
+      }) and their upcoming sessions?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -375,7 +383,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
 
   const SessionRow = ({ s, readOnly = false }) => {
     const meta = specMeta(s.speciality);
-    const editable = !readOnly && isEditableSession(s) && s.status !== "cancelled";;
+    const editable = !readOnly && isEditableSession(s) && s.status !== "cancelled";
 
     const [actionModal, setActionModal] = useState(false);
 
@@ -408,14 +416,14 @@ export default function BatchScheduleScreen({ navigation, route }) {
                 const res = await deleteBatchSession(
                   batchId,
                   s.assignmentId,
-                  s._id
+                  s._id,
                 );
 
                 if (!res?.success) {
                   Alert.alert(
                     "Could not delete",
-                    res?.message ||
-                      "Could not delete session."
+                    res?.message
+                      || "Could not delete session.",
                   );
                   return;
                 }
@@ -424,20 +432,20 @@ export default function BatchScheduleScreen({ navigation, route }) {
 
                 Alert.alert(
                   "Deleted",
-                  "Session deleted successfully."
+                  "Session deleted successfully.",
                 );
               } catch (e) {
                 Alert.alert(
                   "Could not delete",
-                  e?.response?.data?.message ||
-                    "Could not delete session."
+                  e?.response?.data?.message
+                    || "Could not delete session.",
                 );
               } finally {
                 setActionLoading(false);
               }
             },
           },
-        ]
+        ],
       );
     };
     const handlePostpone = (s) => {
@@ -468,18 +476,17 @@ export default function BatchScheduleScreen({ navigation, route }) {
             style={[
               styles.sessionRow,
               readOnly && styles.sessionRowPast,
-              s.sessionType === "cancel" &&
-                styles.sessionRowCancelled,
+              s.sessionType === "cancel"
+              && styles.sessionRowCancelled,
             ]}
           >
             <View
               style={[
                 styles.sessionBar,
                 {
-                  backgroundColor:
-                    s.sessionType === "cancel"
-                      ? "#EF4444"
-                      : meta.color,
+                  backgroundColor: s.sessionType === "cancel"
+                    ? "#EF4444"
+                    : meta.color,
                 },
               ]}
             />
@@ -496,8 +503,8 @@ export default function BatchScheduleScreen({ navigation, route }) {
               <Text
                 style={[
                   styles.sessionStatus,
-                  s.sessionType === "cancel" &&
-                    styles.sessionStatusCancelled,
+                  s.sessionType === "cancel"
+                  && styles.sessionStatusCancelled,
                 ]}
               >
                 {sessionTypeLabel(s.sessionType)}
@@ -508,10 +515,9 @@ export default function BatchScheduleScreen({ navigation, route }) {
               style={[
                 styles.chip,
                 {
-                  backgroundColor:
-                    s.sessionType === "cancel"
-                      ? "#FEE2E2"
-                      : meta.bg,
+                  backgroundColor: s.sessionType === "cancel"
+                    ? "#FEE2E2"
+                    : meta.bg,
                 },
               ]}
             >
@@ -519,10 +525,9 @@ export default function BatchScheduleScreen({ navigation, route }) {
                 style={[
                   styles.chipText,
                   {
-                    color:
-                      s.sessionType === "cancel"
-                        ? "#B91C1C"
-                        : meta.color,
+                    color: s.sessionType === "cancel"
+                      ? "#B91C1C"
+                      : meta.color,
                   },
                 ]}
               >
@@ -532,7 +537,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
 
             <Feather
               name="chevron-right"
-              size={18}
+              size={fontSize(18)}
               color="#94A3B8"
             />
           </View>
@@ -544,6 +549,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
           transparent
           animationType="fade"
           onRequestClose={closeActions}
+          style={{paddingBottom:insets.bottom}}
         >
           <View style={styles.actionOverlay}>
             <View style={styles.actionModal}>
@@ -568,100 +574,102 @@ export default function BatchScheduleScreen({ navigation, route }) {
                 >
                   <Feather
                     name="x"
-                    size={20}
+                    size={fontSize(20)}
                     color="#64748B"
                   />
                 </TouchableOpacity>
               </View>
 
-              {editable ? (
-                <>
-                  <TouchableOpacity
-                    style={styles.actionItem}
-                    onPress={() => handlePostpone(s)}
-                  >
-                    <View
-                      style={[
-                        styles.actionIcon,
-                        { backgroundColor: "#F3E8FF" },
-                      ]}
+              {editable
+                ? (
+                  <>
+                    <TouchableOpacity
+                      style={styles.actionItem}
+                      onPress={() => handlePostpone(s)}
                     >
-                      <Feather
-                        name="calendar"
-                        size={18}
-                        color="#7E22CE"
-                      />
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.actionItemTitle}>
-                        Postpone Session
-                      </Text>
-
-                      <Text style={styles.actionItemSub}>
-                        Choose a new date and available time
-                      </Text>
-                    </View>
-
-                    <Feather
-                      name="chevron-right"
-                      size={18}
-                      color="#94A3B8"
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionItem}
-                    onPress={handleDelete}
-                  >
-                    <View
-                      style={[
-                        styles.actionIcon,
-                        { backgroundColor: "#FEE2E2" },
-                      ]}
-                    >
-                      <Feather
-                        name="trash-2"
-                        size={18}
-                        color="#DC2626"
-                      />
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text
+                      <View
                         style={[
-                          styles.actionItemTitle,
-                          { color: "#DC2626" },
+                          styles.actionIcon,
+                          { backgroundColor: "#F3E8FF" },
                         ]}
                       >
-                        Delete
-                      </Text>
-                      <Text style={styles.actionItemSub}>
-                        Remove this session
-                      </Text>
-                    </View>
+                        <Feather
+                          name="calendar"
+                          size={fontSize(18)}
+                          color="#7E22CE"
+                        />
+                      </View>
 
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.actionItemTitle}>
+                          Postpone Session
+                        </Text>
+
+                        <Text style={styles.actionItemSub}>
+                          Choose a new date and available time
+                        </Text>
+                      </View>
+
+                      <Feather
+                        name="chevron-right"
+                        size={fontSize(18)}
+                        color="#94A3B8"
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.actionItem}
+                      onPress={handleDelete}
+                    >
+                      <View
+                        style={[
+                          styles.actionIcon,
+                          { backgroundColor: "#FEE2E2" },
+                        ]}
+                      >
+                        <Feather
+                          name="trash-2"
+                          size={fontSize(18)}
+                          color="#DC2626"
+                        />
+                      </View>
+
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[
+                            styles.actionItemTitle,
+                            { color: "#DC2626" },
+                          ]}
+                        >
+                          Delete
+                        </Text>
+                        <Text style={styles.actionItemSub}>
+                          Remove this session
+                        </Text>
+                      </View>
+
+                      <Feather
+                        name="chevron-right"
+                        size={fontSize(18)}
+                        color="#94A3B8"
+                      />
+                    </TouchableOpacity>
+                  </>
+                )
+                : (
+                  <View style={styles.pastInfo}>
                     <Feather
-                      name="chevron-right"
-                      size={18}
-                      color="#94A3B8"
+                      name="lock"
+                      size={fontSize(18)}
+                      color="#64748B"
                     />
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <View style={styles.pastInfo}>
-                  <Feather
-                    name="lock"
-                    size={18}
-                    color="#64748B"
-                  />
 
-                  <Text style={styles.pastInfoText}>
-                    {s.status === "cancelled"
-                      ? "This session was postponed or cancelled."
-                      : "This is a past session and can no longer be edited."}
-                  </Text>
-                </View>
-              )}
+                    <Text style={styles.pastInfoText}>
+                      {s.status === "cancelled"
+                        ? "This session was postponed or cancelled."
+                        : "This is a past session and can no longer be edited."}
+                    </Text>
+                  </View>
+                )}
 
               <TouchableOpacity
                 style={styles.cancelAction}
@@ -681,38 +689,27 @@ export default function BatchScheduleScreen({ navigation, route }) {
   const goCreate = () => navigation.navigate("BatchScheduleCreate", { batchId });
   const goAdditional = () => navigation.navigate("BatchAdditionalClass", { batchId });
 
-
   if (loading) {
     return (
-      <SafeAreaView style={styles.main}>
-        <TopBar
-          navigation={navigation}
-          isNotificationOpen={isNotificationOpen}
-          onToggleNotification={setIsNotificationOpen}
-          headerTitle="Batch Schedule"
-        />
+      <View style={styles.main}>
         <View style={styles.centerFill}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-        <BottomBar activeTab="BatchManagment" onOpenNotifications={setIsNotificationOpen} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.main}>
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle="Batch Schedule"
-      />
-
+    <View style={styles.main}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} colors={[colors.primary]} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(true)}
+            colors={[colors.primary]}
+          />
         }
       >
         {/* summary */}
@@ -767,50 +764,50 @@ export default function BatchScheduleScreen({ navigation, route }) {
         </View>
 
         {/* ---------- TIMETABLE ---------- */}
-        {tab === "timetable" &&
-          (upcomingAll.length === 0 ? (
-            <View style={styles.empty}>
-              <Feather name="calendar" size={34} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>No schedule yet</Text>
-              <Text style={styles.emptySub}>
-                {isBatchEnded(batch)
-                  ? "This batch has ended. No new schedule can be created."
-                  : "Pick a session length, choose therapists and their weekly times."}
-              </Text>
-              {!isBatchEnded(batch) && (
-                <TouchableOpacity style={styles.primaryBtn} onPress={goCreate}>
-                  <Text style={styles.primaryBtnText}>Create schedule</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Weekly timetable</Text>
-              {DAYS.map((d) => (
-                <View key={d} style={styles.ttRow}>
-                  <Text style={[styles.ttDay, !timetable[d].length && styles.muted]}>{d}</Text>
-                  <View style={{ flex: 1 }}>
-                    {timetable[d].length === 0 ? (
-                      <Text style={styles.muted}>No sessions</Text>
-                    ) : (
-                      timetable[d].map((s) => {
-                        const m = specMeta(s.speciality);
-                        return (
-                          <View key={`${s.assignmentId}-${s.startTime}`} style={styles.ttSlot}>
-                            <View style={[styles.dot, { backgroundColor: m.color }]} />
-                            <Text style={styles.ttTime}>{timeRange(s)}</Text>
-                            <Text style={styles.ttWho} numberOfLines={1}>
-                              {s.therapistName}
-                            </Text>
-                          </View>
-                        );
-                      })
-                    )}
+        {tab === "timetable"
+          && (upcomingAll.length === 0
+            ? (
+              <View style={styles.empty}>
+                <Feather name="calendar" size={fontSize(34)} color="#94A3B8" />
+                <Text style={styles.emptyTitle}>No schedule yet</Text>
+                <Text style={styles.emptySub}>
+                  {isBatchEnded(batch)
+                    ? "This batch has ended. No new schedule can be created."
+                    : "Pick a session length, choose therapists and their weekly times."}
+                </Text>
+                {!isBatchEnded(batch) && (
+                  <TouchableOpacity style={styles.primaryBtn} onPress={goCreate}>
+                    <Text style={styles.primaryBtnText}>Create schedule</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )
+            : (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Weekly timetable</Text>
+                {DAYS.map((d) => (
+                  <View key={d} style={styles.ttRow}>
+                    <Text style={[styles.ttDay, !timetable[d].length && styles.muted]}>{d}</Text>
+                    <View style={{ flex: 1 }}>
+                      {timetable[d].length === 0 ? <Text style={styles.muted}>No sessions</Text> : (
+                        timetable[d].map((s) => {
+                          const m = specMeta(s.speciality);
+                          return (
+                            <View key={`${s.assignmentId}-${s.startTime}`} style={styles.ttSlot}>
+                              <View style={[styles.dot, { backgroundColor: m.color }]} />
+                              <Text style={styles.ttTime}>{timeRange(s)}</Text>
+                              <Text style={styles.ttWho} numberOfLines={1}>
+                                {s.therapistName}
+                              </Text>
+                            </View>
+                          );
+                        })
+                      )}
+                    </View>
                   </View>
-                </View>
-              ))}
-            </View>
-          ))}
+                ))}
+              </View>
+            ))}
 
         {/* ---------- SESSIONS ---------- */}
         {tab === "sessions" && (
@@ -819,7 +816,8 @@ export default function BatchScheduleScreen({ navigation, route }) {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
                 <TouchableOpacity
                   style={[styles.filterChip, !therapistFilter && styles.filterChipActive]}
-                  onPress={() => setTherapistFilter(null)}
+                  onPress={() =>
+                    setTherapistFilter(null)}
                 >
                   <Text style={[styles.filterText, !therapistFilter && styles.filterTextActive]}>All</Text>
                 </TouchableOpacity>
@@ -839,24 +837,24 @@ export default function BatchScheduleScreen({ navigation, route }) {
               </ScrollView>
             )}
 
-            {upcoming.length === 0 ? (
-              <View style={styles.empty}>
-                <Feather name="clock" size={34} color="#94A3B8" />
-                <Text style={styles.emptyTitle}>No upcoming sessions</Text>
-              </View>
-            ) : (
-              groupByDate(upcoming).map((g) => (
-                <View key={g.date} style={styles.dayGroup}>
-                  <View style={styles.dayHeader}>
-                    <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
-                    {relLabel(g.date) && <Text style={styles.dayRel}>{relLabel(g.date)}</Text>}
-                  </View>
-                  {g.items.map((s) => (
-                    <SessionRow key={`${s.assignmentId}-${s._id}`} s={s} readOnly={false} />
-                  ))}
+            {upcoming.length === 0
+              ? (
+                <View style={styles.empty}>
+                  <Feather name="clock" size={fontSize(34)} color="#94A3B8" />
+                  <Text style={styles.emptyTitle}>No upcoming sessions</Text>
                 </View>
-              ))
-            )}
+              )
+              : (
+                groupByDate(upcoming).map((g) => (
+                  <View key={g.date} style={styles.dayGroup}>
+                    <View style={styles.dayHeader}>
+                      <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
+                      {relLabel(g.date) && <Text style={styles.dayRel}>{relLabel(g.date)}</Text>}
+                    </View>
+                    {g.items.map((s) => <SessionRow key={`${s.assignmentId}-${s._id}`} s={s} readOnly={false} />)}
+                  </View>
+                ))
+              )}
 
             {past.length > 0 && (
               <>
@@ -864,17 +862,15 @@ export default function BatchScheduleScreen({ navigation, route }) {
                   <Text style={styles.pastToggleText}>
                     {showPast ? "Hide" : "Show"} past sessions ({past.length})
                   </Text>
-                  <Feather name={showPast ? "chevron-up" : "chevron-down"} size={16} color={colors.primary} />
+                  <Feather name={showPast ? "chevron-up" : "chevron-down"} size={fontSize(16)} color={colors.primary} />
                 </TouchableOpacity>
-                {showPast &&
-                  groupByDate(past).map((g) => (
+                {showPast
+                  && groupByDate(past).map((g) => (
                     <View key={g.date} style={[styles.dayGroup, { opacity: 0.6 }]}>
                       <View style={styles.dayHeader}>
                         <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
                       </View>
-                      {g.items.map((s) => (
-                        <SessionRow key={`${s.assignmentId}-${s._id}`} s={s} readOnly/>
-                      ))}
+                      {g.items.map((s) => <SessionRow key={`${s.assignmentId}-${s._id}`} s={s} readOnly />)}
                     </View>
                   ))}
               </>
@@ -888,19 +884,19 @@ export default function BatchScheduleScreen({ navigation, route }) {
             <View style={styles.card}>
               <View style={styles.cardHeadRow}>
                 <Text style={styles.cardTitle}>Therapists</Text>
-                {!isBatchEnded(batch) ? (
-                  <TouchableOpacity onPress={goCreate}>
-                    <Text style={styles.linkText}>Add schedule</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={[styles.linkText, { color: "#94A3B8" }]}>
-                    Batch ended
-                  </Text>
-                )}
+                {!isBatchEnded(batch)
+                  ? (
+                    <TouchableOpacity onPress={goCreate}>
+                      <Text style={styles.linkText}>Add schedule</Text>
+                    </TouchableOpacity>
+                  )
+                  : (
+                    <Text style={[styles.linkText, { color: "#94A3B8" }]}>
+                      Batch ended
+                    </Text>
+                  )}
               </View>
-              {assignments.length === 0 ? (
-                <Text style={styles.muted}>No therapist assigned yet.</Text>
-              ) : (
+              {assignments.length === 0 ? <Text style={styles.muted}>No therapist assigned yet.</Text> : (
                 assignments.map((a) => {
                   const m = specMeta(a.speciality);
                   const mine = upcomingAll.filter((s) => s.assignmentId === a._id);
@@ -919,7 +915,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
                         <Text style={[styles.chipText, { color: m.color }]}>{m.label}</Text>
                       </View>
                       <TouchableOpacity style={styles.iconBtn} onPress={() => removeTherapist(a)}>
-                        <Feather name="trash-2" size={15} color="#EF4444" />
+                        <Feather name="trash-2" size={fontSize(15)} color="#EF4444" />
                       </TouchableOpacity>
                     </View>
                   );
@@ -932,42 +928,50 @@ export default function BatchScheduleScreen({ navigation, route }) {
                 <Text style={styles.cardTitle}>
                   Children ({children.length}/{batch?.maxChild})
                 </Text>
-                {!isBatchEnded(batch) ? (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setPicked([]);
-                      setOptions([]);
-                      setSearch("");
-                      setChildModal(true);
-                    }}
-                  >
-                    <Text style={styles.linkText}>Add children</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={[styles.linkText, { color: "#94A3B8" }]}>
-                    Batch ended
-                  </Text>
-                )}
-              </View>
-              {children.length === 0 ? (
-                <Text style={styles.muted}>No children yet. New children join every upcoming session automatically.</Text>
-              ) : (
-                children.map((c) => (
-                  <View key={c._id} style={styles.personRow}>
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{(c.fullName || "?").slice(0, 1).toUpperCase()}</Text>
-                    </View>
-                    <Text style={[styles.personName, { flex: 1 }]}>{c.fullName}</Text>
-                    <TouchableOpacity style={styles.iconBtn} disabled={removingChildId === String(c._id)} onPress={() => removeChild(c)}>
-                      {removingChildId === String(c._id) ? (
-                        <ActivityIndicator size="small" />
-                      ) : (
-                        <Feather name="x" size={18} />
-                      )}
+                {!isBatchEnded(batch)
+                  ? (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setPicked([]);
+                        setOptions([]);
+                        setSearch("");
+                        setChildModal(true);
+                      }}
+                    >
+                      <Text style={styles.linkText}>Add children</Text>
                     </TouchableOpacity>
-                  </View>
-                ))
-              )}
+                  )
+                  : (
+                    <Text style={[styles.linkText, { color: "#94A3B8" }]}>
+                      Batch ended
+                    </Text>
+                  )}
+              </View>
+              {children.length === 0
+                ? (
+                  <Text style={styles.muted}>
+                    No children yet. New children join every upcoming session automatically.
+                  </Text>
+                )
+                : (
+                  children.map((c) => (
+                    <View key={c._id} style={styles.personRow}>
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>{(c.fullName || "?").slice(0, 1).toUpperCase()}</Text>
+                      </View>
+                      <Text style={[styles.personName, { flex: 1 }]}>{c.fullName}</Text>
+                      <TouchableOpacity
+                        style={styles.iconBtn}
+                        disabled={removingChildId === String(c._id)}
+                        onPress={() => removeChild(c)}
+                      >
+                        {removingChildId === String(c._id)
+                          ? <ActivityIndicator size="small" />
+                          : <Feather name="x" size={fontSize(18)} />}
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
             </View>
           </>
         )}
@@ -983,7 +987,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
             />
           )}
 
-          <View style={[styles.fabWrap, { bottom: insets.bottom + 90 }]} pointerEvents="box-none">
+          <View style={[styles.fabWrap]} pointerEvents="box-none">
             {fabOpen && (
               <>
                 <TouchableOpacity
@@ -994,7 +998,7 @@ export default function BatchScheduleScreen({ navigation, route }) {
                     goAdditional();
                   }}
                 >
-                  <Feather name="clock" size={18} color="#FFFFFF" />
+                  <Feather name="clock" size={fontSize(18)} color="#FFFFFF" />
                   <Text style={styles.fabText}>Add additional session</Text>
                 </TouchableOpacity>
 
@@ -1006,147 +1010,158 @@ export default function BatchScheduleScreen({ navigation, route }) {
                     goCreate();
                   }}
                 >
-                  <Feather name="calendar" size={18} color="#FFFFFF" />
+                  <Feather name="calendar" size={fontSize(18)} color="#FFFFFF" />
                   <Text style={styles.fabText}>Add schedule</Text>
                 </TouchableOpacity>
               </>
             )}
 
             <TouchableOpacity style={styles.fabRound} activeOpacity={0.85} onPress={() => setFabOpen((v) => !v)}>
-              <Feather name={fabOpen ? "x" : "plus"} size={26} color="#FFFFFF" />
+              <Feather name={fabOpen ? "x" : "plus"} size={fontSize(26)} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </>
       )}
 
-      <BottomBar activeTab="BatchManagment" onOpenNotifications={setIsNotificationOpen} />
-
       {/* add children */}
-      <Modal visible={childModal} transparent animationType="slide" onRequestClose={() => setChildModal(false)}>
+      <Modal
+        visible={childModal}
+        style={{ paddingBottom: insets.bottom }}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setChildModal(false)}
+      >
         <KeyboardAvoidingView
-                  behavior={Platform.OS === "ios" ? "padding" : "padding"}
-                  style={{ flex: 1 }}
-                >
-
-              <View style={styles.overlay}>
-                <View style={styles.sheet}>
-                  <View style={styles.sheetHeader}>
-                    <View>
-                      <Text style={styles.sheetTitle}>Add children</Text>
-                      <Text style={styles.sheetSub}>
-                        {spotsLeft} spot{spotsLeft === 1 ? "" : "s"} left · they join all upcoming sessions
-                      </Text>
-                    </View>
-                    <TouchableOpacity onPress={() => setChildModal(false)}>
-                      <Feather name="x" size={22} color="#64748B" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.searchBox}>
-                    <Feather name="search" size={16} color="#94A3B8" />
-                    <TextInput
-                      style={styles.searchInput}
-                      placeholder="Search child..."
-                      placeholderTextColor="#94A3B8"
-                      value={search}
-                      onChangeText={setSearch}
-                    />
-                  </View>
-
-                  {optLoading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 8 }} />}
-
-                  <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
-                    {!optLoading && options.length === 0 && <Text style={styles.muted}>No children found.</Text>}
-                    {options.map((c) => {
-                      const on = picked.includes(c._id);
-                      const full = !on && picked.length >= spotsLeft;
-                      return (
-                        <TouchableOpacity
-                          key={c._id}
-                          style={[styles.pickRow, full && { opacity: 0.4 }]}
-                          disabled={full}
-                          onPress={() => setPicked((p) => (on ? p.filter((x) => x !== c._id) : [...p, c._id]))}
-                        >
-                          <View style={[styles.checkbox, on && styles.checkboxOn]}>
-                            {on && <Feather name="check" size={12} color="#FFF" />}
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.personName}>{c.fullName}</Text>
-                            {!!c.fatherName && <Text style={styles.personSub}>Parent: {c.fatherName}</Text>}
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-
-                  <TouchableOpacity
-                    style={[styles.primaryBtn, (!picked.length || busy) && { opacity: 0.5 }]}
-                    disabled={!picked.length || busy}
-                    onPress={addChildren}
-                  >
-                    {busy ? (
-                      <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                      <Text style={styles.primaryBtnText}>
-                        {picked.length ? `Add ${picked.length} child${picked.length === 1 ? "" : "ren"}` : "Select children"}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.overlay}>
+            <View style={styles.sheet}>
+              <View style={styles.sheetHeader}>
+                <View>
+                  <Text style={styles.sheetTitle}>Add children</Text>
+                  <Text style={styles.sheetSub}>
+                    {spotsLeft} spot{spotsLeft === 1 ? "" : "s"} left · they join all upcoming sessions
+                  </Text>
                 </View>
+                <TouchableOpacity onPress={() => setChildModal(false)}>
+                  <Feather name="x" size={fontSize(22)} color="#64748B" />
+                </TouchableOpacity>
               </View>
-                </KeyboardAvoidingView>
+
+              <View style={styles.searchBox}>
+                <Feather name="search" size={fontSize(16)} color="#94A3B8" />
+                <TextInput
+                  placeholder="Search child..."
+                  placeholderTextColor="#94A3B8"
+                  value={search}
+                  onChangeText={setSearch}
+                  scrollEnabled={false}
+                  style={styles.searchInput}
+                />
+              </View>
+
+              {optLoading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 8 }} />}
+
+              <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
+                {!optLoading && options.length === 0 && <Text style={styles.muted}>No children found.</Text>}
+                {options.map((c) => {
+                  const on = picked.includes(c._id);
+                  const full = !on && picked.length >= spotsLeft;
+                  return (
+                    <TouchableOpacity
+                      key={c._id}
+                      style={[styles.pickRow, full && { opacity: 0.4 }]}
+                      disabled={full}
+                      onPress={() => setPicked((p) => (on ? p.filter((x) => x !== c._id) : [...p, c._id]))}
+                    >
+                      <View style={[styles.checkbox, on && styles.checkboxOn]}>
+                        {on && <Feather name="check" size={fontSize(12)} color="#FFF" />}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.personName}>{c.fullName}</Text>
+                        {!!c.fatherName && <Text style={styles.personSub}>Parent: {c.fatherName}</Text>}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              <TouchableOpacity
+                style={[styles.primaryBtn, (!picked.length || busy) && { opacity: 0.5 }]}
+                disabled={!picked.length || busy}
+                onPress={addChildren}
+              >
+                {busy ? <ActivityIndicator color="#FFFFFF" /> : (
+                  <Text style={styles.primaryBtnText}>
+                    {picked.length
+                      ? `Add ${picked.length} child${picked.length === 1 ? "" : "ren"}`
+                      : "Select children"}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   main: { flex: 1, backgroundColor: "#F8FAFC" },
   centerFill: { flex: 1, alignItems: "center", justifyContent: "center" },
-  content: { padding: 16, paddingBottom: 160 },
+  content: { padding: wp(16), paddingBottom: hp(20) },
 
-  summary: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: 16, marginBottom: 14 },
-  batchTitle: { fontSize: 19, fontFamily: fonts.semiBold, color: "#0F172A" },
-  batchDates: { fontSize: 13, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  summary: { backgroundColor: "#FFFFFF", borderRadius: wp(18), padding: wp(16), marginBottom: hp(14) },
+  batchTitle: { fontSize: fontSize(18), fontFamily: fonts.semiBold, color: "#0F172A" },
+  batchDates: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 },
-  chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start" },
-  chipText: { fontSize: 11, fontFamily: fonts.semiBold },
+  chip: { borderRadius: wp(20), paddingHorizontal: wp(8), paddingVertical: hp(2), alignSelf: "flex-start" },
+  chipText: { fontSize: fontSize(10), fontFamily: fonts.semiBold, lineHeight: 14 },
 
   statsRow: {
     flexDirection: "row",
-    marginTop: 14,
-    paddingTop: 14,
+    marginTop: hp(14),
+    paddingTop: hp(14),
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
   },
-  stat: { flex: 1, alignItems: "center" },
-  statValue: { fontSize: 18, fontFamily: fonts.semiBold, color: "#0B4A6F" },
-  statLabel: { fontSize: 11, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  stat: { flex: 1, alignItems: "center", justifyContent: "center" },
+  statValue: { fontSize: fontSize(18), fontFamily: fonts.semiBold, color: "#0B4A6F" },
+  statLabel: { fontSize: fontSize(10), fontFamily: fonts.regular, color: "#64748B", marginTop: 2, textAlign: "center" },
   statDivider: { width: 1, backgroundColor: "#F1F5F9" },
 
-  tabs: { flexDirection: "row", backgroundColor: "#E2E8F0", borderRadius: 12, padding: 4, marginBottom: 14 },
-  tab: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: "center" },
+  tabs: {
+    flexDirection: "row",
+    backgroundColor: "#E2E8F0",
+    borderRadius: wp(12),
+    padding: wp(4),
+    marginBottom: hp(14),
+  },
+  tab: { flex: 1, paddingVertical: hp(9), borderRadius: wp(9), alignItems: "center" },
   tabActive: { backgroundColor: "#FFFFFF" },
-  tabText: { fontSize: 13, fontFamily: fonts.semiBold, color: "#64748B" },
+  tabText: { fontSize: fontSize(12), fontFamily: fonts.semiBold, color: "#64748B", lineHeight: 18 },
   tabTextActive: { color: "#0B4A6F" },
 
   card: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: 16, marginBottom: 14 },
   cardHeadRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  cardTitle: { fontSize: 15, fontFamily: fonts.semiBold, color: "#0F172A", marginBottom: 6 },
-  linkText: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary },
-  muted: { fontSize: 13, fontFamily: fonts.regular, color: "#94A3B8" },
+  cardTitle: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A", marginBottom: 6 },
+  linkText: { fontSize: fontSize(12), fontFamily: fonts.semiBold, color: colors.primary, lineHeight: 16 },
+  muted: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#94A3B8", lineHeight: 16 },
 
   ttRow: {
     flexDirection: "row",
     paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
+    alignItems: "center",
   },
-  ttDay: { width: 44, fontSize: 13, fontFamily: fonts.semiBold, color: "#0F172A" },
+  ttDay: { width: 44, fontSize: fontSize(12), fontFamily: fonts.semiBold, color: "#0F172A", lineHeight: 16 },
   ttSlot: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 3 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  ttTime: { fontSize: 13, fontFamily: fonts.semiBold, color: "#0F172A" },
-  ttWho: { flex: 1, fontSize: 12, fontFamily: fonts.regular, color: "#64748B" },
+  dot: { width: wp(8), height: hp(8), borderRadius: wp(4) },
+  ttTime: { fontSize: fontSize(12), fontFamily: fonts.semiBold, color: "#0F172A", lineHeight: 16 },
+  ttWho: { flex: 1, fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", lineHeight: 16 },
 
   filterRow: { marginBottom: 12 },
   filterChip: {
@@ -1159,13 +1174,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   filterChipActive: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
-  filterText: { fontSize: 12, fontFamily: fonts.semiBold, color: "#475569" },
+  filterText: { fontSize: fontSize(12), fontFamily: fonts.semiBold, color: "#475569" },
   filterTextActive: { color: "#FFFFFF" },
 
   dayGroup: { marginBottom: 14 },
   dayHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6, paddingHorizontal: 2 },
-  dayTitle: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
-  dayRel: { fontSize: 11, fontFamily: fonts.semiBold, color: colors.primary },
+  dayTitle: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
+  dayRel: { fontSize: fontSize(11), fontFamily: fonts.semiBold, color: colors.primary },
   sessionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1176,11 +1191,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sessionBar: { width: 4, alignSelf: "stretch", borderRadius: 2 },
-  sessionTime: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
-  sessionSub: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  sessionTime: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
+  sessionSub: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
 
   pastToggle: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10 },
-  pastToggleText: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary },
+  pastToggleText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: colors.primary },
 
   personRow: {
     flexDirection: "row",
@@ -1190,8 +1205,8 @@ const styles = StyleSheet.create({
     borderTopColor: "#F1F5F9",
     gap: 10,
   },
-  personName: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
-  personSub: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  personName: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
+  personSub: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
   avatar: {
     width: 32,
     height: 32,
@@ -1200,19 +1215,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { fontSize: 13, fontFamily: fonts.semiBold, color: "#0B4A6F" },
+  avatarText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#0B4A6F" },
   iconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(10),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },
 
   empty: { alignItems: "center", paddingVertical: 40, gap: 6 },
-  emptyTitle: { fontSize: 15, fontFamily: fonts.semiBold, color: "#334155", marginTop: 6 },
-  emptySub: { fontSize: 12, fontFamily: fonts.regular, color: "#94A3B8", textAlign: "center", paddingHorizontal: 30 },
+  emptyTitle: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#334155", marginTop: 6 },
+  emptySub: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    color: "#94A3B8",
+    textAlign: "center",
+    paddingHorizontal: 30,
+  },
 
   primaryBtn: {
     marginTop: 14,
@@ -1223,14 +1244,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryBtnText: { fontSize: 15, fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  primaryBtnText: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#FFFFFF" },
 
   fab: {
     position: "absolute",
     right: 20,
-    height: 50,
-    paddingHorizontal: 18,
-    borderRadius: 25,
+    bottom: 15,
+    height: wp(50),
+    paddingHorizontal: wp(18),
+    borderRadius: 999,
     backgroundColor: colors.primary,
     flexDirection: "row",
     alignItems: "center",
@@ -1241,7 +1263,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 5,
   },
-  fabText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  fabText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#FFFFFF" },
 
   overlay: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.4)", justifyContent: "flex-end" },
   sheet: {
@@ -1253,8 +1275,8 @@ const styles = StyleSheet.create({
     maxHeight: "88%",
   },
   sheetHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
-  sheetTitle: { fontSize: 19, fontFamily: fonts.semiBold, color: "#0F172A" },
-  sheetSub: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  sheetTitle: { fontSize: fontSize(18), fontFamily: fonts.semiBold, color: "#0F172A" },
+  sheetSub: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -1262,15 +1284,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F5F9",
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 44,
+    minHeight: hp(46),
+    maxHeight: hp(46),
     marginBottom: 8,
+    flex: 1,
   },
-  searchInput: { flex: 1, fontSize: 14, color: "#0F172A" },
-  pickRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 },
+  searchInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
+  pickRow: { flexDirection: "row", alignItems: "center", gap: wp(12), paddingVertical: 10 },
   checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
+    width: wp(20),
+    height: hp(20),
+    borderRadius: wp(6),
     borderWidth: 2,
     borderColor: "#CBD5E1",
     alignItems: "center",
@@ -1286,7 +1310,7 @@ const styles = StyleSheet.create({
   },
 
   sessionStatus: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.semiBold,
     color: "#64748B",
     marginTop: 4,
@@ -1317,20 +1341,20 @@ const styles = StyleSheet.create({
   },
 
   actionTitle: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
 
   actionSub: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
     marginTop: 3,
   },
 
   actionTherapist: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#334155",
     marginTop: 3,
@@ -1363,13 +1387,13 @@ const styles = StyleSheet.create({
   },
 
   actionItemTitle: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
 
   actionItemSub: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.regular,
     color: "#64748B",
     marginTop: 2,
@@ -1385,7 +1409,7 @@ const styles = StyleSheet.create({
   },
 
   cancelActionText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#475569",
   },
@@ -1402,15 +1426,15 @@ const styles = StyleSheet.create({
 
   pastInfoText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
   },
-  fabWrap: { position: "absolute", right: 20, alignItems: "flex-end", gap: 10 },
+  fabWrap: { position: "absolute", right: wp(20), bottom: 15, alignItems: "flex-end", gap: 10 },
   fabRound: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(999),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",

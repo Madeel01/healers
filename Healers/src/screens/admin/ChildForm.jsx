@@ -25,9 +25,8 @@ import {
   View,
   Share,
 } from 'react-native';
-import {
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -920,8 +919,8 @@ export default function ChildFormScreen({ navigation, route }) {
   };
 
   return (
-    <View style={commonStyles.container}>
-      
+    <View style={commonStyles.container} edges={["top", "left", "right"]}>
+
       <View style={styles.stepper}>
         {STEPS.map((s, i) => {
           const active = step === s.n;
@@ -1309,7 +1308,6 @@ export default function ChildFormScreen({ navigation, route }) {
 
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: "#F8FAFC" },
 
   header: {
     flexDirection: "row",

@@ -1,13 +1,35 @@
 // src/screens/admin/BatchSessionPostponeScreen.js
-import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Feather from "@expo/vector-icons/Feather";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
-import { postponeBatchSession, getServices } from "../../api/admin/api";
-import SessionSlotPicker from "./components/SessionSlotPicker";
-import { colors, fonts } from "../../styles/theme";
-import { formatTo12Hour } from "../../utils/hoursformat";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+import {
+  getServices,
+  postponeBatchSession,
+} from '../../api/admin/api';
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
+import { formatTo12Hour } from '../../utils/hoursformat';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
+import SessionSlotPicker from './components/SessionSlotPicker';
 
 const mins = (t) => {
   const [h, m] = t.split(":").map(Number);
@@ -98,14 +120,7 @@ export default function BatchSessionPostponeScreen({ navigation, route }) {
   };
 
   return (
-    <SafeAreaView style={styles.main}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={22} color="#0F172A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Postpone session</Text>
-      </View>
-
+    <View style={styles.main}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
           <Text style={styles.cardLabel}>Current session</Text>
@@ -168,49 +183,45 @@ export default function BatchSessionPostponeScreen({ navigation, route }) {
           )}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   main: { flex: 1, backgroundColor: "#F8FAFC" },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 17, fontFamily: fonts.semiBold, color: "#0F172A" },
-  content: { padding: 16, paddingBottom: 120 },
-
-  card: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: 16, marginBottom: 14 },
-  cardLabel: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B" },
-  big: { fontSize: 18, fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 4 },
-  sub: { fontSize: 13, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+   content: { padding: wp(16), paddingBottom: hp(20) },
+  card: { backgroundColor: "#FFFFFF", borderRadius: wp(18), padding: wp(16), marginBottom: hp(14) },
+  cardLabel: { fontSize:fontSize(12), fontFamily: fonts.regular, color: "#64748B" },
+  big: { fontSize:fontSize(18), fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 4 },
+  sub: { fontSize:fontSize(12), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 },
   chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  chipText: { fontSize: 11, fontFamily: fonts.semiBold },
+  chipText: { fontSize:fontSize(10), fontFamily: fonts.semiBold },
 
   segment: { flexDirection: "row", backgroundColor: "#E2E8F0", borderRadius: 12, padding: 4 },
   segBtn: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: "center" },
   segBtnOn: { backgroundColor: "#FFFFFF" },
-  segText: { fontSize: 13, fontFamily: fonts.semiBold, color: "#64748B" },
+  segText: { fontSize:fontSize(11),lineHeight:16, fontFamily: fonts.semiBold, color: "#64748B" },
   segTextOn: { color: "#0B4A6F" },
-  hint: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B", lineHeight: 18, marginTop: 12 },
+  hint: { fontSize:fontSize(12), fontFamily: fonts.regular, color: "#64748B", lineHeight: 18, marginTop: 12 },
 
   footer: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    padding: 16,
-    paddingBottom: 24,
+    padding: wp(16),
+    paddingBottom: hp(20),
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
   },
   primaryBtn: {
-    height: 50,
-    borderRadius: 12,
+    height: hp(50),
+    borderRadius: wp(12),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryText: { fontSize: 15, fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  primaryText: { fontSize:fontSize(14),lineHeight:16, fontFamily: fonts.semiBold, color: "#FFFFFF" },
 });

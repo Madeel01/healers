@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useRef,
   useState,
-} from "react";
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -14,11 +14,18 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
+} from 'react-native';
 
-import { getSessionSlotOptions } from "../../../api/admin/api";
-import { colors, fonts } from "../../../styles/theme";
-import { formatTo12Hour } from "../../../utils/hoursformat";
+import { getSessionSlotOptions } from '../../../api/admin/api';
+import {
+  colors,
+  fonts,
+} from '../../../styles/theme';
+import { formatTo12Hour } from '../../../utils/hoursformat';
+import {
+  fontSize,
+  wp,
+} from '../../../utils/responsive';
 
 const pad = (n) => String(n).padStart(2, "0");
 const toKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -194,10 +201,10 @@ export default function SessionSlotPicker({
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 16, marginBottom: 8 },
-  muted: { fontSize: 12, fontFamily: fonts.regular, color: "#94A3B8" },
+  label: { fontSize:fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 16, marginBottom: 5 },
+  muted: { fontSize:fontSize(12), fontFamily: fonts.regular, color: "#94A3B8",marginBottom:20 },
   loadingRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 },
-  loadingText: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B" },
+  loadingText: { fontSize:fontSize(12), fontFamily: fonts.regular, color: "#64748B" },
   dateRow: { flexGrow: 0 },
   dateChip: {
     width: CHIP_WIDTH,
@@ -210,13 +217,13 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   dateChipOn: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
-  dateDay: { fontSize: 11, fontFamily: fonts.regular, color: "#64748B" },
-  dateNum: { fontSize: 18, fontFamily: fonts.semiBold, color: "#0F172A", marginVertical: 1 },
-  dateMonth: { fontSize: 11, fontFamily: fonts.regular, color: "#64748B" },
+  dateDay: { fontSize:fontSize(11), fontFamily: fonts.regular, color: "#64748B" },
+  dateNum: { fontSize:fontSize(18), fontFamily: fonts.semiBold, color: "#0F172A", marginVertical: 1 },
+  dateMonth: { fontSize:fontSize(11), fontFamily: fonts.regular, color: "#64748B" },
   dateTextOn: { color: "#FFFFFF" },
   slotWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   slot: {
-    paddingHorizontal: 10,
+    paddingHorizontal: wp(8),
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
@@ -224,6 +231,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   slotOn: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
-  slotText: { fontSize: 12, fontFamily: fonts.semiBold, color: "#334155" },
+  slotText: { fontSize:fontSize(12), fontFamily: fonts.semiBold, color: "#334155" },
   slotTextOn: { color: "#FFFFFF" },
 });

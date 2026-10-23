@@ -39,14 +39,17 @@ import {
   getUsersByRole,
   updateBroadcast,
 } from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
+  commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 import BroadcastDetailModal from './components/BroadcastDetailModal';
-import { sendPushNotificationApi } from '../../api/pushNotificationApi';
 
 const LIMIT = 20;
 
@@ -65,7 +68,7 @@ const STATUS_OPTIONS = [
   { label: "Sending", value: "sending" },
   { label: "Sent", value: "sent" },
   { label: "Cancelled", value: "cancelled" },
-  { label: "Failed", value: "failed" }, 
+  { label: "Failed", value: "failed" },
 ];
 const RECIPIENT_GROUPS = Object.keys(GROUP_CONFIG);
 
@@ -88,8 +91,7 @@ const audienceLabel = (b) => {
 };
 
 const formatDate = (b) => {
-  const d =
-    b.status === "scheduled" && b.sendAt ? b.sendAt : b.sentAt || b.createdAt;
+  const d = b.status === "scheduled" && b.sendAt ? b.sendAt : b.sentAt || b.createdAt;
   return d ? new Date(d).toLocaleString() : "";
 };
 const isImageAttachment = (att) => {
@@ -289,7 +291,7 @@ export default function BroadcastManagementScreen({ navigation }) {
   const closeCreateModal = () => {
     if (submitting) return;
     setIsCreateOpen(false);
-    setEditingId(null);   
+    setEditingId(null);
   };
 
   const loadRecipients = async (searchTerm = "") => {
@@ -325,7 +327,7 @@ export default function BroadcastManagementScreen({ navigation }) {
 
   const toggleBatch = (b) =>
     setSelectedBatches((prev) =>
-      prev.some((x) => x._id === b._id) ? prev.filter((x) => x._id !== b._id) : [...prev, b],
+      prev.some((x) => x._id === b._id) ? prev.filter((x) => x._id !== b._id) : [...prev, b]
     );
 
   const openMultiSelect = () => {
@@ -343,7 +345,7 @@ export default function BroadcastManagementScreen({ navigation }) {
     setSelectedRecipients((prev) =>
       prev.some((r) => r._id === item._id)
         ? prev.filter((r) => r._id !== item._id)
-        : [...prev, item],
+        : [...prev, item]
     );
   };
 
@@ -417,12 +419,15 @@ export default function BroadcastManagementScreen({ navigation }) {
     fd.append("message", messageContent.trim());
     fd.append("audience", config.audience);
     fd.append("type", notificationType);
-    if (config.audience === "role")
+    if (config.audience === "role") {
       fd.append("roles", JSON.stringify(config.roles));
-    if (config.audience === "users")
+    }
+    if (config.audience === "users") {
       fd.append("users", JSON.stringify(selectedRecipients.map((r) => r._id)));
-    if (config.audience === "batch")
+    }
+    if (config.audience === "batch") {
       fd.append("batchIds", JSON.stringify(selectedBatches.map((b) => b._id)));
+    }
     fd.append(
       "deliverySchedule",
       mode === "draft" ? "draft" : isLater ? "later" : "now",
@@ -479,7 +484,6 @@ export default function BroadcastManagementScreen({ navigation }) {
         if (!userId) {
           throw new Error("No valid recipient selected.");
         }
-
       }
       setIsCreateOpen(false);
       setEditingId(null);
@@ -489,7 +493,7 @@ export default function BroadcastManagementScreen({ navigation }) {
         "Error",
         e?.response?.data?.message || "Failed to save broadcast.",
       );
-      console.log(e),"errorrrr";
+      console.log(e), "errorrrr";
     } finally {
       setSubmitting(false);
     }
@@ -512,8 +516,7 @@ export default function BroadcastManagementScreen({ navigation }) {
               style={[
                 styles.badge,
                 {
-                  backgroundColor:
-                    TYPE_COLORS[item.type]?.bg || TYPE_COLORS.General.bg,
+                  backgroundColor: TYPE_COLORS[item.type]?.bg || TYPE_COLORS.General.bg,
                 },
               ]}
             >
@@ -521,8 +524,7 @@ export default function BroadcastManagementScreen({ navigation }) {
                 style={[
                   styles.badgeText,
                   {
-                    color:
-                      TYPE_COLORS[item.type]?.text || TYPE_COLORS.General.text,
+                    color: TYPE_COLORS[item.type]?.text || TYPE_COLORS.General.text,
                   },
                 ]}
               >
@@ -541,14 +543,16 @@ export default function BroadcastManagementScreen({ navigation }) {
           {item.message}
         </Text>
 
-        {item.attachment?.name ? (
-          <View style={styles.attachmentRow}>
-            <Feather name="paperclip" size={14} color="#64748B" />
-            <Text style={styles.attachmentText} numberOfLines={1}>
-              {item.attachment.name}
-            </Text>
-          </View>
-        ) : null}
+        {item.attachment?.name
+          ? (
+            <View style={styles.attachmentRow}>
+              <Feather name="paperclip" size={fontSize(14)} color="#64748B" />
+              <Text style={styles.attachmentText} numberOfLines={1}>
+                {item.attachment.name}
+              </Text>
+            </View>
+          )
+          : null}
 
         <View style={styles.metaRow}>
           <Text style={styles.metaText}>To: {audienceLabel(item)}</Text>
@@ -556,9 +560,11 @@ export default function BroadcastManagementScreen({ navigation }) {
 
         <View style={styles.footerRow}>
           <Text style={styles.dateText}>{formatDate(item)}</Text>
-          {/* <TouchableOpacity onPress={() => confirmDelete(item)} hitSlop={10}>
-            <Feather name="trash-2" size={18} color="#EF4444" />
-          </TouchableOpacity> */}
+          {
+            /* <TouchableOpacity onPress={() => confirmDelete(item)} hitSlop={10}>
+            <Feather name="trash-2" size={fontSize(18)} color="#EF4444" />
+          </TouchableOpacity> */
+          }
           {item.status === "sent" && (
             <Text style={styles.metaText}>
               Read {item.readCount}/{item.recipientCount}
@@ -580,7 +586,7 @@ export default function BroadcastManagementScreen({ navigation }) {
     if (listError) {
       return (
         <View style={styles.centerBox}>
-          <Feather name="alert-circle" size={40} color="#EF4444" />
+          <Feather name="alert-circle" size={fontSize(40)} color="#EF4444" />
           <Text style={styles.emptyTitle}>{listError}</Text>
           <TouchableOpacity
             style={styles.retryBtn}
@@ -593,7 +599,7 @@ export default function BroadcastManagementScreen({ navigation }) {
     }
     return (
       <View style={styles.centerBox}>
-        <Feather name="inbox" size={40} color="#94A3B8" />
+        <Feather name="inbox" size={fontSize(40)} color="#94A3B8" />
         <Text style={styles.emptyTitle}>No data found</Text>
         <Text style={styles.emptySub}>
           Tap + to create your first broadcast.
@@ -647,36 +653,32 @@ export default function BroadcastManagementScreen({ navigation }) {
     setAttachment(
       broadcast.attachment?.url
         ? {
-            existing: true,
-            name: broadcast.attachment.name,
-            type: broadcast.attachment.type,
-            url: broadcast.attachment.url,
-          }
+          existing: true,
+          name: broadcast.attachment.name,
+          type: broadcast.attachment.type,
+          url: broadcast.attachment.url,
+        }
         : null,
     );
     setIsCreateOpen(true);
   };
 
   return (
-    <SafeAreaView style={styles.mainContainer}>
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle="Back to dashboard"
-      />
+    <View style={[commonStyles.container, { paddingTop: hp(10) }]}>
       <View style={styles.searchBarWrap}>
-        <Feather name="search" size={16} color="#94A3B8" />
+        <Feather name="search" size={fontSize(16)} color="#94A3B8" />
         <TextInput
           style={styles.searchBarInput}
           placeholder="Search broadcasts..."
           placeholderTextColor="#94A3B8"
           value={broadcastSearch}
           onChangeText={onSearchChange}
+          textAlignVertical="center"
+          scrollEnabled={false}
         />
         {broadcastSearch.length > 0 && (
           <TouchableOpacity onPress={() => onSearchChange("")}>
-            <Feather name="x" size={16} color="#94A3B8" />
+            <Feather name="x" size={fontSize(16)} color="#94A3B8" />
           </TouchableOpacity>
         )}
         <TouchableOpacity
@@ -685,12 +687,10 @@ export default function BroadcastManagementScreen({ navigation }) {
         >
           <Feather
             name="filter"
-            size={18}
-            color={
-              statusFilter !== "all" || typeFilter !== "all"
-                ? colors.primary
-                : "#94A3B8"
-            }
+            size={fontSize(18)}
+            color={statusFilter !== "all" || typeFilter !== "all"
+              ? colors.primary
+              : "#94A3B8"}
           />
         </TouchableOpacity>
       </View>
@@ -699,6 +699,7 @@ export default function BroadcastManagementScreen({ navigation }) {
         transparent
         animationType="slide"
         onRequestClose={() => setIsStatusMenuOpen(false)}
+        style={{paddingBottom:insets.bottom}}
       >
         <TouchableOpacity
           style={styles.bottomSheetOverlay}
@@ -709,7 +710,7 @@ export default function BroadcastManagementScreen({ navigation }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filters</Text>
               <TouchableOpacity onPress={() => setIsStatusMenuOpen(false)}>
-                <Feather name="x" size={20} color="#64748B" />
+                <Feather name="x" size={fontSize(20)} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -777,18 +778,16 @@ export default function BroadcastManagementScreen({ navigation }) {
             </View>
           }
           ListEmptyComponent={renderEmpty}
-          ListFooterComponent={
-            loadingMore ? (
+          ListFooterComponent={loadingMore
+            ? (
               <ActivityIndicator
                 style={{ marginVertical: 16 }}
                 color={colors.primary}
               />
-            ) : null
-          }
+            )
+            : null}
           contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           onEndReached={onEndReached}
           onEndReachedThreshold={0.4}
           showsVerticalScrollIndicator={false}
@@ -796,11 +795,11 @@ export default function BroadcastManagementScreen({ navigation }) {
 
         {/* FAB opens the create-broadcast modal */}
         <TouchableOpacity
-          style={[styles.fab, { bottom: insets.bottom + 10 }]}
+          style={[styles.fab]}
           activeOpacity={0.85}
           onPress={openCreateModal}
         >
-          <Feather name="plus" size={26} color="#FFFFFF" />
+          <Feather name="plus" size={fontSize(26)} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -810,328 +809,328 @@ export default function BroadcastManagementScreen({ navigation }) {
         animationType="slide"
         onRequestClose={closeCreateModal}
       >
-        <SafeAreaView style={styles.mainContainer}>
+        <SafeAreaView style={commonStyles.container}>
           <View style={styles.modalTopBar}>
             <TouchableOpacity onPress={closeCreateModal} hitSlop={10}>
-              <Feather name="x" size={22} color="#0F172A" />
+              <Feather name="x" size={fontSize(22)} color="#0F172A" />
             </TouchableOpacity>
             <Text style={styles.modalTopBarTitle}>New Broadcast</Text>
             <View style={{ width: 22 }} />
           </View>
           <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "padding"}
-        >
-
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "padding"}
           >
-            {/* Card 1: Recipient Group */}
-            <View style={styles.cardContainer}>
-              <Text style={styles.fieldLabel}>RECIPIENT GROUP</Text>
-
-              <TouchableOpacity
-                style={styles.dropdownSelector}
-                onPress={() => setIsGroupModalOpen(true)}
-              >
-                <Text style={styles.dropdownValueText}>{recipientGroup}</Text>
-                <Feather name="chevron-down" size={20} color="#475569" />
-              </TouchableOpacity>
-
-              {isSpecificMode && (
-                <View style={{ marginTop: 14 }}>
-                  <Text style={styles.fieldLabel}>SELECT RECIPIENTS</Text>
-                  <TouchableOpacity
-                    style={styles.multiSelectTrigger}
-                    onPress={openMultiSelect}
-                  >
-                    <Text
-                      style={[
-                        styles.multiSelectPlaceholder,
-                        selectedRecipients.length > 0 && { color: "#0F172A" },
-                      ]}
-                    >
-                      {selectedRecipients.length > 0
-                        ? `${selectedRecipients.length} Selected`
-                        : "Tap to search users or therapists..."}
-                    </Text>
-                    <Feather name="plus-circle" size={18} color="#0B4A6F" />
-                  </TouchableOpacity>
-
-                  {selectedRecipients.length > 0 && (
-                    <View style={styles.selectedTagsContainer}>
-                      {selectedRecipients.map((item) => (
-                        <View key={item._id} style={styles.tagBadge}>
-                          <Text style={styles.tagBadgeText}>
-                            {item.fullName} · {item.role}
-                          </Text>
-                          <TouchableOpacity
-                            onPress={() => toggleRecipientSelection(item)}
-                          >
-                            <Feather name="x" size={14} color="#0B4A6F" />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              )}
-              {isBatchMode && (
-                <View style={{ marginTop: 14 }}>
-                  <Text style={styles.fieldLabel}>SELECT BATCHES</Text>
-                  <TouchableOpacity style={styles.multiSelectTrigger} onPress={openBatchModal}>
-                    <Text
-                      style={[
-                        styles.multiSelectPlaceholder,
-                        selectedBatches.length > 0 && { color: "#0F172A" },
-                      ]}
-                    >
-                      {selectedBatches.length > 0
-                        ? `${selectedBatches.length} Selected`
-                        : "Tap to select batches..."}
-                    </Text>
-                    <Feather name="plus-circle" size={18} color="#0B4A6F" />
-                  </TouchableOpacity>
-
-                  {selectedBatches.length > 0 && (
-                    <View style={styles.selectedTagsContainer}>
-                      {selectedBatches.map((b) => (
-                        <View key={b._id} style={styles.tagBadge}>
-                          <Text style={styles.tagBadgeText}>{b.batchName}</Text>
-                          <TouchableOpacity onPress={() => toggleBatch(b)}>
-                            <Feather name="x" size={14} color="#0B4A6F" />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  <Text style={[styles.metaText, { marginTop: 10, fontWeight: "400", color: "#64748B" }]}>
-                    Goes to the active children in the selected batches.
-                    {deliverySchedule === "Schedule Later"
-                      ? " Children are picked when it is sent, so anyone added or removed before then is included or excluded."
-                      : ""}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.cardContainer}>
-              <Text style={styles.fieldLabel}>NOTIFICATION TYPE</Text>
-              <TouchableOpacity
-                style={styles.dropdownSelector}
-                onPress={() => setIsTypeModalOpen(true)}
-              >
-                <Text style={styles.dropdownValueText}>{notificationType}</Text>
-                <Feather name="chevron-down" size={20} color="#475569" />
-              </TouchableOpacity>
-            </View>
-            <Modal
-              visible={isTypeModalOpen}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setIsTypeModalOpen(false)}
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
-              <TouchableOpacity
-                style={styles.modalOverlay}
-                activeOpacity={1}
-                onPress={() => setIsTypeModalOpen(false)}
-              >
-                <View style={styles.modalContentCard}>
-                  <Text style={styles.modalTitle}>
-                    Select Notification Type
-                  </Text>
-                  {TYPE_OPTIONS.map((t) => (
+              {/* Card 1: Recipient Group */}
+              <View style={styles.cardContainer}>
+                <Text style={styles.fieldLabel}>RECIPIENT GROUP</Text>
+
+                <TouchableOpacity
+                  style={styles.dropdownSelector}
+                  onPress={() => setIsGroupModalOpen(true)}
+                >
+                  <Text style={styles.dropdownValueText}>{recipientGroup}</Text>
+                  <Feather name="chevron-down" size={fontSize(20)} color="#475569" />
+                </TouchableOpacity>
+
+                {isSpecificMode && (
+                  <View style={{ marginTop: 14 }}>
+                    <Text style={styles.fieldLabel}>SELECT RECIPIENTS</Text>
                     <TouchableOpacity
-                      key={t}
-                      style={[
-                        styles.modalOptionRow,
-                        notificationType === t && styles.modalOptionSelected,
-                      ]}
-                      onPress={() => {
-                        setNotificationType(t);
-                        setIsTypeModalOpen(false);
-                      }}
+                      style={styles.multiSelectTrigger}
+                      onPress={openMultiSelect}
                     >
                       <Text
                         style={[
-                          styles.modalOptionText,
-                          notificationType === t &&
-                            styles.modalOptionTextSelected,
+                          styles.multiSelectPlaceholder,
+                          selectedRecipients.length > 0 && { color: "#0F172A" },
                         ]}
                       >
-                        {t}
+                        {selectedRecipients.length > 0
+                          ? `${selectedRecipients.length} Selected`
+                          : "Tap to search users or therapists..."}
                       </Text>
-                      {notificationType === t && (
-                        <Feather name="check" size={18} color="#0B4A6F" />
-                      )}
+                      <Feather name="plus-circle" size={fontSize(18)} color="#0B4A6F" />
                     </TouchableOpacity>
-                  ))}
+
+                    {selectedRecipients.length > 0 && (
+                      <View style={styles.selectedTagsContainer}>
+                        {selectedRecipients.map((item) => (
+                          <View key={item._id} style={styles.tagBadge}>
+                            <Text style={styles.tagBadgeText}>
+                              {item.fullName} · {item.role}
+                            </Text>
+                            <TouchableOpacity
+                              onPress={() => toggleRecipientSelection(item)}
+                            >
+                              <Feather name="x" size={fontSize(14)} color="#0B4A6F" />
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
+                {isBatchMode && (
+                  <View style={{ marginTop: 14 }}>
+                    <Text style={styles.fieldLabel}>SELECT BATCHES</Text>
+                    <TouchableOpacity style={styles.multiSelectTrigger} onPress={openBatchModal}>
+                      <Text
+                        style={[
+                          styles.multiSelectPlaceholder,
+                          selectedBatches.length > 0 && { color: "#0F172A" },
+                        ]}
+                      >
+                        {selectedBatches.length > 0
+                          ? `${selectedBatches.length} Selected`
+                          : "Tap to select batches..."}
+                      </Text>
+                      <Feather name="plus-circle" size={fontSize(18)} color="#0B4A6F" />
+                    </TouchableOpacity>
+
+                    {selectedBatches.length > 0 && (
+                      <View style={styles.selectedTagsContainer}>
+                        {selectedBatches.map((b) => (
+                          <View key={b._id} style={styles.tagBadge}>
+                            <Text style={styles.tagBadgeText}>{b.batchName}</Text>
+                            <TouchableOpacity onPress={() => toggleBatch(b)}>
+                              <Feather name="x" size={fontSize(14)} color="#0B4A6F" />
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    <Text style={[styles.metaText, { marginTop: 10, fontWeight: "400", color: "#64748B" }]}>
+                      Goes to the active children in the selected batches.
+                      {deliverySchedule === "Schedule Later"
+                        ? " Children are picked when it is sent, so anyone added or removed before then is included or excluded."
+                        : ""}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.cardContainer}>
+                <Text style={styles.fieldLabel}>NOTIFICATION TYPE</Text>
+                <TouchableOpacity
+                  style={styles.dropdownSelector}
+                  onPress={() => setIsTypeModalOpen(true)}
+                >
+                  <Text style={styles.dropdownValueText}>{notificationType}</Text>
+                  <Feather name="chevron-down" size={fontSize(20)} color="#475569" />
+                </TouchableOpacity>
+              </View>
+              <Modal
+                visible={isTypeModalOpen}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setIsTypeModalOpen(false)}
+              >
+                <TouchableOpacity
+                  style={styles.modalOverlay}
+                  activeOpacity={1}
+                  onPress={() => setIsTypeModalOpen(false)}
+                >
+                  <View style={styles.modalContentCard}>
+                    <Text style={styles.modalTitle}>
+                      Select Notification Type
+                    </Text>
+                    {TYPE_OPTIONS.map((t) => (
+                      <TouchableOpacity
+                        key={t}
+                        style={[
+                          styles.modalOptionRow,
+                          notificationType === t && styles.modalOptionSelected,
+                        ]}
+                        onPress={() => {
+                          setNotificationType(t);
+                          setIsTypeModalOpen(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.modalOptionText,
+                            notificationType === t
+                            && styles.modalOptionTextSelected,
+                          ]}
+                        >
+                          {t}
+                        </Text>
+                        {notificationType === t && <Feather name="check" size={fontSize(18)} color="#0B4A6F" />}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </TouchableOpacity>
+              </Modal>
+
+              {/* Card 2: Title / Message / Attachment */}
+              <View style={styles.cardContainer}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.fieldLabel}>BROADCAST TITLE</Text>
+                  <Text style={styles.requiredAsterisk}>*</Text>
                 </View>
-              </TouchableOpacity>
-            </Modal>
+                <TextInput
+                  placeholder="e.g., Facility Update:"
+                  placeholderTextColor="#94A3B8"
+                  value={broadcastTitle}
+                  onChangeText={setBroadcastTitle}
+                  scrollEnabled={false}
+                  textAlignVertical="center"
+                  style={styles.formInput}
+                />
 
-            {/* Card 2: Title / Message / Attachment */}
-            <View style={styles.cardContainer}>
-              <View style={styles.labelRow}>
-                <Text style={styles.fieldLabel}>BROADCAST TITLE</Text>
-                <Text style={styles.requiredAsterisk}>*</Text>
-              </View>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g., Facility Update:"
-                placeholderTextColor="#94A3B8"
-                value={broadcastTitle}
-                onChangeText={setBroadcastTitle}
-              />
+                <View style={styles.labelRow}>
+                  <Text style={styles.fieldLabel}>MESSAGE CONTENT</Text>
+                  <Text style={styles.requiredAsterisk}>*</Text>
+                </View>
+                <TextInput
+                  style={styles.textAreaInput}
+                  placeholder="Type your notification message here..."
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                  numberOfLines={5}
+                  textAlignVertical="top"
+                  value={messageContent}
+                  onChangeText={setMessageContent}
+                />
 
-              <View style={styles.labelRow}>
-                <Text style={styles.fieldLabel}>MESSAGE CONTENT</Text>
-                <Text style={styles.requiredAsterisk}>*</Text>
-              </View>
-              <TextInput
-                style={styles.textAreaInput}
-                placeholder="Type your notification message here..."
-                placeholderTextColor="#94A3B8"
-                multiline
-                numberOfLines={5}
-                textAlignVertical="top"
-                value={messageContent}
-                onChangeText={setMessageContent}
-              />
-
-              {/* <Text style={styles.fieldLabel}>ATTACHMENT (OPTIONAL)</Text>
+                {
+                  /* <Text style={styles.fieldLabel}>ATTACHMENT (OPTIONAL)</Text>
               <TouchableOpacity style={styles.uploadBox} onPress={pickAttachment}>
                 <View style={styles.uploadIconContainer}>
-                  <MaterialCommunityIcons name="file-upload-outline" size={30} color="#0B4A6F" />
+                  <MaterialCommunityIcons name="file-upload-outline" size={fontSize(30)} color="#0B4A6F" />
                 </View>
                 <Text style={styles.uploadPrimaryText}>
                   {attachment ? attachment.name : 'Click to upload or drag & drop'}
                 </Text>
                 <Text style={styles.uploadSecondaryText}>PDF, Image, or Doc (Max 10MB)</Text>
-              </TouchableOpacity> */}
-              {attachment ? (
-                <View style={styles.attachmentChip}>
-                  <MaterialCommunityIcons
-                    name={
-                      isImageAttachment(attachment)
-                        ? "file-image-outline"
-                        : attachment.mimeType === "application/pdf" ||
-                            attachment.type === "pdf"
+              </TouchableOpacity> */
+                }
+                {attachment
+                  ? (
+                    <View style={styles.attachmentChip}>
+                      <MaterialCommunityIcons
+                        name={isImageAttachment(attachment)
+                          ? "file-image-outline"
+                          : attachment.mimeType === "application/pdf"
+                              || attachment.type === "pdf"
                           ? "file-pdf-box"
-                          : "file-document-outline"
-                    }
-                    size={20}
-                    color="#0B4A6F"
-                  />
-                  <Text style={styles.attachmentChipText} numberOfLines={1}>
-                    {attachment.name}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setAttachment(null)}
-                    hitSlop={10}
-                  >
-                    <Feather name="x" size={18} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.uploadBox}
-                  onPress={pickAttachment}
-                >
-                  <View style={styles.uploadIconContainer}>
-                    <MaterialCommunityIcons
-                      name="file-upload-outline"
-                      size={30}
-                      color="#0B4A6F"
-                    />
-                  </View>
-                  <Text style={styles.uploadPrimaryText}>
-                    Click to upload or drag & drop
-                  </Text>
-                  <Text style={styles.uploadSecondaryText}>
-                    PDF, Image, or Doc (Max 10MB)
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Card 3: Delivery Schedule */}
-            <View style={styles.cardContainer}>
-              <Text style={styles.fieldLabel}>DELIVERY SCHEDULE</Text>
-              <View style={styles.segmentContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.segmentBtn,
-                    deliverySchedule === "Send Now" && styles.activeSegmentBtn,
-                  ]}
-                  onPress={() => setDeliverySchedule("Send Now")}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      deliverySchedule === "Send Now" &&
-                        styles.activeSegmentText,
-                    ]}
-                  >
-                    Send Now
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.segmentBtn,
-                    deliverySchedule === "Schedule Later" &&
-                      styles.activeSegmentBtn,
-                  ]}
-                  onPress={() => setDeliverySchedule("Schedule Later")}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      deliverySchedule === "Schedule Later" &&
-                        styles.activeSegmentText,
-                    ]}
-                  >
-                    Schedule Later
-                  </Text>
-                </TouchableOpacity>
+                          : "file-document-outline"}
+                        size={fontSize(20)}
+                        color="#0B4A6F"
+                      />
+                      <Text style={styles.attachmentChipText} numberOfLines={1}>
+                        {attachment.name}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => setAttachment(null)}
+                        hitSlop={10}
+                      >
+                        <Feather name="x" size={fontSize(18)} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  )
+                  : (
+                    <TouchableOpacity
+                      style={styles.uploadBox}
+                      onPress={pickAttachment}
+                    >
+                      <View style={styles.uploadIconContainer}>
+                        <MaterialCommunityIcons
+                          name="file-upload-outline"
+                          size={fontSize(30)}
+                          color="#0B4A6F"
+                        />
+                      </View>
+                      <Text style={styles.uploadPrimaryText}>
+                        Click to upload or drag & drop
+                      </Text>
+                      <Text style={styles.uploadSecondaryText}>
+                        PDF, Image, or Doc (Max 10MB)
+                      </Text>
+                    </TouchableOpacity>
+                  )}
               </View>
 
-              {deliverySchedule === "Schedule Later" && (
-                <>
+              {/* Card 3: Delivery Schedule */}
+              <View style={styles.cardContainer}>
+                <Text style={styles.fieldLabel}>DELIVERY SCHEDULE</Text>
+                <View style={styles.segmentContainer}>
                   <TouchableOpacity
-                    style={[styles.dropdownSelector, { marginTop: 12 }]}
-                    onPress={() =>
-                      setPickerMode(
-                        pickerMode
-                          ? null
-                          : Platform.OS === "ios"
+                    style={[
+                      styles.segmentBtn,
+                      deliverySchedule === "Send Now" && styles.activeSegmentBtn,
+                    ]}
+                    onPress={() => setDeliverySchedule("Send Now")}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentText,
+                        deliverySchedule === "Send Now"
+                        && styles.activeSegmentText,
+                      ]}
+                    >
+                      Send Now
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.segmentBtn,
+                      deliverySchedule === "Schedule Later"
+                      && styles.activeSegmentBtn,
+                    ]}
+                    onPress={() => setDeliverySchedule("Schedule Later")}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentText,
+                        deliverySchedule === "Schedule Later"
+                        && styles.activeSegmentText,
+                      ]}
+                    >
+                      Schedule Later
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {deliverySchedule === "Schedule Later" && (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.dropdownSelector, { marginTop: 12 }]}
+                      onPress={() =>
+                        setPickerMode(
+                          pickerMode
+                            ? null
+                            : Platform.OS === "ios"
                             ? "datetime"
                             : "date",
-                      )
-                    }
-                  >
-                    <Text style={styles.dropdownValueText}>
-                      {sendAt.toLocaleString()}
-                    </Text>
-                    <Feather name="calendar" size={18} color="#475569" />
-                  </TouchableOpacity>
-                  {pickerMode && (
-                    <DateTimePicker
-                      value={sendAt}
-                      mode={pickerMode}
-                      minimumDate={new Date()}
-                      onValueChange={onPickerValueChange}
-                      onDismiss={onPickerDismiss}
-                    />
-                  )}
-                </>
-              )}
-            </View>
-          </ScrollView>
-          {/* Bottom Actions */}
+                        )}
+                    >
+                      <Text style={styles.dropdownValueText}>
+                        {sendAt.toLocaleString()}
+                      </Text>
+                      <Feather name="calendar" size={fontSize(18)} color="#475569" />
+                    </TouchableOpacity>
+                    {pickerMode && (
+                      <DateTimePicker
+                        value={sendAt}
+                        mode={pickerMode}
+                        minimumDate={new Date()}
+                        onValueChange={onPickerValueChange}
+                        onDismiss={onPickerDismiss}
+                      />
+                    )}
+                  </>
+                )}
+              </View>
+            </ScrollView>
+            {/* Bottom Actions */}
             <View style={styles.bottomActionsRow}>
               <TouchableOpacity
                 style={styles.saveDraftBtn}
@@ -1146,13 +1145,11 @@ export default function BroadcastManagementScreen({ navigation }) {
                 disabled={submitting}
                 onPress={() => submit("send")}
               >
-                {submitting ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
+                {submitting ? <ActivityIndicator color="#FFF" /> : (
                   <>
                     <Feather
                       name="send"
-                      size={16}
+                      size={fontSize(16)}
                       color="#FFFFFF"
                       style={{ marginRight: 8 }}
                     />
@@ -1165,7 +1162,7 @@ export default function BroadcastManagementScreen({ navigation }) {
                 )}
               </TouchableOpacity>
             </View>
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
         </SafeAreaView>
 
         <Modal
@@ -1199,15 +1196,13 @@ export default function BroadcastManagementScreen({ navigation }) {
                   <Text
                     style={[
                       styles.modalOptionText,
-                      recipientGroup === group &&
-                        styles.modalOptionTextSelected,
+                      recipientGroup === group
+                      && styles.modalOptionTextSelected,
                     ]}
                   >
                     {group}
                   </Text>
-                  {recipientGroup === group && (
-                    <Feather name="check" size={18} color="#0B4A6F" />
-                  )}
+                  {recipientGroup === group && <Feather name="check" size={fontSize(18)} color="#0B4A6F" />}
                 </TouchableOpacity>
               ))}
             </View>
@@ -1221,87 +1216,88 @@ export default function BroadcastManagementScreen({ navigation }) {
           onRequestClose={() => setIsMultiSelectModalOpen(false)}
         >
           <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "padding"}
-        >
-          <View
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setIsMultiSelectModalOpen(false)}
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "padding"}
           >
-            <TouchableOpacity activeOpacity={1} style={styles.modalContentCard}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  Select {config.role === "Child" ? "Users" : "Users"}
-                </Text>
+            <View
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setIsMultiSelectModalOpen(false)}
+            >
+              <TouchableOpacity activeOpacity={1} style={styles.modalContentCard}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>
+                    Select {config.role === "Child" ? "Users" : "Users"}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setIsMultiSelectModalOpen(false)}
+                  >
+                    <Feather name="x" size={fontSize(20)} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
+
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search by name..."
+                  placeholderTextColor="#94A3B8"
+                  value={recipientSearch}
+                  onChangeText={onRecipientSearchChange}
+                  textAlignVertical='center'
+                  scrollEnabled={false}
+                />
+
+                <ScrollView
+                  style={{ maxHeight: 280 }}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {recipientsLoading
+                    ? (
+                      <ActivityIndicator
+                        style={{ marginVertical: 24 }}
+                        color="#0B4A6F"
+                      />
+                    )
+                    : recipientsError
+                    ? <Text style={styles.centerMsgError}>{recipientsError}</Text>
+                    : recipientOptions.length === 0
+                    ? <Text style={styles.centerMsgMuted}>No data found</Text>
+                    : (
+                      recipientOptions.map((item) => {
+                        const isSelected = selectedRecipients.some(
+                          (r) => r._id === item._id,
+                        );
+                        return (
+                          <TouchableOpacity
+                            key={item._id}
+                            style={styles.checkboxRow}
+                            onPress={() => toggleRecipientSelection(item)}
+                          >
+                            <View
+                              style={[
+                                styles.checkbox,
+                                isSelected && styles.checkboxActive,
+                              ]}
+                            >
+                              {isSelected && <Feather name="check" size={fontSize(12)} color="#FFF" />}
+                            </View>
+                            <Text style={styles.checkboxLabel}>
+                              {item.fullName} <Text style={styles.roleTag}>({item.role})</Text>
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })
+                    )}
+                </ScrollView>
+
                 <TouchableOpacity
+                  style={styles.confirmBtn}
                   onPress={() => setIsMultiSelectModalOpen(false)}
                 >
-                  <Feather name="x" size={20} color="#64748B" />
+                  <Text style={styles.confirmBtnText}>Done</Text>
                 </TouchableOpacity>
-              </View>
-
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search by name..."
-                placeholderTextColor="#94A3B8"
-                value={recipientSearch}
-                onChangeText={onRecipientSearchChange}
-              />
-
-              <ScrollView
-                style={{ maxHeight: 280 }}
-                keyboardShouldPersistTaps="handled"
-              >
-                {recipientsLoading ? (
-                  <ActivityIndicator
-                    style={{ marginVertical: 24 }}
-                    color="#0B4A6F"
-                  />
-                ) : recipientsError ? (
-                  <Text style={styles.centerMsgError}>{recipientsError}</Text>
-                ) : recipientOptions.length === 0 ? (
-                  <Text style={styles.centerMsgMuted}>No data found</Text>
-                ) : (
-                  recipientOptions.map((item) => {
-                    const isSelected = selectedRecipients.some(
-                      (r) => r._id === item._id,
-                    );
-                    return (
-                      <TouchableOpacity
-                        key={item._id}
-                        style={styles.checkboxRow}
-                        onPress={() => toggleRecipientSelection(item)}
-                      >
-                        <View
-                          style={[
-                            styles.checkbox,
-                            isSelected && styles.checkboxActive,
-                          ]}
-                        >
-                          {isSelected && (
-                            <Feather name="check" size={12} color="#FFF" />
-                          )}
-                        </View>
-                        <Text style={styles.checkboxLabel}>
-                          {item.fullName}{" "}
-                          <Text style={styles.roleTag}>({item.role})</Text>
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })
-                )}
-              </ScrollView>
-
-              <TouchableOpacity
-                style={styles.confirmBtn}
-                onPress={() => setIsMultiSelectModalOpen(false)}
-              >
-                <Text style={styles.confirmBtnText}>Done</Text>
               </TouchableOpacity>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
+            </View>
+          </KeyboardAvoidingView>
         </Modal>
       </Modal>
       <Modal
@@ -1314,59 +1310,61 @@ export default function BroadcastManagementScreen({ navigation }) {
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : "padding"}
         >
-        <View
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setIsBatchModalOpen(false)}
-        >
-          <TouchableOpacity activeOpacity={1} style={styles.modalContentCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Batches</Text>
-              <TouchableOpacity onPress={() => setIsBatchModalOpen(false)}>
-                <Feather name="x" size={20} color="#64748B" />
+          <View
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setIsBatchModalOpen(false)}
+          >
+            <TouchableOpacity activeOpacity={1} style={styles.modalContentCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Batches</Text>
+                <TouchableOpacity onPress={() => setIsBatchModalOpen(false)}>
+                  <Feather name="x" size={fontSize(20)} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search batch..."
+                placeholderTextColor="#94A3B8"
+                value={batchSearch}
+                onChangeText={(t) => {
+                  setBatchSearch(t);
+                  loadBatches(t);
+                }}
+                   textAlignVertical='center'
+                  scrollEnabled={false}
+              />
+
+              <ScrollView style={{ maxHeight: 280 }} keyboardShouldPersistTaps="handled">
+                {batchesLoading
+                  ? <ActivityIndicator style={{ marginVertical: 24 }} color="#0B4A6F" />
+                  : batchOptions.length === 0
+                  ? <Text style={styles.centerMsgMuted}>No batches found</Text>
+                  : (
+                    batchOptions.map((b) => {
+                      const on = selectedBatches.some((x) => x._id === b._id);
+                      const count = b.childrenIds?.length;
+                      return (
+                        <TouchableOpacity key={b._id} style={styles.checkboxRow} onPress={() => toggleBatch(b)}>
+                          <View style={[styles.checkbox, on && styles.checkboxActive]}>
+                            {on && <Feather name="check" size={fontSize(12)} color="#FFF" />}
+                          </View>
+                          <Text style={styles.checkboxLabel}>
+                            {b.batchName}
+                            {count != null && <Text style={styles.roleTag}>({count} children)</Text>}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })
+                  )}
+              </ScrollView>
+
+              <TouchableOpacity style={styles.confirmBtn} onPress={() => setIsBatchModalOpen(false)}>
+                <Text style={styles.confirmBtnText}>Done</Text>
               </TouchableOpacity>
-            </View>
-
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search batch..."
-              placeholderTextColor="#94A3B8"
-              value={batchSearch}
-              onChangeText={(t) => {
-                setBatchSearch(t);
-                loadBatches(t);
-              }}
-            />
-
-            <ScrollView style={{ maxHeight: 280 }} keyboardShouldPersistTaps="handled">
-              {batchesLoading ? (
-                <ActivityIndicator style={{ marginVertical: 24 }} color="#0B4A6F" />
-              ) : batchOptions.length === 0 ? (
-                <Text style={styles.centerMsgMuted}>No batches found</Text>
-              ) : (
-                batchOptions.map((b) => {
-                  const on = selectedBatches.some((x) => x._id === b._id);
-                  const count = b.childrenIds?.length;
-                  return (
-                    <TouchableOpacity key={b._id} style={styles.checkboxRow} onPress={() => toggleBatch(b)}>
-                      <View style={[styles.checkbox, on && styles.checkboxActive]}>
-                        {on && <Feather name="check" size={12} color="#FFF" />}
-                      </View>
-                      <Text style={styles.checkboxLabel}>
-                        {b.batchName}
-                        {count != null && <Text style={styles.roleTag}> ({count} children)</Text>}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })
-              )}
-            </ScrollView>
-
-            <TouchableOpacity style={styles.confirmBtn} onPress={() => setIsBatchModalOpen(false)}>
-              <Text style={styles.confirmBtnText}>Done</Text>
             </TouchableOpacity>
-          </TouchableOpacity>
-        </View>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
       <BroadcastDetailModal
@@ -1380,28 +1378,21 @@ export default function BroadcastManagementScreen({ navigation }) {
           confirmDelete(b);
         }}
       />
-
-      <BottomBar
-        activeTab=""
-        setActiveTab={setActiveBottomTab}
-        onOpenNotifications={setIsNotificationOpen}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: "#F8FAFC" },
-  listContent: { padding: 16, paddingBottom: 96, flexGrow: 1 },
+  listContent: { padding: wp(16), paddingBottom: hp(20), flexGrow: 1 },
   titleBlock: { marginBottom: 16 },
   pageTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.primary,
     lineHeight: 26,
   },
   pageSubTitle: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 20,
@@ -1409,9 +1400,9 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: wp(20),
+    padding: wp(16),
+    marginBottom: wp(12),
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -1426,18 +1417,17 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     flex: 1,
-    fontSize: 15,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
-  badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
-  badgeText: { fontSize: 10, fontWeight: "700" },
+  badge: { paddingHorizontal: wp(8), paddingVertical: hp(2), borderRadius: wp(12) },
+  badgeText: { fontSize: fontSize(10), fontFamily: fonts.medium, lineHeight: 14 },
   cardMessage: {
-    marginTop: 8,
-    fontSize: 13,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#475569",
-    lineHeight: 19,
+    lineHeight: 16,
   },
   attachmentRow: {
     flexDirection: "row",
@@ -1445,39 +1435,39 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 10,
   },
-  attachmentText: { flex: 1, fontSize: 12, color: "#64748B" },
+  attachmentText: { flex: 1, fontSize: fontSize(12), color: "#64748B" },
   metaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 10,
   },
-  metaText: { fontSize: 12, color: "#0B4A6F", fontWeight: "600" },
+  metaText: { fontSize: fontSize(12), color: "#0B4A6F", fontWeight: "600" },
   footerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 10,
   },
-  dateText: { fontSize: 11, color: "#94A3B8" },
+  dateText: { fontSize: fontSize(11), color: "#94A3B8" },
 
   centerBox: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 80,
+    paddingVertical: hp(80),
     gap: 10,
   },
   emptyTitle: {
-    fontSize: 15,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#334155",
     textAlign: "center",
   },
-  emptySub: { fontSize: 12, color: "#94A3B8" },
+  emptySub: { fontSize: fontSize(12), color: "#94A3B8" },
   retryBtn: {
     marginTop: 4,
     paddingHorizontal: 20,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: wp(10),
     backgroundColor: colors.primary,
   },
   retryText: { color: "#FFF", fontWeight: "700" },
@@ -1485,9 +1475,10 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 12,
+    bottom: 15,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(12),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -1502,23 +1493,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: wp(16),
+    paddingVertical: hp(14),
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
   },
   modalTopBarTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.primary,
+    lineHeight: 24,
   },
 
-  scrollContent: { padding: 16, paddingBottom: 32 },
+  scrollContent: { padding: wp(16), paddingBottom: hp(20) },
 
   cardContainer: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 20,
+    borderRadius: wp(24),
+    padding: wp(20),
     marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -1527,7 +1519,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   fieldLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     letterSpacing: 0.5,
@@ -1536,8 +1528,8 @@ const styles = StyleSheet.create({
   },
   labelRow: { flexDirection: "row", alignItems: "center" },
   requiredAsterisk: {
-    fontSize: 12,
-    fontWeight: "800",
+    fontSize: fontSize(12),
+    fontFamily: fonts.semiBold,
     color: "#EF4444",
     marginBottom: 8,
   },
@@ -1547,21 +1539,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    height: hp(48),
   },
-  dropdownValueText: { fontSize: 15, fontWeight: "600", color: "#0B4A6F" },
+  dropdownValueText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0B4A6F" },
   multiSelectTrigger: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 46,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    height: hp(48),
   },
-  multiSelectPlaceholder: { fontSize: 14, color: "#94A3B8", fontWeight: "500" },
+  multiSelectPlaceholder: { fontSize: fontSize(14), color: "#94A3B8", fontWeight: "500" },
   selectedTagsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1572,40 +1564,47 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#E0F2FE",
-    borderRadius: 20,
+    borderRadius: wp(20),
     paddingHorizontal: 10,
     paddingVertical: 4,
     gap: 6,
   },
-  tagBadgeText: { fontSize: 12, fontWeight: "700", color: "#0B4A6F" },
+  tagBadgeText: { fontSize: fontSize(12), fontWeight: "700", color: "#0B4A6F" },
 
   formInput: {
-    backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
-    fontSize: 16,
-    color: colors.blackFont,
-    marginBottom: 16,
+    flex: 1,
+    minHeight: hp(46),
+    maxHeight: hp(46),
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    paddingHorizontal: wp(14),
+    paddingVertical: hp(0),
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
+    color: colors.blackFont,
+
+    backgroundColor: "#F1F5F9",
+    marginBottom: 16,
+    borderRadius: wp(12),
   },
   textAreaInput: {
     backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    height: 120,
-    fontSize: 16,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    paddingTop: hp(12),
+    height: hp(120),
+    fontSize: fontSize(14),
     color: colors.blackFont,
     marginBottom: 16,
     fontFamily: fonts.regular,
   },
   searchInput: {
     backgroundColor: "#F1F5F9",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 40,
-    fontSize: 14,
+    borderRadius: wp(10),
+    paddingHorizontal: wp(12),
+    minHeight: hp(48),
+    maxHeight: hp(48),
+    fontSize: fontSize(14),
     color: colors.blackFont,
     marginBottom: 10,
   },
@@ -1614,23 +1613,23 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#CBD5E1",
     borderStyle: "dashed",
-    borderRadius: 12,
+    borderRadius: wp(12),
     backgroundColor: "#F1F4F7",
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+    paddingVertical: hp(20),
+    paddingHorizontal: wp(20),
     alignItems: "center",
     justifyContent: "center",
   },
   uploadIconContainer: { marginBottom: 6 },
   uploadPrimaryText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 20,
     marginBottom: 2,
   },
   uploadSecondaryText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: colors.blackFont,
     fontFamily: fonts.regular,
   },
@@ -1638,13 +1637,13 @@ const styles = StyleSheet.create({
   segmentContainer: {
     flexDirection: "row",
     backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    padding: 4,
+    borderRadius: wp(12),
+    padding: wp(4),
   },
   segmentBtn: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: hp(10),
+    borderRadius: wp(8),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1656,14 +1655,14 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  segmentText: { fontSize: 16, fontFamily: fonts.semiBold, color: "#475569" },
+  segmentText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#475569" },
   activeSegmentText: { color: "#F58B2A" },
 
-  bottomActionsRow: { flexDirection: "row", gap: 12, padding: 10 },
+  bottomActionsRow: { flexDirection: "row", gap: 12, padding: wp(10) },
   saveDraftBtn: {
     flex: 1,
-    height: 48,
-    borderRadius: 12,
+    height: hp(48),
+    borderRadius: wp(12),
     borderWidth: 1.5,
     borderColor: colors.primary,
     backgroundColor: "#FFFFFF",
@@ -1671,25 +1670,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   saveDraftText: {
-    fontSize: 16,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: colors.primary,
-    lineHeight: 24,
+    lineHeight: 22,
   },
   sendBroadcastBtn: {
     flex: 1.3,
-    height: 48,
-    borderRadius: 12,
+    height: hp(48),
+    borderRadius: wp(12),
     backgroundColor: colors.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
   },
   sendBroadcastText: {
-    fontSize: 16,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
-    lineHeight: 24,
+    lineHeight: 22,
   },
 
   modalOverlay: {
@@ -1697,13 +1696,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(15, 23, 42, 0.4)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: wp(20),
   },
   modalContentCard: {
     width: "100%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: wp(20),
+    padding: wp(20),
     elevation: 5,
   },
   modalHeader: {
@@ -1713,7 +1712,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: fontSize(16),
     fontWeight: "800",
     color: "#0F172A",
     marginBottom: 12,
@@ -1724,10 +1723,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 8,
-    borderRadius: 8,
+    borderRadius: wp(8),
   },
   modalOptionSelected: { backgroundColor: "#F0F9FF" },
-  modalOptionText: { fontSize: 15, fontWeight: "600", color: "#334155" },
+  modalOptionText: { fontSize: fontSize(15), fontWeight: "600", color: "#334155" },
   modalOptionTextSelected: { color: "#0B4A6F", fontWeight: "700" },
 
   checkboxRow: {
@@ -1736,25 +1735,25 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 2,
+    width: wp(20),
+    height: hp(20),
+    borderRadius: wp(6),
+    borderWidth: 1,
     borderColor: "#CBD5E1",
-    marginRight: 12,
+    marginRight: wp(12),
     justifyContent: "center",
     alignItems: "center",
   },
   checkboxActive: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
-  checkboxLabel: { fontSize: 14, fontWeight: "600", color: "#334155" },
+  checkboxLabel: { fontSize: fontSize(14), fontFamily: fonts.semiBold, lineHeight: 18, color: "#334155" },
   confirmBtn: {
     backgroundColor: "#0B4A6F",
-    borderRadius: 12,
+    borderRadius: wp(12),
     paddingVertical: 12,
     alignItems: "center",
     marginTop: 16,
   },
-  confirmBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  confirmBtnText: { color: "#FFFFFF", fontFamily: fonts.semiBold, fontSize: fontSize(14) },
 
   centerMsgError: { textAlign: "center", color: "#EF4444", marginVertical: 24 },
   centerMsgMuted: { textAlign: "center", color: "#94A3B8", marginVertical: 24 },
@@ -1762,33 +1761,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: wp(12),
     paddingHorizontal: 12,
     marginHorizontal: 15,
-    height: 44,
+    height: hp(44),
     gap: 8,
-    marginBottom: 14,
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  searchBarInput: { flex: 1, fontSize: 14, color: "#0F172A" },
-  roleTag: { fontSize: 11, color: "#94A3B8", fontWeight: "500" },
+  searchBarInput: { flex: 1, minHeight: hp(46), maxHeight: hp(46), fontSize: fontSize(14), color: "#0F172A" },
+  roleTag: { fontSize: fontSize(11), color: "#94A3B8", fontFamily: fonts.medium },
   attachmentChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     backgroundColor: "#F1F5F9",
-    borderRadius: 12,
+    borderRadius: wp(12),
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   attachmentChipText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: fontSize(13),
     color: "#334155",
-    fontWeight: "600",
+    fontFamily: fonts.semiBold,
   },
-  imagePreviewOverlayText: { color: "#FFF", fontSize: 11, fontWeight: "600" },
+  imagePreviewOverlayText: { color: "#FFF", fontSize: fontSize(11), fontFamily: fonts.semiBold },
   badgeGroup: { flexDirection: "row", gap: 6 },
   bottomSheetOverlay: {
     flex: 1,
@@ -1799,12 +1797,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 20,
+    padding: wp(20),
     paddingBottom: 32,
   },
   filterSectionLabel: {
-    fontSize: 11,
-    fontWeight: "800",
+    fontSize: fontSize(11),
+    fontFamily: fonts.semiBold,
     color: "#64748B",
     letterSpacing: 0.5,
     marginBottom: 10,
@@ -1813,10 +1811,10 @@ const styles = StyleSheet.create({
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: wp(20),
     backgroundColor: "#F1F5F9",
   },
   filterChipActive: { backgroundColor: "#0B4A6F" },
-  filterChipText: { fontSize: 13, fontWeight: "600", color: "#475569" },
+  filterChipText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#475569" },
   filterChipTextActive: { color: "#FFFFFF" },
 });

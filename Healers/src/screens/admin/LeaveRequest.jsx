@@ -1,4 +1,8 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -12,27 +16,33 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useIsFocused } from "@react-navigation/native";
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useIsFocused } from '@react-navigation/native';
 
 import {
   approveLeaveRequest,
   getLeaveRequests,
   markAllLeavesSeen,
   rejectLeaveRequest,
-} from "../../api/admin/api";
-import BottomBar from "../../components/BottomBar";
-import TopBar from "../../components/TopBar";
-import { colors, commonStyles, fonts } from "../../styles/theme";
+} from '../../api/admin/api';
+import {
+  colors,
+  commonStyles,
+  fonts,
+} from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
-const formatNames = (names) =>
-  names.length > 2 ? `${names.slice(0, 2).join(", ")}...` : names.join(", ");
+const formatNames = (names) => names.length > 2 ? `${names.slice(0, 2).join(", ")}...` : names.join(", ");
 
 export default function LeaveRequestsScreen({ navigation }) {
-  // const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   const [selectedTab, setSelectedTab] = useState("Pending");
 
   const [requests, setRequests] = useState([]);
@@ -89,7 +99,7 @@ export default function LeaveRequestsScreen({ navigation }) {
       setRequests((prev) =>
         isFirst
           ? list
-          : [...prev, ...list.filter((i) => !prev.some((p) => p.id === i.id))],
+          : [...prev, ...list.filter((i) => !prev.some((p) => p.id === i.id))]
       );
       if (response.data.stats) setStats(response.data.stats);
       setPage(pageNum);
@@ -123,9 +133,9 @@ export default function LeaveRequestsScreen({ navigation }) {
   const formatDate = (d) =>
     d
       ? new Date(d).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        })
+        month: "short",
+        day: "numeric",
+      })
       : "";
 
   const formatDateRange = (start, end) =>
@@ -219,8 +229,7 @@ export default function LeaveRequestsScreen({ navigation }) {
   };
   const handleScroll = ({ nativeEvent }) => {
     const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-    const nearBottom =
-      layoutMeasurement.height + contentOffset.y >= contentSize.height - 120;
+    const nearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 120;
 
     if (nearBottom && hasMore && !loading && !loadingMore) {
       fetchRequests(selectedTab, page + 1);
@@ -228,14 +237,7 @@ export default function LeaveRequestsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle={"Leave Requests"}
-      />
-
+    <View style={[styles.mainContainer, commonStyles.container]}>
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -250,20 +252,17 @@ export default function LeaveRequestsScreen({ navigation }) {
             <Text style={styles.metricValue}>{stats.pendingCount}</Text>
 
             <View style={styles.trendContainer}>
-              {stats.pendingCount >= stats.pendingSinceYesterday ? (
-                <MaterialIcons name="trending-up" size={16} color="#006B58" />
-              ) : (
-                <MaterialIcons name="trending-down" size={16} color="#6b0005" />
-              )}
+              {stats.pendingCount >= stats.pendingSinceYesterday
+                ? <MaterialIcons name="trending-up" size={16} color="#006B58" />
+                : <MaterialIcons name="trending-down" size={16} color="#6b0005" />}
 
               <Text
                 style={[
                   styles.trendText,
                   {
-                    color:
-                      stats.pendingCount >= stats.pendingSinceYesterday
-                        ? "#006B58"
-                        : "#6b0005",
+                    color: stats.pendingCount >= stats.pendingSinceYesterday
+                      ? "#006B58"
+                      : "#6b0005",
                   },
                 ]}
               >
@@ -329,7 +328,7 @@ export default function LeaveRequestsScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
-        
+
         {loading && requests.length === 0 && (
           <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 30 }} />
         )}
@@ -343,103 +342,103 @@ export default function LeaveRequestsScreen({ navigation }) {
         )}
 
         {requests.map((item) => (
-            <View key={item.id} style={styles.requestCard}>
-              <View style={styles.userInfoRow}>
-                <View style={styles.userDetails}>
-                  <Text style={styles.userName}>{item.name}</Text>
+          <View key={item.id} style={styles.requestCard}>
+            <View style={styles.userInfoRow}>
+              <View style={styles.userDetails}>
+                <Text style={styles.userName}>{item.name}</Text>
 
-                  <Text style={styles.userRole}>{item.role}</Text>
-                </View>
+                <Text style={styles.userRole}>{item.role}</Text>
+              </View>
 
-                <View
+              <View
+                style={[
+                  styles.statusBadge,
+
+                  item.status === "Approved"
+                    ? { backgroundColor: "#D1FAE5" }
+                    : item.status === "Rejected"
+                    ? { backgroundColor: "#FEE2E2" }
+                    : { backgroundColor: "#FEF3C7" },
+                ]}
+              >
+                <Text
                   style={[
-                    styles.statusBadge,
+                    styles.statusBadgeText,
 
                     item.status === "Approved"
-                      ? { backgroundColor: "#D1FAE5" }
+                      ? { color: "#059669" }
                       : item.status === "Rejected"
-                        ? { backgroundColor: "#FEE2E2" }
-                        : { backgroundColor: "#FEF3C7" },
+                      ? { color: "#DC2626" }
+                      : { color: "#D97706" },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.statusBadgeText,
-
-                      item.status === "Approved"
-                        ? { color: "#059669" }
-                        : item.status === "Rejected"
-                          ? { color: "#DC2626" }
-                          : { color: "#D97706" },
-                    ]}
-                  >
-                    {item.status}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.dateRow}>
-                <MaterialIcons name="event" size={18} color={colors.primary} />
-
-                <Text style={styles.dateText}>{item.dates}</Text>
-              </View>
-
-              <View style={[styles.typeBadge, { backgroundColor: "#F1F4F7" }]}>
-                <Text style={[styles.typeBadgeText, { color: "#414750" }]}>
-                  {item.reason}
+                  {item.status}
                 </Text>
               </View>
+            </View>
 
-              {/* {!!item.reason && (
+            <View style={styles.dateRow}>
+              <MaterialIcons name="event" size={fontSize(18)} color={colors.primary} />
+
+              <Text style={styles.dateText}>{item.dates}</Text>
+            </View>
+
+            <View style={[styles.typeBadge, { backgroundColor: "#F1F4F7" }]}>
+              <Text style={[styles.typeBadgeText, { color: "#414750" }]}>
+                {item.reason}
+              </Text>
+            </View>
+
+            {
+              /* {!!item.reason && (
 
                 <Text style={styles.reasonText}>Reason: {item.reason}</Text>
 
-              )} */}
+              )} */
+            }
 
-              {item.status === "Rejected" && (
+            {item.status === "Rejected" && (
+              <TouchableOpacity
+                style={[styles.rejectButton, { width: "100%" }]}
+                onPress={() => {
+                  setReasonTarget(item);
+                  setIsReasonModalOpen(true);
+                }}
+              >
+                <Text style={styles.rejectButtonText}>
+                  View Rejection Reason
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {item.status === "Pending" && (
+              <View style={styles.cardActions}>
                 <TouchableOpacity
-                  style={[styles.rejectButton, { width: "100%" }]}
-                  onPress={() => {
-                    setReasonTarget(item);
-                    setIsReasonModalOpen(true);
-                  }}
+                  style={[
+                    styles.approveButton,
+                    actioningId === item.id && { opacity: 0.6 },
+                  ]}
+                  onPress={() => handleApprove(item)}
+                  disabled={actioningId === item.id}
                 >
-                  <Text style={styles.rejectButtonText}>
-                    View Rejection Reason
-                  </Text>
+                  <Text style={styles.approveButtonText}>Approve</Text>
                 </TouchableOpacity>
-              )}
 
-              {item.status === "Pending" && (
-                <View style={styles.cardActions}>
-                  <TouchableOpacity
-                    style={[
-                      styles.approveButton,
-                      actioningId === item.id && { opacity: 0.6 },
-                    ]}
-                    onPress={() => handleApprove(item)}
-                    disabled={actioningId === item.id}
-                  >
-                    <Text style={styles.approveButtonText}>Approve</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.rejectButton,
-                      actioningId === item.id && { opacity: 0.6 },
-                    ]}
-                    onPress={() => openRejectModal(item)}
-                    disabled={actioningId === item.id}
-                  >
-                    <Text style={styles.rejectButtonText}>Reject</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          ))}
-          {loadingMore && (
-            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
-          )}
+                <TouchableOpacity
+                  style={[
+                    styles.rejectButton,
+                    actioningId === item.id && { opacity: 0.6 },
+                  ]}
+                  onPress={() => openRejectModal(item)}
+                  disabled={actioningId === item.id}
+                >
+                  <Text style={styles.rejectButtonText}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        ))}
+        {loadingMore && <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />}
       </ScrollView>
 
       <Modal
@@ -447,6 +446,7 @@ export default function LeaveRequestsScreen({ navigation }) {
         animationType="slide"
         transparent
         onRequestClose={closeRejectModal}
+        style={{ paddingBottom: insets.bottom }}
       >
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -472,8 +472,7 @@ export default function LeaveRequestsScreen({ navigation }) {
                 </Text>
 
                 <Text style={styles.fieldLabel}>
-                  Reason for rejection{" "}
-                  <Text style={styles.requiredText}>*</Text>
+                  Reason for rejection <Text style={styles.requiredText}>*</Text>
                 </Text>
 
                 <TextInput
@@ -495,13 +494,13 @@ export default function LeaveRequestsScreen({ navigation }) {
                   onPress={handleConfirmReject}
                   disabled={actioningId === rejectTarget?.id}
                 >
-                  {actioningId === rejectTarget?.id ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.confirmRejectButtonText}>
-                      Confirm Rejection
-                    </Text>
-                  )}
+                  {actioningId === rejectTarget?.id
+                    ? <ActivityIndicator size="small" color="#FFFFFF" />
+                    : (
+                      <Text style={styles.confirmRejectButtonText}>
+                        Confirm Rejection
+                      </Text>
+                    )}
                 </TouchableOpacity>
               </TouchableOpacity>
             </TouchableOpacity>
@@ -513,6 +512,7 @@ export default function LeaveRequestsScreen({ navigation }) {
         animationType="slide"
         transparent
         onRequestClose={() => setIsReasonModalOpen(false)}
+        style={{paddingBottom:insets.bottom}}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
@@ -541,38 +541,23 @@ export default function LeaveRequestsScreen({ navigation }) {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-
-      <BottomBar
-        activeTab={activeBottomTab}
-        setActiveTab={setActiveBottomTab}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-
-    backgroundColor: "#F8FAFC",
-  },
-
   scrollArea: { flex: 1 },
 
   scrollContent: {
-    paddingHorizontal: 16,
-
-    paddingTop: 16,
-
-    paddingBottom: 24,
+    paddingHorizontal: wp(16),
+    paddingTop: hp(16),
+    paddingBottom: hp(24),
   },
 
   metricCard: {
     backgroundColor: "#FFFFFF",
-
-    borderRadius: 24,
-
-    padding: 24,
+    borderRadius: wp(24),
+    padding: wp(24),
 
     flexDirection: "row",
 
@@ -580,7 +565,7 @@ const styles = StyleSheet.create({
 
     alignItems: "center",
 
-    marginBottom: 14,
+    marginBottom: hp(14),
 
     elevation: 2,
 
@@ -598,7 +583,7 @@ const styles = StyleSheet.create({
   },
 
   metricTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
 
     fontFamily: fonts.semiBold,
 
@@ -608,7 +593,7 @@ const styles = StyleSheet.create({
   },
 
   metricValue: {
-    fontSize: 32,
+    fontSize: fontSize(32),
 
     fontFamily: fonts.bold,
 
@@ -630,7 +615,7 @@ const styles = StyleSheet.create({
   },
 
   trendText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
 
     color: "#006B58",
 
@@ -638,7 +623,7 @@ const styles = StyleSheet.create({
   },
 
   metricSubText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
 
     color: "rgba(65,71,80,.6)",
 
@@ -646,11 +631,8 @@ const styles = StyleSheet.create({
   },
 
   metricIconBox: {
-    padding: 16,
-
-    paddingBottom: 24,
-
-    borderRadius: 12,
+    padding: wp(16),
+    borderRadius: wp(12),
 
     justifyContent: "center",
 
@@ -662,21 +644,21 @@ const styles = StyleSheet.create({
 
     backgroundColor: "#E5E8EB",
 
-    borderRadius: 12,
+    borderRadius: wp(12),
 
-    padding: 4,
+    padding: wp(4),
 
-    marginVertical: 12,
+    marginVertical: hp(12),
   },
 
   tabButton: {
     flex: 1,
 
-    paddingVertical: 10,
+    paddingVertical: hp(10),
 
     alignItems: "center",
 
-    borderRadius: 8,
+    borderRadius: wp(8),
   },
 
   tabButtonActive: {
@@ -686,21 +668,19 @@ const styles = StyleSheet.create({
   },
 
   tabText: {
-    fontSize: 16,
-
+    fontSize: fontSize(15),
     fontFamily: fonts.semiBold,
-
     color: "#414750",
+    lineHeight: 24,
   },
 
   tabTextActive: {
     color: colors.primary,
-
     fontFamily: fonts.semiBold,
   },
 
   emptyState: {
-    padding: 30,
+    padding: wp(30),
 
     alignItems: "center",
   },
@@ -708,19 +688,18 @@ const styles = StyleSheet.create({
   emptyStateText: {
     color: "#414750",
 
-    fontSize: 14,
-
-    fontWeight: "500",
+    fontSize: fontSize(14),
+    fontFamily: fonts.medium,
   },
 
   requestCard: {
     backgroundColor: "#FFFFFF",
 
-    borderRadius: 24,
+    borderRadius: wp(24),
 
-    padding: 20,
+    padding: wp(20),
 
-    marginBottom: 16,
+    marginBottom: hp(16),
 
     elevation: 2,
 
@@ -735,30 +714,17 @@ const styles = StyleSheet.create({
 
   userInfoRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
 
     alignItems: "center",
 
-    marginBottom: 14,
+    marginBottom: hp(14),
 
     gap: 5,
   },
 
-  userAvatar: {
-    width: 56,
-
-    height: 56,
-
-    borderRadius: 999,
-
-    marginRight: 7,
-  },
-
-  userDetails: {
-    flex: 1,
-  },
-
   userName: {
-    fontSize: 16,
+    fontSize: fontSize(16),
 
     fontFamily: fonts.semiBold,
 
@@ -768,7 +734,7 @@ const styles = StyleSheet.create({
   },
 
   userRole: {
-    fontSize: 14,
+    fontSize: fontSize(14),
 
     color: "#414750",
 
@@ -778,16 +744,16 @@ const styles = StyleSheet.create({
   },
 
   statusBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: wp(8),
 
-    paddingVertical: 4,
+    paddingVertical: hp(4),
 
     borderRadius: 6,
   },
 
   statusBadgeText: {
-    fontSize: 11,
-
+    fontSize: fontSize(11),
+    lineHeight: 16,
     fontFamily: fonts.semiBold,
   },
 
@@ -802,8 +768,8 @@ const styles = StyleSheet.create({
   },
 
   dateText: {
-    fontSize: 16,
-
+    fontSize: fontSize(16),
+    lineHeight: 24,
     color: colors.primary,
 
     fontFamily: fonts.semiBold,
@@ -812,20 +778,20 @@ const styles = StyleSheet.create({
   typeBadge: {
     alignSelf: "flex-start",
 
-    paddingHorizontal: 12,
+    paddingHorizontal: wp(12),
 
-    paddingVertical: 6,
+    paddingVertical: hp(6),
 
-    borderRadius: 12,
+    borderRadius: wp(12),
 
-    marginBottom: 16,
+    marginBottom: hp(16),
 
     width: "100%",
   },
 
   typeBadgeText: {
-    fontSize: 14,
-
+    fontSize: fontSize(14),
+    lineHeight: 18,
     fontFamily: fonts.regular,
   },
 
@@ -838,13 +804,13 @@ const styles = StyleSheet.create({
   approveButton: {
     width: "48%",
 
-    paddingHorizontal: 24,
+    paddingHorizontal: wp(24),
 
     backgroundColor: colors.primary,
 
-    paddingVertical: 8,
+    paddingVertical: hp(8),
 
-    borderRadius: 12,
+    borderRadius: wp(12),
 
     alignItems: "center",
   },
@@ -854,7 +820,7 @@ const styles = StyleSheet.create({
 
     fontFamily: fonts.semiBold,
 
-    fontSize: 16,
+    fontSize: fontSize(16),
 
     lineHeight: 24,
   },
@@ -866,9 +832,9 @@ const styles = StyleSheet.create({
 
     borderColor: "#BA1A1A",
 
-    paddingVertical: 8,
+    paddingVertical: hp(8),
 
-    borderRadius: 12,
+    borderRadius: wp(12),
 
     alignItems: "center",
   },
@@ -878,7 +844,7 @@ const styles = StyleSheet.create({
 
     fontFamily: fonts.semiBold,
 
-    fontSize: 16,
+    fontSize: fontSize(16),
 
     lineHeight: 24,
   },
@@ -892,11 +858,11 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: "#FFFFFF",
 
-    borderTopLeftRadius: 28,
+    borderTopLeftRadius: wp(28),
 
-    borderTopRightRadius: 28,
+    borderTopRightRadius: wp(28),
 
-    padding: 24,
+    padding: wp(24),
   },
 
   modalHeader: {
@@ -909,13 +875,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
-  modalTitle: { fontSize: 20, fontWeight: "800", color: "#0F172A" },
+  modalTitle: { fontSize: fontSize(20), fontFamily: fonts.bold, color: "#0F172A" },
 
-  modalSubtitle: { fontSize: 14, color: "#64748B", marginBottom: 16 },
+  modalSubtitle: { fontSize: fontSize(14), color: "#64748B", marginBottom: hp(10) },
 
   fieldLabel: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: fontSize(13),
+    fontFamily: fonts.semiBold,
     color: "#475569",
     marginBottom: 6,
   },
@@ -929,27 +895,27 @@ const styles = StyleSheet.create({
 
     borderColor: "#CBD5E1",
 
-    borderRadius: 12,
+    borderRadius: wp(12),
 
-    paddingHorizontal: 14,
+    paddingHorizontal: wp(14),
 
-    paddingVertical: 12,
+    paddingVertical: hp(12),
 
-    fontSize: 14,
+    fontSize: fontSize(14),
 
     color: "#0F172A",
 
-    minHeight: 100,
+    minHeight: hp(100),
 
-    marginBottom: 20,
+    marginBottom: hp(20),
   },
 
   confirmRejectButton: {
     backgroundColor: "#BA1A1A",
 
-    borderRadius: 14,
+    borderRadius: wp(14),
 
-    paddingVertical: 14,
+    paddingVertical: hp(14),
 
     alignItems: "center",
 
@@ -958,11 +924,12 @@ const styles = StyleSheet.create({
 
   confirmRejectButtonText: {
     color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    lineHeight: 18,
   },
   rejectionReasonText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#DC2626",
     fontFamily: fonts.regular,
     marginBottom: 12,
@@ -971,11 +938,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    paddingVertical: hp(12),
+    fontSize: fontSize(14),
     color: "#0F172A",
-    marginBottom: 16,
+    marginBottom: hp(16),
   },
 });
