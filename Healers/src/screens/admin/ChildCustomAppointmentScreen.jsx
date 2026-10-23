@@ -142,11 +142,11 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.main}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+        {/* <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Feather name="arrow-left" size={22} color="#0F172A" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Custom appointment</Text>
+          {/* <Text style={styles.headerTitle}>Custom appointment</Text> */}
           {!!childName && <Text style={styles.headerSub}>{childName}</Text>}
         </View>
       </View>

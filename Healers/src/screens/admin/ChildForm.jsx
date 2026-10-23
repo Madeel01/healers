@@ -23,12 +23,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Share,
 } from 'react-native';
 import {
-  SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
-
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -43,6 +42,7 @@ import {
 } from '../../api/admin/api';
 import {
   colors,
+  commonStyles,
   fonts,
 } from '../../styles/theme';
 import {
@@ -393,7 +393,7 @@ function PackagePickerModal({ visible, selectedId, onClose, onSelect }) {
                 style={styles.createPackageRow}
                 activeOpacity={0.8}
                 onPress={() => {
-                  setNewName(search.trim()); // prefill with what they searched
+                  setNewName(search.trim());
                   setMode("create");
                 }}
               >
@@ -863,19 +863,65 @@ export default function ChildFormScreen({ navigation, route }) {
       <Text style={styles.outlineBtnText}>Back</Text>
     </TouchableOpacity>
   );
+  const generatePassword = () => {
+    const length = 12;
+    const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    const lowercase = "abcdefghijkmnopqrstuvwxyz";
+    const numbers = "23456789";
+    const symbols = "!@#$%&*";
+
+    const allChars = uppercase + lowercase + numbers + symbols;
+
+    
+    const getRandomChar = (chars) =>
+      chars[Math.floor(Math.random() * chars.length)];
+
+    const requiredChars = [
+      getRandomChar(uppercase),
+      getRandomChar(lowercase),
+      getRandomChar(numbers),
+      getRandomChar(symbols),
+    ];
+
+    const remainingChars = Array.from(
+      { length: length - requiredChars.length },
+      () => getRandomChar(allChars)
+    );
+
+    const passwordArray = [...requiredChars, ...remainingChars];
+
+    for (let i = passwordArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [passwordArray[i], passwordArray[j]] = [
+        passwordArray[j],
+        passwordArray[i],
+      ];
+    }
+
+    const newPassword = passwordArray.join("");
+
+    setPassword(newPassword);
+    setConfirmPassword(newPassword);
+  };
+
+  const copyPassword = async () => {
+    if (!password) {
+      Alert.alert("Error", "Generate a password first.");
+      return;
+    }
+
+    try {
+      await Share.share({
+        message: password,
+      });
+    } catch (error) {
+      Alert.alert("Error", "Unable to share password.");
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.mainContainer} edges={["top", "left", "right"]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} hitSlop={10}>
-          <Feather name="arrow-left" size={22} color="#0F172A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isEditMode ? "Edit Child" : "Add New Child"}
-        </Text>
-        <View style={{ width: 22 }} />
-      </View>
-
+    <View style={commonStyles.container}>
+      
       <View style={styles.stepper}>
         {STEPS.map((s, i) => {
           const active = step === s.n;
@@ -1123,6 +1169,25 @@ export default function ChildFormScreen({ navigation, route }) {
                     />
                   </TouchableOpacity>
                 </View>
+                <View style={styles.passwordButton}>
+                  <TouchableOpacity
+                    style={[styles.passwordSubButton, {backgroundColor:"#0B4A6F"}]}
+                    onPress={generatePassword}
+                  >
+                    <Text style={styles.passwordButtonText}>
+                      Generate Password
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.passwordSubButton, {borderColor:"#0B4A6F"}]}
+                    onPress={copyPassword}
+                  >
+                    <Text style={[styles.passwordButtonText,{color:"#0B4A6F"}]}>
+                      Copy
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={styles.card}>
@@ -1238,7 +1303,7 @@ export default function ChildFormScreen({ navigation, route }) {
         onClose={() => setIsPackagePickerOpen(false)}
         onSelect={handleSelectPackage}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1262,7 +1327,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "center",
-    paddingVertical: 14,
+    paddingVertical: 10,
     paddingHorizontal: 20,
     backgroundColor: "#fff",
   },
@@ -1381,7 +1446,9 @@ const styles = StyleSheet.create({
     height: hp(46),
   },
   passwordInput: { flex: 1,  fontSize: fontSize(14), color: "#0F172A" },
-
+  passwordButton: {
+    flexDirection: "row"
+  },
   selectorRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1574,4 +1641,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   createPackageText: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.primary },
+  passwordButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 10,
+  },
+  passwordSubButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor:"#0B4A6F",
+  },
+  passwordButtonText: {
+    fontSize: fontSize(13),
+    color: "#fff",
+  },
 });
