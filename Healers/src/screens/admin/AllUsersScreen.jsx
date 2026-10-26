@@ -434,7 +434,7 @@ function UserFormModal({
               />
               {isTherapist && (
                 <>
-                  <Text style={styles.fieldLabel}>Specialty</Text>
+                  <Text style={styles.fieldLabel}>Specialty {req}</Text>
                   <View
                     style={{
                       flexDirection: "row",

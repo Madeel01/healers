@@ -614,7 +614,6 @@ export default function CustomSlotPicker({ childId, therapistId, minutes, onChan
           </View>
         </View>
 
-        {/* date picker (inside the modal so it shows above the sheet) */}
         {!!picking && !!pickerConfig?.value && (
           <View style={Platform.OS === "ios" ? styles.iosPickerWrap : undefined}>
             {Platform.OS === "ios" && (
@@ -633,7 +632,7 @@ export default function CustomSlotPicker({ childId, therapistId, minutes, onChan
               display={Platform.OS === "ios" ? "inline" : "default"}
               minimumDate={pickerConfig.min ? fromKey(pickerConfig.min) : undefined}
               maximumDate={pickerConfig.max ? fromKey(pickerConfig.max) : undefined}
-              onChange={handleDate}
+              onValue  Change={handleDate}
               accentColor={colors.primary}
               themeVariant="light"
             />

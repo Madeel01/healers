@@ -1126,7 +1126,7 @@ export default function TherapistsScreen({ navigation }) {
                   onChangeText={(t) => setNewTherapist({ ...newTherapist, name: t })}
                 />
 
-                <Text style={styles.fieldLabel}>Specialty</Text>
+                <Text style={styles.fieldLabel}>Specialty <Text style={styles.requiredText}>*</Text></Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 6 }}>
                   {services.map((item, index) => {
                     const isSelected = newTherapist.specialty === item.id;

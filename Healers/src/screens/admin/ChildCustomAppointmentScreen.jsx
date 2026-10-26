@@ -29,8 +29,8 @@ import {
 import CustomSlotPicker from "./components/CustomSlotPicker";
 import { colors, fonts } from "../../styles/theme";
 import { formatTo12Hour } from "../../utils/hoursformat";
+import { fontSize, hp, wp } from '../../utils/responsive';
 
-// must match SESSION_TIMES on the backend (45, 60, 90, 120)
 const DURATIONS = [30,45, 60, 90, 120];
 
 const label = (s) => formatTo12Hour(`${s.startTime}-${s.endTime}`);
@@ -192,7 +192,11 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
   return (
     <View style={styles.main}>
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>{!!childName && <Text style={styles.headerSub}>{childName}</Text>}</View>
+        {!!childName && (
+          <Text style={styles.headerSub} numberOfLines={2}>
+            Appointments for {childName.trim()}
+          </Text>
+        )}
       </View>
 
       <ScrollView
@@ -370,15 +374,35 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   main: { flex: 1, backgroundColor: "#F8FAFC" },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
-  headerSub: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B" },
-  content: { padding: 16, paddingBottom: 160 },
+  header: {
+    paddingHorizontal: wp(16),
+    paddingTop: hp(12),
+    paddingBottom: hp(4),
+  },
 
-  content: { padding: wp(16), paddingBottom: hp(154) },
+  headerSub: {
+    fontSize: fontSize(20),
+    fontFamily: fonts.bold,
+    color: "#0F172A",
+    lineHeight: fontSize(27),
+  },
+
+  content: {
+    paddingHorizontal: wp(16),
+    paddingTop: 0,
+    paddingBottom: hp(154),
+  },
+
+  label: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+    marginTop: hp(8),
+    marginBottom: hp(8),
+  },
 
   hint: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", lineHeight: 18 },
   muted: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#94A3B8", marginVertical: 8 },
-  label: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 16, marginBottom: hp(8) },
 
   searchBox: {
     flexDirection: "row",

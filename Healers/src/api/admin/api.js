@@ -68,6 +68,14 @@ export const deleteChildCustomAppointment = async (childId, appointmentId) => {
   const res = await apiClient.delete(`/admin/children/${childId}/custom-appointments/${appointmentId}`);
   return res.data;
 };
+export const cancelChildCustomAppointment = async (childId, appointmentId) => {
+  const res = await apiClient.post(`/admin/children/${childId}/custom/${appointmentId}/cancel`);
+  return res.data;
+};
+export const postponeChildCustomAppointment = async (childId, appointmentId, body) => {
+  const res = await apiClient.post(`/admin/children/${childId}/custom/${appointmentId}/postpone`, body);
+  return res.data;
+};
 
 export const getSessions = (params) => apiClient.get("/admin/schedule", { params }).then((r) => r.data);
 
