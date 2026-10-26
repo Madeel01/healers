@@ -1,9 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -21,11 +16,12 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+  Share,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import Feather from '@expo/vector-icons/Feather';
-import { useFocusEffect } from '@react-navigation/native';
+import Feather from "@expo/vector-icons/Feather";
+import { useFocusEffect } from "@react-navigation/native";
 
 import {
   createAdmin,
@@ -37,17 +33,9 @@ import {
   getServices,
   updateAdmin,
   updateTherapist,
-} from '../../api/admin/api';
-import {
-  colors,
-  commonStyles,
-  fonts,
-} from '../../styles/theme';
-import {
-  fontSize,
-  hp,
-  wp,
-} from '../../utils/responsive';
+} from "../../api/admin/api";
+import { colors, commonStyles, fonts } from "../../styles/theme";
+import { fontSize, hp, wp } from "../../utils/responsive";
 
 const LIMIT = 10;
 
@@ -101,13 +89,16 @@ function UserCard({ u, onMenu, services = [] }) {
   const meta = ROLE_META[u.role] || { bg: "#F1F5F9", color: "#475569" };
   const btnRef = useRef(null);
 
-  const openMenu = () => btnRef.current?.measureInWindow((x, y, w, h) => onMenu(u, { x, y, w, h }));
+  const openMenu = () =>
+    btnRef.current?.measureInWindow((x, y, w, h) => onMenu(u, { x, y, w, h }));
   return (
     <View style={styles.card}>
       <View style={[styles.roleClip, { backgroundColor: meta.bg }]}>
         <Text style={[styles.chipText, { color: meta.color }]}>{u.role}</Text>
       </View>
-      {u.profileImage ? <Image source={{ uri: u.profileImage }} style={styles.avatar} /> : (
+      {u.profileImage ? (
+        <Image source={{ uri: u.profileImage }} style={styles.avatar} />
+      ) : (
         <View
           style={[
             styles.avatar,
@@ -164,7 +155,11 @@ function UserCard({ u, onMenu, services = [] }) {
                   <Text
                     numberOfLines={1}
                     ellipsizeMode="tail"
-                    style={{ color: s.color, fontSize: fontSize(11), fontFamily: fonts.semiBold }}
+                    style={{
+                      color: s.color,
+                      fontSize: fontSize(11),
+                      fontFamily: fonts.semiBold,
+                    }}
                   >
                     {s.label}
                   </Text>
@@ -335,13 +330,68 @@ function UserFormModal({
     } catch (e) {
       Alert.alert(
         "Error",
-        e?.response?.data?.message
-          || `Could not ${isEdit ? "update" : "create"} this ${role.toLowerCase()}. Please try again.`,
+        e?.response?.data?.message ||
+          `Could not ${isEdit ? "update" : "create"} this ${role.toLowerCase()}. Please try again.`,
       );
     } finally {
       setSaving(false);
     }
   };
+  const generatePassword = () => {
+      const length = 12;
+      const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+      const lowercase = "abcdefghijkmnopqrstuvwxyz";
+      const numbers = "23456789";
+      const symbols = "!@#$%&*";
+  
+      const allChars = uppercase + lowercase + numbers + symbols;
+  
+      
+      const getRandomChar = (chars) =>
+        chars[Math.floor(Math.random() * chars.length)];
+  
+      const requiredChars = [
+        getRandomChar(uppercase),
+        getRandomChar(lowercase),
+        getRandomChar(numbers),
+        getRandomChar(symbols),
+      ];
+  
+      const remainingChars = Array.from(
+        { length: length - requiredChars.length },
+        () => getRandomChar(allChars)
+      );
+  
+      const passwordArray = [...requiredChars, ...remainingChars];
+  
+      for (let i = passwordArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [passwordArray[i], passwordArray[j]] = [
+          passwordArray[j],
+          passwordArray[i],
+        ];
+      }
+  
+      const newPassword = passwordArray.join("");
+  
+      setPassword(newPassword);
+      setConfirm(newPassword);
+    };
+  
+    const copyPassword = async () => {
+      if (!password) {
+        Alert.alert("Error", "Generate a password first.");
+        return;
+      }
+  
+      try {
+        await Share.share({
+          message: password,
+        });
+      } catch (error) {
+        Alert.alert("Error", "Unable to share password.");
+      }
+    };
 
   const req = <Text style={{ color: "red" }}>*</Text>;
 
@@ -384,7 +434,7 @@ function UserFormModal({
               />
               {isTherapist && (
                 <>
-                  <Text style={styles.fieldLabel}>Specialty</Text>
+                  <Text style={styles.fieldLabel}>Specialty {req}</Text>
                   <View
                     style={{
                       flexDirection: "row",
@@ -489,7 +539,8 @@ function UserFormModal({
               </View>
 
               <Text style={styles.fieldLabel}>
-                {isEdit ? "Confirm New Password" : "Confirm Password"} {!isEdit && req}
+                {isEdit ? "Confirm New Password" : "Confirm Password"}{" "}
+                {!isEdit && req}
               </Text>
               <View style={styles.pwBox}>
                 <TextInput
@@ -507,6 +558,30 @@ function UserFormModal({
                     size={20}
                     color="#94A3B8"
                   />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.passwordButton}>
+                <TouchableOpacity
+                  style={[
+                    styles.passwordSubButton,
+                    { backgroundColor: "#0B4A6F" },
+                  ]}
+                  onPress={generatePassword}
+                >
+                  <Text style={styles.passwordButtonText}>
+                    Generate Password
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.passwordSubButton, { borderColor: "#0B4A6F" }]}
+                  onPress={copyPassword}
+                >
+                  <Text
+                    style={[styles.passwordButtonText, { color: "#0B4A6F" }]}
+                  >
+                    Copy
+                  </Text>
                 </TouchableOpacity>
               </View>
 
@@ -527,7 +602,9 @@ function UserFormModal({
                 onPress={save}
                 disabled={saving}
               >
-                {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : (
+                {saving ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
                   <Text style={styles.primaryBtnText}>
                     {isEdit ? "Save Changes" : `Save ${role}`}
                   </Text>
@@ -578,7 +655,8 @@ export default function AllUsersScreen({ navigation }) {
 
   const requestRef = useRef(0);
 
-  const activeFilterCount = (role !== "all" ? 1 : 0) + (status !== "all" ? 1 : 0);
+  const activeFilterCount =
+    (role !== "all" ? 1 : 0) + (status !== "all" ? 1 : 0);
 
   useEffect(() => {
     const t = setTimeout(() => setQuery(search.trim()), 400);
@@ -742,17 +820,17 @@ export default function AllUsersScreen({ navigation }) {
       if (body?.deactivated || body?.deleted === false) {
         Alert.alert(
           "Marked Inactive",
-          body?.message
-            || "This user has past records, so they were marked inactive instead of deleted.",
+          body?.message ||
+            "This user has past records, so they were marked inactive instead of deleted.",
         );
       }
       load(1, "reset");
     } catch (e) {
       Alert.alert(
         "Cannot Delete",
-        e?.response?.data?.message
-          || e?.message
-          || "Could not delete this user. Please try again.",
+        e?.response?.data?.message ||
+          e?.message ||
+          "Could not delete this user. Please try again.",
       );
     }
   };
@@ -789,47 +867,47 @@ export default function AllUsersScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {loading
-        ? (
-          <View style={styles.centerFill}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        )
-        : (
-          <FlatList
-            data={items}
-            keyExtractor={(item) => String(item._id)}
-            renderItem={({ item }) => <UserCard u={item} onMenu={openMenu} services={services} />}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            onEndReached={onEndReached}
-            onEndReachedThreshold={0.4}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={() => load(1, "refresh")}
-                colors={[colors.primary]}
+      {loading ? (
+        <View style={styles.centerFill}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => String(item._id)}
+          renderItem={({ item }) => (
+            <UserCard u={item} onMenu={openMenu} services={services} />
+          )}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.4}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => load(1, "refresh")}
+              colors={[colors.primary]}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Feather name="users" size={34} color="#94A3B8" />
+              <Text style={styles.emptyTitle}>
+                {query ? "No matches found" : "No users found"}
+              </Text>
+            </View>
+          }
+          ListFooterComponent={
+            loadingMore ? (
+              <ActivityIndicator
+                color={colors.primary}
+                style={{ marginVertical: 14 }}
               />
-            }
-            ListEmptyComponent={
-              <View style={styles.empty}>
-                <Feather name="users" size={34} color="#94A3B8" />
-                <Text style={styles.emptyTitle}>
-                  {query ? "No matches found" : "No users found"}
-                </Text>
-              </View>
-            }
-            ListFooterComponent={loadingMore
-              ? (
-                <ActivityIndicator
-                  color={colors.primary}
-                  style={{ marginVertical: 14 }}
-                />
-              )
-              : null}
-          />
-        )}
+            ) : null
+          }
+        />
+      )}
 
       {/* FAB */}
       <TouchableOpacity
@@ -1077,9 +1155,11 @@ export default function AllUsersScreen({ navigation }) {
                 )}
                 <DetailRow
                   label="Joined"
-                  value={detailUser.createdAt
-                    ? new Date(detailUser.createdAt).toLocaleDateString()
-                    : ""}
+                  value={
+                    detailUser.createdAt
+                      ? new Date(detailUser.createdAt).toLocaleDateString()
+                      : ""
+                  }
                 />
               </ScrollView>
             )}
@@ -1122,12 +1202,12 @@ const styles = StyleSheet.create({
     borderColor: "#CBD5E1",
     borderRadius: wp(12),
     paddingHorizontal: wp(12),
-   height: hp(50),
+    height: hp(50),
   },
   searchInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
   filterBtn: {
     width: wp(50),
-   height: hp(50),
+    height: hp(50),
     borderRadius: wp(12),
     borderWidth: 1,
     borderColor: "#CBD5E1",
@@ -1166,11 +1246,19 @@ const styles = StyleSheet.create({
     padding: wp(3),
     borderTopEndRadius: wp(16),
     borderBottomStartRadius: wp(16),
-    paddingHorizontal:wp(10),
+    paddingHorizontal: wp(10),
   },
   avatar: { width: wp(46), height: hp(46), borderRadius: wp(999) },
-  avatarText: { fontSize: fontSize(18), fontFamily: fonts.semiBold,lineHeight:24 },
-  name: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#0F172A" },
+  avatarText: {
+    fontSize: fontSize(18),
+    fontFamily: fonts.semiBold,
+    lineHeight: 24,
+  },
+  name: {
+    fontSize: fontSize(15),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
   meta: {
     fontSize: fontSize(12),
     fontFamily: fonts.regular,
@@ -1178,7 +1266,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  chipText: { fontSize: fontSize(10), fontFamily: fonts.medium, lineHeight: 14 },
+  chipText: {
+    fontSize: fontSize(10),
+    fontFamily: fonts.medium,
+    lineHeight: 14,
+  },
   menuBtn: { padding: 4 },
 
   empty: { alignItems: "center", paddingVertical: 60, gap: 6 },
@@ -1192,7 +1284,7 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 10,
-    bottom:15,
+    bottom: 15,
     width: wp(56),
     height: hp(56),
     borderRadius: wp(16),
@@ -1226,7 +1318,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 12,
   },
-  sheetTitle: { flex: 1, fontSize: fontSize(18), fontFamily: fonts.semiBold, color: "#0F172A" },
+  sheetTitle: {
+    flex: 1,
+    fontSize: fontSize(18),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
 
   sectionTitle: {
     fontSize: fontSize(13),
@@ -1247,7 +1344,11 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   filterChipOn: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
-  filterText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#475569" },
+  filterText: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.semiBold,
+    color: "#475569",
+  },
   filterTextOn: { color: "#FFFFFF" },
   filterFooter: {
     flexDirection: "row",
@@ -1266,7 +1367,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  resetBtnText: { fontSize: fontSize(14), fontFamily: fonts.bold, color: "#475569" },
+  resetBtnText: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.bold,
+    color: "#475569",
+  },
   applyBtn: {
     flex: 2,
     height: wp(48),
@@ -1291,7 +1396,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  optionText: { flex: 1, fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
+  optionText: {
+    flex: 1,
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
 
   detailRow: {
     flexDirection: "row",
@@ -1301,8 +1411,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  detailLabel: { fontSize: fontSize(13), fontFamily: fonts.bold, color: "#64748B" },
-  detailValue: { flex: 1, textAlign: "right", fontSize: fontSize(14), color: "#0F172A" },
+  detailLabel: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.bold,
+    color: "#64748B",
+  },
+  detailValue: {
+    flex: 1,
+    textAlign: "right",
+    fontSize: fontSize(14),
+    color: "#0F172A",
+  },
 
   /* form */
   fieldLabel: {
@@ -1331,7 +1450,7 @@ const styles = StyleSheet.create({
     borderColor: "#CBD5E1",
     borderRadius: 12,
     paddingHorizontal: 14,
-   height: hp(50),
+    height: hp(50),
   },
   pwInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
   segmentWrap: {
@@ -1348,7 +1467,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   segmentItemOn: { backgroundColor: "#0B4A6F" },
-  segmentText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#475569" },
+  segmentText: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#475569",
+  },
   segmentTextOn: { color: "#FFFFFF" },
   stickyFooter: {
     paddingTop: 12,
@@ -1385,5 +1508,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   dropdownDivider: { borderTopWidth: 1, borderTopColor: "#F1F5F9" },
-  dropdownText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#334155" },
+  dropdownText: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#334155",
+  },
+  passwordButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 10,
+  },
+  passwordSubButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: "#0B4A6F",
+  },
+  passwordButtonText: {
+    fontSize: fontSize(13),
+    color: "#fff",
+  },
 });

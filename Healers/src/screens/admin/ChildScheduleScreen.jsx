@@ -1,8 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -14,36 +10,31 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import Feather from '@expo/vector-icons/Feather';
-import { useFocusEffect } from '@react-navigation/native';
+import Feather from "@expo/vector-icons/Feather";
+import { useFocusEffect } from "@react-navigation/native";
 
 import {
+  cancelChildCustomAppointment,
   deleteChildCustomAppointment,
   getChildBatchOptions,
   getChildSchedule,
   getServices,
   updateBatchChildren,
-} from '../../api/admin/api';
-import {
-  colors,
-  fonts,
-} from '../../styles/theme';
-import { formatTo12Hour } from '../../utils/hoursformat';
-import {
-  fontSize,
-  hp,
-  wp,
-} from '../../utils/responsive';
+} from "../../api/admin/api";
+import { colors, fonts } from "../../styles/theme";
+import { formatTo12Hour } from "../../utils/hoursformat";
+import { fontSize, hp, wp } from "../../utils/responsive";
+import PostponeCustomModal from "./components/ChildCustomPostpond";
 
 const PAGE = 20;
 
 const TABS = [
   { id: "upcoming", label: "Upcoming" },
   { id: "past", label: "Past" },
-  { id: "batches", label: "Batches" },
+  // { id: "batches", label: "Batches" },
 ];
 
 const TYPE_META = {
@@ -57,15 +48,32 @@ const ATT = {
   Absent: { label: "Absent", bg: "#FEE2E2", color: "#B91C1C" },
   NotMarked: { label: "Not marked", bg: "#F1F5F9", color: "#64748B" },
 };
+const truncateText = (text, maxLength = 15) => {
+  if (!text) return "";
 
+  const value = String(text).trim();
+
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
+};
 const pad = (n) => String(n).padStart(2, "0");
-const dateToKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const dateToKey = (d) =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const keyToDate = (k) => {
   const [y, m, d] = k.split("-").map(Number);
   return new Date(y, m - 1, d);
 };
-const prettyDay = (k) => keyToDate(k).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-const prettyFull = (k) => keyToDate(k).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const prettyDay = (k) =>
+  keyToDate(k).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+const prettyFull = (k) =>
+  keyToDate(k).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 const mins = (t) => {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -83,7 +91,8 @@ const groupByDate = (list) => {
   return out;
 };
 
-const isInactive = (s) => s.sessionType === "cancel" || s.sessionType === "postponed";
+const isInactive = (s) =>
+  s.sessionType === "cancel" || s.sessionType === "postponed";
 
 const attendanceMeta = (s) => {
   if (isInactive(s)) return null;
@@ -101,19 +110,29 @@ function SessionRow({ s, onPress, specMeta }) {
 
   return (
     <TouchableOpacity activeOpacity={0.75} onPress={() => onPress(s)}>
-      <View style={[styles.sessionRow, s.sessionType === "cancel" && styles.sessionRowCancelled]}>
+      <View
+        style={[
+          styles.sessionRow,
+          s.sessionType === "cancel" && styles.sessionRowCancelled,
+        ]}
+      >
         <View
           style={[
             styles.sessionBar,
             {
-              backgroundColor: isCustom ? "#8B5CF6" : s.sessionType === "cancel" ? "#EF4444" : spec?.color || "#0B4A6F",
+              backgroundColor:
+                s.sessionType === "cancel"
+                  ? "#EF4444"
+                  : spec?.color || "#0B4A6F",
             },
           ]}
         />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.sessionTime, isInactive(s) && styles.struck]}>{timeRange(s)}</Text>
+          <Text style={[styles.sessionTime, isInactive(s) && styles.struck]}>
+            {timeRange(s)}
+          </Text>
           <Text style={styles.sessionSub} numberOfLines={1}>
-            {isCustom ? "Custom appointment" : s.batchName}
+            {isCustom ? "Appointment" : s.batchName}
           </Text>
           <Text style={styles.sessionMeta} numberOfLines={1}>
             with {s.therapistName}
@@ -122,22 +141,57 @@ function SessionRow({ s, onPress, specMeta }) {
         <View style={{ alignItems: "flex-end", gap: wp(4) }}>
           {att && (
             <View style={[styles.chip, { backgroundColor: att.bg }]}>
-              <Text style={[styles.chipText, { color: att.color }]}>{att.label}</Text>
+              <Text style={[styles.chipText, { color: att.color }]}>
+                {truncateText(att.label)}
+              </Text>
             </View>
           )}
           {tm && (
             <View style={[styles.chip, { backgroundColor: tm.bg }]}>
-              <Text style={[styles.chipText, { color: tm.color }]}>{tm.label}</Text>
+              <Text style={[styles.chipText, { color: tm.color }]}>
+                {truncateText(tm.label)}
+              </Text>
             </View>
           )}
-          {!att && !tm && isCustom && (
-            <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
-              <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom</Text>
+          {spec && (
+            <View style={[styles.chip, { backgroundColor: spec.bg }]}>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.chipText, { color: spec.color }]}
+              >
+                {truncateText(spec.label)}
+              </Text>
             </View>
           )}
         </View>
         <Feather name="chevron-right" size={fontSize(18)} color="#94A3B8" />
       </View>
+    </TouchableOpacity>
+  );
+}
+function ActionRow({ icon, bg, color, title, sub, onPress, disabled }) {
+  return (
+    <TouchableOpacity
+      style={[styles.actionItem, disabled && { opacity: 0.5 }]}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <View style={[styles.actionIcon, { backgroundColor: bg }]}>
+        <Feather name={icon} size={fontSize(18)} color={color} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={[
+            styles.actionItemTitle,
+            { color: color === "#7E22CE" ? "#0F172A" : color },
+          ]}
+        >
+          {title}
+        </Text>
+        <Text style={styles.actionItemSub}>{sub}</Text>
+      </View>
+      <Feather name="chevron-right" size={fontSize(18)} color="#94A3B8" />
     </TouchableOpacity>
   );
 }
@@ -155,7 +209,8 @@ export default function ChildScheduleScreen({ navigation, route }) {
   const [tab, setTab] = useState("upcoming");
   const [pastLimit, setPastLimit] = useState(PAGE);
   const [detail, setDetail] = useState(null);
-  const [cancelling, setCancelling] = useState(false);
+  const [acting, setActing] = useState(false);
+  const [postponeTarget, setPostponeTarget] = useState(null);
 
   // enroll modal
   const [enrollOpen, setEnrollOpen] = useState(false);
@@ -171,9 +226,13 @@ export default function ChildScheduleScreen({ navigation, route }) {
         isRefresh ? setRefreshing(true) : setLoading(true);
         const res = await getChildSchedule(childId);
         if (res?.success) setData(res.data);
-        else Alert.alert("Error", res?.message || "Could not load the schedule.");
+        else
+          Alert.alert("Error", res?.message || "Could not load the schedule.");
       } catch (e) {
-        Alert.alert("Error", e?.response?.data?.message || "Could not load the schedule.");
+        Alert.alert(
+          "Error",
+          e?.response?.data?.message || "Could not load the schedule.",
+        );
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -201,9 +260,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
   const specMeta = useCallback(
     (id) => {
       return (
-        services.find(
-          (service) => service.id === id,
-        ) || {
+        services.find((service) => service.id === id) || {
           label: id,
           bg: "#E0F2FE",
           color: "#0B4A6F",
@@ -231,7 +288,11 @@ export default function ChildScheduleScreen({ navigation, route }) {
         const res = await getChildBatchOptions(childId);
         if (alive) setOptions(res?.data || []);
       } catch (e) {
-        if (alive) Alert.alert("Error", e?.response?.data?.message || "Could not load batches.");
+        if (alive)
+          Alert.alert(
+            "Error",
+            e?.response?.data?.message || "Could not load batches.",
+          );
       } finally {
         if (alive) setOptLoading(false);
       }
@@ -245,12 +306,18 @@ export default function ChildScheduleScreen({ navigation, route }) {
   const upcoming = data?.upcoming || [];
   const past = data?.past || [];
   const batches = data?.batches || [];
-  const stats = data?.stats || { present: 0, absent: 0, notMarked: 0, total: 0 };
+  const stats = data?.stats || {
+    present: 0,
+    absent: 0,
+    notMarked: 0,
+    total: 0,
+  };
   const child = data?.child;
   const isChildActive = (child?.isActive ?? isActive ?? true) !== false;
 
   const marked = stats.present + stats.absent;
-  const rate = marked > 0 ? `${Math.round((stats.present / marked) * 100)}%` : "-";
+  const rate =
+    marked > 0 ? `${Math.round((stats.present / marked) * 100)}%` : "-";
   const activeUpcoming = upcoming.filter((s) => !isInactive(s));
 
   const relLabel = (key) => {
@@ -260,14 +327,21 @@ export default function ChildScheduleScreen({ navigation, route }) {
     return key === dateToKey(t) ? "Tomorrow" : null;
   };
 
-  const goCustom = () => navigation.navigate("ChildCustomAppointment", { childId, childName });
+  const goCustom = () =>
+    navigation.navigate("ChildCustomAppointment", { childId, childName });
 
   const enroll = async () => {
     if (!pickedBatch || enrolling) return;
     setEnrolling(true);
     try {
-      const res = await updateBatchChildren(pickedBatch, { addChildIds: [childId] });
-      if (!res?.success) return Alert.alert("Could not enroll", res?.message || "Please try again.");
+      const res = await updateBatchChildren(pickedBatch, {
+        addChildIds: [childId],
+      });
+      if (!res?.success)
+        return Alert.alert(
+          "Could not enroll",
+          res?.message || "Please try again.",
+        );
       const skipped = res.data?.skippedSessions || 0;
       setEnrollOpen(false);
       await load();
@@ -278,7 +352,10 @@ export default function ChildScheduleScreen({ navigation, route }) {
           : "Added to every upcoming session of this batch.",
       );
     } catch (e) {
-      Alert.alert("Could not enroll", e?.response?.data?.message || "Please try again.");
+      Alert.alert(
+        "Could not enroll",
+        e?.response?.data?.message || "Please try again.",
+      );
     } finally {
       setEnrolling(false);
     }
@@ -298,11 +375,20 @@ export default function ChildScheduleScreen({ navigation, route }) {
           onPress: async () => {
             try {
               setRemovingId(String(b._id));
-              const res = await updateBatchChildren(b._id, { removeChildIds: [childId] });
-              if (!res?.success) return Alert.alert("Could not remove", res?.message || "Please try again.");
+              const res = await updateBatchChildren(b._id, {
+                removeChildIds: [childId],
+              });
+              if (!res?.success)
+                return Alert.alert(
+                  "Could not remove",
+                  res?.message || "Please try again.",
+                );
               await load();
             } catch (e) {
-              Alert.alert("Could not remove", e?.response?.data?.message || "Please try again.");
+              Alert.alert(
+                "Could not remove",
+                e?.response?.data?.message || "Please try again.",
+              );
             } finally {
               setRemovingId(null);
             }
@@ -311,27 +397,64 @@ export default function ChildScheduleScreen({ navigation, route }) {
       ],
     );
 
-  const cancelAppointment = (s) =>
-    Alert.alert("Cancel appointment", `Cancel the appointment on ${prettyFull(s.date)}?`, [
+  const confirmAction = ({ title, message, confirmText, call, success }) =>
+    Alert.alert(title, message, [
       { text: "Keep", style: "cancel" },
       {
-        text: "Cancel appointment",
+        text: confirmText,
         style: "destructive",
         onPress: async () => {
           try {
-            setCancelling(true);
-            const res = await deleteChildCustomAppointment(childId, s.id);
-            if (!res?.success) return Alert.alert("Could not cancel", res?.message || "Please try again.");
+            setActing(true);
+            const res = await call();
+            if (!res?.success)
+              return Alert.alert(
+                "Could not complete",
+                res?.message || "Please try again.",
+              );
             setDetail(null);
-            await load();
+            await load(1, "reset");
+            Alert.alert("Done", success);
           } catch (e) {
-            Alert.alert("Could not cancel", e?.response?.data?.message || "Please try again.");
+            Alert.alert(
+              "Could not complete",
+              e?.response?.data?.message || "Please try again.",
+            );
           } finally {
-            setCancelling(false);
+            setActing(false);
           }
         },
       },
     ]);
+
+  const cancelAppointment = (s) => {
+    const childId = s.children?.[0]?.childId;
+    if (!childId) return;
+    confirmAction({
+      title: "Cancel appointment",
+      message: `Cancel the appointment on ${prettyFull(s.date)}? It stays in the list as cancelled.`,
+      confirmText: "Cancel appointment",
+      call: () => cancelChildCustomAppointment(childId, s.id),
+      success: "Appointment cancelled.",
+    });
+  };
+
+  const deleteAppointment = (s) => {
+    const childId = s.children?.[0]?.childId;
+    if (!childId) return;
+    confirmAction({
+      title: "Delete appointment",
+      message: `Permanently delete the appointment on ${prettyFull(s.date)}?`,
+      confirmText: "Delete",
+      call: () => deleteChildCustomAppointment(childId, s.id),
+      success: "Appointment deleted.",
+    });
+  };
+
+  const postponeAppointment = (s) => {
+    setDetail(null);
+    setTimeout(() => setPostponeTarget(s), Platform.OS === "ios" ? 400 : 0);
+  };
 
   if (loading) {
     return (
@@ -360,8 +483,12 @@ export default function ChildScheduleScreen({ navigation, route }) {
       >
         {/* summary */}
         <View style={styles.summary}>
-          <Text style={styles.title}>{child?.fullName || childName || "Child"}</Text>
-          {!!child?.fatherName && <Text style={styles.subtitle}>Parent: {child.fatherName}</Text>}
+          <Text style={styles.title}>
+            {child?.fullName || childName || "Child"}
+          </Text>
+          {!!child?.fatherName && (
+            <Text style={styles.subtitle}>Parent: {child.fatherName}</Text>
+          )}
 
           <View style={styles.statsRow}>
             <View style={styles.stat}>
@@ -373,19 +500,19 @@ export default function ChildScheduleScreen({ navigation, route }) {
               <Text style={styles.statValue}>{activeUpcoming.length}</Text>
               <Text style={styles.statLabel}>Upcoming</Text>
             </View>
-            <View style={styles.statDivider} />
+            {/* <View style={styles.statDivider} />
             <View style={styles.stat}>
               <Text style={styles.statValue}>{batches.length}</Text>
               <Text style={styles.statLabel}>Batches</Text>
-            </View>
+            </View> */}
           </View>
 
           <Text style={styles.statNote}>
-            Last {data?.pastDays || 90} days: {stats.present} attended · {stats.absent} absent · {stats.notMarked}{" "}
-            not marked
+            Last {data?.pastDays || 90} days: {stats.present} attended ·{" "}
+            {stats.absent} absent · {stats.notMarked} not marked
           </Text>
 
-          <View style={styles.actionRow}>
+          {/* <View style={styles.actionRow}>
             <TouchableOpacity
               style={[styles.primaryBtn, !isChildActive && styles.disabledBtn]}
               disabled={!isChildActive}
@@ -404,13 +531,14 @@ export default function ChildScheduleScreen({ navigation, route }) {
                 Appointment
               </Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
 
           {!isChildActive && (
             <View style={styles.inactiveNotice}>
               <Feather name="info" size={fontSize(14)} color="#B91C1C" />
               <Text style={styles.inactiveNoticeText}>
-                This child is inactive. Activate them to enroll or book appointments.
+                This child is inactive. Activate them to enroll or book
+                appointments.
               </Text>
             </View>
           )}
@@ -424,67 +552,89 @@ export default function ChildScheduleScreen({ navigation, route }) {
               style={[styles.tab, tab === t.id && styles.tabActive]}
               onPress={() => setTab(t.id)}
             >
-              <Text style={[styles.tabText, tab === t.id && styles.tabTextActive]}>{t.label}</Text>
+              <Text
+                style={[styles.tabText, tab === t.id && styles.tabTextActive]}
+              >
+                {t.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
         {/* ---------- UPCOMING ---------- */}
-        {tab === "upcoming"
-          && (upcoming.length === 0
-            ? (
-              <View style={styles.empty}>
-                <Feather name="calendar" size={fontSize(34)} color="#94A3B8" />
-                <Text style={styles.emptyTitle}>No upcoming sessions</Text>
-                <Text style={styles.emptySub}>Enroll this child in a batch or create a custom appointment.</Text>
+        {tab === "upcoming" &&
+          (upcoming.length === 0 ? (
+            <View style={styles.empty}>
+              <Feather name="calendar" size={fontSize(34)} color="#94A3B8" />
+              <Text style={styles.emptyTitle}>No upcoming sessions</Text>
+              <Text style={styles.emptySub}>Create a appointment.</Text>
+            </View>
+          ) : (
+            groupByDate(upcoming).map((g) => (
+              <View key={g.date} style={styles.dayGroup}>
+                <View style={styles.dayHeader}>
+                  <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
+                  {relLabel(g.date) && (
+                    <Text style={styles.dayRel}>{relLabel(g.date)}</Text>
+                  )}
+                </View>
+                {g.items.map((s) => (
+                  <SessionRow
+                    key={s.id}
+                    s={s}
+                    onPress={setDetail}
+                    specMeta={specMeta}
+                  />
+                ))}
               </View>
-            )
-            : (
-              groupByDate(upcoming).map((g) => (
+            ))
+          ))}
+
+        {/* ---------- PAST ---------- */}
+        {tab === "past" &&
+          (past.length === 0 ? (
+            <View style={styles.empty}>
+              <Feather name="clock" size={fontSize(34)} color="#94A3B8" />
+              <Text style={styles.emptyTitle}>No past sessions</Text>
+              <Text style={styles.emptySub}>
+                Showing the last {data?.pastDays || 90} days.
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.hint}>
+                Showing the last {data?.pastDays || 90} days.
+              </Text>
+              {groupByDate(past.slice(0, pastLimit)).map((g) => (
                 <View key={g.date} style={styles.dayGroup}>
                   <View style={styles.dayHeader}>
                     <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
-                    {relLabel(g.date) && <Text style={styles.dayRel}>{relLabel(g.date)}</Text>}
                   </View>
-                  {g.items.map((s) => <SessionRow key={s.id} s={s} onPress={setDetail} specMeta={specMeta} />)}
+                  {g.items.map((s) => (
+                    <SessionRow
+                      key={s.id}
+                      s={s}
+                      onPress={setDetail}
+                      specMeta={specMeta}
+                    />
+                  ))}
                 </View>
-              ))
-            ))}
-
-        {/* ---------- PAST ---------- */}
-        {tab === "past"
-          && (past.length === 0
-            ? (
-              <View style={styles.empty}>
-                <Feather name="clock" size={fontSize(34)} color="#94A3B8" />
-                <Text style={styles.emptyTitle}>No past sessions</Text>
-                <Text style={styles.emptySub}>Showing the last {data?.pastDays || 90} days.</Text>
-              </View>
-            )
-            : (
-              <>
-                <Text style={styles.hint}>Showing the last {data?.pastDays || 90} days.</Text>
-                {groupByDate(past.slice(0, pastLimit)).map((g) => (
-                  <View key={g.date} style={styles.dayGroup}>
-                    <View style={styles.dayHeader}>
-                      <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
-                    </View>
-                    {g.items.map((s) => <SessionRow key={s.id} s={s} onPress={setDetail} specMeta={specMeta} />)}
-                  </View>
-                ))}
-                {past.length > pastLimit && (
-                  <TouchableOpacity
-                    style={styles.moreBtn}
-                    onPress={() => setPastLimit((n) => n + PAGE)}
-                  >
-                    <Text style={styles.moreBtnText}>Show more ({past.length - pastLimit} left)</Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            ))}
+              ))}
+              {past.length > pastLimit && (
+                <TouchableOpacity
+                  style={styles.moreBtn}
+                  onPress={() => setPastLimit((n) => n + PAGE)}
+                >
+                  <Text style={styles.moreBtnText}>
+                    Show more ({past.length - pastLimit} left)
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
+          ))}
 
         {/* ---------- BATCHES ---------- */}
-        {tab === "batches"
+        {/* {tab === "batches"
           && (batches.length === 0
             ? (
               <View style={styles.empty}>
@@ -536,7 +686,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
                   </View>
                 </View>
               ))
-            ))}
+            ))} */}
       </ScrollView>
 
       {/* session details */}
@@ -553,9 +703,12 @@ export default function ChildScheduleScreen({ navigation, route }) {
               <>
                 <View style={styles.sheetHeader}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.sheetTitle}>{prettyFull(detail.date)}</Text>
+                    <Text style={styles.sheetTitle}>
+                      {prettyFull(detail.date)}
+                    </Text>
                     <Text style={styles.sheetSub}>
-                      {timeRange(detail)} · {mins(detail.endTime) - mins(detail.startTime)} min
+                      {timeRange(detail)} ·{" "}
+                      {mins(detail.endTime) - mins(detail.startTime)} min
                     </Text>
                   </View>
                   <TouchableOpacity onPress={() => setDetail(null)}>
@@ -564,23 +717,41 @@ export default function ChildScheduleScreen({ navigation, route }) {
                 </View>
 
                 <View style={styles.chipRow}>
-                  {detail.type === "custom"
-                    ? (
-                      <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
-                        <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom appointment</Text>
-                      </View>
-                    )
-                    : (
-                      detail.speciality && (
-                        <View style={[styles.chip, { backgroundColor: specMeta(detail.speciality).bg }]}>
-                          <Text style={[styles.chipText, { color: specMeta(detail.speciality).color }]}>
-                            {specMeta(detail.speciality).label}
-                          </Text>
-                        </View>
-                      )
-                    )}
-                  <View style={[styles.chip, { backgroundColor: TYPE_META[detail.sessionType]?.bg || "#F1F5F9" }]}>
-                    <Text style={[styles.chipText, { color: TYPE_META[detail.sessionType]?.color || "#475569" }]}>
+                  {detail.speciality && (
+                    <View
+                      style={[
+                        styles.chip,
+                        { backgroundColor: specMeta(detail.speciality).bg },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          { color: specMeta(detail.speciality).color },
+                        ]}
+                      >
+                        {specMeta(detail.speciality).label}
+                      </Text>
+                    </View>
+                  )}
+                  <View
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor:
+                          TYPE_META[detail.sessionType]?.bg || "#F1F5F9",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        {
+                          color:
+                            TYPE_META[detail.sessionType]?.color || "#475569",
+                        },
+                      ]}
+                    >
                       {TYPE_META[detail.sessionType]?.label || "Regular"}
                     </Text>
                   </View>
@@ -598,38 +769,110 @@ export default function ChildScheduleScreen({ navigation, route }) {
                 )}
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Attendance</Text>
-                  {detailAtt
-                    ? (
-                      <View style={[styles.chip, { backgroundColor: detailAtt.bg }]}>
-                        <Text style={[styles.chipText, { color: detailAtt.color }]}>{detailAtt.label}</Text>
-                      </View>
-                    )
-                    : (
-                      <Text style={styles.detailValue}>
-                        {isInactive(detail) ? "-" : "Not started yet"}
+                  {detailAtt ? (
+                    <View
+                      style={[styles.chip, { backgroundColor: detailAtt.bg }]}
+                    >
+                      <Text
+                        style={[styles.chipText, { color: detailAtt.color }]}
+                      >
+                        {detailAtt.label}
                       </Text>
-                    )}
+                    </View>
+                  ) : (
+                    <Text style={styles.detailValue}>
+                      {isInactive(detail) ? "-" : "Not started yet"}
+                    </Text>
+                  )}
                 </View>
 
-                {detail.canCancel && (
-                  <TouchableOpacity
-                    style={[styles.dangerBtn, (cancelling || !isChildActive) && { opacity: 0.4 }]}
-                    disabled={cancelling || !isChildActive}
-                    onPress={() => cancelAppointment(detail)}
-                  >
-                    {cancelling
-                      ? <ActivityIndicator color="#EF4444" />
-                      : <Text style={styles.dangerText}>Cancel appointment</Text>}
-                  </TouchableOpacity>
+                {detail.type === "custom" && (
+                  <View style={{ marginTop: 14 }}>
+                    {detail.canPostpone ||
+                    detail.canCancel ||
+                    !detail.isPast ? (
+                      <>
+                        <Text style={styles.sheetSection}>Actions</Text>
+                        {detail.canPostpone && (
+                          <ActionRow
+                            icon="calendar"
+                            bg="#F3E8FF"
+                            color="#7E22CE"
+                            disabled={acting}
+                            title="Postpone"
+                            sub="Choose a new date and available time"
+                            onPress={() => postponeAppointment(detail)}
+                          />
+                        )}
+                        {detail.canCancel && (
+                          <ActionRow
+                            icon="x-circle"
+                            bg="#FEF3C7"
+                            color="#B45309"
+                            disabled={acting}
+                            title="Cancel appointment"
+                            sub="Keep it in history as cancelled"
+                            onPress={() => cancelAppointment(detail)}
+                          />
+                        )}
+                        {!detail.isPast && (
+                          <ActionRow
+                            icon="trash-2"
+                            bg="#FEE2E2"
+                            color="#DC2626"
+                            disabled={acting}
+                            title="Delete"
+                            sub="Remove this appointment completely"
+                            onPress={() => deleteAppointment(detail)}
+                          />
+                        )}
+                        {acting && (
+                          <ActivityIndicator
+                            color={colors.primary}
+                            style={{ marginTop: 10 }}
+                          />
+                        )}
+                      </>
+                    ) : (
+                      <View style={styles.pastInfo}>
+                        <Feather
+                          name="lock"
+                          size={fontSize(18)}
+                          color="#64748B"
+                        />
+                        <Text style={styles.pastInfoText}>
+                          This is a past appointment and can no longer be
+                          changed.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 )}
               </>
             )}
           </View>
         </View>
       </Modal>
+      <TouchableOpacity
+        style={[styles.fab]}
+        activeOpacity={0.85}
+        onPress={goCustom}
+      >
+        <Feather name="plus" size={fontSize(30)} color="#FFFFFF" />
+      </TouchableOpacity>
+      <PostponeCustomModal
+        visible={!!postponeTarget}
+        childId={postponeTarget?.children?.[0]?.childId}
+        appointment={postponeTarget}
+        onClose={() => setPostponeTarget(null)}
+        onDone={() => {
+          setPostponeTarget(null);
+          load(1, "reset");
+        }}
+      />
 
       {/* enroll in batch */}
-      <Modal
+      {/* <Modal
         style={{ paddingBottom: insets.bottom }}
         visible={enrollOpen}
         transparent
@@ -706,7 +949,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </Modal> */}
     </View>
   );
 }
@@ -716,19 +959,65 @@ const styles = StyleSheet.create({
   centerFill: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { padding: wp(16), paddingBottom: hp },
 
-  summary: { backgroundColor: "#FFFFFF", borderRadius: wp(18), padding: wp(16), marginBottom: hp(14) },
-  title: { fontSize: fontSize(19), fontFamily: fonts.semiBold, color: "#0F172A" },
-  subtitle: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: wp(6), marginTop: 8, marginBottom: hp(7) },
-  chip: { borderRadius: wp(20), paddingHorizontal: wp(10), paddingVertical: 4, alignSelf: "flex-start" },
+  summary: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: wp(18),
+    padding: wp(16),
+    marginBottom: hp(14),
+  },
+  title: {
+    fontSize: fontSize(19),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
+  subtitle: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: wp(6),
+    marginTop: 8,
+    marginBottom: hp(7),
+  },
+  chip: {
+    borderRadius: wp(20),
+    paddingHorizontal: wp(10),
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+  },
   chipText: { fontSize: fontSize(11), fontFamily: fonts.semiBold },
 
-  statsRow: { flexDirection: "row", marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: "#F1F5F9" },
+  statsRow: {
+    flexDirection: "row",
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+  },
   stat: { flex: 1, alignItems: "center" },
-  statValue: { fontSize: fontSize(18), fontFamily: fonts.semiBold, color: "#0B4A6F" },
-  statLabel: { fontSize: fontSize(11), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  statValue: {
+    fontSize: fontSize(18),
+    fontFamily: fonts.semiBold,
+    color: "#0B4A6F",
+  },
+  statLabel: {
+    fontSize: fontSize(11),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    marginTop: 2,
+  },
   statDivider: { width: 1, backgroundColor: "#F1F5F9" },
-  statNote: { fontSize: fontSize(11), fontFamily: fonts.regular, color: "#94A3B8", textAlign: "center", marginTop: 10 },
+  statNote: {
+    fontSize: fontSize(11),
+    fontFamily: fonts.regular,
+    color: "#94A3B8",
+    textAlign: "center",
+    marginTop: 10,
+  },
 
   actionRow: { flexDirection: "row", gap: wp(10), marginTop: 14 },
   primaryBtn: {
@@ -742,7 +1031,11 @@ const styles = StyleSheet.create({
     gap: wp(8),
     paddingHorizontal: wp(14),
   },
-  primaryText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  primaryText: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#FFFFFF",
+  },
   secondaryBtn: {
     flex: 1,
     height: hp(44),
@@ -753,7 +1046,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  secondaryText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: colors.primary, lineHeight: 17 },
+  secondaryText: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.semiBold,
+    color: colors.primary,
+    lineHeight: 17,
+  },
   fullBtn: { flex: 0, marginTop: 14, height: 48 },
 
   tabs: {
@@ -763,16 +1061,44 @@ const styles = StyleSheet.create({
     padding: wp(4),
     marginBottom: hp(14),
   },
-  tab: { flex: 1, paddingVertical: 9, borderRadius: wp(9), alignItems: "center" },
+  tab: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: wp(9),
+    alignItems: "center",
+  },
   tabActive: { backgroundColor: "#FFFFFF" },
-  tabText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#64748B" },
+  tabText: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.semiBold,
+    color: "#64748B",
+  },
   tabTextActive: { color: "#0B4A6F" },
 
-  card: { backgroundColor: "#FFFFFF", borderRadius: wp(18), padding: wp(16), marginBottom: hp(12) },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: wp(18),
+    padding: wp(16),
+    marginBottom: hp(12),
+  },
   cardHeadRow: { flexDirection: "row", alignItems: "flex-start", gap: wp(10) },
-  cardTitle: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#0F172A" },
-  muted: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#94A3B8", marginVertical: 12 },
-  hint: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#94A3B8", marginBottom: hp(10) },
+  cardTitle: {
+    fontSize: fontSize(15),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
+  muted: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.regular,
+    color: "#94A3B8",
+    marginVertical: 12,
+  },
+  hint: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    color: "#94A3B8",
+    marginBottom: hp(10),
+  },
   iconBtn: {
     width: wp(32),
     height: hp(32),
@@ -783,9 +1109,23 @@ const styles = StyleSheet.create({
   },
 
   dayGroup: { marginBottom: hp(14) },
-  dayHeader: { flexDirection: "row", alignItems: "center", gap: wp(8), marginBottom: hp(6), paddingHorizontal: wp(2) },
-  dayTitle: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
-  dayRel: { fontSize: fontSize(11), fontFamily: fonts.semiBold, color: colors.primary },
+  dayHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: wp(8),
+    marginBottom: hp(6),
+    paddingHorizontal: wp(2),
+  },
+  dayTitle: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
+  dayRel: {
+    fontSize: fontSize(11),
+    fontFamily: fonts.semiBold,
+    color: colors.primary,
+  },
 
   sessionRow: {
     flexDirection: "row",
@@ -798,16 +1138,39 @@ const styles = StyleSheet.create({
   },
   sessionRowCancelled: { backgroundColor: "#FFF7F7" },
   sessionBar: { width: 4, alignSelf: "stretch", borderRadius: wp(2) },
-  sessionTime: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
+  sessionTime: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
   struck: { textDecorationLine: "line-through", color: "#94A3B8" },
-  sessionSub: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
-  sessionMeta: { fontSize: fontSize(11), fontFamily: fonts.regular, color: "#94A3B8", marginTop: 3 },
+  sessionSub: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  sessionMeta: {
+    fontSize: fontSize(11),
+    fontFamily: fonts.regular,
+    color: "#94A3B8",
+    marginTop: 3,
+  },
 
   moreBtn: { alignItems: "center", paddingVertical: 12 },
-  moreBtnText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: colors.primary },
+  moreBtnText: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.semiBold,
+    color: colors.primary,
+  },
 
   empty: { alignItems: "center", paddingVertical: 40, gap: wp(6) },
-  emptyTitle: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#334155", marginTop: 6 },
+  emptyTitle: {
+    fontSize: fontSize(15),
+    fontFamily: fonts.semiBold,
+    color: "#334155",
+    marginTop: 6,
+  },
   emptySub: {
     fontSize: fontSize(12),
     fontFamily: fonts.regular,
@@ -816,7 +1179,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(30),
   },
 
-  overlay: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.4)", justifyContent: "flex-end" },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.4)",
+    justifyContent: "flex-end",
+  },
   sheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 26,
@@ -825,9 +1192,22 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     maxHeight: "88%",
   },
-  sheetHeader: { flexDirection: "row", alignItems: "flex-start", marginBottom: hp(6) },
-  sheetTitle: { fontSize: fontSize(19), fontFamily: fonts.semiBold, color: "#0F172A" },
-  sheetSub: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: hp(6),
+  },
+  sheetTitle: {
+    fontSize: fontSize(19),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
+  sheetSub: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    marginTop: 2,
+  },
 
   detailRow: {
     flexDirection: "row",
@@ -837,7 +1217,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
   },
-  detailLabel: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#64748B" },
+  detailLabel: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+  },
   detailValue: {
     fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
@@ -854,7 +1238,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  dangerText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#EF4444" },
+  dangerText: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#EF4444",
+  },
 
   pickRow: {
     flexDirection: "row",
@@ -879,7 +1267,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   radioOn: { borderColor: "#0B4A6F" },
-  radioDot: { width: 10, height: 10, borderRadius: wp(5), backgroundColor: "#0B4A6F" },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: wp(5),
+    backgroundColor: "#0B4A6F",
+  },
   disabledBtn: { backgroundColor: "#CBD5E1" },
   disabledOutlineBtn: { borderColor: "#CBD5E1" },
   inactiveNotice: {
@@ -898,5 +1291,61 @@ const styles = StyleSheet.create({
     fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#B91C1C",
+  },
+  fab: {
+    position: "absolute",
+    right: 18,
+    bottom: 10,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(16),
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 6,
+    shadowColor: "#0d162b",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+  },
+  actionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 13,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+    gap: 12,
+  },
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionItemTitle: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
+  actionItemSub: {
+    fontSize: fontSize(11),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  pastInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    padding: 12,
+  },
+  pastInfoText: {
+    flex: 1,
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    color: "#64748B",
   },
 });

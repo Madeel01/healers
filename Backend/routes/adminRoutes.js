@@ -81,6 +81,11 @@ const {
   getAllUsers,
   createAdmin,
   updateAdmin,
+  getChildCustomWeekOptions,
+  previewChildCustomSchedule,
+  saveChildCustomSchedule,
+  cancelChildCustomAppointment,
+  postponeChildCustomAppointment,
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
@@ -90,12 +95,18 @@ router.get("/children/:childId/batch-options", protect, getChildBatchOptions);
 router.post("/children/:childId/custom-slot-options", protect, getChildCustomSlotOptions);
 router.post("/children/:childId/custom-appointments", protect, createChildCustomAppointment);
 router.delete("/children/:childId/custom-appointments/:appointmentId", protect, deleteChildCustomAppointment);
+router.post("/children/:childId/custom-week-options", protect, getChildCustomWeekOptions);
+router.post("/children/:childId/custom-schedule/preview", protect ,previewChildCustomSchedule);
+router.post("/children/:childId/custom-schedule", protect, saveChildCustomSchedule);
 router.delete(
   "/batches/:batchId/assignments/:assignmentId/sessions/:sessionId",
   protect,
   deleteBatchSession,
 );
 router.post("/children/documents", protect, uploadChildDocument);
+router.post("/children/:childId/custom/:appointmentId/cancel", protect, cancelChildCustomAppointment);
+router.post("/children/:childId/custom/:appointmentId/postpone", protect, postponeChildCustomAppointment);
+
 
 
 

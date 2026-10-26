@@ -1,6 +1,7 @@
 import React, {
   useCallback,
   useEffect,
+  memo,
   useRef,
   useState,
 } from 'react';
@@ -10,6 +11,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -24,6 +26,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 
 import {
+  cancelChildCustomAppointment,
   deleteChildCustomAppointment,
   getServices,
   getSessions,
@@ -39,6 +42,7 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
+import PostponeCustomModal from './components/ChildCustomPostpond';
 
 const LIMIT = 15;
 
@@ -46,11 +50,15 @@ const SCOPES = [
   { id: "upcoming", label: "Upcoming" },
   { id: "past", label: "Past" },
 ];
-const TYPES = [
+const RANGES = [
   { id: "all", label: "All" },
-  { id: "batch", label: "Batch" },
-  { id: "custom", label: "Custom" },
+  { id: "this_week", label: "This week" },
+  { id: "last_week", label: "Last week" },
+  { id: "this_month", label: "This month" },
+  { id: "last_month", label: "Last month" },
 ];
+const UPCOMING_RANGES = ["all", "this_week", "this_month"];
+const PAST_RANGES = ["all", "this_week", "last_week", "this_month", "last_month"];
 
 const TYPE_META = {
   additional: { label: "Additional", bg: "#EDE9FE", color: "#6D28D9" },
@@ -85,21 +93,33 @@ const attendanceSummary = (children = []) => {
   const absent = children.filter((c) => c.attendance === "Absent").length;
   return { present, absent, pending: children.length - present - absent };
 };
+const truncateText = (text, maxLength = 15) => {
+  if (!text) return "";
 
+  const value = String(text).trim();
+
+  return value.length > maxLength
+    ? `${value.slice(0, maxLength)}...`
+    : value;
+};
 // ---------- card (declared outside the screen so it never remounts) ----------
-function SessionCard({ s, onPress, specMeta }) {
+const SessionCard = memo(function SessionCard({
+  s,
+  onPress,
+  specMeta,
+}) {
   const isCustom = s.type === "custom";
-  const spec = !isCustom && s.speciality ? specMeta(s.speciality) : null;
+  const spec = s.speciality ? specMeta(s.speciality) : null;
   const tm = TYPE_META[s.sessionType];
   const kids = s.children || [];
   const att = attendanceSummary(kids);
   const showAttendance = s.isPast && !isInactive(s);
 
-  const title = isCustom ? kids[0]?.fullName || "Custom appointment" : s.batchName;
+  const title = isCustom ? kids[0]?.fullName || "Child appointment" : s.batchName;
   const meta = isCustom
-    ? `Custom · with ${s.therapistName}`
+    ? `Appointment with ${s.therapistName}`
     : `with ${s.therapistName} · ${kids.length} ${kids.length === 1 ? "child" : "children"}`;
-
+  
   let attLine = null;
   let attChip = null;
   if (showAttendance) {
@@ -114,7 +134,7 @@ function SessionCard({ s, onPress, specMeta }) {
           style={[
             styles.bar,
             {
-              backgroundColor: isCustom ? "#8B5CF6" : s.sessionType === "cancel" ? "#EF4444" : spec?.color || "#0B4A6F",
+              backgroundColor: s.sessionType === "cancel" ? "#EF4444" : spec?.color || "#0B4A6F",
             },
           ]}
         />
@@ -130,23 +150,14 @@ function SessionCard({ s, onPress, specMeta }) {
         </View>
 
         <View style={{ alignItems: "flex-end", gap: 4 }}>
-          {isCustom
-            ? (
-              <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
-                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.chipText, { color: "#6B21A8" }]}>
-                  Custom
-                </Text>
-              </View>
-            )
-            : (
-              spec && (
+          {spec && (
                 <View style={[styles.chip, { backgroundColor: spec.bg }]}>
                   <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.chipText, { color: spec.color }]}>
-                    {spec.label}
+                    {truncateText(spec.label)}
                   </Text>
                 </View>
               )
-            )}
+          }
           {tm && (
             <View style={[styles.chip, { backgroundColor: tm.bg }]}>
               <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.chipText, { color: tm.color }]}>
@@ -166,15 +177,29 @@ function SessionCard({ s, onPress, specMeta }) {
       </View>
     </TouchableOpacity>
   );
+})
+function ActionRow({ icon, bg, color, title, sub, onPress, disabled }) {
+  return (
+    <TouchableOpacity style={[styles.actionItem, disabled && { opacity: 0.5 }]} onPress={onPress} disabled={disabled}>
+      <View style={[styles.actionIcon, { backgroundColor: bg }]}>
+        <Feather name={icon} size={fontSize(18)} color={color} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.actionItemTitle, { color: color === "#7E22CE" ? "#0F172A" : color }]}>{title}</Text>
+        <Text style={styles.actionItemSub}>{sub}</Text>
+      </View>
+      <Feather name="chevron-right" size={fontSize(18)} color="#94A3B8" />
+    </TouchableOpacity>
+  );
 }
 
 export default function ScheduleScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-
+  const rangeScrollRef = useRef(null);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   const [scope, setScope] = useState("upcoming");
-  const [type, setType] = useState("all");
+  const [range, setRange] = useState("all");
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [services, setServices] = useState([]);
@@ -188,7 +213,8 @@ export default function ScheduleScreen({ navigation }) {
   const [loadingMore, setLoadingMore] = useState(false);
 
   const [detail, setDetail] = useState(null);
-  const [cancelling, setCancelling] = useState(false);
+  const [acting, setActing] = useState(false);
+  const [postponeTarget, setPostponeTarget] = useState(null);
 
   // child picker for "new custom appointment"
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -229,7 +255,6 @@ export default function ScheduleScreen({ navigation }) {
     [services],
   );
 
-  // debounce the search box
   useEffect(() => {
     const t = setTimeout(() => setQuery(search.trim()), 400);
     return () => clearTimeout(t);
@@ -243,7 +268,7 @@ export default function ScheduleScreen({ navigation }) {
       else setLoadingMore(true);
 
       try {
-        const res = await getSessions({ scope, type, search: query, page: pageNum, limit: LIMIT });
+        const res = await getSessions({ scope, range, search: query, page: pageNum, limit: LIMIT });
         if (id !== requestRef.current) return;
 
         if (!res?.success) {
@@ -271,10 +296,9 @@ export default function ScheduleScreen({ navigation }) {
         }
       }
     },
-    [scope, type, query],
+    [scope, range, query],
   );
 
-  // runs on mount, whenever a filter changes, and when coming back from the create screen
   useFocusEffect(
     useCallback(() => {
       load(1, "reset");
@@ -285,7 +309,6 @@ export default function ScheduleScreen({ navigation }) {
     if (hasMore && !loading && !loadingMore && !refreshing) load(page + 1, "more");
   };
 
-  // children list for the picker
   useEffect(() => {
     if (!pickerOpen) return undefined;
     let alive = true;
@@ -327,49 +350,105 @@ export default function ScheduleScreen({ navigation }) {
     return key === dateToKey(t) ? "Tomorrow" : null;
   };
 
-  const cancelAppointment = (s) => {
-    const childId = s.children?.[0]?.childId;
-    if (!childId) return;
-    Alert.alert("Cancel appointment", `Cancel the appointment on ${prettyFull(s.date)}?`, [
+  const confirmAction = ({ title, message, confirmText, call, success }) =>
+    Alert.alert(title, message, [
       { text: "Keep", style: "cancel" },
       {
-        text: "Cancel appointment",
+        text: confirmText,
         style: "destructive",
         onPress: async () => {
           try {
-            setCancelling(true);
-            const res = await deleteChildCustomAppointment(childId, s.id);
-            if (!res?.success) return Alert.alert("Could not cancel", res?.message || "Please try again.");
+            setActing(true);
+            const res = await call();
+            if (!res?.success) return Alert.alert("Could not complete", res?.message || "Please try again.");
             setDetail(null);
             await load(1, "reset");
+            Alert.alert("Done", success);
           } catch (e) {
-            Alert.alert("Could not cancel", e?.response?.data?.message || "Please try again.");
+            Alert.alert("Could not complete", e?.response?.data?.message || "Please try again.");
           } finally {
-            setCancelling(false);
+            setActing(false);
           }
         },
       },
     ]);
+
+  const cancelAppointment = (s) => {
+    const childId = s.children?.[0]?.childId;
+    if (!childId) return;
+    confirmAction({
+      title: "Cancel appointment",
+      message: `Cancel the appointment on ${prettyFull(s.date)}? It stays in the list as cancelled.`,
+      confirmText: "Cancel appointment",
+      call: () => cancelChildCustomAppointment(childId, s.id),
+      success: "Appointment cancelled.",
+    });
   };
 
-  const renderItem = ({ item, index }) => {
-    const showHeader = index === 0 || items[index - 1].date !== item.date;
-    const rel = scope === "upcoming" ? relLabel(item.date) : null;
-    return (
-      <View>
-        {showHeader && (
-          <View style={styles.dayHeader}>
-            <Text style={styles.dayTitle}>{prettyDay(item.date)}</Text>
-            {!!rel && <Text style={styles.dayRel}>{rel}</Text>}
-          </View>
-        )}
-        <SessionCard s={item} onPress={setDetail} specMeta={specMeta} />
-      </View>
-    );
+  const deleteAppointment = (s) => {
+    const childId = s.children?.[0]?.childId;
+    if (!childId) return;
+    confirmAction({
+      title: "Delete appointment",
+      message: `Permanently delete the appointment on ${prettyFull(s.date)}?`,
+      confirmText: "Delete",
+      call: () => deleteChildCustomAppointment(childId, s.id),
+      success: "Appointment deleted.",
+    });
   };
+
+  const postponeAppointment = (s) => {
+    setDetail(null);
+    setTimeout(() => setPostponeTarget(s), Platform.OS === "ios" ? 400 : 0);
+  };
+  const changeScope = useCallback((id) => {
+    setItems([]);
+    setPage(1);
+    setHasMore(false);
+    setRange("all");
+    setScope(id);
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item, index }) => {
+      const showHeader =
+        index === 0 || items[index - 1]?.date !== item.date;
+
+      const rel =
+        scope === "upcoming" ? relLabel(item.date) : null;
+
+      return (
+        <View>
+          {showHeader && (
+            <View style={styles.dayHeader}>
+              <Text style={styles.dayTitle}>
+                {prettyDay(item.date)}
+              </Text>
+
+              {!!rel && (
+                <Text style={styles.dayRel}>{rel}</Text>
+              )}
+            </View>
+          )}
+
+          <SessionCard
+            s={item}
+            onPress={setDetail}
+            specMeta={specMeta}
+          />
+        </View>
+      );
+    },
+    [items, scope, today, specMeta]
+  );
 
   const detailKids = detail?.children || [];
-
+  useEffect(() => {
+    rangeScrollRef.current?.scrollTo({
+      x: 0,
+      animated: false,
+    });
+  }, [scope, range, items]);
   return (
     <View style={styles.main}>
       {/* search + filters */}
@@ -378,7 +457,7 @@ export default function ScheduleScreen({ navigation }) {
           <Feather name="search" size={18} color="#94A3B8" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search child, therapist or batch..."
+            placeholder="Search child or therapist..."
             placeholderTextColor="#94A3B8"
             value={search}
             onChangeText={setSearch}
@@ -395,24 +474,45 @@ export default function ScheduleScreen({ navigation }) {
             <TouchableOpacity
               key={t.id}
               style={[styles.tab, scope === t.id && styles.tabActive]}
-              onPress={() => setScope(t.id)}
+              onPress={() => changeScope(t.id)}
             >
               <Text style={[styles.tabText, scope === t.id && styles.tabTextActive]}>{t.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={styles.typeRow}>
-          {TYPES.map((t) => (
-            <TouchableOpacity
-              key={t.id}
-              style={[styles.typeChip, type === t.id && styles.typeChipActive]}
-              onPress={() => setType(t.id)}
-            >
-              <Text style={[styles.typeText, type === t.id && styles.typeTextActive]}>{t.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <ScrollView
+          ref={rangeScrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.rangeScroll}
+          contentContainerStyle={styles.typeRow}
+        >
+          {(scope === "upcoming" ? UPCOMING_RANGES : PAST_RANGES).map((rangeId) => {
+            const r = RANGES.find((item) => item.id === rangeId);
+
+            return (
+              <TouchableOpacity
+                key={r.id}
+                style={[
+                  styles.typeChip,
+                  range === r.id && styles.typeChipActive,
+                ]}
+                onPress={() => setRange(r.id)}
+                activeOpacity={0.75}
+              >
+                <Text
+                  style={[
+                    styles.typeText,
+                    range === r.id && styles.typeTextActive,
+                  ]}
+                >
+                  {r.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {loading
@@ -493,21 +593,14 @@ export default function ScheduleScreen({ navigation }) {
                 </View>
 
                 <View style={styles.chipRow}>
-                  {detail.type === "custom"
-                    ? (
-                      <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
-                        <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom appointment</Text>
-                      </View>
-                    )
-                    : (
-                      detail.speciality && (
+                  {detail.speciality && (
                         <View style={[styles.chip, { backgroundColor: specMeta(detail.speciality).bg }]}>
                           <Text style={[styles.chipText, { color: specMeta(detail.speciality).color }]}>
                             {specMeta(detail.speciality).label}
                           </Text>
                         </View>
                       )
-                    )}
+                    }
                   <View style={[styles.chip, { backgroundColor: TYPE_META[detail.sessionType]?.bg || "#F1F5F9" }]}>
                     <Text style={[styles.chipText, { color: TYPE_META[detail.sessionType]?.color || "#475569" }]}>
                       {TYPE_META[detail.sessionType]?.label || "Regular"}
@@ -551,16 +644,41 @@ export default function ScheduleScreen({ navigation }) {
                   )}
                 </ScrollView>
 
-                {detail.canCancel && (
-                  <TouchableOpacity
-                    style={[styles.dangerBtn, cancelling && { opacity: 0.6 }]}
-                    disabled={cancelling}
-                    onPress={() => cancelAppointment(detail)}
-                  >
-                    {cancelling
-                      ? <ActivityIndicator color="#EF4444" />
-                      : <Text style={styles.dangerText}>Cancel appointment</Text>}
-                  </TouchableOpacity>
+                {detail.type === "custom" && (
+                  <View style={{ marginTop: 14 }}>
+                    {(detail.canPostpone || detail.canCancel || !detail.isPast) ? (
+                      <>
+                        <Text style={styles.sheetSection}>Actions</Text>
+                        {detail.canPostpone && (
+                          <ActionRow
+                            icon="calendar" bg="#F3E8FF" color="#7E22CE" disabled={acting}
+                            title="Postpone" sub="Choose a new date and available time"
+                            onPress={() => postponeAppointment(detail)}
+                          />
+                        )}
+                        {detail.canCancel && (
+                          <ActionRow
+                            icon="x-circle" bg="#FEF3C7" color="#B45309" disabled={acting}
+                            title="Cancel appointment" sub="Keep it in history as cancelled"
+                            onPress={() => cancelAppointment(detail)}
+                          />
+                        )}
+                        {!detail.isPast && (
+                          <ActionRow
+                            icon="trash-2" bg="#FEE2E2" color="#DC2626" disabled={acting}
+                            title="Delete" sub="Remove this appointment completely"
+                            onPress={() => deleteAppointment(detail)}
+                          />
+                        )}
+                        {acting && <ActivityIndicator color={colors.primary} style={{ marginTop: 10 }} />}
+                      </>
+                    ) : (
+                      <View style={styles.pastInfo}>
+                        <Feather name="lock" size={fontSize(18)} color="#64748B" />
+                        <Text style={styles.pastInfoText}>This is a past appointment and can no longer be changed.</Text>
+                      </View>
+                    )}
+                  </View>
                 )}
               </>
             )}
@@ -614,6 +732,16 @@ export default function ScheduleScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+      <PostponeCustomModal
+        visible={!!postponeTarget}
+        childId={postponeTarget?.children?.[0]?.childId}
+        appointment={postponeTarget}
+        onClose={() => setPostponeTarget(null)}
+        onDone={() => {
+          setPostponeTarget(null);
+          load(1, "reset");
+        }}
+      />
     </View>
   );
 }
@@ -642,14 +770,28 @@ const styles = StyleSheet.create({
   tabText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#64748B" },
   tabTextActive: { color: "#0B4A6F" },
 
-  typeRow: { flexDirection: "row", gap: 8, marginTop: 10, marginBottom: 4 },
+  rangeScroll: {
+    marginTop: 10,
+    marginBottom: 4,
+    flexGrow: 0,
+  },
+
+  typeRow: {
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    alignItems: "center",
+    gap: 8,
+    paddingRight: 4,
+  },
+
   typeChip: {
-    paddingHorizontal: wp(20),
+    paddingHorizontal: wp(14),
     paddingVertical: hp(7),
     borderRadius: wp(16),
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
+    flexShrink: 0,
   },
   typeChipActive: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
   typeText: { fontSize: fontSize(12), fontFamily: fonts.semiBold, color: "#475569" },
@@ -788,15 +930,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#0B4A6F" },
-
-  dangerBtn: {
-    marginTop: 14,
-    height: 46,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#EF4444",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dangerText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#EF4444" },
+  actionItem: { flexDirection: "row", alignItems: "center", paddingVertical: 13, borderTopWidth: 1, borderTopColor: "#F1F5F9", gap: 12 },
+  actionIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  actionItemTitle: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
+  actionItemSub: { fontSize: fontSize(11), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  pastInfo: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#F8FAFC", borderRadius: 12, padding: 12 },
+  pastInfoText: { flex: 1, fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B" },
 });

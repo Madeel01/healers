@@ -40,7 +40,7 @@ const therapistAssignmentSchema = new mongoose.Schema(
 //   { batchId: 1, therapistId: 1, specialty: 1 },
 //   { unique: true }
 // );
-
+therapistAssignmentSchema.index({ therapistId: 1 });
 module.exports = mongoose.model(
   "TherapistAssignment",
   therapistAssignmentSchema

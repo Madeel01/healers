@@ -8,6 +8,7 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,30 +16,24 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
-} from 'react-native';
-
-import Feather from '@expo/vector-icons/Feather';
+} from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import Feather from "@expo/vector-icons/Feather";
 
 import {
-  createChildCustomAppointment,
-  getChildCustomSlotOptions,
   getServices,
   getUsersByRole,
-} from '../../api/admin/api';
-import {
-  colors,
-  fonts,
-} from '../../styles/theme';
-import { formatTo12Hour } from '../../utils/hoursformat';
-import {
-  fontSize,
-  hp,
-  wp,
-} from '../../utils/responsive';
-import SessionSlotPicker from './components/SessionSlotPicker';
+  previewChildCustomSchedule,
+  saveChildCustomSchedule,
+} from "../../api/admin/api";
+import CustomSlotPicker from "./components/CustomSlotPicker";
+import { colors, fonts } from "../../styles/theme";
+import { formatTo12Hour } from "../../utils/hoursformat";
+import { fontSize, hp, wp } from '../../utils/responsive';
 
-const DURATIONS = [45, 60, 90, 120];
+const DURATIONS = [30,45, 60, 90, 120];
 
+const label = (s) => formatTo12Hour(`${s.startTime}-${s.endTime}`);
 const prettyFull = (k) => {
   const [y, m, d] = k.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("en-US", {
@@ -51,20 +46,24 @@ const prettyFull = (k) => {
 
 export default function ChildCustomAppointmentScreen({ navigation, route }) {
   const { childId, childName } = route.params;
+  const insets = useSafeAreaInsets();
   const [selectingTherapist, setSelectingTherapist] = useState(false);
-  const [selectedTherapist, setSelectedTherapist] = useState(null);
   const { width } = useWindowDimensions();
   const isSmallDevice = width < 380;
 
+  const [selectedTherapist, setSelectedTherapist] = useState(null);
   const [search, setSearch] = useState("");
   const [therapists, setTherapists] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
 
   const [therapistId, setTherapistId] = useState(null);
   const [minutes, setMinutes] = useState(60);
-  const [choice, setChoice] = useState(null);
-  const [busy, setBusy] = useState(false);
   const [services, setServices] = useState([]);
+
+  const [plan, setPlan] = useState(null); // { mode, sessions }
+  const [review, setReview] = useState(null); // { total, conflicts }
+  const [showConflicts, setShowConflicts] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -78,10 +77,7 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
     };
   }, []);
 
-  const serviceMap = useMemo(
-    () => new Map(services.map((s) => [s.id, s])),
-    [services],
-  );
+  const serviceMap = useMemo(() => new Map(services.map((s) => [s.id, s])), [services]);
 
   useEffect(() => {
     let alive = true;
@@ -102,46 +98,80 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
     };
   }, [search]);
 
-  const loadSlots = useCallback(
-    (date, m) => getChildCustomSlotOptions(childId, { therapistId, date, sessionMinutes: m }),
-    [childId, therapistId],
-  );
+  // any change in the selection invalidates the last review
+  const handlePlan = useCallback((p) => {
+    setPlan(p);
+    setReview(null);
+  }, []);
 
   const pickTherapist = (t) => {
-    if (t === therapistId) return;
-
+    const id = t._id || t.id;
+    if (id === therapistId) return;
     setSelectedTherapist(t);
-    setTherapistId(t._id || t.id);
-    setChoice(null);
+    setTherapistId(id);
+    setPlan(null);
+    setReview(null);
   };
   const pickMinutes = (m) => {
     setMinutes(m);
-    setChoice(null);
+    setPlan(null);
+    setReview(null);
   };
   const changeTherapist = () => {
     setSelectedTherapist(null);
     setTherapistId(null);
-    setChoice(null);
+    setPlan(null);
+    setReview(null);
     setSearch("");
   };
 
-  const submit = async () => {
-    if (!therapistId || !choice || busy) return;
+  const sessions = plan?.sessions || [];
+  const conflicts = review?.conflicts || [];
+
+  const startReview = async () => {
+    if (!therapistId || !sessions.length || busy) return;
     setBusy(true);
     try {
-      const res = await createChildCustomAppointment(childId, { therapistId, ...choice });
-      if (!res?.success) return Alert.alert("Could not create", res?.message || "Please try again.");
-      Alert.alert(
-        "Appointment created",
-        `${prettyFull(choice.date)}, ${formatTo12Hour(`${choice.startTime}-${choice.endTime}`)}`,
-        [{ text: "OK", onPress: () => navigation.goBack() }],
-      );
+      const res = await previewChildCustomSchedule(childId, {
+        therapistId,
+        sessionMinutes: minutes,
+        sessions,
+      });
+      if (!res?.success) return Alert.alert("Error", res?.message || "Could not check the schedule.");
+      setReview(res.data);
     } catch (e) {
-      Alert.alert("Could not create", e?.response?.data?.message || "Please try again.");
+      Alert.alert("Error", e?.response?.data?.message || "Could not check the schedule.");
     } finally {
       setBusy(false);
     }
   };
+
+  const save = async () => {
+    if (!therapistId || !sessions.length || busy) return;
+    setBusy(true);
+    try {
+      const res = await saveChildCustomSchedule(childId, {
+        therapistId,
+        sessionMinutes: minutes,
+        sessions,
+      });
+      if (!res?.success) return Alert.alert("Could not save", res?.message || "Please try again.");
+      Alert.alert("Appointments created", `${res.data?.created ?? sessions.length} session(s) added.`, [
+        { text: "OK", onPress: () => navigation.goBack() },
+      ]);
+    } catch (e) {
+      const data = e?.response?.data;
+      if (data?.hasConflicts) {
+        // something changed since the review, show the new conflicts
+        setReview({ total: sessions.length, conflicts: data.conflicts || [] });
+        return Alert.alert("Conflicts found", data.message);
+      }
+      Alert.alert("Could not save", data?.message || "Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const renderSpecChips = (t) => {
     const specs = [].concat(t.speciality ?? t.specialities ?? t.services ?? []);
     if (services.length === 0 || specs.length === 0) return null;
@@ -159,10 +189,16 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
     );
   };
 
-  const ready = !!therapistId && !!choice && !busy;
-
   return (
     <View style={styles.main}>
+      <View style={styles.header}>
+        {!!childName && (
+          <Text style={styles.headerSub} numberOfLines={2}>
+            Appointments for {childName.trim()}
+          </Text>
+        )}
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -228,8 +264,7 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
           )}
 
         <Text style={styles.label}>Session length</Text>
-
-        <View style={styles.durationRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
           {DURATIONS.map((m) => (
             <TouchableOpacity
               key={m}
@@ -256,29 +291,118 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
 
-        {therapistId && (
-          <SessionSlotPicker loadSlots={loadSlots} minutes={minutes} value={choice} onChange={setChoice} />
+        {!!therapistId && (
+          <CustomSlotPicker
+            key={`${therapistId}|${minutes}`}
+            childId={childId}
+            therapistId={therapistId}
+            minutes={minutes}
+            onChange={handlePlan}
+          />
         )}
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={[styles.primaryBtn, !ready && { opacity: 0.5 }]} disabled={!ready} onPress={submit}>
-          {busy ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Create appointment</Text>}
-        </TouchableOpacity>
+        {review && (
+          <Text style={[styles.reviewNote, conflicts.length > 0 && { color: "#B91C1C" }]}>
+            {conflicts.length > 0
+              ? `${conflicts.length} of ${review.total} session(s) have a conflict.`
+              : `No conflicts. ${review.total} session(s) are ready to save.`}
+          </Text>
+        )}
+
+        {!review ? (
+          <TouchableOpacity
+            style={[styles.primaryBtn, (!sessions.length || busy) && { opacity: 0.5 }]}
+            disabled={!sessions.length || busy}
+            onPress={startReview}
+          >
+            {busy ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Review schedule</Text>}
+          </TouchableOpacity>
+        ) : conflicts.length > 0 ? (
+          <TouchableOpacity style={styles.dangerBtn} onPress={() => setShowConflicts(true)}>
+            <Text style={styles.primaryText}>View conflicts ({conflicts.length})</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={[styles.primaryBtn, busy && { opacity: 0.6 }]} disabled={busy} onPress={save}>
+            {busy ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Save sessions</Text>}
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* conflicts list */}
+      <Modal visible={showConflicts} transparent animationType="slide" onRequestClose={() => setShowConflicts(false)}>
+        <View style={styles.overlay}>
+          <View style={[styles.sheet, { paddingBottom: 26 + insets.bottom }]}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Conflicts</Text>
+              <TouchableOpacity onPress={() => setShowConflicts(false)}>
+                <Feather name="x" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.hint}>
+              Go back and change these dates or times, then review again. Nothing has been saved.
+            </Text>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {conflicts.map((c) => (
+                <View key={`${c.date}-${c.startTime}`} style={styles.conflictCard}>
+                  <Text style={styles.conflictName}>
+                    {prettyFull(c.date)} · {label(c)}
+                  </Text>
+                  {(c.reasons || []).map((r) => (
+                    <Text key={r} style={styles.conflictReason}>
+                      {r}
+                    </Text>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity style={[styles.secondaryBtn, { marginTop: 14 }]} onPress={() => setShowConflicts(false)}>
+              <Text style={styles.secondaryText}>Back to schedule</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   main: { flex: 1, backgroundColor: "#F8FAFC" },
-  content: { padding: wp(16), paddingBottom: hp(154) },
+  header: {
+    paddingHorizontal: wp(16),
+    paddingTop: hp(12),
+    paddingBottom: hp(4),
+  },
+
+  headerSub: {
+    fontSize: fontSize(20),
+    fontFamily: fonts.bold,
+    color: "#0F172A",
+    lineHeight: fontSize(27),
+  },
+
+  content: {
+    paddingHorizontal: wp(16),
+    paddingTop: 0,
+    paddingBottom: hp(154),
+  },
+
+  label: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+    marginTop: hp(8),
+    marginBottom: hp(8),
+  },
 
   hint: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", lineHeight: 18 },
   muted: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#94A3B8", marginVertical: 8 },
-  label: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 16, marginBottom: hp(8) },
 
   searchBox: {
     flexDirection: "row",
@@ -305,8 +429,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  therapistRowOn: { borderColor: "#0B4A6F" },
-  therapistName: { flex: 1, fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
+  therapistName: { flex: 1, fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
   radio: {
     width: wp(20),
     height: hp(20),
@@ -319,16 +442,18 @@ const styles = StyleSheet.create({
   radioOn: { borderColor: "#0B4A6F" },
   radioDot: { width: wp(10), height: hp(10), borderRadius: wp(5), backgroundColor: "#0B4A6F" },
 
-  row: { flexDirection: "row", gap: 10 },
+  row: { flexDirection: "row", gap: 10, alignItems: "center" },
   durBtn: {
-    flex: 1,
-    height: hp(44),
-    borderRadius: wp(12),
+    height: 44,
     borderWidth: 1,
     borderColor: "#CBD5E1",
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    flexShrink: 0,
   },
   durBtnOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   durText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#334155" },
@@ -345,6 +470,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
   },
+  reviewNote: { fontSize: 12, fontFamily: fonts.semiBold, color: "#15803D", marginBottom: 8 },
   primaryBtn: {
     height: hp(50),
     borderRadius: wp(12),
@@ -352,7 +478,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#FFFFFF", lineHeight: 18 },
+  dangerBtn: {
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: "#B91C1C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryText: { fontSize: 15, fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  secondaryBtn: {
+    height: 50,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryText: { fontSize: 15, fontFamily: fonts.semiBold, color: colors.primary },
+
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 8 },
   chip: { borderRadius: wp(20), paddingHorizontal: wp(10), paddingVertical: 4 },
   chipText: { fontSize: fontSize(11), fontFamily: fonts.semiBold },
@@ -363,11 +506,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#0B4A6F",
   },
-  selectedTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
+  selectedTop: { flexDirection: "row", alignItems: "center", gap: 12 },
   changeBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -377,41 +516,26 @@ const styles = StyleSheet.create({
     borderRadius: wp(20),
     backgroundColor: "#E8F2FC",
   },
-  changeBtnText: { fontSize: fontSize(12), fontFamily: fonts.semiBold, color: colors.primary },
+  changeBtnText: { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
 
-  durationRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: 10,
-    marginTop: 4,
-  },
-
-  durBtn: {
-    minHeight: 44,
-    borderRadius: wp(12),
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
+  overlay: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.4)", justifyContent: "flex-end" },
+  sheet: {
     backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-    paddingVertical: 10,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    padding: 20,
+    maxHeight: "90%",
   },
-
-  durBtnOn: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+  sheetHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  sheetTitle: { fontSize: 19, fontFamily: fonts.semiBold, color: "#0F172A" },
+  conflictCard: {
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 10,
   },
-
-  durText: {
-    fontSize: fontSize(13),
-    fontFamily: fonts.semiBold,
-    color: "#334155",
-    textAlign: "center",
-  },
-
-  durTextOn: {
-    color: "#FFFFFF",
-  },
+  conflictName: { fontSize: 14, fontFamily: fonts.semiBold, color: "#991B1B" },
+  conflictReason: { fontSize: 12, fontFamily: fonts.regular, color: "#7F1D1D", marginTop: 2 },
 });

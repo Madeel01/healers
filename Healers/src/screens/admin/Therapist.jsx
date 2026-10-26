@@ -13,6 +13,7 @@ import {
   Platform,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -633,6 +634,61 @@ export default function TherapistsScreen({ navigation }) {
       setAssigning(false);
     }
   };
+  const generatePassword = () => {
+    const length = 12;
+    const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    const lowercase = "abcdefghijkmnopqrstuvwxyz";
+    const numbers = "23456789";
+    const symbols = "!@#$%&*";
+
+    const allChars = uppercase + lowercase + numbers + symbols;
+
+    
+    const getRandomChar = (chars) =>
+      chars[Math.floor(Math.random() * chars.length)];
+
+    const requiredChars = [
+      getRandomChar(uppercase),
+      getRandomChar(lowercase),
+      getRandomChar(numbers),
+      getRandomChar(symbols),
+    ];
+
+    const remainingChars = Array.from(
+      { length: length - requiredChars.length },
+      () => getRandomChar(allChars)
+    );
+
+    const passwordArray = [...requiredChars, ...remainingChars];
+
+    for (let i = passwordArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [passwordArray[i], passwordArray[j]] = [
+        passwordArray[j],
+        passwordArray[i],
+      ];
+    }
+
+    const newPassword = passwordArray.join("");
+
+    setPassword(newPassword);
+    setConfirmPassword(newPassword);
+  };
+
+  const copyPassword = async () => {
+    if (!password) {
+      Alert.alert("Error", "Generate a password first.");
+      return;
+    }
+
+    try {
+      await Share.share({
+        message: password,
+      });
+    } catch (error) {
+      Alert.alert("Error", "Unable to share password.");
+    }
+  };
 
   return (
     <View
@@ -1070,7 +1126,7 @@ export default function TherapistsScreen({ navigation }) {
                   onChangeText={(t) => setNewTherapist({ ...newTherapist, name: t })}
                 />
 
-                <Text style={styles.fieldLabel}>Specialty</Text>
+                <Text style={styles.fieldLabel}>Specialty <Text style={styles.requiredText}>*</Text></Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 6 }}>
                   {services.map((item, index) => {
                     const isSelected = newTherapist.specialty === item.id;
@@ -1173,6 +1229,25 @@ export default function TherapistsScreen({ navigation }) {
                   />
                   <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
                     <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#94A3B8" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.passwordButton}>
+                  <TouchableOpacity
+                    style={[styles.passwordSubButton, {backgroundColor:"#0B4A6F"}]}
+                    onPress={generatePassword}
+                  >
+                    <Text style={styles.passwordButtonText}>
+                      Generate Password
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.passwordSubButton, {borderColor:"#0B4A6F"}]}
+                    onPress={copyPassword}
+                  >
+                    <Text style={[styles.passwordButtonText,{color:"#0B4A6F"}]}>
+                      Copy
+                    </Text>
                   </TouchableOpacity>
                 </View>
 
@@ -2011,5 +2086,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#EF4444",
     borderWidth: 1.5,
     borderColor: "#FFFFFF",
+  },
+  passwordButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 10,
+  },
+  passwordSubButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor:"#0B4A6F",
+  },
+  passwordButtonText: {
+    fontSize: fontSize(13),
+    color: "#fff",
   },
 });
