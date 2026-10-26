@@ -1196,7 +1196,7 @@ export default function ChildFormScreen({ navigation, route }) {
           )}
         </ScrollView>
 
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View style={[styles.footer, { paddingBottom:10 }]}>
           {step === 1 && (
             <>
               {isEditMode && renderSaveButton(styles.secondaryBtn)}
@@ -1477,16 +1477,16 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: "#FFFFFF", fontSize: fontSize(15), fontFamily: fonts.semiBold },
   secondaryBtn: {
     flex: 1,
-    height: 48,
-    borderRadius: 12,
+    height: hp(48),
+    borderRadius: wp(12),
     backgroundColor: "#F58B2A",
     alignItems: "center",
     justifyContent: "center",
   },
   outlineBtn: {
     flex: 1,
-    height: 48,
-    borderRadius: 12,
+    height: hp(48),
+    borderRadius: wp(12),
     borderWidth: 1.5,
     borderColor: colors.primary,
     backgroundColor: "#FFFFFF",

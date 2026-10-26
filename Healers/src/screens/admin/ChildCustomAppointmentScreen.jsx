@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
 import {
   ActivityIndicator,
   Alert,
@@ -7,15 +13,29 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Feather from "@expo/vector-icons/Feather";
+} from 'react-native';
 
-import { createChildCustomAppointment, getChildCustomSlotOptions, getUsersByRole, getServices, } from "../../api/admin/api";
-import SessionSlotPicker from "./components/SessionSlotPicker";
-import { colors, fonts } from "../../styles/theme";
-import { formatTo12Hour } from "../../utils/hoursformat";
+import Feather from '@expo/vector-icons/Feather';
+
+import {
+  createChildCustomAppointment,
+  getChildCustomSlotOptions,
+  getServices,
+  getUsersByRole,
+} from '../../api/admin/api';
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
+import { formatTo12Hour } from '../../utils/hoursformat';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
+import SessionSlotPicker from './components/SessionSlotPicker';
 
 const DURATIONS = [45, 60, 90, 120];
 
@@ -33,6 +53,8 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
   const { childId, childName } = route.params;
   const [selectingTherapist, setSelectingTherapist] = useState(false);
   const [selectedTherapist, setSelectedTherapist] = useState(null);
+  const { width } = useWindowDimensions();
+  const isSmallDevice = width < 380;
 
   const [search, setSearch] = useState("");
   const [therapists, setTherapists] = useState([]);
@@ -100,7 +122,7 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
     setSelectedTherapist(null);
     setTherapistId(null);
     setChoice(null);
-    setSearch(""); 
+    setSearch("");
   };
 
   const submit = async () => {
@@ -140,89 +162,98 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
   const ready = !!therapistId && !!choice && !busy;
 
   return (
-    <SafeAreaView style={styles.main}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={22} color="#0F172A" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Custom appointment</Text>
-          {!!childName && <Text style={styles.headerSub}>{childName}</Text>}
-        </View>
-      </View>
-
+    <View style={styles.main}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-
         <Text style={styles.label}>Therapist</Text>
 
-        {selectedTherapist ? (
-          <View style={styles.selectedCard}>
-            <View style={styles.selectedTop}>
-              <View style={[styles.radio, styles.radioOn]}>
-                <View style={styles.radioDot} />
+        {selectedTherapist
+          ? (
+            <View style={styles.selectedCard}>
+              <View style={styles.selectedTop}>
+                <View style={[styles.radio, styles.radioOn]}>
+                  <View style={styles.radioDot} />
+                </View>
+                <Text style={styles.therapistName} numberOfLines={1}>
+                  {selectedTherapist.fullName || selectedTherapist.name}
+                </Text>
+                <TouchableOpacity style={styles.changeBtn} onPress={changeTherapist} activeOpacity={0.8}>
+                  <Feather name="repeat" size={14} color={colors.primary} />
+                  <Text style={styles.changeBtnText}>Change</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.therapistName} numberOfLines={1}>
-                {selectedTherapist.fullName || selectedTherapist.name}
-              </Text>
-              <TouchableOpacity style={styles.changeBtn} onPress={changeTherapist} activeOpacity={0.8}>
-                <Feather name="repeat" size={14} color={colors.primary} />
-                <Text style={styles.changeBtnText}>Change</Text>
-              </TouchableOpacity>
+              {renderSpecChips(selectedTherapist)}
             </View>
-            {renderSpecChips(selectedTherapist)}
-          </View>
-        ) : (
-          <>
-            <View style={styles.searchBox}>
-              <Feather name="search" size={16} color="#94A3B8" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search therapist..."
-                placeholderTextColor="#94A3B8"
-                value={search}
-                onChangeText={setSearch}
-              />
-            </View>
+          )
+          : (
+            <>
+              <View style={styles.searchBox}>
+                <Feather name="search" size={16} color="#94A3B8" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search therapist..."
+                  placeholderTextColor="#94A3B8"
+                  value={search}
+                  onChangeText={setSearch}
+                />
+              </View>
 
-            {loadingList ? (
-              <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
-            ) : therapists.length === 0 ? (
-              <Text style={styles.muted}>No therapists found.</Text>
-            ) : (
-              therapists.map((t) => {
-                const id = t._id || t.id;
-                return (
-                  <TouchableOpacity
-                    key={id}
-                    style={styles.therapistRow}
-                    onPress={() => pickTherapist(t)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.radio} />
-                    <Text style={styles.therapistName} numberOfLines={1}>
-                      {t.fullName || t.name}
-                    </Text>
-                    {renderSpecChips(t)}
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </>
-        )}
+              {loadingList
+                ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
+                : therapists.length === 0
+                ? <Text style={styles.muted}>No therapists found.</Text>
+                : (
+                  therapists.map((t) => {
+                    const id = t._id || t.id;
+                    return (
+                      <TouchableOpacity
+                        key={id}
+                        style={styles.therapistRow}
+                        onPress={() => pickTherapist(t)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={styles.radio} />
+                        <Text style={styles.therapistName} numberOfLines={1}>
+                          {t.fullName || t.name}
+                        </Text>
+                        {renderSpecChips(t)}
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+            </>
+          )}
 
         <Text style={styles.label}>Session length</Text>
-        <View style={styles.row}>
+
+        <View style={styles.durationRow}>
           {DURATIONS.map((m) => (
             <TouchableOpacity
               key={m}
-              style={[styles.durBtn, minutes === m && styles.durBtnOn]}
+              style={[
+                styles.durBtn,
+                {
+                  width: isSmallDevice ? "48%" : "23%",
+                },
+                minutes === m && styles.durBtnOn,
+              ]}
               onPress={() => pickMinutes(m)}
+              activeOpacity={0.8}
             >
-              <Text style={[styles.durText, minutes === m && styles.durTextOn]}>{m} min</Text>
+              <Text
+                style={[
+                  styles.durText,
+                  minutes === m && styles.durTextOn,
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {m} min
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -237,21 +268,17 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
           {busy ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Create appointment</Text>}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   main: { flex: 1, backgroundColor: "#F8FAFC" },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 17, fontFamily: fonts.semiBold, color: "#0F172A" },
-  headerSub: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B" },
-  content: { padding: 16, paddingBottom: 120 },
+  content: { padding: wp(16), paddingBottom: hp(154) },
 
-  hint: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B", lineHeight: 18 },
-  muted: { fontSize: 12, fontFamily: fonts.regular, color: "#94A3B8", marginVertical: 8 },
-  label: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 16, marginBottom: 8 },
+  hint: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", lineHeight: 18 },
+  muted: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#94A3B8", marginVertical: 8 },
+  label: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 16, marginBottom: hp(8) },
 
   searchBox: {
     flexDirection: "row",
@@ -260,43 +287,43 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-    marginBottom: 8,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(12),
+    height: hp(48),
+    marginBottom: hp(8),
   },
-  searchInput: { flex: 1, fontSize: 14, color: "#0F172A" },
+  searchInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
 
   therapistRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderRadius: 14,
+    padding: wp(12),
+    marginBottom: hp(8),
+    borderRadius: wp(14),
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
   therapistRowOn: { borderColor: "#0B4A6F" },
-  therapistName: { flex: 1, fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
+  therapistName: { flex: 1, fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
   radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: wp(20),
+    height: hp(20),
+    borderRadius: wp(10),
     borderWidth: 2,
     borderColor: "#CBD5E1",
     alignItems: "center",
     justifyContent: "center",
   },
   radioOn: { borderColor: "#0B4A6F" },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#0B4A6F" },
+  radioDot: { width: wp(10), height: hp(10), borderRadius: wp(5), backgroundColor: "#0B4A6F" },
 
   row: { flexDirection: "row", gap: 10 },
   durBtn: {
     flex: 1,
-    height: 44,
-    borderRadius: 12,
+    height: hp(44),
+    borderRadius: wp(12),
     borderWidth: 1,
     borderColor: "#CBD5E1",
     backgroundColor: "#FFFFFF",
@@ -304,7 +331,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   durBtnOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  durText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#334155" },
+  durText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#334155" },
   durTextOn: { color: "#FFFFFF" },
 
   footer: {
@@ -312,26 +339,26 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    padding: 16,
-    paddingBottom: 24,
+    padding: wp(16),
+    paddingBottom: hp(24),
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
   },
   primaryBtn: {
-    height: 50,
-    borderRadius: 12,
+    height: hp(50),
+    borderRadius: wp(12),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryText: { fontSize: 15, fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  primaryText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#FFFFFF", lineHeight: 18 },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 8 },
-  chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  chipText: { fontSize: 11, fontFamily: fonts.semiBold },
+  chip: { borderRadius: wp(20), paddingHorizontal: wp(10), paddingVertical: 4 },
+  chipText: { fontSize: fontSize(11), fontFamily: fonts.semiBold },
   selectedCard: {
-    padding: 12,
-    borderRadius: 14,
+    padding: wp(12),
+    borderRadius: wp(14),
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#0B4A6F",
@@ -345,10 +372,46 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: wp(12),
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: wp(20),
     backgroundColor: "#E8F2FC",
   },
-  changeBtnText: { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
+  changeBtnText: { fontSize: fontSize(12), fontFamily: fonts.semiBold, color: colors.primary },
+
+  durationRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 10,
+    marginTop: 4,
+  },
+
+  durBtn: {
+    minHeight: 44,
+    borderRadius: wp(12),
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    paddingVertical: 10,
+  },
+
+  durBtnOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+
+  durText: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.semiBold,
+    color: "#334155",
+    textAlign: "center",
+  },
+
+  durTextOn: {
+    color: "#FFFFFF",
+  },
 });

@@ -16,7 +16,6 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 
@@ -24,13 +23,16 @@ import {
   deletePackage,
   getAllPackages,
 } from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 export default function AllPackagesScreen({ navigation }) {
   const { height } = useWindowDimensions();
@@ -244,7 +246,7 @@ export default function AllPackagesScreen({ navigation }) {
               name={item.type === "batch"
                 ? "users"
                 : "user"}
-              size={19}
+              size={fontSize(19)}
               color={colors.primary}
             />
           </View>
@@ -305,7 +307,7 @@ export default function AllPackagesScreen({ navigation }) {
           >
             <Feather
               name="edit-2"
-              size={16}
+              size={fontSize(16)}
               color={colors.primary}
             />
 
@@ -325,7 +327,7 @@ export default function AllPackagesScreen({ navigation }) {
           >
             <Feather
               name="trash-2"
-              size={16}
+              size={fontSize(16)}
               color="#BA1A1A"
             />
 
@@ -369,7 +371,7 @@ export default function AllPackagesScreen({ navigation }) {
         >
           <Feather
             name="plus-circle"
-            size={18}
+            size={fontSize(18)}
             color="#FFFFFF"
           />
 
@@ -391,7 +393,7 @@ export default function AllPackagesScreen({ navigation }) {
         <View style={styles.emptyIcon}>
           <Feather
             name="package"
-            size={30}
+            size={fontSize(30)}
             color={colors.primary}
           />
         </View>
@@ -440,16 +442,13 @@ export default function AllPackagesScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         commonStyles.container,
       ]}
     >
-      <TopBar
-        navigation={navigation}
-        headerTitle="Back to Fee Management"
-      />
+     
 
       {loading && packages.length === 0
         ? (
@@ -492,8 +491,7 @@ export default function AllPackagesScreen({ navigation }) {
           />
         )}
 
-      <BottomBar activeTab="" />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -504,13 +502,13 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 30,
+    paddingHorizontal:wp(16),
+    paddingBottom: hp(24),
   },
 
   initialLoadingWrapper: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal:wp(16),
   },
 
   headerRow: {
@@ -526,7 +524,7 @@ const styles = StyleSheet.create({
   },
 
   pageTitle: {
-    fontSize: 26,
+    fontSize: fontSize(26),
     lineHeight: 34,
     fontFamily: fonts.semiBold,
     color: "#181C1E",
@@ -534,24 +532,24 @@ const styles = StyleSheet.create({
 
   pageDescription: {
     marginTop: 4,
-    fontSize: 15,
+    fontSize: fontSize(15),
     lineHeight: 21,
     fontFamily: fonts.regular,
     color: colors.blackFont,
   },
 
   countBadge: {
-    minWidth: 42,
-    height: 42,
-    paddingHorizontal: 10,
-    borderRadius: 21,
+    minWidth: wp(42),
+    height: hp(42),
+    paddingHorizontal:wp(10),
+    borderRadius: wp(21),
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,80,134,0.10)",
   },
 
   countText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.primary,
   },
@@ -561,48 +559,48 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "flex-start",
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 11,
+    paddingHorizontal:wp(18),
+    paddingVertical: hp(12),
+    borderRadius: wp(11),
     backgroundColor: colors.primary,
     marginBottom: 18,
   },
 
   addButtonText: {
-    marginLeft: 8,
-    fontSize: 15,
+    marginLeft: wp(8),
+    fontSize: fontSize(15),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
   },
 
   loadingContainer: {
     flex: 1,
-    minHeight: 250,
+    minHeight: hp(250),
     alignItems: "center",
     justifyContent: "center",
   },
 
   loadingText: {
     marginTop: 10,
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
   },
 
   emptyCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    paddingHorizontal: 25,
-    paddingVertical: 45,
+    borderRadius: wp(16),
+    paddingHorizontal:wp(25),
+    paddingVertical: hp(45),
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#F1F5F9",
   },
 
   emptyIcon: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    width: wp(62),
+    height: hp(62),
+    borderRadius: wp(31),
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,80,134,0.08)",
@@ -610,14 +608,14 @@ const styles = StyleSheet.create({
 
   emptyTitle: {
     marginTop: 15,
-    fontSize: 19,
+    fontSize: fontSize(19),
     fontFamily: fonts.semiBold,
     color: "#181C1E",
   },
 
   emptyDescription: {
     marginTop: 6,
-    fontSize: 14,
+    fontSize: fontSize(14),
     lineHeight: 20,
     textAlign: "center",
     fontFamily: fonts.regular,
@@ -626,26 +624,26 @@ const styles = StyleSheet.create({
 
   emptyButton: {
     marginTop: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal:wp(18),
+    paddingVertical: hp(10),
+    borderRadius: wp(10),
     backgroundColor: colors.primary,
   },
 
   emptyButtonText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
   },
 
   separator: {
-    height: 12,
+    height: hp(12),
   },
 
   packageCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: wp(16),
+    padding: wp(16),
     borderWidth: 1,
     borderColor: "#F1F5F9",
     shadowColor: "#000",
@@ -664,9 +662,9 @@ const styles = StyleSheet.create({
   },
 
   packageIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
+    width: wp(42),
+    height: hp(42),
+    borderRadius: wp(10),
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,80,134,0.08)",
@@ -674,12 +672,12 @@ const styles = StyleSheet.create({
 
   packageMain: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: wp(12),
     marginRight: 8,
   },
 
   packageName: {
-    fontSize: 17,
+    fontSize: fontSize(17),
     lineHeight: 23,
     fontFamily: fonts.semiBold,
     color: "#181C1E",
@@ -688,21 +686,21 @@ const styles = StyleSheet.create({
   typeBadge: {
     alignSelf: "flex-start",
     marginTop: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
+    paddingHorizontal:wp(8),
+    paddingVertical: hp(3),
+    borderRadius: wp(999),
     backgroundColor: "#F1F4F7",
   },
 
   typeBadgeText: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     lineHeight: 15,
     fontFamily: fonts.regular,
     color: colors.blackFont,
   },
 
   packagePrice: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontFamily: fonts.semiBold,
     color: colors.primary,
     textAlign: "right",
@@ -720,7 +718,7 @@ const styles = StyleSheet.create({
 
   descriptionText: {
     marginTop: 3,
-    fontSize: 13,
+    fontSize: fontSize(13),
     lineHeight: 19,
     fontFamily: fonts.regular,
     color: colors.blackFont,
@@ -737,15 +735,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 9,
+    paddingVertical: hp(10),
+    borderRadius: wp(9),
     borderWidth: 1,
     borderColor: "#D8E4ED",
   },
 
   editButtonText: {
-    marginLeft: 6,
-    fontSize: 14,
+    marginLeft: wp(6),
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: colors.primary,
   },
@@ -755,27 +753,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 9,
+    paddingVertical: hp(10),
+    borderRadius: wp(9),
     backgroundColor: "#FFF3F3",
   },
 
   deleteButtonText: {
-    marginLeft: 6,
-    fontSize: 14,
+    marginLeft: wp(6),
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#BA1A1A",
   },
 
   loadMoreContainer: {
-    paddingVertical: 22,
+    paddingVertical: hp(22),
     alignItems: "center",
     justifyContent: "center",
   },
 
   loadMoreText: {
     marginTop: 8,
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: colors.blackFont,
   },

@@ -1,4 +1,8 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
+
+import * as FileSystem from 'expo-file-system/legacy';
+import * as IntentLauncher from 'expo-intent-launcher';
+import * as Sharing from 'expo-sharing';
 import {
   ActivityIndicator,
   Alert,
@@ -9,15 +13,20 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Feather from "@expo/vector-icons/Feather";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import * as FileSystem from "expo-file-system/legacy";
-import * as Sharing from "expo-sharing";
-import * as IntentLauncher from "expo-intent-launcher";
+} from 'react-native';
 
-import { colors, fonts } from "../../styles/theme";
+import Feather from '@expo/vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const DOCUMENTS = [
   { key: "cnicFront", label: "CNIC Front", hint: "Parent CNIC, front side" },
@@ -246,7 +255,7 @@ export default function ChildDetailsScreen({ navigation, route }) {
   const hasDiscount = child.discountedPrice != null;
 
   return (
-    <SafeAreaView style={styles.main}>
+    <View style={styles.main}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()}>
           <Feather name="arrow-left" size={22} color="#0F172A" />
@@ -317,7 +326,7 @@ export default function ChildDetailsScreen({ navigation, route }) {
           <DocCard key={d.key} label={d.label} hint={d.hint} doc={child.documents?.[d.key]} />
         ))}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -333,21 +342,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
   },
-  iconBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 16, fontFamily: fonts.semiBold, color: colors.primary },
+  iconBtn: { width:wp(44), height:hp(44), alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize:fontSize(16), fontFamily: fonts.semiBold, color: colors.primary },
   content: { padding: 16, paddingBottom: 40 },
 
   hero: { alignItems: "center", marginBottom: 16 },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
+    width:wp(72),
+    height:hp(72),
+    borderRadius: wp(20),
     backgroundColor: "#0B4A6F",
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { color: "#FFFFFF", fontSize: 30, fontWeight: "700" },
-  name: { marginTop: 10, fontSize: 20, fontFamily: fonts.semiBold, color: "#0F172A", textAlign: "center" },
+  avatarText: { color: "#FFFFFF", fontSize:fontSize(30), fontWeight: "700" },
+  name: { marginTop: 10, fontSize:fontSize(20), fontFamily: fonts.semiBold, color: "#0F172A", textAlign: "center" },
   badge: {
     flexDirection: "row",
     alignItems: "center",
@@ -355,64 +364,64 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: wp(999),
     borderWidth: 1,
   },
   badgeOn: { backgroundColor: "#F0FDF4", borderColor: "#BBF7D0" },
   badgeOff: { backgroundColor: "#FEF2F2", borderColor: "#FECACA" },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  badgeText: { fontSize: 12, fontFamily: fonts.semiBold },
+  dot: { width:wp(6), height:hp(6), borderRadius: wp(3) },
+  badgeText: { fontSize:fontSize(12), fontFamily: fonts.semiBold },
 
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: wp(20),
     padding: 18,
     marginBottom: 14,
     elevation: 2,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width:wp(0), height:hp(2) },
     shadowOpacity: 0.04,
     shadowRadius: 8,
   },
-  cardTitle: { fontSize: 15, fontFamily: fonts.semiBold, color: "#0B4A6F", marginBottom: 10 },
+  cardTitle: { fontSize:fontSize(15), fontFamily: fonts.semiBold, color: "#0B4A6F", marginBottom: 10 },
   row: { flexDirection: "row", gap: 12, paddingVertical: 8 },
-  rowLabel: { fontSize: 12, color: "#64748B" },
-  rowValue: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 2 },
-  muted: { fontSize: 13, color: "#94A3B8" },
+  rowLabel: { fontSize:fontSize(12), color: "#64748B" },
+  rowValue: { fontSize:fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 2 },
+  muted: { fontSize:fontSize(13), color: "#94A3B8" },
 
-  sectionTitle: { fontSize: 16, fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 6, marginBottom: 10 },
+  sectionTitle: { fontSize:fontSize(16), fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 6, marginBottom: 10 },
   docCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: wp(20),
     padding: 16,
     marginBottom: 12,
     elevation: 2,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width:wp(0), height:hp(2) },
     shadowOpacity: 0.04,
     shadowRadius: 8,
   },
-  docLabel: { fontSize: 15, fontFamily: fonts.semiBold, color: "#0F172A" },
-  docHint: { fontSize: 12, color: "#64748B", marginTop: 2, marginBottom: 10 },
+  docLabel: { fontSize:fontSize(15), fontFamily: fonts.semiBold, color: "#0F172A" },
+  docHint: { fontSize:fontSize(12), color: "#64748B", marginTop: 2, marginBottom: 10 },
   docFile: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     padding: 10,
-    borderRadius: 12,
+    borderRadius: wp(12),
     backgroundColor: "#F1F5F9",
   },
-  docThumb: { width: 52, height: 52, borderRadius: 8, backgroundColor: "#E2E8F0" },
+  docThumb: { width:wp(52), height:hp(52), borderRadius: wp(8), backgroundColor: "#E2E8F0" },
   docThumbPdf: { alignItems: "center", justifyContent: "center", backgroundColor: "#FEE2E2" },
-  docName: { fontSize: 13, fontWeight: "600", color: "#334155" },
-  docMeta: { fontSize: 11, color: "#64748B", marginTop: 2 },
+  docName: { fontSize:fontSize(13), fontWeight: "600", color: "#334155" },
+  docMeta: { fontSize:fontSize(11), color: "#64748B", marginTop: 2 },
   docEmpty: {
     padding: 14,
-    borderRadius: 12,
+    borderRadius: wp(12),
     borderWidth: 1.5,
     borderStyle: "dashed",
     borderColor: "#CBD5E1",
     alignItems: "center",
   },
-  docEmptyText: { fontSize: 13, color: "#94A3B8" },
+  docEmptyText: { fontSize:fontSize(13), color: "#94A3B8" },
 });

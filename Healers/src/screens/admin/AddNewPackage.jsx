@@ -14,7 +14,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Feather } from '@expo/vector-icons';
 
@@ -23,13 +22,16 @@ import {
   getPackageById,
   updatePackage,
 } from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 export default function AddNewPackageScreen({
   navigation,
@@ -155,26 +157,17 @@ export default function AddNewPackageScreen({
 
   if (isEditMode && loadingPackage) {
     return (
-      <SafeAreaView style={[styles.container, commonStyles.container]}>
-        <TopBar navigation={navigation} headerTitle="Edit Package" />
-
+      <View style={[styles.container, commonStyles.container]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading package...</Text>
         </View>
-
-        <BottomBar activeTab="" />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, commonStyles.container]}>
-      <TopBar
-        navigation={navigation}
-        headerTitle={isEditMode ? "Edit Package" : "Add New Package"}
-      />
-
+    <View style={[styles.container, commonStyles.container]}>
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -210,8 +203,7 @@ export default function AddNewPackageScreen({
           </View>
 
           <Text style={styles.helperText}>
-            You can give a child a discounted price when you assign
-            this package to them from the Children page.
+            You can give a child a discounted price when you assign this package to them from the Children page.
           </Text>
         </View>
 
@@ -236,9 +228,9 @@ export default function AddNewPackageScreen({
                   <>
                     <Feather
                       name={isEditMode ? "check" : "save"}
-                      size={16}
+                      size={fontSize(16)}
                       color="#FFFFFF"
-                      style={{ marginRight: 6 }}
+                      style={{ marginRight: wp(6) }}
                     />
 
                     <Text style={styles.saveBtnText}>
@@ -250,9 +242,7 @@ export default function AddNewPackageScreen({
           </View>
         </View>
       </ScrollView>
-
-      <BottomBar activeTab="" />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -267,9 +257,9 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 24,
+    paddingHorizontal: wp(16),
+    paddingTop: wp(20),
+    paddingBottom: hp(24),
   },
 
   loadingContainer: {
@@ -280,22 +270,22 @@ const styles = StyleSheet.create({
 
   loadingText: {
     marginTop: 10,
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: colors.blackFont,
     fontFamily: fonts.regular,
   },
 
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
+    borderRadius: wp(16),
+    padding: wp(18),
+    marginBottom: hp(16),
     borderWidth: 1,
     borderColor: "#F1F5F9",
   },
 
   inputLabel: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.blackFont,
     lineHeight: 20,
@@ -307,14 +297,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#F7FAFD",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    paddingVertical: hp(12),
+    fontSize: fontSize(14),
     color: "#0F172A",
     marginBottom: 14,
     fontFamily: fonts.regular,
-    height: 50,
+    height: hp(50),
   },
 
   rateInputContainer: {
@@ -323,14 +313,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#F7FAFD",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 50,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    fontSize: fontSize(14),
+    height: hp(50),
     marginBottom: 10,
   },
 
   currencyPrefix: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: colors.blackFont,
     fontFamily: fonts.regular,
     marginRight: 8,
@@ -338,21 +329,21 @@ const styles = StyleSheet.create({
 
   rateTextInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#0F172A",
     padding: 0,
     fontFamily: fonts.regular,
   },
 
   rateSuffix: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     color: "#64748B",
     fontFamily: fonts.regular,
     marginLeft: 8,
   },
 
   helperText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     lineHeight: 18,
     color: "#64748B",
     fontFamily: fonts.regular,
@@ -367,14 +358,14 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: colors.blackFont,
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: wp(12),
+    paddingVertical: hp(10),
     alignItems: "center",
     justifyContent: "center",
   },
 
   cancelBtnText: {
-    fontSize: 16,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: colors.primary,
     lineHeight: 24,
@@ -384,8 +375,8 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: wp(12),
+    paddingVertical: hp(10),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -395,7 +386,7 @@ const styles = StyleSheet.create({
   },
 
   saveBtnText: {
-    fontSize: 14,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#FFFFFF",
     lineHeight: 24,

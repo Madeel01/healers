@@ -19,10 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -34,12 +31,16 @@ import {
   sendComplaintMessage,
   updateComplaintPriority,
 } from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
+  commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const PAGE_SIZE = 10;
 const CHAT_POLL_MS = 6000;
@@ -361,7 +362,7 @@ export default function ComplainManagementScreen({ navigation }) {
           style={styles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : "padding"}
         >
-          <View style={[styles.chatSheet, { paddingBottom: insets.bottom }]}>
+          <View style={[styles.chatSheet]}>
             <View style={styles.chatHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.chatTitle} numberOfLines={1}>
@@ -372,7 +373,7 @@ export default function ComplainManagementScreen({ navigation }) {
                 </Text>
               </View>
               <TouchableOpacity onPress={closeChat} hitSlop={8}>
-                <Feather name="x" size={22} color="#64748B" />
+                <Feather name="x" size={fontSize(22)} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -413,7 +414,7 @@ export default function ComplainManagementScreen({ navigation }) {
             {readOnly
               ? (
                 <View style={[styles.readOnlyBanner, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-                  <Feather name="lock" size={14} color="#64748B" />
+                  <Feather name="lock" size={fontSize(14)} color="#64748B" />
                   <Text style={styles.readOnlyText}>
                     This complaint is resolved. The conversation is read-only.
                   </Text>
@@ -437,7 +438,7 @@ export default function ComplainManagementScreen({ navigation }) {
                   >
                     {sending
                       ? <ActivityIndicator size="small" color="#FFFFFF" />
-                      : <Feather name="send" size={18} color="#FFFFFF" />}
+                      : <Feather name="send" size={fontSize(18)} color="#FFFFFF" />}
                   </TouchableOpacity>
                 </View>
               )}
@@ -461,7 +462,7 @@ export default function ComplainManagementScreen({ navigation }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Complaint details</Text>
               <TouchableOpacity onPress={closeDetails} hitSlop={8}>
-                <Feather name="x" size={20} color="#64748B" />
+                <Feather name="x" size={fontSize(20)} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -496,7 +497,7 @@ export default function ComplainManagementScreen({ navigation }) {
                   ? (
                     <View style={styles.resolvedBox}>
                       <View style={styles.resolvedHeaderRow}>
-                        <Feather name="check-circle" size={16} color="#059669" />
+                        <Feather name="check-circle" size={fontSize(16)} color="#059669" />
                         <Text style={styles.resolvedTitle}>
                           Resolved by {item.resolvedByName || "an admin"}
                         </Text>
@@ -522,7 +523,7 @@ export default function ComplainManagementScreen({ navigation }) {
 
                 <View style={styles.detailActions}>
                   <TouchableOpacity style={styles.secondaryBtn} onPress={() => openChat(item)}>
-                    <Ionicons name="chatbox-outline" size={16} color="#0B4A6F" />
+                    <Ionicons name="chatbox-outline" size={fontSize(16)} color="#0B4A6F" />
                     <Text style={styles.secondaryBtnText}>{resolved ? "View chat" : "Open chat"}</Text>
                   </TouchableOpacity>
 
@@ -532,7 +533,7 @@ export default function ComplainManagementScreen({ navigation }) {
                       onPress={() => handleTogglePriority(item)}
                       disabled={actionLoading}
                     >
-                      <Feather name="flag" size={16} color="#0B4A6F" />
+                      <Feather name="flag" size={fontSize(16)} color="#0B4A6F" />
                       <Text style={styles.secondaryBtnText}>
                         {item.priority === "High" ? "Set normal" : "Set high"}
                       </Text>
@@ -588,14 +589,8 @@ export default function ComplainManagementScreen({ navigation }) {
   const resetDraft = () => setDraft({ status: "All", priority: "All", role: "All" });
 
   return (
-    <SafeAreaView style={styles.mainContainer}>
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle={"Back to dashboard"}
-      />
-
+    <View style={commonStyles.container}>
+     
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -622,7 +617,7 @@ export default function ComplainManagementScreen({ navigation }) {
 
         <View style={styles.searchRow}>
           <View style={styles.searchBar}>
-            <Feather name="search" size={18} color="#94A3B8" style={styles.searchIcon} />
+            <Feather name="search" size={fontSize(18)} color="#94A3B8" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search complaints or people..."
@@ -638,7 +633,7 @@ export default function ComplainManagementScreen({ navigation }) {
           >
             <Ionicons
               name="options-outline"
-              size={20}
+              size={fontSize(20)}
               color={filtersActive ? "#FFFFFF" : "#334155"}
             />
           </TouchableOpacity>
@@ -650,7 +645,7 @@ export default function ComplainManagementScreen({ navigation }) {
 
         {!loading && complaints.length === 0 && (
           <View style={styles.emptyContainer}>
-            <Feather name="inbox" size={44} color="#94A3B8" />
+            <Feather name="inbox" size={fontSize(44)} color="#94A3B8" />
             <Text style={styles.emptyTitle}>No complaints found</Text>
             <Text style={styles.emptyText}>
               {searchQuery || filtersActive || statusFilter !== "All"
@@ -674,7 +669,7 @@ export default function ComplainManagementScreen({ navigation }) {
                   <View style={styles.roleIconBadge}>
                     <Feather
                       name={item.role === "Therapist" ? "briefcase" : "smile"}
-                      size={9}
+                      size={fontSize(9)}
                       color="#FFFFFF"
                     />
                   </View>
@@ -706,11 +701,11 @@ export default function ComplainManagementScreen({ navigation }) {
               <View style={styles.cardActions}>
                 <TouchableOpacity style={styles.viewDetailsBtn} onPress={() => openDetails(item)}>
                   <Text style={styles.viewDetailsText}>View Details</Text>
-                  <Feather name="chevron-right" size={16} color="#475569" />
+                  <Feather name="chevron-right" size={fontSize(16)} color="#475569" />
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.iconActionBtn} onPress={() => openChat(item)}>
-                  <Ionicons name="chatbox-outline" size={18} color="#0B4A6F" />
+                  <Ionicons name="chatbox-outline" size={fontSize(18)} color="#0B4A6F" />
                   {item.unreadCount > 0 && <View style={styles.unreadDot} />}
                 </TouchableOpacity>
 
@@ -719,7 +714,7 @@ export default function ComplainManagementScreen({ navigation }) {
                   onPress={() => confirmQuickResolve(item)}
                   disabled={resolved || actionLoading}
                 >
-                  <Feather name="check-circle" size={18} color="#059669" />
+                  <Feather name="check-circle" size={fontSize(18)} color="#059669" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -736,6 +731,7 @@ export default function ComplainManagementScreen({ navigation }) {
         transparent
         animationType="slide"
         onRequestClose={() => setIsFilterModalOpen(false)}
+        style={{paddingBottom:insets.bottom}}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
@@ -746,7 +742,7 @@ export default function ComplainManagementScreen({ navigation }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filter complaints</Text>
               <TouchableOpacity onPress={() => setIsFilterModalOpen(false)}>
-                <Feather name="x" size={20} color="#64748B" />
+                <Feather name="x" size={fontSize(20)} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -798,45 +794,39 @@ export default function ComplainManagementScreen({ navigation }) {
       {renderDetailsModal()}
       {renderChatSheet()}
 
-      <BottomBar
-        activeTab={""}
-        setActiveTab={setActiveBottomTab}
-        onOpenNotifications={setIsNotificationOpen}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: "#F8FAFC" },
   scrollArea: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 32 },
+  scrollContent: { padding: wp(20), paddingBottom: hp(24) },
 
   pageTitle: {
-    fontSize: 24,
+    fontSize:fontSize(24),
     fontFamily: fonts.bold,
     color: "#181C1E",
-    lineHeight: 40,
-    marginBottom: 16,
+    lineHeight: 30,
+    marginBottom: hp(16),
   },
 
-  statsRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  statsRow: { flexDirection: "row", gap: 10, marginBottom: hp(20) },
   statCard: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    borderRadius: wp(18),
+    paddingVertical: wp(14),
+    paddingHorizontal: hp(14),
   },
   statCardActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  statLabel: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B" },
+  statLabel: { fontSize:fontSize(12), fontFamily: fonts.regular, color: "#64748B" },
   statLabelActive: { color: "#FFFFFF" },
-  statNumber: { fontSize: 24, fontFamily: fonts.bold, color: "#0F172A", marginTop: 2 },
+  statNumber: { fontSize:fontSize(24), fontFamily: fonts.bold, color: "#0F172A", marginTop: 2 },
   statNumberActive: { color: "#FFFFFF" },
 
-  searchRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20 },
+  searchRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: hp(20) },
   searchBar: {
     flex: 1,
     flexDirection: "row",
@@ -844,19 +834,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(12),
+    height: hp(48),
   },
   searchIcon: { marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 14, color: "#0F172A" },
+  searchInput: { flex: 1, fontSize:fontSize(14), color: "#0F172A" },
   filterBtn: {
-    width: 44,
-    height: 44,
+    width: wp(44),
+    height: hp(44),
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 12,
+    borderRadius: wp(12),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -864,93 +854,93 @@ const styles = StyleSheet.create({
 
   complaintCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: wp(20),
+    padding: wp(16),
+    marginBottom: hp(16),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 1,
   },
-  userHeader: { flexDirection: "row", alignItems: "flex-start", marginBottom: 12 },
+  userHeader: { flexDirection: "row", alignItems: "flex-start", marginBottom: hp(12) },
   avatarWrapper: { position: "relative", marginRight: 12 },
   userAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: wp(44),
+    height: hp(44),
+    borderRadius: wp(14),
     alignItems: "center",
     justifyContent: "center",
   },
-  userAvatarText: { color: "#FFFFFF", fontSize: 18, fontWeight: "700" },
+  userAvatarText: { color: "#FFFFFF", fontSize:fontSize(18), fontFamily:fonts.semiBold,lineHeight:24 },
   roleIconBadge: {
     position: "absolute",
     bottom: -3,
     right: -3,
     backgroundColor: "#004B82",
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: wp(18),
+    height: hp(18),
+    borderRadius: wp(9),
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
     borderColor: "#FFFFFF",
   },
-  userDetails: { flex: 1, paddingRight: 8 },
-  userName: { fontSize: 16, fontFamily: fonts.semiBold, color: "#181C1E", marginBottom: 4 },
+  userDetails: { flex: 1, paddingRight: wp(8) },
+  userName: { fontSize:fontSize(14), fontFamily: fonts.semiBold, color: "#181C1E", marginBottom: hp(2) ,lineHeight:20},
   roleBadge: {
     alignSelf: "flex-start",
     backgroundColor: "#E2E8F0",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: wp(6),
+    paddingVertical: hp(2),
+    borderRadius: wp(6),
   },
-  roleBadgeText: { fontSize: 10, fontFamily: fonts.bold, color: "#475569" },
+  roleBadgeText: { fontSize:fontSize(8), fontFamily: fonts.semiBold, color: "#475569" ,lineHeight:12},
 
   badgeTimeCol: { alignItems: "flex-end", gap: 4 },
-  badgeRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
-  statusBadgeText: { fontSize: 11, fontWeight: "700" },
+  badgeRow: { flexDirection: "row", gap: 8, marginBottom: hp(12) },
+  statusBadge: { paddingHorizontal: wp(8), paddingVertical: hp(2), borderRadius: wp(12) },
+  statusBadgeText: { fontSize:fontSize(10), fontFamily: fonts.semiBold ,lineHeight:14},
   highPriorityBg: { backgroundColor: "#FEE2E2" },
   highPriorityText: { color: "#93000A" },
   pendingBg: { backgroundColor: "#FEF3C7" },
   pendingText: { color: "#92400E" },
   resolvedBg: { backgroundColor: "#D1FAE5" },
   resolvedText: { color: "#065F46" },
-  timeText: { fontSize: 11, color: "#94A3B8" },
+  timeText: { fontSize:fontSize(11), color: "#94A3B8" },
 
   complaintTitle: {
-    fontSize: 17,
+    fontSize:fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.primary,
-    marginBottom: 6,
+    marginBottom: hp(3),
     lineHeight: 22,
   },
   complaintDescription: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 19,
-    marginBottom: 16,
+    marginBottom: hp(16),
   },
 
   cardActions: { flexDirection: "row", gap: 8 },
   viewDetailsBtn: {
     flex: 1,
-    height: 40,
+    height: hp(40),
     backgroundColor: "#E2E8F0",
-    borderRadius: 10,
+    borderRadius: wp(10),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: wp(4),
   },
-  viewDetailsText: { fontSize: 13, fontFamily: fonts.bold, color: colors.blackFont, lineHeight: 20 },
+  viewDetailsText: { fontSize:fontSize(12), fontFamily: fonts.semiBold, color: colors.blackFont, lineHeight: 18 },
   iconActionBtn: {
-    width: 40,
-    height: 40,
+    width: wp(40),
+    height: hp(40),
     backgroundColor: "#E0F2FE",
-    borderRadius: 10,
+    borderRadius: wp(10),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -961,16 +951,16 @@ const styles = StyleSheet.create({
     right: 7,
     width: 9,
     height: 9,
-    borderRadius: 5,
+    borderRadius: wp(5),
     backgroundColor: "#DC2626",
     borderWidth: 1.5,
     borderColor: "#E0F2FE",
   },
 
-  centerLoader: { marginVertical: 30 },
+  centerLoader: { marginVertical: hp(30) },
   emptyContainer: { alignItems: "center", paddingVertical: 40, paddingHorizontal: 20 },
-  emptyTitle: { fontSize: 17, fontWeight: "600", color: "#334155", marginTop: 12 },
-  emptyText: { fontSize: 14, color: "#64748B", textAlign: "center", marginTop: 6, lineHeight: 20 },
+  emptyTitle: { fontSize:fontSize(16), fontFamily: fonts.semiBold, color: "#334155", marginTop: 12 },
+  emptyText: { fontSize:fontSize(14), color: "#64748B", textAlign: "center", marginTop: 6, lineHeight: 20 },
 
   /* Modals */
   modalOverlay: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.4)", justifyContent: "flex-end" },
@@ -985,89 +975,89 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: hp(16),
   },
-  modalTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A" },
-  filterSectionLabel: { fontSize: 12, fontWeight: "700", color: "#64748B", marginBottom: 10, marginTop: 8 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
-  chipBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: "#F1F5F9" },
+  modalTitle: { fontSize:fontSize(16), fontFamily: fonts.semiBold, color: "#0F172A",lineHeight:24 },
+  filterSectionLabel: { fontSize:fontSize(12), fontFamily: fonts.semiBold, color: "#64748B", marginBottom: hp(10), marginTop: 6 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: hp(16) },
+  chipBtn: { paddingHorizontal: wp(16), paddingVertical: hp(8), borderRadius: wp(20), backgroundColor: "#F1F5F9" },
   chipBtnActive: { backgroundColor: "#004B82" },
-  chipText: { fontSize: 13, fontWeight: "600", color: "#475569" },
+  chipText: { fontSize:fontSize(12), fontFamily: fonts.semiBold, color: "#475569" },
   chipTextActive: { color: "#FFFFFF" },
   modalActionsRow: { flexDirection: "row", gap: 12, marginTop: 16 },
   resetBtn: {
     flex: 1,
-    height: 46,
-    borderRadius: 12,
+    height: hp(46),
+    borderRadius: wp(12),
     borderWidth: 1.5,
     borderColor: "#CBD5E1",
     alignItems: "center",
     justifyContent: "center",
   },
-  resetBtnText: { fontSize: 14, fontWeight: "700", color: "#475569" },
+  resetBtnText: { fontSize:fontSize(14), fontFamily: fonts.semiBold, color: "#475569" },
   applyBtn: {
     flex: 1.5,
-    height: 46,
-    borderRadius: 12,
+    height: hp(46),
+    borderRadius: wp(12),
     backgroundColor: "#004B82",
     alignItems: "center",
     justifyContent: "center",
   },
-  applyBtnText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
+  applyBtnText: { fontSize:fontSize(14), fontFamily: fonts.semiBold, color: "#FFFFFF" },
 
   /* Details modal */
   detailSheet: {
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
+    borderTopLeftRadius: wp(24),
+    borderTopRightRadius: wp(24),
+    padding: wp(20),
     maxHeight: "88%",
   },
-  detailTitle: { fontSize: 20, fontFamily: fonts.semiBold, color: "#0F172A", lineHeight: 26, marginBottom: 8 },
-  detailDescription: { fontSize: 15, fontFamily: fonts.regular, color: "#334155", lineHeight: 22, marginBottom: 16 },
-  metaBox: { backgroundColor: "#F8FAFC", borderRadius: 14, padding: 14, gap: 10, marginBottom: 16 },
+  detailTitle: { fontSize:fontSize(20), fontFamily: fonts.semiBold, color: "#0F172A", lineHeight: 26, marginBottom: hp(8) },
+  detailDescription: { fontSize:fontSize(15), fontFamily: fonts.regular, color: "#334155", lineHeight: 22, marginBottom: hp(16) },
+  metaBox: { backgroundColor: "#F8FAFC", borderRadius: wp(14), padding: 14, gap: 10, marginBottom: hp(16) },
   metaRow: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  metaLabel: { fontSize: 13, color: "#64748B" },
-  metaValue: { fontSize: 13, fontWeight: "600", color: "#0F172A", flexShrink: 1, textAlign: "right" },
-  resolvedBox: { backgroundColor: "#ECFDF5", borderRadius: 14, padding: 14, marginBottom: 16 },
+  metaLabel: { fontSize:fontSize(13), color: "#64748B" },
+  metaValue: { fontSize:fontSize(13), fontFamily: fonts.semiBold, color: "#0F172A", flexShrink: 1, textAlign: "right" },
+  resolvedBox: { backgroundColor: "#ECFDF5", borderRadius: wp(14), padding: 14, marginBottom: hp(16) },
   resolvedHeaderRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  resolvedTitle: { fontSize: 14, fontWeight: "700", color: "#065F46" },
-  resolvedMeta: { fontSize: 12, color: "#047857", marginTop: 4 },
-  resolvedNote: { fontSize: 14, color: "#065F46", marginTop: 8, lineHeight: 20 },
-  fieldLabel: { fontSize: 13, fontWeight: "700", color: "#475569", marginBottom: 6 },
+  resolvedTitle: { fontSize:fontSize(14), fontFamily: fonts.semiBold, color: "#065F46" },
+  resolvedMeta: { fontSize:fontSize(12), color: "#047857", marginTop: 4 },
+  resolvedNote: { fontSize:fontSize(14), color: "#065F46", marginTop: 8, lineHeight: 20 },
+  fieldLabel: { fontSize:fontSize(13), fontFamily: fonts.semiBold, color: "#475569", marginBottom: hp(6) },
   noteInput: {
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 12,
+    borderRadius: wp(12),
     paddingHorizontal: 14,
     paddingVertical: 10,
     minHeight: 72,
-    fontSize: 14,
+    fontSize:fontSize(14),
     color: "#0F172A",
     textAlignVertical: "top",
-    marginBottom: 16,
+    marginBottom: hp(16),
   },
-  detailActions: { flexDirection: "row", gap: 10, marginBottom: 12 },
+  detailActions: { flexDirection: "row", gap: 10, marginBottom: hp(12) },
   secondaryBtn: {
     flex: 1,
-    height: 44,
-    borderRadius: 12,
+    height: hp(44),
+    borderRadius: wp(10),
     backgroundColor: "#E0F2FE",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
-  secondaryBtnText: { fontSize: 13, fontWeight: "700", color: "#0B4A6F" },
+  secondaryBtnText: { fontSize:fontSize(12), fontFamily: fonts.semiBold, color: "#0B4A6F" },
   primaryBtn: {
-    height: 48,
-    borderRadius: 14,
+    height: hp(46),
+    borderRadius: wp(10),
     backgroundColor: "#0B4A6F",
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryBtnText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  primaryBtnText: { fontSize:fontSize(14), fontFamily: fonts.semiBold, color: "#FFFFFF" },
 
   /* Chat */
   chatSheet: {
@@ -1086,26 +1076,26 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  chatTitle: { fontSize: 17, fontWeight: "800", color: "#0F172A" },
-  chatSubTitle: { fontSize: 12, color: "#64748B", marginTop: 2 },
+  chatTitle: { fontSize:fontSize(17), fontFamily: fonts.semiBold, color: "#0F172A" },
+  chatSubTitle: { fontSize:fontSize(12), color: "#64748B", marginTop: 2 },
   chatBody: { flex: 1, paddingHorizontal: 16, backgroundColor: "#F8FAFC" },
   chatEmpty: {
     textAlign: "center",
     color: "#94A3B8",
-    fontSize: 14,
-    marginTop: 40,
+    fontSize:fontSize(14),
+    marginTop: hp(40),
     paddingHorizontal: 24,
     lineHeight: 20,
   },
-  bubbleRow: { flexDirection: "row", marginBottom: 8 },
+  bubbleRow: { flexDirection: "row", marginBottom: hp(8) },
   bubbleRowMine: { justifyContent: "flex-end" },
   bubbleRowTheirs: { justifyContent: "flex-start" },
-  bubble: { maxWidth: "80%", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 9 },
+  bubble: { maxWidth: "80%", borderRadius: wp(16), paddingHorizontal: wp(14), paddingVertical: hp(8) },
   bubbleMine: { backgroundColor: "#0B4A6F", borderBottomRightRadius: 4 },
   bubbleTheirs: { backgroundColor: "#FFFFFF", borderBottomLeftRadius: 4, borderWidth: 1, borderColor: "#E2E8F0" },
-  bubbleText: { fontSize: 14, color: "#0F172A", lineHeight: 20 },
+  bubbleText: { fontSize:fontSize(14), color: "#0F172A", lineHeight: 20 },
   bubbleTextMine: { color: "#FFFFFF" },
-  bubbleTime: { fontSize: 10, color: "#94A3B8", marginTop: 4, alignSelf: "flex-end" },
+  bubbleTime: { fontSize:fontSize(10), color: "#94A3B8", marginTop: 4, alignSelf: "flex-end" },
   bubbleTimeMine: { color: "#BFDBFE" },
   chatInputRow: {
     flexDirection: "row",
@@ -1119,19 +1109,20 @@ const styles = StyleSheet.create({
   },
   chatInput: {
     flex: 1,
-    maxHeight: 100,
+    minHeight: hp(48),
+    maxHeight: hp(48),
     backgroundColor: "#F1F5F9",
-    borderRadius: 20,
+    borderRadius: wp(20),
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 10,
-    fontSize: 14,
+    fontSize:fontSize(14),
     color: "#0F172A",
   },
   sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: wp(48),
+    height: hp(48),
+    borderRadius: 999,
     backgroundColor: "#0B4A6F",
     alignItems: "center",
     justifyContent: "center",
@@ -1146,5 +1137,5 @@ const styles = StyleSheet.create({
     borderTopColor: "#F1F5F9",
     backgroundColor: "#F8FAFC",
   },
-  readOnlyText: { flex: 1, fontSize: 12, color: "#64748B" },
+  readOnlyText: { flex: 1, fontSize:fontSize(12), color: "#64748B" },
 });
