@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#FFFFFF",
   },
-  partnerName: { fontSize: fontSize(16), fontFamily: fonts.medium, color: "#0F172A", lineHeight: 20 },
+  partnerName: { fontSize: fontSize(16), fontFamily: fonts.medium, color: "#0F172A", lineHeight: 16 },
   statusText: { fontSize: fontSize(11), marginTop: 1, lineHeight: 16 },
   infoButton: {
     width: wp(36),
