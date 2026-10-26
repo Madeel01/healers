@@ -1,6 +1,7 @@
 const Conversation = require("../models/Conversation");
 const Message = require("../models/Message");
 const mongoose = require("mongoose");
+const User = require("../models/User");
 
 exports.sendMessage = async (req, res) => {
   try {
@@ -95,11 +96,11 @@ exports.getConversations = async (req, res) => {
           },
           lastMessage: conv.lastMessage
             ? {
-                text: conv.lastMessage.text,
-                createdAt: conv.lastMessage.createdAt,
-                isSeen: conv.lastMessage.isSeen,
-                sender: conv.lastMessage.sender,
-              }
+              text: conv.lastMessage.text,
+              createdAt: conv.lastMessage.createdAt,
+              isSeen: conv.lastMessage.isSeen,
+              sender: conv.lastMessage.sender,
+            }
             : null,
           unreadCount,
           isCareTeam: conv.isCareTeam,
@@ -124,6 +125,49 @@ exports.getConversations = async (req, res) => {
     res.status(200).json({ success: true, data: paginatedConversations });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// Use your existing User model
+exports.getConversationsLastSeen = async (req, res) => {
+  try {
+    const { userID } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(userID)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    const user = await User.findById(userID)
+      .select("fullName profileImage isOnline lastActive")
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        id: user._id,
+        fullName: user.fullName,
+        profileImage: user.profileImage || "",
+        isOnline: user.isOnline ?? false,
+        lastActive: user.lastActive ?? null,
+      },
+    });
+  } catch (error) {
+    console.log("getConversationsLastSeen error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -272,8 +316,8 @@ exports.getConversationId = async (req, res) => {
     const { senderId, receiverId } = req.params;
 
     if (
-      !mongoose.isValidObjectId(senderId) ||
-      !mongoose.isValidObjectId(receiverId)
+      !mongoose.isValidObjectId(senderId)
+      || !mongoose.isValidObjectId(receiverId)
     ) {
       return res.status(400).json({
         success: false,

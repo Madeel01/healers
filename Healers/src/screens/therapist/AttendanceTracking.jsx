@@ -14,7 +14,6 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -25,8 +24,6 @@ import {
   therapistUsers,
   updateAttendanceStatusApi,
 } from '../../api/therapist/api';
-import TherapistBottomBar from '../../components/TherapistBottomBar';
-import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
@@ -34,6 +31,11 @@ import {
   fonts,
 } from '../../styles/theme';
 import { formatTo12Hour } from '../../utils/hoursformat';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const MONTH_NAMES = [
   "January",
@@ -256,9 +258,7 @@ export default function AttendanceTrackingScreen({ navigation, route }) {
   };
 
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
-      <TopBar navigation={navigation} headerTitle="Attendance Tracking" />
-
+    <View style={[styles.mainContainer, commonStyles.container]}>
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -350,7 +350,7 @@ export default function AttendanceTrackingScreen({ navigation, route }) {
                     >
                       <View style={styles.dateColumn}>
                         {selectedRange === "Today" && (
-                          <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: "#1E293B", marginBottom: 2 }}>
+                          <Text style={{ fontFamily: fonts.bold, fontSize:fontSize(14), color: "#1E293B", marginBottom: 2 }}>
                             {item.childName}
                           </Text>
                         )}
@@ -459,7 +459,6 @@ export default function AttendanceTrackingScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      {/* Modals */}
       <Modal
         visible={childDropdownVisible}
         transparent={true}
@@ -532,9 +531,7 @@ export default function AttendanceTrackingScreen({ navigation, route }) {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-
-      <TherapistBottomBar activeTab="AttendanceTracking" />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -546,7 +543,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
     paddingTop: 12,
     paddingBottom: 20,
   },
@@ -557,46 +554,46 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 10,
     backgroundColor: "#FFFFFF",
-    padding: 12,
-    borderRadius: 12,
+    padding: wp(12),
+    borderRadius: wp(12),
   },
   searchBarContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F7FAFD",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 40,
+    borderRadius: wp(8),
+    paddingHorizontal: wp(12),
+    height: hp(40),
   },
   searchIcon: {
     marginRight: 8,
   },
   selectedChildText: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     color: "#717781",
     lineHeight: 20,
   },
   filterBtn: {
     backgroundColor: "#1669A9",
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: wp(40),
+    height: hp(40),
+    borderRadius: wp(8),
     alignItems: "center",
     justifyContent: "center",
   },
 
   childInfoCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    padding: 20,
+    borderRadius: wp(8),
+    padding: wp(20),
     borderWidth: 1,
     borderColor: "#C1C7D2",
     marginBottom: 16,
   },
   childSectionTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.bold,
     color: colors.primary,
     lineHeight: 24,
@@ -610,7 +607,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fieldLabel: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.medium,
     color: "#717781",
     marginBottom: 4,
@@ -618,15 +615,15 @@ const styles = StyleSheet.create({
   },
   fieldValueContainer: {
     backgroundColor: "#F7FAFD",
-    borderRadius: 8,
+    borderRadius: wp(8),
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    paddingHorizontal: 12,
+    paddingHorizontal: wp(12),
     height: 38,
     justifyContent: "center",
   },
   fieldValueText: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 20,
@@ -634,10 +631,10 @@ const styles = StyleSheet.create({
 
   dateHeaderBanner: {
     backgroundColor: "#005086",
-    borderRadius: 0,
+    borderRadius: wp(0),
     marginHorizontal: -16,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: wp(20),
+    paddingVertical: hp(10),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -649,19 +646,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dateDropdownText: {
-    fontSize: 16,
+    fontSize:fontSize(14),
     fontFamily: fonts.medium,
     color: "#FFFFFF",
     lineHeight: 24,
   },
   statusPillBadge: {
     backgroundColor: "#8BF6D9",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(4),
+    borderRadius: wp(8),
   },
   statusPillText: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.medium,
     color: colors.primary,
     lineHeight: 16,
@@ -669,7 +666,7 @@ const styles = StyleSheet.create({
 
   attendanceContainer: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: wp(12),
     borderWidth: 1,
     borderColor: "#E0E3E6",
     overflow: "hidden",
@@ -678,8 +675,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: wp(14),
+    paddingVertical: hp(12),
   },
   borderBottom: {
     borderBottomWidth: 1,
@@ -690,13 +687,13 @@ const styles = StyleSheet.create({
     width: 100,
   },
   dateText: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.bold,
     color: "#181C1E",
     lineHeight: 16,
   },
   timeText: {
-    fontSize: 10,
+    fontSize:fontSize(10),
     fontFamily: fonts.regular,
     color: "#717781",
     lineHeight: 15,
@@ -705,14 +702,14 @@ const styles = StyleSheet.create({
   toggleGroup: {
     flexDirection: "row",
     backgroundColor: "rgba(139,246,217,.3)",
-    borderRadius: 8,
-    padding: 3,
+    borderRadius: wp(8),
+    padding: wp(3),
     gap: 4,
   },
   toggleIconBtn: {
-    width: 32,
-    height: 28,
-    borderRadius: 6,
+    width: wp(32),
+    height: hp(28),
+    borderRadius: wp(6),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -727,19 +724,19 @@ const styles = StyleSheet.create({
   },
 
   statusBadgeColumn: {
-    width: 85,
+    width: wp(85),
     alignItems: "flex-end",
   },
   presentBadge: {
     backgroundColor: "rgba(0,107,88,.1)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: wp(6),
+    paddingVertical: hp(2),
+    borderRadius: wp(4),
     borderWidth: 1,
     borderColor: "rgba(0,107,88,.2)",
   },
   statusBadgeText: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     lineHeight: 20,
   },
@@ -748,9 +745,9 @@ const styles = StyleSheet.create({
   },
   absentBadge: {
     backgroundColor: "rgba(186,26,26,.1)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: wp(6),
+    paddingVertical: hp(2),
+    borderRadius: wp(4),
     borderWidth: 1,
     borderColor: "rgba(186,26,26,.2)",
   },
@@ -759,9 +756,9 @@ const styles = StyleSheet.create({
   },
   pendingBadge: {
     backgroundColor: "#E0E3E6",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: wp(6),
+    paddingVertical: hp(2),
+    borderRadius: wp(4),
     borderWidth: 1,
     borderColor: "#C1C7D2",
   },
@@ -771,26 +768,26 @@ const styles = StyleSheet.create({
 
   fullHistoryBtn: {
     backgroundColor: "#F1F4F7",
-    paddingVertical: 12,
+    paddingVertical: hp(12),
     alignItems: "center",
     justifyContent: "center",
     borderTopWidth: 1,
     borderTopColor: "#E0E3E6",
   },
   fullHistoryText: {
-    fontSize: 10,
+    fontSize:fontSize(10),
     fontFamily: fonts.bold,
     color: colors.primary,
     lineHeight: 15,
   },
 
   emptyContainer: {
-    paddingVertical: 32,
+    paddingVertical: hp(32),
     alignItems: "center",
     justifyContent: "center",
   },
   emptyText: {
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.medium,
     color: "#64748B",
     lineHeight: 18,
@@ -802,13 +799,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.4)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
   },
   dropdownMenu: {
     width: "100%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: wp(16),
+    padding: wp(16),
     elevation: 5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -816,7 +813,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   dropdownMenuTitle: {
-    fontSize: 15,
+    fontSize:fontSize(15),
     fontFamily: fonts.bold,
     color: "#0F172A",
     marginBottom: 12,
@@ -829,15 +826,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    paddingVertical: hp(10),
+    paddingHorizontal: wp(8),
+    borderRadius: wp(8),
   },
   dropdownOptionSelected: {
     backgroundColor: "#F1F5F9",
   },
   dropdownOptionText: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     color: "#334155",
     lineHeight: 20,

@@ -19,7 +19,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -33,8 +33,6 @@ import {
   therapistUsers,
   updateFeedbackVisibility,
 } from '../../api/therapist/api';
-import TherapistBottomBar from '../../components/TherapistBottomBar';
-import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
@@ -42,6 +40,11 @@ import {
   fonts,
 } from '../../styles/theme';
 import { formatTo12Hour } from '../../utils/hoursformat';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const MONTH_NAMES = [
   "January",
@@ -88,6 +91,7 @@ const getCurrentMonthRangeLabel = () => {
 
 export default function FeedbackManagementScreen({ navigation }) {
   const { user } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
 
   const [selectedRange, setSelectedRange] = useState(getCurrentMonthRangeLabel);
   const [childDropdownVisible, setChildDropdownVisible] = useState(false);
@@ -487,17 +491,7 @@ export default function FeedbackManagementScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView
-      style={[
-        styles.mainContainer,
-        commonStyles.container,
-      ]}
-    >
-      <TopBar
-        navigation={navigation}
-        headerTitle="Feedback Management"
-      />
-
+    <View style={[styles.mainContainer, commonStyles.container]}>
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -514,7 +508,7 @@ export default function FeedbackManagementScreen({ navigation }) {
           >
             <Feather
               name="search"
-              size={20}
+              size={fontSize(20)}
               color="#717781"
               style={styles.searchIcon}
             />
@@ -530,7 +524,7 @@ export default function FeedbackManagementScreen({ navigation }) {
 
             <Feather
               name="chevron-down"
-              size={18}
+              size={fontSize(18)}
               color="#717781"
               style={{
                 marginLeft: "auto",
@@ -548,7 +542,7 @@ export default function FeedbackManagementScreen({ navigation }) {
           >
             <Ionicons
               name="options-outline"
-              size={22}
+              size={fontSize(22)}
               color="#FFFFFF"
             />
           </TouchableOpacity>
@@ -673,7 +667,7 @@ export default function FeedbackManagementScreen({ navigation }) {
 
             <Feather
               name="chevron-down"
-              size={20}
+              size={fontSize(20)}
               color="#FFFFFF"
             />
           </TouchableOpacity>
@@ -805,7 +799,7 @@ export default function FeedbackManagementScreen({ navigation }) {
                                 >
                                   <Ionicons
                                     name="checkmark-circle-outline"
-                                    size={22}
+                                    size={fontSize(22)}
                                     color="#006B58"
                                   />
                                 </View>
@@ -816,22 +810,18 @@ export default function FeedbackManagementScreen({ navigation }) {
                                 >
                                   <MaterialCommunityIcons
                                     name="dots-horizontal-circle-outline"
-                                    size={22}
+                                    size={fontSize(22)}
                                     color="#717781"
                                   />
                                 </View>
                               )}
 
-                            <View
-                              style={styles.sessionDetails}
-                            >
-                              <View
-                                style={styles.nameTimeRow}
-                              >
-                                <Text
-                                  style={styles.childItemName}
-                                >
-                                  {item.name}
+                            <View style={styles.sessionDetails}>
+                              <View style={styles.nameTimeRow}>
+                                <Text style={styles.childItemName}>
+                                  {item.name?.length > 10
+                                    ? `${item.name.slice(0, 10)}...`
+                                    : item.name}
                                 </Text>
 
                                 {!!item.time && (
@@ -1020,7 +1010,7 @@ export default function FeedbackManagementScreen({ navigation }) {
                         {isSelected && (
                           <Feather
                             name="check"
-                            size={18}
+                            size={fontSize(18)}
                             color="#1669A9"
                           />
                         )}
@@ -1104,7 +1094,7 @@ export default function FeedbackManagementScreen({ navigation }) {
                           {isSelected && (
                             <Feather
                               name="check"
-                              size={18}
+                              size={fontSize(18)}
                               color="#006B5D"
                             />
                           )}
@@ -1124,6 +1114,7 @@ export default function FeedbackManagementScreen({ navigation }) {
         transparent
         animationType="slide"
         onRequestClose={() => setReplyModalVisible(false)}
+        style={{paddingBottom:insets.bottom}}
       >
         <View style={styles.modalOverlay2}>
           <View style={styles.replyModal}>
@@ -1144,7 +1135,7 @@ export default function FeedbackManagementScreen({ navigation }) {
               >
                 <Feather
                   name="x"
-                  size={22}
+                  size={fontSize(22)}
                   color="#334155"
                 />
               </TouchableOpacity>
@@ -1182,7 +1173,7 @@ export default function FeedbackManagementScreen({ navigation }) {
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
-                    marginBottom: 8,
+                    marginBottom: wp(8),
                   }}
                 >
                   {selectedFeedback?.feedbackDetails
@@ -1196,9 +1187,9 @@ export default function FeedbackManagementScreen({ navigation }) {
                             .profileImage,
                         }}
                         style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
+                          width: wp(36),
+                          height: hp(36),
+                          borderRadius: wp(18),
                           marginRight: 10,
                         }}
                       />
@@ -1206,9 +1197,9 @@ export default function FeedbackManagementScreen({ navigation }) {
                     : (
                       <View
                         style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
+                          width: wp(36),
+                          height: hp(36),
+                          borderRadius: wp(18),
                           marginRight: 10,
                           backgroundColor: "#E2E8F0",
                           alignItems: "center",
@@ -1233,7 +1224,7 @@ export default function FeedbackManagementScreen({ navigation }) {
 
                     <Text
                       style={{
-                        fontSize: 11,
+                        fontSize: fontSize(11),
                         color: "#64748B",
                       }}
                     >
@@ -1266,7 +1257,7 @@ export default function FeedbackManagementScreen({ navigation }) {
             <ScrollView
               style={styles.repliesList}
               contentContainerStyle={{
-                paddingVertical: 10,
+                paddingVertical: hp(10),
               }}
             >
               {loadingReplies
@@ -1396,7 +1387,7 @@ export default function FeedbackManagementScreen({ navigation }) {
                   : (
                     <Feather
                       name="send"
-                      size={18}
+                      size={fontSize(18)}
                       color="#FFFFFF"
                     />
                   )}
@@ -1405,9 +1396,7 @@ export default function FeedbackManagementScreen({ navigation }) {
           </View>
         </View>
       </Modal>
-
-      <TherapistBottomBar activeTab="FeedbackManagement" />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1419,177 +1408,177 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 24,
+    paddingHorizontal: wp(20),
+    paddingTop: hp(12),
+    paddingBottom: hp(24),
   },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
-    gap: 12,
+    marginBottom: wp(16),
+    gap: wp(12),
     backgroundColor: colors.white,
-    padding: 12,
-    borderRadius: 12,
+    padding: wp(12),
+    borderRadius: wp(12),
   },
   searchBarContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F7FAFD",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 40,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(12),
+    height: hp(40),
   },
   searchIcon: {
     marginRight: 8,
   },
   selectedChildText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.medium,
     color: "#0F172A",
   },
   filterBtn: {
     backgroundColor: "#1669A9",
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: wp(40),
+    height: hp(40),
+    borderRadius: wp(8),
     alignItems: "center",
     justifyContent: "center",
   },
   childInfoCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    padding: 24,
+    borderRadius: wp(8),
+    padding: wp(24),
     borderWidth: 1,
     borderColor: "#C1C7D2",
-    marginBottom: 16,
+    marginBottom: wp(16),
   },
   childSectionTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.primary,
     lineHeight: 24,
-    marginBottom: 12,
+    marginBottom: wp(12),
   },
   inputRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: wp(12),
   },
   fieldBox: {
     flex: 1,
   },
   fieldLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#717781",
-    marginBottom: 6,
+    marginBottom: wp(6),
     lineHeight: 16,
   },
   fieldValueContainer: {
     backgroundColor: "#F1F4F7",
-    borderRadius: 8,
+    borderRadius: wp(8),
     borderWidth: 1,
     borderColor: "#C1C7D2",
-    paddingHorizontal: 12,
-    height: 40,
+    paddingHorizontal: wp(12),
+    height: hp(40),
     justifyContent: "center",
   },
   fieldValueText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.medium,
     color: "#181C1E",
     lineHeight: 20,
   },
   statsCard: {
     backgroundColor: colors.primary,
-    borderRadius: 24,
-    paddingVertical: 24,
-    paddingHorizontal: 24,
+    borderRadius: wp(24),
+    paddingVertical: hp(24),
+    paddingHorizontal: wp(24),
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: wp(16),
   },
   statBox: {
     flex: 1,
     backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    borderRadius: wp(12),
+    paddingVertical: hp(12),
+    paddingHorizontal: wp(12),
     alignItems: "center",
-    justifyContent: "center",
+    // justifyContent: "center",
     marginHorizontal: 4,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: fontSize(24),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
-    marginBottom: 5,
+    marginBottom: wp(5),
     lineHeight: 24,
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: fontSize(9),
     fontFamily: fonts.medium,
     color: "rgba(255,255,255,.8)",
     textAlign: "center",
-    lineHeight: 15,
+    lineHeight: 12,
     letterSpacing: 0.5,
   },
   dateHeaderBanner: {
     backgroundColor: "#00725E",
     marginHorizontal: -16,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: wp(16),
+    paddingVertical: hp(10),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: wp(16),
   },
   dateDropdownBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: wp(6),
   },
   dateDropdownText: {
-    fontSize: 16,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#FFFFFF",
     lineHeight: 24,
   },
   feedbackPillBtn: {
     backgroundColor: "#8BF6D9",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(4),
+    borderRadius: wp(8),
   },
   feedbackPillText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#006B58",
     lineHeight: 16,
   },
   loaderContainer: {
-    paddingVertical: 40,
+    paddingVertical: hp(40),
     alignItems: "center",
     justifyContent: "center",
   },
   loadingText: {
     marginTop: 10,
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#64748B",
   },
   sessionList: {
-    gap: 10,
+    gap: wp(10),
   },
   sessionCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    borderRadius: wp(12),
+    paddingVertical: hp(12),
+    paddingHorizontal: wp(12),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1610,18 +1599,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   iconCircleDone: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(999),
     backgroundColor: "#8BF6D9",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 10,
   },
   iconCirclePending: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(999),
     backgroundColor: "#E5E8EB",
     alignItems: "center",
     justifyContent: "center",
@@ -1633,23 +1622,23 @@ const styles = StyleSheet.create({
   nameTimeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: wp(8),
     justifyContent: "space-between",
   },
   childItemName: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 20,
   },
   timeText: {
-    fontSize: 8,
+    fontSize: fontSize(8),
     fontFamily: fonts.regular,
     color: "#737277",
     lineHeight: 20,
   },
   categoryText: {
-    fontSize: 8,
+    fontSize: fontSize(8),
     fontFamily: fonts.bold,
     color: "#F58B2A",
     lineHeight: 10,
@@ -1660,79 +1649,84 @@ const styles = StyleSheet.create({
   sessionRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: wp(6),
     paddingLeft: 5,
   },
   badgeDone: {
     backgroundColor: "#00725E",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: wp(8),
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(6),
   },
   badgeDoneText: {
-    fontSize: 6,
+    fontSize: fontSize(6),
     fontFamily: fonts.medium,
     color: "#FFFFFF",
+    lineHeigt:10
   },
   viewBtn: {
     backgroundColor: "#F58B2A",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: wp(8),
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(4),
   },
   viewBtnText: {
-    fontSize: 8,
+    fontSize: fontSize(8),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
+    lineHeigt:10
   },
   badgePending: {
     backgroundColor: "#006B5D",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: wp(8),
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(4),
   },
   badgePendingText: {
-    fontSize: 6,
+    fontSize: fontSize(6),
     fontFamily: fonts.medium,
     color: "#FFFFFF",
+    lineHeigt:10
   },
   addFeedbackBtn: {
     backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: wp(8),
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(4),
   },
   addFeedbackBtnText: {
-    fontSize: 8,
+    fontSize: fontSize(7),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
+    lineHeigt:10
   },
   disabledBtn: {
     backgroundColor: "#A0AEC0",
     opacity: 0.6,
   },
   emptyContainer: {
-    paddingVertical: 24,
+    paddingVertical: hp(24),
     alignItems: "center",
     justifyContent: "center",
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.medium,
     color: "#64748B",
+    lineHeigt:10
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
   },
   dropdownMenu: {
     width: "100%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: wp(16),
+    padding: wp(16),
     elevation: 5,
     shadowColor: "#000",
     shadowOffset: {
@@ -1743,11 +1737,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   dropdownMenuTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#0F172A",
-    marginBottom: 12,
-    paddingBottom: 8,
+    marginBottom: wp(12),
+    paddingBottom: hp(8),
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
   },
@@ -1755,15 +1749,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    paddingVertical: hp(12),
+    paddingHorizontal: wp(8),
+    borderRadius: wp(8),
   },
   dropdownOptionSelected: {
     backgroundColor: "#F1F5F9",
   },
   dropdownOptionText: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontFamily: fonts.regular,
     color: "#334155",
   },
@@ -1775,37 +1769,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
-    paddingHorizontal: 18,
+    paddingHorizontal: wp(18),
   },
   replyModalContent: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 18,
+    borderRadius: wp(20),
+    padding: wp(18),
     maxHeight: "88%",
   },
   replyModalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingBottom: 14,
+    paddingBottom: hp(14),
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
   },
   replyModalTitle: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.bold,
     color: "#0F172A",
   },
   replyModalSubtitle: {
     marginTop: 4,
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
   },
   closeModalBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: wp(18),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
@@ -1814,23 +1808,23 @@ const styles = StyleSheet.create({
     maxHeight: 380,
   },
   replyScrollContent: {
-    paddingTop: 14,
-    paddingBottom: 10,
+    paddingTop: hp(14),
+    paddingBottom: hp(10),
   },
   originalFeedbackBox: {
     backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 18,
+    borderRadius: wp(12),
+    padding: wp(14),
+    marginBottom: wp(18),
   },
   originalFeedbackLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.bold,
     color: "#00725E",
-    marginBottom: 6,
+    marginBottom: wp(6),
   },
   originalFeedbackText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#334155",
     lineHeight: 20,
@@ -1838,28 +1832,28 @@ const styles = StyleSheet.create({
   feedbackMetaRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: wp(6),
     marginTop: 10,
   },
   feedbackMetaText: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.medium,
     color: "#64748B",
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: wp(20),
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(4),
   },
   repliesTitle: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontFamily: fonts.bold,
     color: "#0F172A",
-    marginBottom: 10,
+    marginBottom: wp(10),
   },
   replyBubble: {
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
+    borderRadius: wp(12),
+    padding: wp(12),
+    marginBottom: wp(10),
     borderWidth: 1,
   },
   therapistReplyBubble: {
@@ -1873,19 +1867,19 @@ const styles = StyleSheet.create({
   replyTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: wp(6),
   },
   replySender: {
     maxWidth: "65%",
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.bold,
     color: "#0F172A",
     marginRight: 8,
   },
   replyRoleBadge: {
-    borderRadius: 20,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    borderRadius: wp(20),
+    paddingHorizontal: wp(7),
+    paddingVertical: hp(2),
   },
   therapistRoleBadge: {
     backgroundColor: "#A7F3D0",
@@ -1894,41 +1888,41 @@ const styles = StyleSheet.create({
     backgroundColor: "#BFDBFE",
   },
   replyRoleText: {
-    fontSize: 9,
+    fontSize: fontSize(9),
     fontFamily: fonts.medium,
     color: "#334155",
   },
   replyText: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#334155",
     lineHeight: 19,
   },
   replyDate: {
-    fontSize: 9,
+    fontSize: fontSize(9),
     fontFamily: fonts.regular,
     color: "#94A3B8",
     marginTop: 7,
   },
   noRepliesBox: {
-    paddingVertical: 20,
+    paddingVertical: hp(20),
     alignItems: "center",
   },
   noRepliesText: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#94A3B8",
   },
   replyInputSection: {
-    paddingTop: 14,
+    paddingTop: hp(14),
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
   },
   replyInputLabel: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.bold,
     color: "#334155",
-    marginBottom: 7,
+    marginBottom: wp(7),
   },
   replyInput: {
     minHeight: 80,
@@ -1936,47 +1930,47 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
+    borderRadius: wp(10),
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(10),
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#0F172A",
   },
   sendReplyBtn: {
     height: 42,
     backgroundColor: "#00725E",
-    borderRadius: 10,
+    borderRadius: wp(10),
     marginTop: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 7,
+    gap: wp(7),
   },
   sendReplyBtnDisabled: {
     opacity: 0.5,
   },
   sendReplyBtnText: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
   },
   originalFeedback: {
     backgroundColor: "#F8FAFC",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
+    borderRadius: wp(10),
+    padding: wp(12),
+    marginBottom: wp(10),
   },
 
   originalFeedbackName: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: colors.blackFont,
-    marginBottom: 4,
+    marginBottom: wp(4),
   },
 
   originalFeedbackText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#475569",
     lineHeight: 20,
@@ -2001,9 +1995,9 @@ const styles = StyleSheet.create({
 
   replyBubble: {
     maxWidth: "80%",
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: 16,
+    paddingHorizontal: wp(13),
+    paddingVertical: hp(9),
+    borderRadius: wp(16),
   },
 
   myReplyBubble: {
@@ -2017,10 +2011,10 @@ const styles = StyleSheet.create({
   },
 
   replySender: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.semiBold,
     color: "#64748B",
-    marginBottom: 2,
+    marginBottom: wp(2),
   },
 
   myReplySenderText: {
@@ -2029,7 +2023,7 @@ const styles = StyleSheet.create({
   },
 
   replyMessage: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 19,
@@ -2040,7 +2034,7 @@ const styles = StyleSheet.create({
   },
 
   replyTime: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.regular,
     color: "#94A3B8",
     marginTop: 4,
@@ -2053,7 +2047,7 @@ const styles = StyleSheet.create({
 
   noRepliesText: {
     textAlign: "center",
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#64748B",
     marginTop: 30,
@@ -2062,30 +2056,30 @@ const styles = StyleSheet.create({
   replyInputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 8,
-    paddingTop: 10,
+    gap: wp(8),
+    paddingTop: hp(10),
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
   },
 
   replyInput: {
     flex: 1,
-    minHeight: 42,
+    minHeight: hp(46),
     maxHeight: 90,
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 14,
+    borderRadius: wp(10),
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(9),
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
   },
 
   sendReplyBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
+    width: wp(46),
+    height: hp(46),
+    borderRadius: wp(10),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -2105,39 +2099,39 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     height: "85%",
-    padding: 18,
+    padding: wp(18),
   },
 
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: wp(14),
   },
 
   modalTitle: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.semiBold,
     color: colors.blackFont,
   },
 
   visibilityRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingVertical: 12,
-  marginTop: 10,
-  borderTopWidth: 1,
-  borderTopColor: "#E2E8F0",
-},
-visibilityTitle: {
-  fontSize: 13,
-  fontFamily: fonts.semiBold,
-  color: "#0F172A",
-},
-visibilitySubtitle: {
-  fontSize: 11,
-  fontFamily: fonts.regular,
-  color: "#64748B",
-  marginTop: 2,
-},
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: hp(12),
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+  },
+  visibilityTitle: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
+  visibilitySubtitle: {
+    fontSize: fontSize(11),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    marginTop: 2,
+  },
 });

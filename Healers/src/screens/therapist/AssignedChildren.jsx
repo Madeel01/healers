@@ -14,9 +14,9 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -28,17 +28,25 @@ import {
   therapistUsers,
   updateGoalProgressApi,
 } from '../../api/therapist/api';
-import TherapistBottomBar from '../../components/TherapistBottomBar';
-import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 export default function AssignedChildrenScreen({ navigation }) {
   const { user } = useContext(AuthContext);
+  const { width } = useWindowDimensions();
+
+  const containerWidth = width - wp(42);
+  const gap = wp(12);
+  const chipWidth = (containerWidth - gap) / 2;
   const [searchQuery, setSearchQuery] = useState("");
   const [children, setChildren] = useState([]);
   const [loadingChildren, setLoadingChildren] = useState(true);
@@ -197,11 +205,8 @@ export default function AssignedChildrenScreen({ navigation }) {
     return `${formattedDate}, ${timeString}`;
   };
 
-  console.log("rr",programs)
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
-      <TopBar navigation={navigation} headerTitle={"Assigned Children"} />
-
+    <View style={[styles.mainContainer, commonStyles.container]}>
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -215,6 +220,9 @@ export default function AssignedChildrenScreen({ navigation }) {
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            scrollEnabled={false}
+            multiline={false}
+            numberOfLines={1}
           />
         </View>
 
@@ -226,7 +234,7 @@ export default function AssignedChildrenScreen({ navigation }) {
         </View>
 
         {loadingChildren
-          ? <ActivityIndicator size="small" color="#004E9F" style={{ marginBottom: 20 }} />
+          ? <ActivityIndicator size="small" color="#004E9F" style={{ marginBottom: hp(20) }} />
           : filteredChildren.length > 0
           ? (
             <View style={styles.chipsGrid}>
@@ -238,7 +246,10 @@ export default function AssignedChildrenScreen({ navigation }) {
                     key={childId}
                     style={[
                       styles.childChip,
-                      isSelected ? styles.chipSelected : styles.chipUnselected,
+                      { width: chipWidth },
+                      isSelected
+                        ? styles.chipSelected
+                        : styles.chipUnselected,
                     ]}
                     activeOpacity={0.8}
                     onPress={() => setSelectedChildId(childId)}
@@ -292,22 +303,37 @@ export default function AssignedChildrenScreen({ navigation }) {
           </View>
 
           <View style={styles.sessionBox}>
-            {loadingStats ? <ActivityIndicator size="small" color="#004E9F" style={{ flex: 1 }} /> : (
-              <>
-                <View>
-                  <Text style={styles.sessionLabel}>Next Session</Text>
-                  <Text style={styles.sessionValue}>
-                    {formatNextSession(sessionStats.nextSession)}
-                  </Text>
-                </View>
-                <View style={{ alignItems: "flex-end" }}>
-                  <Text style={styles.sessionLabel}>Attendance</Text>
-                  <Text style={styles.attendanceValue}>
-                    {sessionStats.attendancePercentage}%
-                  </Text>
-                </View>
-              </>
-            )}
+            {loadingStats
+              ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#004E9F"
+                  style={{ flex: 1 }}
+                />
+              )
+              : (
+                <>
+                  <View style={styles.sessionLeft}>
+                    <Text style={styles.sessionLabel}>
+                      Next Session
+                    </Text>
+
+                    <Text style={styles.sessionValue}>
+                      {formatNextSession(sessionStats.nextSession)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.sessionRight}>
+                    <Text style={styles.sessionLabel}>
+                      Attendance
+                    </Text>
+
+                    <Text style={styles.attendanceValue}>
+                      {sessionStats.attendancePercentage}%
+                    </Text>
+                  </View>
+                </>
+              )}
           </View>
         </View>
 
@@ -417,8 +443,6 @@ export default function AssignedChildrenScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      <TherapistBottomBar activeTab="AssignedChildren" />
-
       <Modal
         visible={modalVisible}
         transparent={true}
@@ -481,7 +505,7 @@ export default function AssignedChildrenScreen({ navigation }) {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -493,40 +517,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 20,
+    paddingHorizontal: wp(20),
+    paddingTop: hp(8),
+    paddingBottom: hp(20),
   },
   searchBarContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F1F4FA",
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 20,
+    borderRadius: wp(999),
+    paddingHorizontal: wp(16),
+    paddingVertical: hp(8),
+    marginBottom: hp(20),
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#0F172A",
-    height: 45,
+    height: hp(48),
+    paddingVertical: 0,
+    textAlignVertical: "center",
+    includeFontPadding: false,
   },
   casesHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: hp(14),
   },
   casesTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#414753",
     lineHeight: 24,
   },
   viewAllText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#004E9F",
     lineHeight: 24,
@@ -534,14 +561,13 @@ const styles = StyleSheet.create({
   chipsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: 12,
-    marginBottom: 20,
+    rowGap: wp(12),
+    columnGap: wp(12),
+    marginBottom: hp(20),
   },
   childChip: {
-    width: "48%",
-    borderRadius: 32,
-    paddingVertical: 16,
+    borderRadius: wp(32),
+    paddingVertical: hp(14),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -554,13 +580,13 @@ const styles = StyleSheet.create({
     borderColor: "#D7E3FF",
   },
   chipText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     lineHeight: 24,
     color: "#004E9F",
   },
   noUserContainer: {
-    padding: 16,
+    padding: wp(16),
     alignItems: "center",
   },
   noUserText: {
@@ -569,10 +595,10 @@ const styles = StyleSheet.create({
   },
   profileCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 37,
-    padding: 20,
+    borderRadius: wp(37),
+    padding: wp(20),
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: hp(20),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -581,12 +607,12 @@ const styles = StyleSheet.create({
   },
   childAvatarWrapper: {
     backgroundColor: "#FFFFFF",
-    width: 128,
-    height: 128,
-    borderRadius: 24,
+    width: wp(128),
+    height: hp(128),
+    borderRadius: wp(24),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: hp(12),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -594,93 +620,116 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   childAvatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 24,
+    width: wp(120),
+    height: hp(120),
+    borderRadius: wp(24),
   },
   avatarFallback: {
-    width: 120,
-    height: 120,
-    borderRadius: 24,
+    width: wp(120),
+    height: hp(120),
+    borderRadius: wp(24),
     backgroundColor: "#004E9F",
     alignItems: "center",
     justifyContent: "center",
   },
   avatarFallbackText: {
-    fontSize: 48,
+    fontSize: fontSize(48),
     fontFamily: fonts.bold || "System",
     color: "#FFFFFF",
   },
   childName: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 24,
-    marginBottom: 8,
+    marginBottom: hp(8),
   },
   badgesRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 20,
+    marginBottom: hp(20),
   },
   ageBadge: {
     backgroundColor: "rgba(22,105,169,.1)",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(2),
+    borderRadius: wp(999),
   },
   ageBadgeText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.medium,
     color: "#005086",
-    lineHeight: 24,
+    lineHeight: 18,
   },
   therapistBadge: {
     backgroundColor: "rgba(255,183,129,.2)",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(2),
+    borderRadius: wp(999),
   },
   therapistBadgeText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.medium,
     color: "#7A3E00",
-    lineHeight: 24,
+    lineHeight: 18,
   },
+
   sessionBox: {
     width: "100%",
     backgroundColor: "#F1F4FA",
-    borderRadius: 18,
-    padding: 12,
+    borderRadius: wp(18),
+    padding: wp(12),
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    gap: wp(8),
   },
+
+  sessionLeft: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "flex-start",
+  },
+
+  sessionRight: {
+    flexShrink: 0,
+    alignItems: "flex-end",
+  },
+
   sessionLabel: {
-    fontSize: 16,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
-    lineHeight: 24,
-    marginBottom: 2,
+    lineHeight: 20,
+    marginBottom: hp(5),
   },
+
   sessionValue: {
-    fontSize: 16,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#181C21",
-    lineHeight: 24,
+    lineHeight: 20,
+    flexShrink: 1,
+    flexWrap: "wrap",
   },
+
   attendanceValue: {
-    fontSize: 16,
+    fontSize: fontSize(14),
+    fontFamily: fonts.bold,
+    color: "#004E9F",
+    lineHeight: 20,
+  },
+
+  attendanceValue: {
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#004E9F",
     lineHeight: 24,
   },
   sectionCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: wp(24),
+    padding: wp(20),
+    marginBottom: hp(20),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -690,10 +739,10 @@ const styles = StyleSheet.create({
   sectionCardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: hp(16),
   },
   sectionCardTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: colors.primary,
     lineHeight: 24,
@@ -707,74 +756,74 @@ const styles = StyleSheet.create({
   goalItemCard: {
     borderWidth: 1,
     borderColor: "#EBEEF1",
-    borderRadius: 24,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: wp(24),
+    padding: wp(16),
+    marginBottom: hp(12),
   },
   goalTitleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: hp(4),
   },
   goalTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 24,
   },
   progressBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(2),
+    borderRadius: wp(4),
     backgroundColor: "#8BF6D9",
   },
   progressBadgeText: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.bold,
     color: "#00725E",
     lineHeight: 24,
   },
   goalSubtext: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#C1C7D2",
     lineHeight: 16,
-    marginBottom: 10,
+    marginBottom: hp(10),
   },
   progressBarBg: {
     height: 8,
     backgroundColor: "#EBEEF1",
-    borderRadius: 999,
-    marginBottom: 12,
+    borderRadius: wp(999),
+    marginBottom: hp(12),
     position: "relative",
     justifyContent: "center",
   },
   progressBarFill: {
     height: "100%",
-    borderRadius: 999,
+    borderRadius: wp(999),
     position: "absolute",
     left: 0,
     top: 0,
   },
   inlineSlider: {
     width: "100%",
-    height: 40,
+    height: hp(40),
     position: "absolute",
     alignSelf: "center",
   },
   addProgressBtn: {
     backgroundColor: "#E5E8EB",
     alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(2),
+    borderRadius: wp(4),
   },
   addProgressBtnText: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.bold,
     color: "#717781",
-    lineHeight: 24,
+    lineHeight: 18,
   },
   sliderContainer: {
     marginTop: 8,
@@ -787,65 +836,67 @@ const styles = StyleSheet.create({
   cancelSliderBtn: {
     flex: 1,
     backgroundColor: "#F1F5F9",
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: hp(8),
+    borderRadius: wp(8),
     alignItems: "center",
   },
   cancelSliderText: {
     color: "#475569",
-    fontSize: 13,
-    fontFamily: fonts.medium || "System",
+    fontSize: fontSize(12),
+    fontFamily: fonts.semiBold,
+    lineHeight: 16,
   },
   saveSliderBtn: {
     flex: 1,
     backgroundColor: "#00725E",
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: hp(8),
+    borderRadius: wp(8),
     alignItems: "center",
   },
   saveSliderText: {
     color: "#FFFFFF",
-    fontSize: 13,
-    fontFamily: fonts.bold || "System",
+    fontSize: fontSize(12),
+    fontFamily: fonts.semiBold,
+    lineHeight: 16,
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
   },
   modalContent: {
     width: "100%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: wp(16),
+    padding: wp(16),
     elevation: 5,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: hp(12),
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#0F172A",
     lineHeight: 22,
   },
   modalSearchContainer: {
     backgroundColor: "#F1F5F9",
-    borderRadius: 8,
-    height: 43,
+    borderRadius: wp(8),
+    height: hp(43),
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    marginBottom: 12,
+    paddingHorizontal: wp(10),
+    marginBottom: hp(12),
   },
   modalSearchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#0F172A",
   },
@@ -853,15 +904,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical: hp(10),
+    paddingHorizontal: wp(10),
+    borderRadius: wp(8),
   },
   modalOptionSelected: {
     backgroundColor: "#F1F5F9",
   },
   modalOptionText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#334155",
     lineHeight: 20,

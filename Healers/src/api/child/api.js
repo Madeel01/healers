@@ -39,6 +39,12 @@ export const getConversations = async (page = 1, limit = 5) => {
   return response.data;
 };
 
+export const getConversationsLastSeen = async (userID) => {
+  const response = await apiClient.get(`/chat/conversations/last_seen/${userID}`);
+  return response.data;
+};
+
+
 export const getMessagesApi = async (conversationId) => {
   const response = await apiClient.get(`/chat/messages/${conversationId}`);
   return response.data;

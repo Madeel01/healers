@@ -13,18 +13,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { createFeedback } from '../../api/therapist/api';
-import TherapistBottomBar from '../../components/TherapistBottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const MOOD_OPTIONS = [
   { id: "Frustrated", label: "Frustrated", emoji: "😔" },
@@ -51,14 +53,14 @@ export default function AddFeedbackScreen({ navigation, route }) {
   const feedbackData = session?.feedbackDetails || session || {};
 
   const [selectedMood, setSelectedMood] = useState(
-    feedbackData?.mood || "Frustrated"
+    feedbackData?.mood || "Frustrated",
   );
   const [behaviorNote, setBehaviorNote] = useState(
-    feedbackData?.notes || feedbackData?.behaviorNote || ""
+    feedbackData?.notes || feedbackData?.behaviorNote || "",
   );
 
   const [isVisibleToParents, setIsVisibleToParents] = useState(
-    feedbackData?.isVisibleToParent !== undefined ? feedbackData.isVisibleToParent : true
+    feedbackData?.isVisibleToParent !== undefined ? feedbackData.isVisibleToParent : true,
   );
 
   useEffect(() => {
@@ -93,9 +95,7 @@ export default function AddFeedbackScreen({ navigation, route }) {
   };
 
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
-      <TopBar navigation={navigation} headerTitle={isViewOnly ? "View Feedback" : "Add Feedback"} />
-
+    <View style={[styles.mainContainer, commonStyles.container]}>
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -217,9 +217,7 @@ export default function AddFeedbackScreen({ navigation, route }) {
           </View>
         )}
       </ScrollView>
-
-      <TherapistBottomBar activeTab="Feedback" />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -231,17 +229,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
     paddingTop: 20,
     paddingBottom: 20,
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 18,
+    borderRadius: wp(12),
+    padding: wp(18),
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    marginBottom: 16,
+    marginBottom: hp(16),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -249,49 +247,49 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   cardHeaderTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.medium,
     color: colors.primary,
-    marginBottom: 10,
+    marginBottom: hp(10),
     lineHeight: 24,
   },
   inputLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.medium,
     color: "#717781",
-    marginBottom: 3,
+    marginBottom: hp(3),
     lineHeight: 18,
   },
   childInfoBox: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F1F4F7",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 14,
+    borderRadius: wp(8),
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(8),
+    marginBottom: hp(14),
     borderWidth: 1,
     borderColor: "#C1C7D2",
   },
   avatarImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(999),
     marginRight: 12,
   },
   childNameText: {
-    fontSize: 16,
+    fontSize: fontSize(15),
     fontFamily: fonts.medium,
     color: "#181C1E",
-    lineHeight: 24,
+    lineHeight: 22,
   },
   childIdText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#717781",
     marginLeft: "auto",
     lineHeight: 18,
-    maxWidth: 160,
+    maxWidth: wp(160),
   },
   rowTwoColumns: {
     flexDirection: "row",
@@ -302,15 +300,15 @@ const styles = StyleSheet.create({
   },
   readOnlyInputBox: {
     backgroundColor: "#F1F4F7",
-    borderRadius: 8,
-    height: 42,
+    borderRadius: wp(8),
+    height: hp(44),
     justifyContent: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: wp(12),
     borderWidth: 1,
     borderColor: "#C1C7D2",
   },
   readOnlyInputText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 20,
@@ -318,16 +316,16 @@ const styles = StyleSheet.create({
   moodSelectorContainer: {
     flexDirection: "row",
     backgroundColor: "#F1F4F7",
-    borderRadius: 8,
-    padding: 4,
+    borderRadius: wp(8),
+    padding: wp(4),
     gap: 6,
   },
   moodItem: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: hp(10),
+    borderRadius: wp(8),
   },
   moodItemSelected: {
     backgroundColor: "#FFFFFF",
@@ -338,11 +336,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   emojiText: {
-    fontSize: 20,
-    marginBottom: 2,
+    fontSize: fontSize(20),
+    marginBottom: hp(2),
   },
   moodLabel: {
-    fontSize: 10,
+    fontSize: fontSize(9),
     fontFamily: fonts.regular,
     color: "#717781",
     lineHeight: 15,
@@ -352,25 +350,25 @@ const styles = StyleSheet.create({
   },
   textAreaInput: {
     backgroundColor: "#F1F4F7",
-    borderRadius: 8,
+    borderRadius: wp(8),
     borderWidth: 1,
     borderColor: "#C1C7D2",
-    padding: 12,
-    fontSize: 13,
+    padding: wp(12),
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#1E293B",
-    minHeight: 80,
+    minHeight: hp(80),
   },
   toggleCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    padding: 20,
+    borderRadius: wp(8),
+    padding: wp(20),
     borderWidth: 1,
     borderColor: "#C1C7D2",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: hp(20),
   },
   toggleLeftRow: {
     flexDirection: "row",
@@ -381,7 +379,7 @@ const styles = StyleSheet.create({
   toggleIconCircle: {
     width: 40,
     height: 40,
-    borderRadius: 999,
+    borderRadius: wp(999),
     backgroundColor: "rgba(0,80,134,.1)",
     alignItems: "center",
     justifyContent: "center",
@@ -391,13 +389,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   toggleTitle: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.medium,
     color: "#181C1E",
     lineHeight: 20,
   },
   toggleSubTitle: {
-    fontSize: 8,
+    fontSize: fontSize(8),
     fontFamily: fonts.regular,
     color: "#717781",
     lineHeight: 15,
@@ -405,18 +403,18 @@ const styles = StyleSheet.create({
   actionButtonsRow: {
     flexDirection: "row",
     gap: 12,
-    marginBottom: 12,
+    marginBottom: hp(12),
   },
   saveBtn: {
     flex: 1,
     backgroundColor: "#8BF6D9",
-    paddingVertical: 9,
-    borderRadius: 8,
+    paddingVertical: hp(9),
+    borderRadius: wp(8),
     alignItems: "center",
     justifyContent: "center",
   },
   saveBtnText: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.semiBold,
     color: "#00725E",
     lineHeight: 15,
@@ -424,15 +422,15 @@ const styles = StyleSheet.create({
   cancelBtn: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    paddingVertical: 9,
-    borderRadius: 8,
+    paddingVertical: hp(9),
+    borderRadius: wp(8),
     borderWidth: 1,
     borderColor: "#CBD5E1",
     alignItems: "center",
     justifyContent: "center",
   },
   cancelBtnText: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.semiBold,
     color: "#000000",
     lineHeight: 15,
