@@ -19,7 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -32,8 +32,6 @@ import {
   getChildFeedbackReplies,
   getChildFeedbackRequests,
 } from '../../api/child/api';
-import ChildBottomBar from '../../components/ChildBottomBar';
-import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
@@ -41,6 +39,11 @@ import {
   fonts,
 } from '../../styles/theme';
 import { formatTo12Hour } from '../../utils/hoursformat';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const TAB_TO_STATUS = {
   "All Feedback": "all",
@@ -356,7 +359,7 @@ export default function ChildFeedback({ navigation }) {
         <FontAwesome
           key={i}
           name={iconName}
-          size={14}
+          size={fontSize(14)}
           color="#7A3E00"
           style={styles.starIcon}
         />,
@@ -559,16 +562,10 @@ export default function ChildFeedback({ navigation }) {
       day: "2-digit",
     });
   };
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle="Manage Feedback"
-      />
-
+    <View style={[styles.mainContainer, commonStyles.container]}>
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -613,7 +610,7 @@ export default function ChildFeedback({ navigation }) {
             <View style={styles.trendRow}>
               <Feather
                 name="trending-down"
-                size={14}
+                size={fontSize(14)}
                 color="#006B58"
               />
 
@@ -633,7 +630,7 @@ export default function ChildFeedback({ navigation }) {
           >
             <MaterialCommunityIcons
               name="clipboard-clock-outline"
-              size={28}
+              size={fontSize(28)}
               color={colors.primary}
             />
           </View>
@@ -671,7 +668,7 @@ export default function ChildFeedback({ navigation }) {
           >
             <Feather
               name="smile"
-              size={28}
+              size={fontSize(28)}
               color="#7A3E00"
             />
           </View>
@@ -805,7 +802,7 @@ export default function ChildFeedback({ navigation }) {
                         >
                           {item.statusLabel}
                         </Text>
-                      </View>
+                      </View> 
                     </View>
 
                     {item.rating != null && renderStars(item.rating)}
@@ -846,7 +843,7 @@ export default function ChildFeedback({ navigation }) {
                   <View style={styles.pendingSessionHeader}>
                     <Feather
                       name="clock"
-                      size={16}
+                      size={fontSize(16)}
                       color="#B45309"
                     />
 
@@ -859,7 +856,7 @@ export default function ChildFeedback({ navigation }) {
                     <View style={styles.pendingSessionDetailItem}>
                       <Feather
                         name="calendar"
-                        size={14}
+                        size={fontSize(14)}
                         color="#64748B"
                       />
 
@@ -873,7 +870,7 @@ export default function ChildFeedback({ navigation }) {
                     <View style={styles.pendingSessionDetailItem}>
                       <Feather
                         name="clock"
-                        size={14}
+                        size={fontSize(14)}
                         color="#64748B"
                       />
 
@@ -973,7 +970,7 @@ export default function ChildFeedback({ navigation }) {
                 {item.primaryIcon && (
                   <Feather
                     name={item.primaryIcon}
-                    size={16}
+                    size={fontSize(16)}
                     color={item.actionType === "primary"
                       ? "#FFFFFF"
                       : "#0B4A6F"}
@@ -1022,7 +1019,7 @@ export default function ChildFeedback({ navigation }) {
                   : (
                     <Feather
                       name="trash-2"
-                      size={16}
+                      size={fontSize(16)}
                       color={!item.isPending && item.isRespond
                         ? "#FFFFFF"
                         : "#94A3B8"}
@@ -1070,12 +1067,12 @@ export default function ChildFeedback({ navigation }) {
         transparent
         animationType="slide"
         onRequestClose={() => setReplyModalVisible(false)}
+        style={{paddingBottom:insets.bottom}}
       >
         <KeyboardAvoidingView
-                  style={{ flex: 1 }}
-                  behavior={Platform.OS === "ios" ? "padding" : "padding"}
-                >
-
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
           <View style={styles.modalOverlay}>
             <View style={styles.replyModal}>
               <View
@@ -1095,7 +1092,7 @@ export default function ChildFeedback({ navigation }) {
                 >
                   <Feather
                     name="x"
-                    size={22}
+                    size={fontSize(22)}
                     color="#334155"
                   />
                 </TouchableOpacity>
@@ -1140,7 +1137,7 @@ export default function ChildFeedback({ navigation }) {
               <ScrollView
                 style={styles.repliesList}
                 contentContainerStyle={{
-                  paddingVertical: 10,
+                  paddingVertical: hp(10),
                 }}
               >
                 {loadingReplies
@@ -1270,7 +1267,7 @@ export default function ChildFeedback({ navigation }) {
                     : (
                       <Feather
                         name="send"
-                        size={18}
+                        size={fontSize(18)}
                         color="#FFFFFF"
                       />
                     )}
@@ -1278,15 +1275,9 @@ export default function ChildFeedback({ navigation }) {
               </View>
             </View>
           </View>
-                </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
       </Modal>
-
-      <ChildBottomBar
-        activeTab="ChildFeedback"
-        setActiveTab={setActiveBottomTab}
-        onOpenNotifications={setIsNotificationOpen}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1300,8 +1291,8 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    padding: 16,
-    paddingBottom: 120,
+    padding: wp(16),
+    paddingBottom: hp(24),
   },
 
   metricCard: {
@@ -1309,8 +1300,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: wp(12),
+    padding: wp(20),
     marginBottom: 14,
   },
 
@@ -1319,14 +1310,14 @@ const styles = StyleSheet.create({
   },
 
   metricLabel: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.blackFont,
     lineHeight: 20,
   },
 
   metricValue: {
-    fontSize: 32,
+    fontSize: fontSize(32),
     fontFamily: fonts.bold,
     color: colors.primary,
     lineHeight: 36,
@@ -1339,26 +1330,26 @@ const styles = StyleSheet.create({
   trendRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: wp(4),
   },
 
   trendText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#006B58",
   },
 
   metricIconBg: {
-    width: 64,
-    height: 64,
-    borderRadius: 999,
+    width: wp(64),
+    height: hp(64),
+    borderRadius: wp(999),
     alignItems: "center",
     justifyContent: "center",
   },
 
   starRow: {
     flexDirection: "row",
-    gap: 2,
+    gap: wp(2),
     marginTop: 4,
   },
 
@@ -1368,14 +1359,14 @@ const styles = StyleSheet.create({
 
   tabsContainer: {
     flexDirection: "row",
-    gap: 8,
+    gap: wp(8),
     marginVertical: 20,
   },
 
   tabButton: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 999,
+    paddingVertical: hp(6),
+    borderRadius: wp(999),
     backgroundColor: "#FFFFFF",
     alignItems: "center",
   },
@@ -1385,7 +1376,7 @@ const styles = StyleSheet.create({
   },
 
   tabText: {
-    fontSize: 14,
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
     color: colors.blackFont,
     lineHeight: 24,
@@ -1396,13 +1387,13 @@ const styles = StyleSheet.create({
   },
 
   centerState: {
-    paddingVertical: 40,
+    paddingVertical: hp(40),
     alignItems: "center",
     justifyContent: "center",
   },
 
   errorText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#DC2626",
     marginBottom: 12,
@@ -1411,39 +1402,40 @@ const styles = StyleSheet.create({
 
   retryBtn: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: wp(20),
+    paddingVertical: hp(10),
+    borderRadius: wp(10),
   },
 
   retryBtnText: {
     color: "#FFFFFF",
     fontFamily: fonts.semiBold,
-    fontSize: 14,
+    fontSize: fontSize(14),
   },
 
   emptyText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
   },
 
   feedbackCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: wp(12),
+    padding: wp(20),
     // marginBottom: 14,
   },
 
   cardHeader: {
     flexDirection: "row",
     marginBottom: 10,
+    alignItems:'center'
   },
 
   userAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: wp(48),
+    height: hp(48),
+    borderRadius: wp(24),
     marginRight: 12,
   },
 
@@ -1451,29 +1443,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  nameBadgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-
   userName: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.blackFont,
     lineHeight: 20,
   },
 
   tagBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(2),
+    borderRadius: wp(10),
   },
 
   tagBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize: fontSize(11),
+    fontFamily: fonts.semiBold,
+    lineHeight: 16,
+
   },
 
   newBadgeBg: {
@@ -1493,43 +1480,43 @@ const styles = StyleSheet.create({
   },
 
   commentText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 22,
     marginBottom: 14,
-    marginLeft: 60,
+    marginLeft: wp(60),
   },
 
   notesText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 22,
     marginBottom: 14,
-    marginLeft: 60,
+    marginLeft: wp(60),
   },
 
   cardActionsRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: wp(10),
   },
 
   actionBtn: {
     flex: 1,
-    height: 40,
-    borderRadius: 10,
+    height: hp(40),
+    borderRadius: wp(10),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
   },
 
   btnIcon: {
-    marginRight: 6,
+    marginRight: wp(6),
   },
 
   actionBtnText: {
-    fontSize: 14,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     lineHeight: 18,
   },
@@ -1553,7 +1540,7 @@ const styles = StyleSheet.create({
   },
 
   secondaryGrayBtnText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     lineHeight: 18,
   },
@@ -1566,33 +1553,16 @@ const styles = StyleSheet.create({
 
   headerLeft: {
     flex: 1,
-    paddingRight: 8,
+    paddingRight: wp(8),
   },
 
   nameBadgeRow: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 6,
+    gap: wp(6),
   },
 
-  userName: {
-    fontSize: 16,
-    fontFamily: fonts.semiBold,
-    color: colors.blackFont,
-  },
-
-  tagBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    alignSelf: "flex-start",
-  },
-
-  tagBadgeText: {
-    fontSize: 11,
-    fontFamily: fonts.medium,
-  },
 
   appointmentInfo: {
     alignItems: "flex-end",
@@ -1600,7 +1570,7 @@ const styles = StyleSheet.create({
   },
 
   detailLine: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 18,
@@ -1622,7 +1592,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     height: "85%",
-    padding: 18,
+    padding: wp(18),
   },
 
   modalHeader: {
@@ -1633,27 +1603,27 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.semiBold,
     color: colors.blackFont,
   },
 
   originalFeedback: {
     backgroundColor: "#F8FAFC",
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: wp(10),
+    padding: wp(12),
     marginBottom: 10,
   },
 
   originalFeedbackName: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: colors.blackFont,
     marginBottom: 4,
   },
 
   originalFeedbackText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#475569",
     lineHeight: 20,
@@ -1678,9 +1648,9 @@ const styles = StyleSheet.create({
 
   replyBubble: {
     maxWidth: "80%",
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: 16,
+    paddingHorizontal: wp(13),
+    paddingVertical: hp(9),
+    borderRadius: wp(16),
   },
 
   myReplyBubble: {
@@ -1694,7 +1664,7 @@ const styles = StyleSheet.create({
   },
 
   replySender: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.semiBold,
     color: "#64748B",
     marginBottom: 2,
@@ -1706,7 +1676,7 @@ const styles = StyleSheet.create({
   },
 
   replyMessage: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 19,
@@ -1717,7 +1687,7 @@ const styles = StyleSheet.create({
   },
 
   replyTime: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.regular,
     color: "#94A3B8",
     marginTop: 4,
@@ -1730,7 +1700,7 @@ const styles = StyleSheet.create({
 
   noRepliesText: {
     textAlign: "center",
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#64748B",
     marginTop: 30,
@@ -1739,7 +1709,7 @@ const styles = StyleSheet.create({
   replyInputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 8,
+    gap: wp(8),
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
@@ -1747,22 +1717,22 @@ const styles = StyleSheet.create({
 
   replyInput: {
     flex: 1,
-    minHeight: 42,
-    maxHeight: 90,
+    minHeight: hp(46),
+    maxHeight: hp(46),
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 14,
+    borderRadius: wp(10),
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(9),
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
   },
 
   sendReplyBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
+    width: wp(46),
+    height: hp(46),
+    borderRadius: wp(10),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -1800,21 +1770,21 @@ const styles = StyleSheet.create({
   },
 
   loadingMoreContainer: {
-    paddingVertical: 20,
+    paddingVertical: hp(20),
     alignItems: "center",
     justifyContent: "center",
   },
 
   loadingMoreText: {
     marginTop: 6,
-    fontSize: 13,
+    fontSize: fontSize(13),
     color: "#64748B",
     fontFamily: fonts.regular,
   },
   avatarFallback: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: wp(40),
+    height: hp(40),
+    borderRadius: wp(20),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -1822,9 +1792,10 @@ const styles = StyleSheet.create({
   },
 
   avatarFallbackText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
+    lineHeight:24
   },
   pendingBadgeBg: {
     backgroundColor: "#FEF3C7",
@@ -1837,32 +1808,32 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF7ED",
     borderWidth: 1,
     borderColor: "#FED7AA",
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: wp(8),
+    padding: wp(12),
     marginTop: 10,
     marginBottom: 12,
   },
   pendingSessionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
+    gap: wp(7),
   },
   pendingSessionTitle: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.medium,
     color: "#B45309",
   },
   pendingSessionDetails: {
     marginTop: 9,
-    gap: 6,
+    gap: wp(6),
   },
   pendingSessionDetailItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
+    gap: wp(7),
   },
   pendingSessionDetailText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#475569",
   },

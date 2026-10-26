@@ -17,7 +17,6 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -28,14 +27,17 @@ import {
   getQuarterlyReport,
   therapistUsers,
 } from '../../api/therapist/api';
-import TherapistBottomBar from '../../components/TherapistBottomBar';
-import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const currentYear = new Date().getFullYear();
 
@@ -456,16 +458,13 @@ export default function QuarterlyReportsScreen({
 
  
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.mainContainer,
         commonStyles.container,
       ]}
     >
-      <TopBar
-        navigation={navigation}
-        headerTitle="Quarterly Reports"
-      />
+    
 
       <ScrollView
         style={styles.scrollArea}
@@ -705,7 +704,7 @@ export default function QuarterlyReportsScreen({
               <View style={styles.toggleIconBg}>
                 <Ionicons
                   name="people"
-                  size={20}
+                  size={fontSize(20)}
                   color="#0B598F"
                 />
               </View>
@@ -779,10 +778,7 @@ export default function QuarterlyReportsScreen({
         </View>
       </ScrollView>
 
-      {/* -------------------------------- */}
-      {/* CHILD MODAL */}
-      {/* -------------------------------- */}
-
+  
       <Modal
         visible={childModalVisible}
         transparent
@@ -824,7 +820,7 @@ export default function QuarterlyReportsScreen({
                   >
                     <Feather
                       name="x"
-                      size={20}
+                      size={fontSize(20)}
                       color="#64748B"
                     />
                   </TouchableOpacity>
@@ -837,7 +833,7 @@ export default function QuarterlyReportsScreen({
                 >
                   <Feather
                     name="search"
-                    size={16}
+                    size={fontSize(16)}
                     color="#94A3B8"
                     style={{
                       marginRight: 8,
@@ -911,7 +907,7 @@ export default function QuarterlyReportsScreen({
                               {isSelected && (
                                 <Feather
                                   name="check"
-                                  size={18}
+                                  size={fontSize(18)}
                                   color="#0B598F"
                                 />
                               )}
@@ -934,18 +930,10 @@ export default function QuarterlyReportsScreen({
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* -------------------------------- */}
-      {/* BOTTOM BAR */}
-      {/* -------------------------------- */}
-
-      <TherapistBottomBar activeTab="Children" />
-    </SafeAreaView>
+  
+    </View>
   );
 }
-
-// ======================================
-// STYLES
-// ======================================
 
 const styles = StyleSheet.create({
   mainContainer: {
@@ -960,25 +948,23 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
 
-  // HEADER
 
   headerBanner: {
     backgroundColor: "#006B58",
-    paddingHorizontal: 20,
-    paddingVertical: 22,
+    paddingHorizontal:wp(20),
+    paddingVertical:hp(22),
   },
 
   bannerTitle: {
-    fontSize: 22,
+    fontSize:fontSize(20),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
-    lineHeight: 28,
+    lineHeight: 26,
   },
 
-  // FILTER
 
   filterSection: {
-    paddingHorizontal: 20,
+    paddingHorizontal:wp(20),
     paddingTop: 20,
     paddingBottom: 24,
   },
@@ -991,14 +977,14 @@ const styles = StyleSheet.create({
   },
 
   filterSectionTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.bold,
     color: colors.blackFont,
     lineHeight: 24,
   },
 
   viewAllText: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     color: "#004E9F",
     lineHeight: 24,
@@ -1010,9 +996,9 @@ const styles = StyleSheet.create({
   },
 
   chip: {
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 32,
+    paddingHorizontal:wp(32),
+    paddingVertical:hp(12),
+    borderRadius: wp(32),
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
@@ -1029,14 +1015,14 @@ const styles = StyleSheet.create({
   },
 
   chipText: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.medium,
     lineHeight: 24,
     color: "#004E9F",
   },
 
   noUserContainer: {
-    paddingVertical: 10,
+    paddingVertical:hp(10),
   },
 
   noUserText: {
@@ -1044,7 +1030,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
 
-  // QUARTER
 
   quarterGrid: {
     flexDirection: "row",
@@ -1053,8 +1038,8 @@ const styles = StyleSheet.create({
 
   quarterChip: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 32,
+    paddingVertical:hp(8),
+    borderRadius: wp(32),
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
@@ -1071,7 +1056,7 @@ const styles = StyleSheet.create({
   },
 
   quarterChipText: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.medium,
     lineHeight: 24,
   },
@@ -1088,15 +1073,15 @@ const styles = StyleSheet.create({
 
   blueContainer: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 20,
+    paddingHorizontal:wp(20),
     paddingTop: 24,
     paddingBottom: 32,
-    borderRadius: 7,
+    borderRadius: wp(7),
     gap: 16,
   },
 
   loadingContainer: {
-    minHeight: 100,
+    minHeight: hp(100),
     justifyContent: "center",
     alignItems: "center",
     gap: 10,
@@ -1104,18 +1089,18 @@ const styles = StyleSheet.create({
 
   loadingText: {
     color: "#FFFFFF",
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.regular,
   },
 
   noProgramContainer: {
-    paddingVertical: 20,
+    paddingVertical:hp(20),
     alignItems: "center",
   },
 
   noProgramText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.medium,
   },
 
@@ -1123,13 +1108,13 @@ const styles = StyleSheet.create({
 
   reportCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    padding: 20,
+    borderRadius: wp(8),
+    padding: wp(20),
   },
 
   cardTitle: {
-    fontSize: 17,
-    fontFamily: fonts.bold,
+    fontSize:fontSize(16),
+    fontFamily: fonts.semiBold,
     color: colors.primary,
     lineHeight: 24,
     marginBottom: 6,
@@ -1142,21 +1127,21 @@ const styles = StyleSheet.create({
   },
 
   goalText: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.medium,
     color: "#334155",
     lineHeight: 20,
     marginBottom: 8,
   },
   goalsText: {
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.regular,
     color: "#64748B",
     lineHeight: 20,
     marginBottom: 14,
   },
   noGoalText: {
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.regular,
     color: "#64748B",
     marginTop: 8,
@@ -1165,31 +1150,31 @@ const styles = StyleSheet.create({
   // TEXT AREA
 
   textAreaWrapper: {
-    minHeight: 88,
+    minHeight: hp(88),
     backgroundColor: "#F1F4F7",
     borderWidth: 1,
     borderColor: "#C1C7D2",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: wp(8),
+    paddingHorizontal:wp(14),
+    paddingVertical:hp(12),
   },
 
   textAreaInput: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     color: "#334155",
-    padding: 0,
+    padding: wp(0),
     lineHeight: 20,
-    minHeight: 60,
+    minHeight: hp(60),
   },
 
   // TOGGLE
 
   toggleCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    borderRadius: wp(8),
+    paddingHorizontal:wp(20),
+    paddingVertical:hp(14),
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -1203,9 +1188,9 @@ const styles = StyleSheet.create({
   },
 
   toggleIconBg: {
-    width: 42,
-    height: 42,
-    borderRadius: 999,
+    width: wp(42),
+    height: hp(42),
+    borderRadius: wp(999),
     backgroundColor: "#E0F2FE",
     alignItems: "center",
     justifyContent: "center",
@@ -1216,14 +1201,14 @@ const styles = StyleSheet.create({
   },
 
   toggleTitle: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.medium,
     color: "#181C1E",
     lineHeight: 20,
   },
 
   toggleSubTitle: {
-    fontSize: 9,
+    fontSize:fontSize(9),
     fontFamily: fonts.regular,
     color: "#717781",
     lineHeight: 15,
@@ -1241,8 +1226,8 @@ const styles = StyleSheet.create({
 
   submitBtn: {
     flex: 1.2,
-    height: 44,
-    borderRadius: 8,
+    height: hp(44),
+    borderRadius: wp(8),
     backgroundColor: "#8BF6D9",
     alignItems: "center",
     justifyContent: "center",
@@ -1253,7 +1238,7 @@ const styles = StyleSheet.create({
   },
 
   submitBtnText: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#00725E",
     lineHeight: 15,
@@ -1261,15 +1246,15 @@ const styles = StyleSheet.create({
 
   cancelBtn: {
     flex: 1,
-    height: 44,
-    borderRadius: 8,
+    height: hp(44),
+    borderRadius: wp(8),
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
 
   cancelBtnText: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#000",
     lineHeight: 15,
@@ -1282,14 +1267,14 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal:wp(20),
   },
 
   modalContent: {
     width: "100%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 18,
+    borderRadius: wp(16),
+    padding: wp(18),
     elevation: 5,
   },
 
@@ -1301,7 +1286,7 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.bold,
     color: "#0F172A",
     lineHeight: 22,
@@ -1309,17 +1294,17 @@ const styles = StyleSheet.create({
 
   modalSearchContainer: {
     backgroundColor: "#F1F5F9",
-    borderRadius: 8,
+    borderRadius: wp(8),
     height: 43,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
+    paddingHorizontal:wp(10),
     marginBottom: 12,
   },
 
   modalSearchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.regular,
     color: "#0F172A",
   },
@@ -1328,9 +1313,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical:hp(12),
+    paddingHorizontal:wp(10),
+    borderRadius: wp(8),
   },
 
   modalOptionSelected: {
@@ -1338,7 +1323,7 @@ const styles = StyleSheet.create({
   },
 
   modalOptionText: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     color: "#334155",
     lineHeight: 20,
@@ -1352,8 +1337,8 @@ const styles = StyleSheet.create({
 
   modalNoResult: {
     textAlign: "center",
-    paddingVertical: 20,
-    fontSize: 14,
+    paddingVertical:hp(20),
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     color: "#64748B",
   },

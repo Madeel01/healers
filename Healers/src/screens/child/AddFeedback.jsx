@@ -14,19 +14,21 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { getServices } from '../../api/admin/api';
 import { createChildFeedback } from '../../api/child/api';
-import ChildBottomBar from '../../components/ChildBottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
-import { getServices } from '../../api/admin/api';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const MOOD_OPTIONS = [
   {
@@ -52,7 +54,7 @@ const MOOD_OPTIONS = [
 ];
 
 export default function ChildAddFeedbackScreen({ navigation, route }) {
-  const [services, setServices] = useState([])
+  const [services, setServices] = useState([]);
   const { session } = route?.params || {};
 
   const specialtyId = session?.specialty;
@@ -62,7 +64,7 @@ export default function ChildAddFeedbackScreen({ navigation, route }) {
         const res = await getServices({ search: "" });
 
         const activeServices = res.data.filter(
-          (service) => service.isActive === true
+          (service) => service.isActive === true,
         );
 
         setServices(activeServices);
@@ -73,7 +75,6 @@ export default function ChildAddFeedbackScreen({ navigation, route }) {
 
     servicesData();
   }, []);
-
 
   const selectedSpecialty = services.find(
     (item) => item.id === specialtyId,
@@ -195,17 +196,12 @@ export default function ChildAddFeedbackScreen({ navigation, route }) {
   };
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.mainContainer,
         commonStyles.container,
       ]}
     >
-      <TopBar
-        navigation={navigation}
-        headerTitle="Give Feedback"
-      />
-
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -364,7 +360,7 @@ export default function ChildAddFeedbackScreen({ navigation, route }) {
           <View style={styles.infoIconCircle}>
             <Ionicons
               name="shield-checkmark-outline"
-              size={21}
+              size={fontSize(21)}
               color={colors.primary}
             />
           </View>
@@ -413,9 +409,7 @@ export default function ChildAddFeedbackScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      <ChildBottomBar activeTab="ChildFeedback" />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -427,14 +421,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
     paddingTop: 20,
     paddingBottom: 30,
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 18,
+    borderRadius: wp(12),
+    padding: wp(18),
     borderWidth: 1,
     borderColor: "#E2E8F0",
     marginBottom: 16,
@@ -448,14 +442,14 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   cardHeaderTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.medium,
     color: colors.primary,
     marginBottom: 10,
     lineHeight: 24,
   },
   inputLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.medium,
     color: "#717781",
     marginBottom: 5,
@@ -465,30 +459,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F1F4F7",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: wp(8),
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(8),
     marginBottom: 14,
     borderWidth: 1,
     borderColor: "#C1C7D2",
   },
   avatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    marginRight: 12,
+    width: wp(40),
+    height: hp(40),
+    borderRadius: wp(999),
+    marginRight: wp(12),
   },
   therapistTextContainer: {
     flex: 1,
   },
   therapistNameText: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontFamily: fonts.medium,
     color: "#181C1E",
     lineHeight: 22,
   },
   therapyTypeText: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.regular,
     color: "#717781",
     marginTop: 2,
@@ -502,15 +496,15 @@ const styles = StyleSheet.create({
   },
   readOnlyInputBox: {
     backgroundColor: "#F1F4F7",
-    borderRadius: 8,
-    height: 42,
+    borderRadius: wp(8),
+    height: hp(42),
     justifyContent: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: wp(12),
     borderWidth: 1,
     borderColor: "#C1C7D2",
   },
   readOnlyInputText: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 20,
@@ -518,16 +512,16 @@ const styles = StyleSheet.create({
   moodSelectorContainer: {
     flexDirection: "row",
     backgroundColor: "#F1F4F7",
-    borderRadius: 8,
-    padding: 4,
+    borderRadius: wp(8),
+    padding: wp(4),
     gap: 6,
   },
   moodItem: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: hp(10),
+    borderRadius: wp(8),
   },
   moodItemSelected: {
     backgroundColor: "#FFFFFF",
@@ -541,11 +535,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   emojiText: {
-    fontSize: 20,
+    fontSize: fontSize(18),
     marginBottom: 2,
   },
   moodLabel: {
-    fontSize: 10,
+    fontSize: fontSize(9),
     fontFamily: fonts.regular,
     color: "#717781",
     lineHeight: 15,
@@ -561,30 +555,32 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   starButton: {
-    paddingHorizontal: 5,
+    paddingHorizontal: wp(5),
   },
   ratingText: {
     textAlign: "center",
     marginTop: 5,
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.medium,
     color: "#717781",
   },
   textAreaInput: {
+    flex: 1,
+    width: "100%",
     backgroundColor: "#F1F4F7",
-    borderRadius: 8,
+    borderRadius: wp(8),
     borderWidth: 1,
     borderColor: "#C1C7D2",
-    padding: 12,
-    fontSize: 13,
+    padding: wp(12),
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#1E293B",
     minHeight: 110,
   },
   infoCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: wp(8),
+    padding: wp(16),
     borderWidth: 1,
     borderColor: "#C1C7D2",
     flexDirection: "row",
@@ -592,9 +588,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   infoIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
+    width: wp(40),
+    height: hp(40),
+    borderRadius: wp(999),
     backgroundColor: "rgba(0,80,134,.1)",
     alignItems: "center",
     justifyContent: "center",
@@ -604,13 +600,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoTitle: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.medium,
     color: "#181C1E",
     lineHeight: 20,
   },
   infoSubTitle: {
-    fontSize: 9,
+    fontSize: fontSize(9),
     fontFamily: fonts.regular,
     color: "#717781",
     lineHeight: 15,
@@ -624,14 +620,14 @@ const styles = StyleSheet.create({
   saveBtn: {
     flex: 1,
     backgroundColor: "#8BF6D9",
-    paddingVertical: 11,
-    borderRadius: 8,
+    paddingVertical: hp(11),
+    borderRadius: wp(8),
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 40,
+    minHeight: hp(40),
   },
   saveBtnText: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.semiBold,
     color: "#00725E",
     lineHeight: 15,
@@ -639,16 +635,16 @@ const styles = StyleSheet.create({
   cancelBtn: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    paddingVertical: 11,
-    borderRadius: 8,
+    paddingVertical: hp(11),
+    borderRadius: wp(8),
     borderWidth: 1,
     borderColor: "#CBD5E1",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 40,
+    minHeight: hp(40),
   },
   cancelBtnText: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.semiBold,
     color: "#000000",
     lineHeight: 15,
@@ -656,7 +652,7 @@ const styles = StyleSheet.create({
   avatarFallback: {
     width: 40,
     height: 40,
-    borderRadius: 999,
+    borderRadius: wp(999),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -664,7 +660,7 @@ const styles = StyleSheet.create({
   },
 
   avatarFallbackText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
   },
