@@ -1080,6 +1080,7 @@ export default function TherapistsScreen({ navigation }) {
           setIsAddModalOpen(false);
           resetTherapistForm();
         }}
+        style={{paddingBottom:insets.bottom}}
       >
         <KeyboardAvoidingView
           style={{ flex: 1 }}

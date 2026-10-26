@@ -15,7 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 
@@ -23,13 +22,16 @@ import {
   deletePackage,
   getAllPackages,
 } from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const PAGE_LIMIT = 3;
 
@@ -135,16 +137,12 @@ export default function FeeManagementScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         commonStyles.container,
       ]}
     >
-      <TopBar
-        navigation={navigation}
-        headerTitle="Back to dashboard"
-      />
 
       <ScrollView
         style={styles.scrollArea}
@@ -173,14 +171,10 @@ export default function FeeManagementScreen({ navigation }) {
             <View style={styles.iconSquareBlue}>
               <Feather
                 name="package"
-                size={18}
+                size={fontSize(18)}
                 color={colors.primary}
               />
             </View>
-
-            {/* <Text style={styles.greenBadgeText}>
-              +4% vs last mo
-            </Text> */}
           </View>
 
           <Text style={styles.cardLabel}>
@@ -191,19 +185,6 @@ export default function FeeManagementScreen({ navigation }) {
             {totalPackages}
           </Text>
 
-          {/* <View style={styles.pillRow}>
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>
-                42 Monthly
-              </Text>
-            </View>
-
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>
-                18 Per-Session
-              </Text>
-            </View>
-          </View> */}
         </View>
 
         {/* <View style={styles.card}>
@@ -211,7 +192,7 @@ export default function FeeManagementScreen({ navigation }) {
             <View style={styles.iconSquareGreen}>
               <Feather
                 name="trending-up"
-                size={18}
+                size={fontSize(18)}
                 color="#006B58"
               />
             </View>
@@ -234,7 +215,7 @@ export default function FeeManagementScreen({ navigation }) {
               style={[
                 styles.progressBar,
                 {
-                  width: "70%",
+                  width: wp(")70%",
                 },
               ]}
             />
@@ -246,7 +227,7 @@ export default function FeeManagementScreen({ navigation }) {
             <View style={styles.iconSquareOrange}>
               <MaterialCommunityIcons
                 name="clipboard-text-clock-outline"
-                size={18}
+                size={fontSize(18)}
                 color="#7A3E00"
               />
             </View>
@@ -267,7 +248,7 @@ export default function FeeManagementScreen({ navigation }) {
           <View style={styles.infoRow}>
             <Feather
               name="info"
-              size={13}
+              size={fontSize(13)}
               color={colors.blackFont}
             />
 
@@ -310,7 +291,7 @@ export default function FeeManagementScreen({ navigation }) {
               <View style={styles.emptyContainer}>
                 <Feather
                   name="package"
-                  size={28}
+                  size={fontSize(28)}
                   color="#9CA3AF"
                 />
 
@@ -358,7 +339,7 @@ export default function FeeManagementScreen({ navigation }) {
                     >
                       <Feather
                         name="edit-2"
-                        size={16}
+                        size={fontSize(16)}
                         color="#7A8494"
                       />
                     </TouchableOpacity>
@@ -373,7 +354,7 @@ export default function FeeManagementScreen({ navigation }) {
                     >
                       <Feather
                         name="trash-2"
-                        size={16}
+                        size={fontSize(16)}
                         color="#BA1A1A"
                       />
                     </TouchableOpacity>
@@ -423,8 +404,7 @@ export default function FeeManagementScreen({ navigation }) {
         </ImageBackground>
       </ScrollView>
 
-      <BottomBar activeTab="" />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -439,12 +419,12 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal:wp(16),
     paddingBottom: 24,
   },
 
   pageTitle: {
-    fontSize: 24,
+    fontSize:fontSize(24),
     fontFamily: fonts.semiBold,
     lineHeight: 32,
     color: "#181C1E",
@@ -453,7 +433,7 @@ const styles = StyleSheet.create({
   },
 
   pageDescription: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     lineHeight: 22,
     color: colors.blackFont,
@@ -464,16 +444,16 @@ const styles = StyleSheet.create({
     display:"flex",
     flexDirection:"row",
     justifyContent:"space-between",
-    alignItems:"flex-end",
+    alignItems:"center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius:wp(12),
     padding: 20,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: "#F1F5F9",
     shadowColor: "#000",
     shadowOffset: {
-      width: 0,
+      width: wp(0),
       height: 2,
     },
     shadowOpacity: 0.02,
@@ -489,51 +469,16 @@ const styles = StyleSheet.create({
   },
 
   iconSquareBlue: {
-    width: 44,
-    padding: 12,
-    paddingBottom: 18,
-    borderRadius: 8,
+    width: wp(44),
+    padding: wp(12),
+    borderRadius:wp(8),
     backgroundColor: "rgba(0,80,134,.1)",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  iconSquareGreen: {
-    width: 44,
-    padding: 12,
-    paddingBottom: 18,
-    borderRadius: 8,
-    backgroundColor: "rgba(139,246,217,.3)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  iconSquareOrange: {
-    width: 44,
-    padding: 12,
-    paddingBottom: 18,
-    borderRadius: 8,
-    backgroundColor: "rgba(157,82,0,.1)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  greenBadgeText: {
-    fontSize: 16,
-    fontFamily: fonts.regular,
-    lineHeight: 24,
-    color: "#006B58",
-  },
-
-  orangeBadgeText: {
-    fontSize: 16,
-    fontFamily: fonts.regular,
-    lineHeight: 24,
-    color: "#BA1A1A",
-  },
-
   cardLabel: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     lineHeight: 24,
     marginBottom: 4,
@@ -541,10 +486,9 @@ const styles = StyleSheet.create({
   },
 
   cardValueLarge: {
-    fontSize: 24,
+    fontSize:fontSize(24),
     fontFamily: fonts.semiBold,
     color: "#181C1E",
-    marginBottom: 12,
     lineHeight: 32,
   },
 
@@ -555,13 +499,13 @@ const styles = StyleSheet.create({
 
   pill: {
     backgroundColor: "#F1F4F7",
-    paddingHorizontal: 8,
+    paddingHorizontal:wp(8),
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius:wp(999),
   },
 
   pillText: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     color: colors.blackFont,
     fontFamily: fonts.regular,
     lineHeight: 16,
@@ -570,14 +514,14 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 8,
     backgroundColor: "#F1F4F7",
-    borderRadius: 4,
+    borderRadius:wp(4),
     overflow: "hidden",
   },
 
   progressBar: {
     height: "100%",
     backgroundColor: "#006B58",
-    borderRadius: 4,
+    borderRadius:wp(4),
   },
 
   infoRow: {
@@ -587,7 +531,7 @@ const styles = StyleSheet.create({
   },
 
   infoText: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     color: colors.blackFont,
     fontFamily: fonts.regular,
     lineHeight: 16,
@@ -602,14 +546,14 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 24,
+    fontSize:fontSize(24),
     color: "#181C1E",
     fontFamily: fonts.semiBold,
     lineHeight: 32,
   },
 
   viewAllText: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     color: colors.primary,
     fontFamily: fonts.regular,
     lineHeight: 25,
@@ -617,7 +561,7 @@ const styles = StyleSheet.create({
 
   feeListCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius:wp(16),
     padding: 5,
     borderWidth: 1,
     borderColor: "#F1F5F9",
@@ -625,7 +569,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: {
-      width: 0,
+      width: wp(0),
       height: 2,
     },
     shadowOpacity: 0.05,
@@ -650,14 +594,14 @@ const styles = StyleSheet.create({
   },
 
   feeName: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     lineHeight: 24,
     color: "#181C1E",
   },
 
   feePrice: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     lineHeight: 20,
     color: colors.blackFont,
@@ -679,14 +623,14 @@ const styles = StyleSheet.create({
 
   addPackageBtn: {
     backgroundColor: "#F1F4F7",
-    paddingVertical: 16,
+    paddingVertical: hp(16),
     alignItems: "center",
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
   },
 
   addPackageText: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     lineHeight: 24,
     color: colors.primary,
@@ -699,27 +643,27 @@ const styles = StyleSheet.create({
 
   loadingText: {
     marginTop: 8,
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
   },
 
   emptyContainer: {
     paddingVertical: 30,
-    paddingHorizontal: 20,
+    paddingHorizontal:wp(20),
     alignItems: "center",
   },
 
   emptyTitle: {
     marginTop: 10,
-    fontSize: 17,
+    fontSize:fontSize(17),
     fontFamily: fonts.semiBold,
     color: "#181C1E",
   },
 
   emptyText: {
     marginTop: 5,
-    fontSize: 14,
+    fontSize:fontSize(14),
     lineHeight: 20,
     textAlign: "center",
     color: colors.blackFont,
@@ -727,13 +671,13 @@ const styles = StyleSheet.create({
   },
 
   bannerImage: {
-    height: 190,
-    borderRadius: 16,
+    height: hp(190),
+    borderRadius:wp(16),
     overflow: "hidden",
   },
 
   bannerImageStyle: {
-    borderRadius: 16,
+    borderRadius:wp(16),
   },
 
   bannerOverlay: {
@@ -743,14 +687,14 @@ const styles = StyleSheet.create({
   },
 
   bannerTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     color: "#FFFFFF",
     lineHeight: 24,
   },
 
   bannerSubtitle: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     color: "rgba(255,255,255,.8)",
     lineHeight: 18,
     fontFamily: fonts.regular,

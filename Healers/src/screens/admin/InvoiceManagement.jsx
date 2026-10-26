@@ -20,7 +20,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
@@ -30,14 +29,17 @@ import {
   getInvoicesApi,
   updateInvoiceStatusApi,
 } from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
 import { sendInvoiceBroadcast } from '../../utils/invoiceBroadcast';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const PAGE_LIMIT = 5;
 
@@ -171,7 +173,7 @@ const MetricCard = ({
           { backgroundColor: background },
         ]}
       >
-        <Feather name={icon} size={21} color={color} />
+        <Feather name={icon} size={fontSize(21)} color={color} />
       </View>
     </View>
 
@@ -648,7 +650,7 @@ export default function InvoiceManagementScreen({
       >
         <Feather
           name="plus"
-          size={18}
+          size={fontSize(18)}
           color="#FFFFFF"
         />
         <Text style={styles.createBtnText}>
@@ -724,7 +726,7 @@ export default function InvoiceManagementScreen({
         <View style={styles.searchBarContainer}>
           <Feather
             name="search"
-            size={18}
+            size={fontSize(18)}
             color="#94A3B8"
           />
 
@@ -744,7 +746,7 @@ export default function InvoiceManagementScreen({
             >
               <Feather
                 name="x"
-                size={18}
+                size={fontSize(18)}
                 color="#94A3B8"
               />
             </TouchableOpacity>
@@ -758,7 +760,7 @@ export default function InvoiceManagementScreen({
           <View style={styles.filterLeft}>
             <Feather
               name="filter"
-              size={17}
+              size={fontSize(17)}
               color="#64748B"
             />
 
@@ -769,7 +771,7 @@ export default function InvoiceManagementScreen({
 
           <Feather
             name="chevron-down"
-            size={18}
+            size={fontSize(18)}
             color="#64748B"
           />
         </TouchableOpacity>
@@ -906,7 +908,7 @@ export default function InvoiceManagementScreen({
             >
               <Feather
                 name={theme.icon}
-                size={18}
+                size={fontSize(18)}
                 color={theme.color}
               />
             </View>
@@ -933,7 +935,7 @@ export default function InvoiceManagementScreen({
 
             <Feather
               name="chevron-right"
-              size={20}
+              size={fontSize(20)}
               color="#94A3B8"
             />
           </View>
@@ -942,7 +944,7 @@ export default function InvoiceManagementScreen({
             <View style={styles.invoiceDateBlock}>
               <Text style={styles.invoiceDateLabel}>Invoice Date</Text>
               <View style={styles.invoiceDateValueRow}>
-                <Feather name="calendar" size={13} color="#64748B" />
+                <Feather name="calendar" size={fontSize(13)} color="#64748B" />
                 <Text style={styles.invoiceDateValue}>
                   {formatInvoiceDate(item.invoiceDate)}
                 </Text>
@@ -951,7 +953,7 @@ export default function InvoiceManagementScreen({
             <View style={styles.invoiceDateBlock}>
               <Text style={styles.invoiceDateLabel}>Due Date</Text>
               <View style={styles.invoiceDateValueRow}>
-                <Feather name="calendar" size={13} color={item.status === "Overdue" ? "#B91C1C" : "#64748B"} />
+                <Feather name="calendar" size={fontSize(13)} color={item.status === "Overdue" ? "#B91C1C" : "#64748B"} />
                 <Text style={[styles.invoiceDateValue, item.status === "Overdue" && styles.overdueDateValue]}>
                   {formatInvoiceDate(item.dueDate)}
                 </Text>
@@ -1035,7 +1037,7 @@ export default function InvoiceManagementScreen({
           >
             <Feather
               name="eye"
-              size={17}
+              size={fontSize(17)}
               color="#475569"
             />
           </TouchableOpacity>
@@ -1062,7 +1064,7 @@ export default function InvoiceManagementScreen({
                   <>
                     <Feather
                       name="edit-3"
-                      size={15}
+                      size={fontSize(15)}
                       color="#FFFFFF"
                     />
 
@@ -1081,7 +1083,7 @@ export default function InvoiceManagementScreen({
             >
               <Feather
                 name="credit-card"
-                size={15}
+                size={fontSize(15)}
                 color="#FFFFFF"
               />
 
@@ -1098,7 +1100,7 @@ export default function InvoiceManagementScreen({
             >
               <Feather
                 name="mail"
-                size={16}
+                size={fontSize(16)}
                 color="#BA1A1A"
               />
             </TouchableOpacity>
@@ -1129,7 +1131,7 @@ export default function InvoiceManagementScreen({
         <View style={styles.emptyIcon}>
           <Feather
             name="file-text"
-            size={32}
+            size={fontSize(32)}
             color="#94A3B8"
           />
         </View>
@@ -1153,7 +1155,7 @@ export default function InvoiceManagementScreen({
           >
             <Feather
               name="plus"
-              size={16}
+              size={fontSize(16)}
               color="#FFFFFF"
             />
 
@@ -1214,7 +1216,7 @@ export default function InvoiceManagementScreen({
             >
               <Feather
                 name="x"
-                size={20}
+                size={fontSize(20)}
                 color="#64748B"
               />
             </TouchableOpacity>
@@ -1246,7 +1248,7 @@ export default function InvoiceManagementScreen({
                   <View style={styles.checkCircle}>
                     <Feather
                       name="check"
-                      size={14}
+                      size={fontSize(14)}
                       color="#FFFFFF"
                     />
                   </View>
@@ -1316,7 +1318,7 @@ export default function InvoiceManagementScreen({
                 >
                   <Feather
                     name="x"
-                    size={20}
+                    size={fontSize(20)}
                     color="#64748B"
                   />
                 </TouchableOpacity>
@@ -1379,7 +1381,7 @@ export default function InvoiceManagementScreen({
                         name={status === "Paid"
                           ? "check-circle"
                           : "clock"}
-                        size={16}
+                        size={fontSize(16)}
                         color={selected ? "#FFFFFF" : "#64748B"}
                       />
 
@@ -1498,7 +1500,7 @@ export default function InvoiceManagementScreen({
                   <>
                     <Feather
                       name="check"
-                      size={18}
+                      size={fontSize(18)}
                       color="#FFFFFF"
                     />
 
@@ -1526,17 +1528,13 @@ export default function InvoiceManagementScreen({
   };
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         commonStyles.container,
       ]}
     >
-      <TopBar
-        navigation={navigation}
-        headerTitle="Back to dashboard"
-      />
-
+    
       <FlatList
         data={invoices}
         keyExtractor={(item) => String(item._id)}
@@ -1564,8 +1562,7 @@ export default function InvoiceManagementScreen({
       {renderFilterModal()}
       {renderPaymentModal()}
 
-      <BottomBar activeTab="Home" />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1575,26 +1572,26 @@ const styles = StyleSheet.create({
   },
 
   listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 30,
+    paddingHorizontal: wp(16),
+    paddingTop: hp(16),
+    paddingBottom: hp(30),
     flexGrow: 1,
   },
 
   screenTitle: {
-    fontSize: 24,
+    fontSize: fontSize(24),
     fontFamily: fonts.bold,
     color: "#0F172A",
     lineHeight: 34,
-    marginBottom: 5,
+    marginBottom: hp(5),
   },
 
   introDescription: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     color: colors.blackFont,
     lineHeight: 22,
     fontFamily: fonts.regular,
-    marginBottom: 20,
+    marginBottom: hp(20),
   },
 
   createBtn: {
@@ -1602,25 +1599,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    marginBottom: 20,
-    gap: 8,
+    borderRadius: wp(12),
+    paddingVertical: hp(14),
+    paddingHorizontal: wp(18),
+    marginBottom: hp(20),
+    gap: wp(8),
     alignSelf: "flex-start",
   },
 
   createBtnText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#FFFFFF",
     fontFamily: fonts.semiBold,
+    lineHeight:18
   },
 
   metricCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 20,
-    marginBottom: 12,
+    borderRadius: wp(18),
+    padding: wp(20),
+    marginBottom: hp(12),
     borderWidth: 1,
     borderColor: "#F1F5F9",
     elevation: 1,
@@ -1638,39 +1636,39 @@ const styles = StyleSheet.create({
   },
 
   metricLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#64748B",
     letterSpacing: 0.5,
-    marginBottom: 8,
+    marginBottom: hp(8),
   },
 
   metricValue: {
-    fontSize: 27,
+    fontSize: fontSize(27),
     fontFamily: fonts.bold,
     lineHeight: 38,
   },
 
   metricIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: wp(46),
+    height: hp(46),
+    borderRadius: wp(10),
     alignItems: "center",
     justifyContent: "center",
   },
 
   metricSubtitle: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#64748B",
     fontFamily: fonts.regular,
-    marginTop: 8,
+    marginTop: 2,
   },
 
   progressCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
+    borderRadius: wp(16),
+    padding: wp(18),
+    marginBottom: hp(16),
     borderWidth: 1,
     borderColor: "#F1F5F9",
   },
@@ -1678,17 +1676,17 @@ const styles = StyleSheet.create({
   progressHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 14,
+    marginBottom: hp(14),
   },
 
   progressTitle: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
 
   progressPercent: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.bold,
     color: "#006B58",
   },
@@ -1696,14 +1694,14 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 9,
     backgroundColor: "#FEE2E2",
-    borderRadius: 10,
+    borderRadius: wp(10),
     overflow: "hidden",
   },
 
   progressFill: {
     height: "100%",
     backgroundColor: "#059669",
-    borderRadius: 10,
+    borderRadius: wp(10),
   },
 
   progressLegend: {
@@ -1713,22 +1711,22 @@ const styles = StyleSheet.create({
   },
 
   progressCollected: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#059669",
     fontFamily: fonts.regular,
   },
 
   progressOutstanding: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#BA1A1A",
     fontFamily: fonts.regular,
   },
 
   filterSection: {
-    marginBottom: 16,
+    marginBottom: hp(16),
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: wp(16),
+    padding: wp(16),
     elevation: 1,
   },
 
@@ -1736,16 +1734,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F7FAFD",
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
     height: 46,
-    marginBottom: 10,
-    gap: 8,
+    marginBottom: hp(10),
+    gap: wp(8),
   },
 
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: colors.blackFont,
     fontFamily: fonts.regular,
     paddingVertical: 0,
@@ -1756,19 +1754,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "#F7FAFD",
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
     height: 46,
   },
 
   filterLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: wp(10),
   },
 
   dropdownFilterText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
@@ -1777,26 +1775,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: hp(10),
   },
 
   resultTitle: {
-    fontSize: 17,
+    fontSize: fontSize(17),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
 
   resultCount: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#94A3B8",
   },
 
   invoiceCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: wp(16),
+    padding: wp(16),
+    marginBottom: hp(12),
     borderWidth: 1,
     borderColor: "#F1F5F9",
     elevation: 1,
@@ -1805,13 +1803,13 @@ const styles = StyleSheet.create({
   invoiceHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: hp(16),
   },
 
   invoiceIconContainer: {
     width: 42,
     height: 42,
-    borderRadius: 11,
+    borderRadius: wp(11),
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -1823,49 +1821,49 @@ const styles = StyleSheet.create({
   },
 
   parentName: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#181C1E",
   },
 
   childSubtitle: {
     marginTop: 3,
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: colors.blackFont,
     fontFamily: fonts.regular,
   },
 
   invoiceNumber: {
     marginTop: 4,
-    fontSize: 11,
+    fontSize: fontSize(11),
     color: "#64748B",
     fontFamily: fonts.regular,
   },
 
   invoiceDatesRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 14,
+    gap: wp(10),
+    marginBottom: hp(14),
   },
   invoiceDateBlock: {
     flex: 1,
-    padding: 10,
-    borderRadius: 10,
+    padding: wp(10),
+    borderRadius: wp(10),
     backgroundColor: "#F8FAFC",
   },
   invoiceDateLabel: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.regular,
     color: "#64748B",
-    marginBottom: 6,
+    marginBottom: hp(6),
   },
   invoiceDateValueRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: wp(5),
   },
   invoiceDateValue: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
     flexShrink: 1,
@@ -1878,8 +1876,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
-    gap: 8,
+    marginBottom: hp(12),
+    gap: wp(8),
   },
 
   amountBlock: {
@@ -1887,7 +1885,7 @@ const styles = StyleSheet.create({
   },
 
   amountLabel: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.regular,
     color: "#94A3B8",
     letterSpacing: 0.5,
@@ -1895,51 +1893,51 @@ const styles = StyleSheet.create({
 
   amountValue: {
     marginTop: 4,
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.semiBold,
     color: "#00497B",
   },
 
   statusBadge: {
-    paddingHorizontal: 11,
+    paddingHorizontal: wp(11),
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: wp(20),
     borderWidth: 1,
   },
 
   statusBadgeText: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.semiBold,
   },
 
   balanceBox: {
     backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 12,
-    gap: 10,
+    borderRadius: wp(12),
+    padding: wp(12),
+    gap: wp(10),
   },
 
   balanceInfoRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 8,
+    gap: wp(8),
   },
 
   balanceInfoLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#64748B",
     fontFamily: fonts.regular,
   },
 
   collectedValue: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     color: "#059669",
     fontFamily: fonts.semiBold,
   },
 
   balanceInfoValue: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     color: "#BA1A1A",
     fontFamily: fonts.semiBold,
   },
@@ -1947,7 +1945,7 @@ const styles = StyleSheet.create({
   cardProgressTrack: {
     height: 6,
     backgroundColor: "#FEE2E2",
-    borderRadius: 10,
+    borderRadius: wp(10),
     overflow: "hidden",
   },
 
@@ -1957,7 +1955,7 @@ const styles = StyleSheet.create({
   },
 
   cardProgressText: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     color: "#64748B",
     fontFamily: fonts.regular,
     textAlign: "right",
@@ -1972,13 +1970,13 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: wp(8),
   },
 
   iconCircleBtn: {
     width: 38,
     height: 38,
-    borderRadius: 10,
+    borderRadius: wp(10),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
@@ -1990,14 +1988,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.primary,
-    borderRadius: 9,
-    paddingHorizontal: 10,
+    borderRadius: wp(9),
+    paddingHorizontal: wp(10),
     height: 38,
-    gap: 7,
+    gap: wp(7),
   },
 
   editPaymentText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
   },
@@ -2005,7 +2003,7 @@ const styles = StyleSheet.create({
   remindBtn: {
     width: 38,
     height: 38,
-    borderRadius: 10,
+    borderRadius: wp(10),
     backgroundColor: "#FEF2F2",
     alignItems: "center",
     justifyContent: "center",
@@ -2019,7 +2017,7 @@ const styles = StyleSheet.create({
 
   loadingText: {
     marginTop: 12,
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#64748B",
     fontFamily: fonts.regular,
   },
@@ -2028,28 +2026,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 50,
-    paddingHorizontal: 30,
+    paddingHorizontal: wp(30),
   },
 
   emptyIcon: {
     width: 70,
     height: 70,
-    borderRadius: 35,
+    borderRadius: wp(35),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: hp(16),
   },
 
   emptyTitle: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     color: "#0F172A",
     fontFamily: fonts.semiBold,
-    marginBottom: 6,
+    marginBottom: hp(6),
   },
 
   emptyDescription: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     lineHeight: 20,
     color: "#64748B",
     fontFamily: fonts.regular,
@@ -2061,14 +2059,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.primary,
-    paddingHorizontal: 18,
+    paddingHorizontal: wp(18),
     paddingVertical: 11,
-    borderRadius: 10,
-    gap: 7,
+    borderRadius: wp(10),
+    gap: wp(7),
   },
 
   emptyCreateText: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     color: "#FFFFFF",
     fontFamily: fonts.semiBold,
   },
@@ -2078,11 +2076,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: wp(8),
   },
 
   footerLoaderText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#64748B",
     fontFamily: fonts.regular,
   },
@@ -2094,7 +2092,7 @@ const styles = StyleSheet.create({
   endText: {
     textAlign: "center",
     paddingVertical: 20,
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#94A3B8",
     fontFamily: fonts.regular,
   },
@@ -2104,15 +2102,15 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(15,23,42,0.55)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: wp(16),
   },
 
   modalContent: {
     width: "100%",
     maxWidth: 420,
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 18,
+    borderRadius: wp(18),
+    padding: wp(18),
     elevation: 5,
   },
 
@@ -2120,11 +2118,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: hp(16),
   },
 
   modalTitle: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.bold,
     color: "#0F172A",
   },
@@ -2132,7 +2130,7 @@ const styles = StyleSheet.create({
   modalCloseBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: wp(18),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
@@ -2143,8 +2141,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     minHeight: 52,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingHorizontal: wp(12),
+    borderRadius: wp(10),
     marginTop: 3,
   },
 
@@ -2153,7 +2151,7 @@ const styles = StyleSheet.create({
   },
 
   modalOptionText: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontFamily: fonts.regular,
     color: "#334155",
   },
@@ -2166,7 +2164,7 @@ const styles = StyleSheet.create({
   checkCircle: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: wp(12),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -2177,17 +2175,18 @@ const styles = StyleSheet.create({
     maxWidth: 440,
     maxHeight: "88%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: wp(20),
     overflow: "hidden",
+    padding: wp(20),
+
   },
 
   paymentScrollContent: {
-    padding: 20,
-    paddingBottom: 24,
+    paddingBottom: hp(24),
   },
 
   paymentInvoiceNumber: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#64748B",
     fontFamily: fonts.regular,
     marginTop: 4,
@@ -2195,40 +2194,40 @@ const styles = StyleSheet.create({
 
   paymentSummary: {
     backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 15,
-    gap: 12,
-    marginBottom: 20,
+    borderRadius: wp(12),
+    padding: wp(15),
+    gap: wp(12),
+    marginBottom: hp(20),
   },
 
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    gap: 8,
+    gap: wp(8),
   },
 
   summaryLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#64748B",
     fontFamily: fonts.regular,
     flex: 1,
   },
 
   summaryValue: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     color: "#0F172A",
     fontFamily: fonts.semiBold,
   },
 
   summaryCollected: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     color: "#059669",
     fontFamily: fonts.semiBold,
   },
 
   summaryOutstanding: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     color: "#BA1A1A",
     fontFamily: fonts.bold,
   },
@@ -2239,16 +2238,16 @@ const styles = StyleSheet.create({
   },
 
   inputLabel: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     color: "#334155",
     fontFamily: fonts.semiBold,
-    marginBottom: 9,
+    marginBottom: hp(9),
   },
 
   paymentStatusRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 20,
+    gap: wp(10),
+    marginBottom: hp(20),
   },
 
   paymentStatusOption: {
@@ -2256,8 +2255,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    borderRadius: 10,
+    gap: wp(6),
+    borderRadius: wp(10),
     backgroundColor: "#F1F5F9",
     paddingVertical: 13,
   },
@@ -2267,7 +2266,7 @@ const styles = StyleSheet.create({
   },
 
   paymentStatusText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#475569",
     fontFamily: fonts.semiBold,
   },
@@ -2281,10 +2280,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    borderRadius: wp(10),
+    paddingHorizontal: wp(14),
     height: 50,
-    marginBottom: 12,
+    marginBottom: hp(12),
   },
 
   disabledInput: {
@@ -2292,7 +2291,7 @@ const styles = StyleSheet.create({
   },
 
   currencyPrefix: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#64748B",
     fontFamily: fonts.semiBold,
     marginRight: 10,
@@ -2300,39 +2299,39 @@ const styles = StyleSheet.create({
 
   paymentInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: fontSize(16),
     color: "#0F172A",
     fontFamily: fonts.semiBold,
     paddingVertical: 0,
   },
 
   inputHint: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#059669",
     fontFamily: fonts.regular,
-    marginBottom: 12,
+    marginBottom: hp(12),
   },
 
   remainingPreview: {
     backgroundColor: "#EFF6FF",
-    borderRadius: 10,
-    padding: 13,
+    borderRadius: wp(10),
+    padding: wp(13),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 8,
-    marginBottom: 20,
+    gap: wp(8),
+    marginBottom: hp(20),
   },
 
   remainingLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#475569",
     fontFamily: fonts.regular,
     flex: 1,
   },
 
   remainingValue: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: colors.primary,
     fontFamily: fonts.bold,
   },
@@ -2340,14 +2339,14 @@ const styles = StyleSheet.create({
   paymentMethodGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 20,
+    gap: wp(8),
+    marginBottom: hp(20),
   },
 
   methodOption: {
-    paddingHorizontal: 13,
+    paddingHorizontal: wp(13),
     paddingVertical: 10,
-    borderRadius: 9,
+    borderRadius: wp(9),
     borderWidth: 1,
     borderColor: "#E2E8F0",
     backgroundColor: "#F8FAFC",
@@ -2359,7 +2358,7 @@ const styles = StyleSheet.create({
   },
 
   methodText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#64748B",
     fontFamily: fonts.regular,
   },
@@ -2372,23 +2371,23 @@ const styles = StyleSheet.create({
   noteInput: {
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: wp(10),
+    padding: wp(12),
     height: 75,
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#0F172A",
-    marginBottom: 20,
+    marginBottom: hp(20),
   },
 
   savePaymentBtn: {
     backgroundColor: colors.primary,
-    borderRadius: 11,
+    borderRadius: wp(11),
     height: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: wp(8),
   },
 
   disabledButton: {
@@ -2396,7 +2395,7 @@ const styles = StyleSheet.create({
   },
 
   savePaymentText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#FFFFFF",
     fontFamily: fonts.semiBold,
   },
@@ -2407,7 +2406,7 @@ const styles = StyleSheet.create({
   },
 
   cancelPaymentText: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     color: "#64748B",
     fontFamily: fonts.semiBold,
   },

@@ -17,18 +17,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { getInvoiceByIdApi } from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const COMPANY = {
   name: "HEALERS INSTITUTION",
@@ -714,8 +716,7 @@ export default function InvoiceViewScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.screen}>
-        <TopBar navigation={navigation} headerTitle="Invoices" />
+      <View style={styles.screen}>
 
         <View style={styles.center}>
           <ActivityIndicator
@@ -727,19 +728,18 @@ export default function InvoiceViewScreen({ navigation, route }) {
             Loading invoice...
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!invoice) {
     return (
-      <SafeAreaView style={styles.screen}>
-        <TopBar navigation={navigation} headerTitle="Invoices" />
+      <View style={styles.screen}>
 
         <View style={styles.center}>
           <Feather
             name="file-text"
-            size={42}
+            size={fontSize(42)}
             color="#94A3B8"
           />
 
@@ -756,7 +756,7 @@ export default function InvoiceViewScreen({ navigation, route }) {
             </Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -772,8 +772,7 @@ export default function InvoiceViewScreen({ navigation, route }) {
   const balance = Number(invoice.balanceDue ?? total - paid);
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <TopBar navigation={navigation} headerTitle="Invoices" />
+    <View style={styles.screen}>
 
       <ScrollView
         style={styles.scroll}
@@ -1077,8 +1076,8 @@ export default function InvoiceViewScreen({ navigation, route }) {
               : (
                 <Feather
                   name="download"
-                  size={20}
-                  color="#FFFFFF"
+                  size={fontSize(20)}
+                  color="#100909"
                 />
               )}
 
@@ -1091,8 +1090,7 @@ export default function InvoiceViewScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      <BottomBar activeTab="" />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1107,15 +1105,15 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal:wp(16),
     paddingTop: 16,
-    paddingBottom: 30,
+    paddingBottom: hp(24),
   },
 
   invoicePaper: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingHorizontal: 20,
+    borderRadius:wp(12),
+    paddingHorizontal:wp(20),
     paddingTop: 28,
     paddingBottom: 40,
     elevation: 2,
@@ -1138,20 +1136,20 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 52,
-    height: 52,
+    width: wp(52),
+    height: wp(52),
     marginBottom: 12,
   },
 
   companyName: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.bold,
     color: colors.primary,
     lineHeight: 28,
   },
 
   companyAddress: {
-    fontSize: 10,
+    fontSize:fontSize(10),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 24,
@@ -1164,7 +1162,7 @@ const styles = StyleSheet.create({
   },
 
   invoiceTitle: {
-    fontSize: 18,
+    fontSize:fontSize(18),
     fontFamily: fonts.regular,
     color: "#1F2937",
     letterSpacing: 1,
@@ -1172,7 +1170,7 @@ const styles = StyleSheet.create({
   },
 
   invoiceNumber: {
-    fontSize: 10,
+    fontSize:fontSize(10),
     color: "#6B7280",
     fontFamily: fonts.regular,
     lineHeight: 13,
@@ -1180,21 +1178,21 @@ const styles = StyleSheet.create({
 
   balanceHeaderLabel: {
     marginTop: 20,
-    fontSize: 10,
+    fontSize:fontSize(10),
     color: "#94A3B8",
     fontFamily: fonts.regular,
   },
 
   balanceHeaderValue: {
     marginTop: 4,
-    fontSize: 15,
+    fontSize:fontSize(15),
     color: "#1E293B",
     fontFamily: fonts.bold,
   },
 
   statusText: {
     marginTop: 6,
-    fontSize: 10,
+    fontSize:fontSize(10),
     color: "#64748B",
     fontFamily: fonts.semiBold,
   },
@@ -1212,20 +1210,20 @@ const styles = StyleSheet.create({
   },
 
   sectionLabel: {
-    fontSize: 11,
+    fontSize:fontSize(11),
     color: "#94A3B8",
     fontFamily: fonts.regular,
     marginBottom: 5,
   },
 
   personName: {
-    fontSize: 11,
+    fontSize:fontSize(11),
     color: "#1E293B",
     fontFamily: fonts.semiBold,
   },
 
   smallText: {
-    fontSize: 10,
+    fontSize:fontSize(10),
     color: "#64748B",
     fontFamily: fonts.regular,
     lineHeight: 15,
@@ -1248,14 +1246,14 @@ const styles = StyleSheet.create({
   },
 
   detailLabel: {
-    fontSize: 9,
+    fontSize:fontSize(9),
     color: "#94A3B8",
     fontFamily: fonts.regular,
     flex: 1,
   },
 
   detailValue: {
-    fontSize: 9,
+    fontSize:fontSize(9),
     color: "#1E293B",
     fontFamily: fonts.regular,
     textAlign: "right",
@@ -1266,12 +1264,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#176B9E",
     paddingVertical: 10,
-    paddingHorizontal: 5,
+    paddingHorizontal:wp(5),
   },
 
   tableHeadingText: {
     color: "#FFFFFF",
-    fontSize: 9,
+    fontSize:fontSize(9),
     fontFamily: fonts.regular,
   },
 
@@ -1300,7 +1298,7 @@ const styles = StyleSheet.create({
 
   tableRow: {
     flexDirection: "row",
-    paddingHorizontal: 5,
+    paddingHorizontal:wp(5),
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
@@ -1308,28 +1306,28 @@ const styles = StyleSheet.create({
   },
 
   cellText: {
-    fontSize: 9,
+    fontSize:fontSize(9),
     color: "#475569",
     fontFamily: fonts.regular,
     lineHeight: 14,
   },
 
   serviceName: {
-    fontSize: 10,
+    fontSize:fontSize(10),
     color: "#1E293B",
     fontFamily: fonts.semiBold,
     lineHeight: 14,
   },
 
   serviceDescription: {
-    fontSize: 9,
+    fontSize:fontSize(9),
     color: "#94A3B8",
     fontFamily: fonts.regular,
     marginTop: 4,
   },
 
   itemDiscount: {
-    fontSize: 9,
+    fontSize:fontSize(9),
     color: "#DC2626",
     fontFamily: fonts.regular,
     marginTop: 5,
@@ -1351,13 +1349,13 @@ const styles = StyleSheet.create({
 
   totalLabel: {
     flex: 1,
-    fontSize: 10,
+    fontSize:fontSize(10),
     color: "#475569",
     fontFamily: fonts.regular,
   },
 
   totalValue: {
-    fontSize: 10,
+    fontSize:fontSize(10),
     color: "#334155",
     fontFamily: fonts.regular,
     textAlign: "right",
@@ -1374,8 +1372,8 @@ const styles = StyleSheet.create({
 
   balanceRow: {
     backgroundColor: "#F1F3F5",
-    borderRadius: 3,
-    paddingHorizontal: 8,
+    borderRadius:wp(3),
+    paddingHorizontal:wp(8),
     marginTop: 4,
   },
 
@@ -1384,17 +1382,17 @@ const styles = StyleSheet.create({
   },
 
   notesText: {
-    fontSize: 10,
+    fontSize:fontSize(10),
     color: "#475569",
     fontFamily: fonts.regular,
     lineHeight: 16,
   },
 
   downloadButton: {
-    marginTop: 65,
-    height: 54,
+    marginTop: hp(65),
+    height: hp(54),
     backgroundColor: "#FA8C28",
-    borderRadius: 12,
+    borderRadius:wp(12),
     borderWidth: 1,
     borderColor: "#B65A08",
     flexDirection: "row",
@@ -1409,9 +1407,10 @@ const styles = StyleSheet.create({
   },
 
   downloadText: {
-    fontSize: 15,
-    color: "#FFFFFF",
+    fontSize:fontSize(14),
+    color: "#100909",
     fontFamily: fonts.semiBold,
+    lineHeight:18
   },
 
   disabledButton: {
@@ -1427,17 +1426,17 @@ const styles = StyleSheet.create({
 
   loadingText: {
     marginTop: 12,
-    fontSize: 14,
+    fontSize:fontSize(14),
     color: "#64748B",
     fontFamily: fonts.regular,
   },
 
   retryButton: {
     marginTop: 18,
-    paddingHorizontal: 24,
+    paddingHorizontal:wp(24),
     paddingVertical: 12,
     backgroundColor: colors.primary,
-    borderRadius: 10,
+    borderRadius:wp(10),
   },
 
   retryText: {

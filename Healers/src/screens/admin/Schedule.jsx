@@ -469,7 +469,13 @@ export default function ScheduleScreen({ navigation }) {
       </TouchableOpacity>
 
       {/* ---------- session details ---------- */}
-      <Modal visible={!!detail} transparent animationType="slide" onRequestClose={() => setDetail(null)}>
+      <Modal
+        style={{ paddingBottom: insets.bottom }}
+        visible={!!detail}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDetail(null)}
+      >
         <View style={styles.overlay}>
           <View style={styles.sheet}>
             {detail && (
@@ -523,11 +529,11 @@ export default function ScheduleScreen({ navigation }) {
                 <Text style={styles.sheetSection}>Children ({detailKids.length})</Text>
                 <ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={false}>
                   {detailKids.length === 0 ? <Text style={styles.muted}>No children in this session.</Text> : (
-                    detailKids.map((c) => {
+                    detailKids.map((c, index) => {
                       const a = ATT[c.attendance] || ATT.Pending;
                       const showChip = detail.isPast || c.attendance !== "Pending";
                       return (
-                        <View key={c.childId} style={styles.childRow}>
+                        <View key={`${c.childId}-${index}`} style={styles.childRow}>
                           <View style={styles.avatar}>
                             <Text style={styles.avatarText}>{(c.fullName || "?").slice(0, 1).toUpperCase()}</Text>
                           </View>
@@ -678,8 +684,14 @@ const styles = StyleSheet.create({
   meta: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
   attLine: { fontSize: fontSize(11), fontFamily: fonts.regular, color: "#94A3B8", marginTop: 3 },
 
-  chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start", maxWidth: wp(100) },
-  chipText: { fontSize: fontSize(11), fontFamily: fonts.semiBold },
+  chip: {
+    borderRadius: wp(20),
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(4),
+    alignSelf: "flex-start",
+    // maxWidth: wp(100),
+  },
+  chipText: { fontSize: fontSize(10), fontFamily: fonts.semiBold,lineHeight:16 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
 
   empty: { alignItems: "center", paddingVertical: 60, gap: 6 },

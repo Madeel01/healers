@@ -1,4 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
+
 import {
   ActivityIndicator,
   Alert,
@@ -9,23 +14,29 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import Feather from "@expo/vector-icons/Feather";
-import { useFocusEffect } from "@react-navigation/native";
+import Feather from '@expo/vector-icons/Feather';
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
   deleteChildCustomAppointment,
   getChildBatchOptions,
   getChildSchedule,
-  updateBatchChildren,
   getServices,
-} from "../../api/admin/api";
-import BottomBar from "../../components/BottomBar";
-import TopBar from "../../components/TopBar";
-import { colors, fonts } from "../../styles/theme";
-import { formatTo12Hour } from "../../utils/hoursformat";
+  updateBatchChildren,
+} from '../../api/admin/api';
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
+import { formatTo12Hour } from '../../utils/hoursformat';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const PAGE = 20;
 
@@ -53,10 +64,8 @@ const keyToDate = (k) => {
   const [y, m, d] = k.split("-").map(Number);
   return new Date(y, m - 1, d);
 };
-const prettyDay = (k) =>
-  keyToDate(k).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-const prettyFull = (k) =>
-  keyToDate(k).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const prettyDay = (k) => keyToDate(k).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+const prettyFull = (k) => keyToDate(k).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const mins = (t) => {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -96,7 +105,9 @@ function SessionRow({ s, onPress, specMeta }) {
         <View
           style={[
             styles.sessionBar,
-            { backgroundColor: isCustom ? "#8B5CF6" : s.sessionType === "cancel" ? "#EF4444" : spec?.color || "#0B4A6F" },
+            {
+              backgroundColor: isCustom ? "#8B5CF6" : s.sessionType === "cancel" ? "#EF4444" : spec?.color || "#0B4A6F",
+            },
           ]}
         />
         <View style={{ flex: 1 }}>
@@ -108,7 +119,7 @@ function SessionRow({ s, onPress, specMeta }) {
             with {s.therapistName}
           </Text>
         </View>
-        <View style={{ alignItems: "flex-end", gap: 4 }}>
+        <View style={{ alignItems: "flex-end", gap: wp(4) }}>
           {att && (
             <View style={[styles.chip, { backgroundColor: att.bg }]}>
               <Text style={[styles.chipText, { color: att.color }]}>{att.label}</Text>
@@ -125,20 +136,21 @@ function SessionRow({ s, onPress, specMeta }) {
             </View>
           )}
         </View>
-        <Feather name="chevron-right" size={18} color="#94A3B8" />
+        <Feather name="chevron-right" size={fontSize(18)} color="#94A3B8" />
       </View>
     </TouchableOpacity>
   );
 }
 
 export default function ChildScheduleScreen({ navigation, route }) {
-  const { childId, childName, isActive  } = route.params || {};
+  const { childId, childName, isActive } = route.params || {};
+  const insets = useSafeAreaInsets();
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [services, setServices] = useState([])
+  const [services, setServices] = useState([]);
 
   const [tab, setTab] = useState("upcoming");
   const [pastLimit, setPastLimit] = useState(PAGE);
@@ -175,7 +187,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
         const res = await getServices({ search: "" });
 
         const activeServices = res.data.filter(
-          (service) => service.isActive === true
+          (service) => service.isActive === true,
         );
 
         setServices(activeServices);
@@ -190,7 +202,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
     (id) => {
       return (
         services.find(
-          (service) => service.id === id
+          (service) => service.id === id,
         ) || {
           label: id,
           bg: "#E0F2FE",
@@ -198,7 +210,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
         }
       );
     },
-    [services]
+    [services],
   );
 
   useFocusEffect(
@@ -275,7 +287,9 @@ export default function ChildScheduleScreen({ navigation, route }) {
   const removeFromBatch = (b) =>
     Alert.alert(
       "Remove from batch",
-      `Remove ${data?.child?.fullName || "this child"} from ${b.batchName}? Their upcoming pending sessions in this batch will be deleted.`,
+      `Remove ${
+        data?.child?.fullName || "this child"
+      } from ${b.batchName}? Their upcoming pending sessions in this batch will be deleted.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -319,37 +333,30 @@ export default function ChildScheduleScreen({ navigation, route }) {
       },
     ]);
 
-  const header = (
-    <TopBar
-      navigation={navigation}
-      isNotificationOpen={isNotificationOpen}
-      onToggleNotification={setIsNotificationOpen}
-      headerTitle="Child Schedule"
-    />
-  );
-
   if (loading) {
     return (
-      <SafeAreaView style={styles.main}>
-        {header}
+      <View style={styles.main}>
         <View style={styles.centerFill}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-        <BottomBar activeTab="Children" onOpenNotifications={setIsNotificationOpen} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   const detailAtt = detail ? attendanceMeta(detail) : null;
 
   return (
-    <SafeAreaView style={styles.main}>
-      {header}
-
+    <View style={styles.main}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} colors={[colors.primary]} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(true)}
+            colors={[colors.primary]}
+          />
+        }
       >
         {/* summary */}
         <View style={styles.summary}>
@@ -374,7 +381,8 @@ export default function ChildScheduleScreen({ navigation, route }) {
           </View>
 
           <Text style={styles.statNote}>
-            Last {data?.pastDays || 90} days: {stats.present} attended · {stats.absent} absent · {stats.notMarked} not marked
+            Last {data?.pastDays || 90} days: {stats.present} attended · {stats.absent} absent · {stats.notMarked}{" "}
+            not marked
           </Text>
 
           <View style={styles.actionRow}>
@@ -383,7 +391,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
               disabled={!isChildActive}
               onPress={() => setEnrollOpen(true)}
             >
-              <Feather name="layers" size={16} color="#FFFFFF" />
+              <Feather name="layers" size={fontSize(16)} color="#FFFFFF" />
               <Text style={styles.primaryText}>Enroll in batch</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -391,7 +399,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
               disabled={!isChildActive}
               onPress={goCustom}
             >
-              <Feather name="plus" size={16} color={isChildActive ? colors.primary : "#94A3B8"} />
+              <Feather name="plus" size={fontSize(16)} color={isChildActive ? colors.primary : "#94A3B8"} />
               <Text style={[styles.secondaryText, !isChildActive && { color: "#94A3B8" }]}>
                 Appointment
               </Text>
@@ -400,7 +408,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
 
           {!isChildActive && (
             <View style={styles.inactiveNotice}>
-              <Feather name="info" size={14} color="#B91C1C" />
+              <Feather name="info" size={fontSize(14)} color="#B91C1C" />
               <Text style={styles.inactiveNoticeText}>
                 This child is inactive. Activate them to enroll or book appointments.
               </Text>
@@ -422,113 +430,123 @@ export default function ChildScheduleScreen({ navigation, route }) {
         </View>
 
         {/* ---------- UPCOMING ---------- */}
-        {tab === "upcoming" &&
-          (upcoming.length === 0 ? (
-            <View style={styles.empty}>
-              <Feather name="calendar" size={34} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>No upcoming sessions</Text>
-              <Text style={styles.emptySub}>Enroll this child in a batch or create a custom appointment.</Text>
-            </View>
-          ) : (
-            groupByDate(upcoming).map((g) => (
-              <View key={g.date} style={styles.dayGroup}>
-                <View style={styles.dayHeader}>
-                  <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
-                  {relLabel(g.date) && <Text style={styles.dayRel}>{relLabel(g.date)}</Text>}
-                </View>
-                {g.items.map((s) => (
-                  <SessionRow key={s.id} s={s} onPress={setDetail} specMeta={specMeta} />
-                ))}
+        {tab === "upcoming"
+          && (upcoming.length === 0
+            ? (
+              <View style={styles.empty}>
+                <Feather name="calendar" size={fontSize(34)} color="#94A3B8" />
+                <Text style={styles.emptyTitle}>No upcoming sessions</Text>
+                <Text style={styles.emptySub}>Enroll this child in a batch or create a custom appointment.</Text>
               </View>
-            ))
-          ))}
-
-        {/* ---------- PAST ---------- */}
-        {tab === "past" &&
-          (past.length === 0 ? (
-            <View style={styles.empty}>
-              <Feather name="clock" size={34} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>No past sessions</Text>
-              <Text style={styles.emptySub}>Showing the last {data?.pastDays || 90} days.</Text>
-            </View>
-          ) : (
-            <>
-              <Text style={styles.hint}>Showing the last {data?.pastDays || 90} days.</Text>
-              {groupByDate(past.slice(0, pastLimit)).map((g) => (
+            )
+            : (
+              groupByDate(upcoming).map((g) => (
                 <View key={g.date} style={styles.dayGroup}>
                   <View style={styles.dayHeader}>
                     <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
+                    {relLabel(g.date) && <Text style={styles.dayRel}>{relLabel(g.date)}</Text>}
                   </View>
-                  {g.items.map((s) => (
-                    <SessionRow key={s.id} s={s} onPress={setDetail} specMeta={specMeta} />
-                  ))}
+                  {g.items.map((s) => <SessionRow key={s.id} s={s} onPress={setDetail} specMeta={specMeta} />)}
                 </View>
-              ))}
-              {past.length > pastLimit && (
-                <TouchableOpacity style={styles.moreBtn} onPress={() => setPastLimit((n) => n + PAGE)}>
-                  <Text style={styles.moreBtnText}>Show more ({past.length - pastLimit} left)</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          ))}
+              ))
+            ))}
+
+        {/* ---------- PAST ---------- */}
+        {tab === "past"
+          && (past.length === 0
+            ? (
+              <View style={styles.empty}>
+                <Feather name="clock" size={fontSize(34)} color="#94A3B8" />
+                <Text style={styles.emptyTitle}>No past sessions</Text>
+                <Text style={styles.emptySub}>Showing the last {data?.pastDays || 90} days.</Text>
+              </View>
+            )
+            : (
+              <>
+                <Text style={styles.hint}>Showing the last {data?.pastDays || 90} days.</Text>
+                {groupByDate(past.slice(0, pastLimit)).map((g) => (
+                  <View key={g.date} style={styles.dayGroup}>
+                    <View style={styles.dayHeader}>
+                      <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
+                    </View>
+                    {g.items.map((s) => <SessionRow key={s.id} s={s} onPress={setDetail} specMeta={specMeta} />)}
+                  </View>
+                ))}
+                {past.length > pastLimit && (
+                  <TouchableOpacity
+                    style={styles.moreBtn}
+                    onPress={() => setPastLimit((n) => n + PAGE)}
+                  >
+                    <Text style={styles.moreBtnText}>Show more ({past.length - pastLimit} left)</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ))}
 
         {/* ---------- BATCHES ---------- */}
-        {tab === "batches" &&
-          (batches.length === 0 ? (
-            <View style={styles.empty}>
-              <Feather name="layers" size={34} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>Not in any batch</Text>
-              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 12 }, !isChildActive && styles.disabledBtn]}
-  disabled={!isChildActive} onPress={() => setEnrollOpen(true)}>
-                <Text style={styles.primaryText}>Enroll in batch</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            batches.map((b) => (
-              <View key={b._id} style={styles.card}>
-                <View style={styles.cardHeadRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardTitle}>{b.batchName}</Text>
-                    <Text style={styles.sessionSub}>
-                      {prettyFull(String(b.dateFrom).slice(0, 10))} to {prettyFull(String(b.dateTo).slice(0, 10))}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.iconBtn, !isChildActive && { opacity: 0.4 }]}
-                    disabled={!isChildActive || removingId === String(b._id)}
-                    onPress={() => removeFromBatch(b)}
-                  >
-                    {removingId === String(b._id) ? (
-                      <ActivityIndicator size="small" color="#EF4444" />
-                    ) : (
-                      <Feather name="user-minus" size={16} color="#EF4444" />
-                    )}
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.chipRow}>
-                  {asList(b.speciality).map((id) => {
-                    const m = specMeta(id);
-                    return (
-                      <View key={id} style={[styles.chip, { backgroundColor: m.bg }]}>
-                        <Text style={[styles.chipText, { color: m.color }]}>{m.label}</Text>
-                      </View>
-                    );
-                  })}
-                  <View style={[styles.chip, { backgroundColor: "#F1F5F9" }]}>
-                    <Text style={[styles.chipText, { color: "#475569" }]}>
-                      {b.childCount}/{b.maxChild} children
-                    </Text>
-                  </View>
-                </View>
+        {tab === "batches"
+          && (batches.length === 0
+            ? (
+              <View style={styles.empty}>
+                <Feather name="layers" size={fontSize(34)} color="#94A3B8" />
+                <Text style={styles.emptyTitle}>Not in any batch</Text>
+                <TouchableOpacity
+                  style={[styles.primaryBtn, { marginTop: 12 }, !isChildActive && styles.disabledBtn]}
+                  disabled={!isChildActive}
+                  onPress={() => setEnrollOpen(true)}
+                >
+                  <Text style={styles.primaryText}>Enroll in batch</Text>
+                </TouchableOpacity>
               </View>
-            ))
-          ))}
+            )
+            : (
+              batches.map((b) => (
+                <View key={b._id} style={styles.card}>
+                  <View style={styles.cardHeadRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cardTitle}>{b.batchName}</Text>
+                      <Text style={styles.sessionSub}>
+                        {prettyFull(String(b.dateFrom).slice(0, 10))} to {prettyFull(String(b.dateTo).slice(0, 10))}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.iconBtn, !isChildActive && { opacity: 0.4 }]}
+                      disabled={!isChildActive || removingId === String(b._id)}
+                      onPress={() => removeFromBatch(b)}
+                    >
+                      {removingId === String(b._id)
+                        ? <ActivityIndicator size="small" color="#EF4444" />
+                        : <Feather name="user-minus" size={fontSize(16)} color="#EF4444" />}
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.chipRow}>
+                    {asList(b.speciality).map((id) => {
+                      const m = specMeta(id);
+                      return (
+                        <View key={id} style={[styles.chip, { backgroundColor: m.bg }]}>
+                          <Text style={[styles.chipText, { color: m.color }]}>{m.label}</Text>
+                        </View>
+                      );
+                    })}
+                    <View style={[styles.chip, { backgroundColor: "#F1F5F9" }]}>
+                      <Text style={[styles.chipText, { color: "#475569" }]}>
+                        {b.childCount}/{b.maxChild} children
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))
+            ))}
       </ScrollView>
 
-      <BottomBar activeTab="Children" onOpenNotifications={setIsNotificationOpen} />
-
       {/* session details */}
-      <Modal visible={!!detail} transparent animationType="slide" onRequestClose={() => setDetail(null)}>
+      <Modal
+        style={{ paddingBottom: insets.bottom }}
+        visible={!!detail}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDetail(null)}
+      >
         <View style={styles.overlay}>
           <View style={styles.sheet}>
             {detail && (
@@ -541,24 +559,26 @@ export default function ChildScheduleScreen({ navigation, route }) {
                     </Text>
                   </View>
                   <TouchableOpacity onPress={() => setDetail(null)}>
-                    <Feather name="x" size={22} color="#64748B" />
+                    <Feather name="x" size={fontSize(22)} color="#64748B" />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.chipRow}>
-                  {detail.type === "custom" ? (
-                    <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
-                      <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom appointment</Text>
-                    </View>
-                  ) : (
-                    detail.speciality && (
-                      <View style={[styles.chip, { backgroundColor: specMeta(detail.speciality).bg }]}>
-                        <Text style={[styles.chipText, { color: specMeta(detail.speciality).color }]}>
-                          {specMeta(detail.speciality).label}
-                        </Text>
+                  {detail.type === "custom"
+                    ? (
+                      <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
+                        <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom appointment</Text>
                       </View>
                     )
-                  )}
+                    : (
+                      detail.speciality && (
+                        <View style={[styles.chip, { backgroundColor: specMeta(detail.speciality).bg }]}>
+                          <Text style={[styles.chipText, { color: specMeta(detail.speciality).color }]}>
+                            {specMeta(detail.speciality).label}
+                          </Text>
+                        </View>
+                      )
+                    )}
                   <View style={[styles.chip, { backgroundColor: TYPE_META[detail.sessionType]?.bg || "#F1F5F9" }]}>
                     <Text style={[styles.chipText, { color: TYPE_META[detail.sessionType]?.color || "#475569" }]}>
                       {TYPE_META[detail.sessionType]?.label || "Regular"}
@@ -578,15 +598,17 @@ export default function ChildScheduleScreen({ navigation, route }) {
                 )}
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Attendance</Text>
-                  {detailAtt ? (
-                    <View style={[styles.chip, { backgroundColor: detailAtt.bg }]}>
-                      <Text style={[styles.chipText, { color: detailAtt.color }]}>{detailAtt.label}</Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.detailValue}>
-                      {isInactive(detail) ? "-" : "Not started yet"}
-                    </Text>
-                  )}
+                  {detailAtt
+                    ? (
+                      <View style={[styles.chip, { backgroundColor: detailAtt.bg }]}>
+                        <Text style={[styles.chipText, { color: detailAtt.color }]}>{detailAtt.label}</Text>
+                      </View>
+                    )
+                    : (
+                      <Text style={styles.detailValue}>
+                        {isInactive(detail) ? "-" : "Not started yet"}
+                      </Text>
+                    )}
                 </View>
 
                 {detail.canCancel && (
@@ -595,11 +617,9 @@ export default function ChildScheduleScreen({ navigation, route }) {
                     disabled={cancelling || !isChildActive}
                     onPress={() => cancelAppointment(detail)}
                   >
-                    {cancelling ? (
-                      <ActivityIndicator color="#EF4444" />
-                    ) : (
-                      <Text style={styles.dangerText}>Cancel appointment</Text>
-                    )}
+                    {cancelling
+                      ? <ActivityIndicator color="#EF4444" />
+                      : <Text style={styles.dangerText}>Cancel appointment</Text>}
                   </TouchableOpacity>
                 )}
               </>
@@ -609,7 +629,13 @@ export default function ChildScheduleScreen({ navigation, route }) {
       </Modal>
 
       {/* enroll in batch */}
-      <Modal visible={enrollOpen} transparent animationType="slide" onRequestClose={() => setEnrollOpen(false)}>
+      <Modal
+        style={{ paddingBottom: insets.bottom }}
+        visible={enrollOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEnrollOpen(false)}
+      >
         <View style={styles.overlay}>
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
@@ -618,177 +644,190 @@ export default function ChildScheduleScreen({ navigation, route }) {
                 <Text style={styles.sheetSub}>They join every upcoming session of the batch.</Text>
               </View>
               <TouchableOpacity onPress={() => setEnrollOpen(false)}>
-                <Feather name="x" size={22} color="#64748B" />
+                <Feather name="x" size={fontSize(22)} color="#64748B" />
               </TouchableOpacity>
             </View>
 
-            {optLoading ? (
-              <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
-            ) : (
-              <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
-                {options.length === 0 && (
-                  <Text style={styles.muted}>No open batches available. Batches that ended or are full are hidden.</Text>
-                )}
-                {options.map((b) => {
-                  const on = pickedBatch === b._id;
-                  return (
-                    <TouchableOpacity
-                      key={b._id}
-                      style={[styles.pickRow, on && styles.pickRowOn]}
-                      onPress={() => setPickedBatch(b._id)}
-                    >
-                      <View style={[styles.radio, on && styles.radioOn]}>{on && <View style={styles.radioDot} />}</View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.cardTitle}>{b.batchName}</Text>
-                        <Text style={styles.sessionSub}>
-                          {prettyFull(String(b.dateFrom).slice(0, 10))} to {prettyFull(String(b.dateTo).slice(0, 10))}
-                        </Text>
-                        <View style={styles.chipRow}>
-                          {asList(b.speciality).map((id) => {
-                            const m = specMeta(id);
-                            return (
-                              <View key={id} style={[styles.chip, { backgroundColor: m.bg }]}>
-                                <Text style={[styles.chipText, { color: m.color }]}>{m.label}</Text>
-                              </View>
-                            );
-                          })}
-                          <View style={[styles.chip, { backgroundColor: "#F1F5F9" }]}>
-                            <Text style={[styles.chipText, { color: "#475569" }]}>
-                              {b.remaining} spot{b.remaining === 1 ? "" : "s"} left
-                            </Text>
+            {optLoading
+              ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
+              : (
+                <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
+                  {options.length === 0 && (
+                    <Text style={styles.muted}>
+                      No open batches available. Batches that ended or are full are hidden.
+                    </Text>
+                  )}
+                  {options.map((b) => {
+                    const on = pickedBatch === b._id;
+                    return (
+                      <TouchableOpacity
+                        key={b._id}
+                        style={[styles.pickRow, on && styles.pickRowOn]}
+                        onPress={() => setPickedBatch(b._id)}
+                      >
+                        <View style={[styles.radio, on && styles.radioOn]}>
+                          {on && <View style={styles.radioDot} />}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.cardTitle}>{b.batchName}</Text>
+                          <Text style={styles.sessionSub}>
+                            {prettyFull(String(b.dateFrom).slice(0, 10))} to {prettyFull(String(b.dateTo).slice(0, 10))}
+                          </Text>
+                          <View style={styles.chipRow}>
+                            {asList(b.speciality).map((id) => {
+                              const m = specMeta(id);
+                              return (
+                                <View key={id} style={[styles.chip, { backgroundColor: m.bg }]}>
+                                  <Text style={[styles.chipText, { color: m.color }]}>{m.label}</Text>
+                                </View>
+                              );
+                            })}
+                            <View style={[styles.chip, { backgroundColor: "#F1F5F9" }]}>
+                              <Text style={[styles.chipText, { color: "#475569" }]}>
+                                {b.remaining} spot{b.remaining === 1 ? "" : "s"} left
+                              </Text>
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              )}
 
             <TouchableOpacity
               style={[styles.primaryBtn, styles.fullBtn, (!pickedBatch || enrolling) && { opacity: 0.5 }]}
               disabled={!pickedBatch || enrolling}
               onPress={enroll}
             >
-              {enrolling ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.primaryText}>{pickedBatch ? "Enroll" : "Select a batch"}</Text>
-              )}
+              {enrolling
+                ? <ActivityIndicator color="#FFFFFF" />
+                : <Text style={styles.primaryText}>{pickedBatch ? "Enroll" : "Select a batch"}</Text>}
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   main: { flex: 1, backgroundColor: "#F8FAFC" },
   centerFill: { flex: 1, alignItems: "center", justifyContent: "center" },
-  content: { padding: 16, paddingBottom: 160 },
+  content: { padding: wp(16), paddingBottom: hp },
 
-  summary: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: 16, marginBottom: 14 },
-  title: { fontSize: 19, fontFamily: fonts.semiBold, color: "#0F172A" },
-  subtitle: { fontSize: 13, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8, marginBottom:7, },
-  chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start" },
-  chipText: { fontSize: 11, fontFamily: fonts.semiBold },
+  summary: { backgroundColor: "#FFFFFF", borderRadius: wp(18), padding: wp(16), marginBottom: hp(14) },
+  title: { fontSize: fontSize(19), fontFamily: fonts.semiBold, color: "#0F172A" },
+  subtitle: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: wp(6), marginTop: 8, marginBottom: hp(7) },
+  chip: { borderRadius: wp(20), paddingHorizontal: wp(10), paddingVertical: 4, alignSelf: "flex-start" },
+  chipText: { fontSize: fontSize(11), fontFamily: fonts.semiBold },
 
   statsRow: { flexDirection: "row", marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: "#F1F5F9" },
   stat: { flex: 1, alignItems: "center" },
-  statValue: { fontSize: 18, fontFamily: fonts.semiBold, color: "#0B4A6F" },
-  statLabel: { fontSize: 11, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  statValue: { fontSize: fontSize(18), fontFamily: fonts.semiBold, color: "#0B4A6F" },
+  statLabel: { fontSize: fontSize(11), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
   statDivider: { width: 1, backgroundColor: "#F1F5F9" },
-  statNote: { fontSize: 11, fontFamily: fonts.regular, color: "#94A3B8", textAlign: "center", marginTop: 10 },
+  statNote: { fontSize: fontSize(11), fontFamily: fonts.regular, color: "#94A3B8", textAlign: "center", marginTop: 10 },
 
-  actionRow: { flexDirection: "row", gap: 10, marginTop: 14 },
+  actionRow: { flexDirection: "row", gap: wp(10), marginTop: 14 },
   primaryBtn: {
     flex: 1,
-    height: 44,
-    borderRadius: 12,
+    height: hp(44),
+    borderRadius: wp(12),
     backgroundColor: colors.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: 14,
+    gap: wp(8),
+    paddingHorizontal: wp(14),
   },
-  primaryText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  primaryText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#FFFFFF" },
   secondaryBtn: {
     flex: 1,
-    height: 44,
-    borderRadius: 12,
+    height: hp(44),
+    borderRadius: wp(12),
     borderWidth: 1.5,
     borderColor: colors.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
   },
-  secondaryText: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.primary },
+  secondaryText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: colors.primary, lineHeight: 17 },
   fullBtn: { flex: 0, marginTop: 14, height: 48 },
 
-  tabs: { flexDirection: "row", backgroundColor: "#E2E8F0", borderRadius: 12, padding: 4, marginBottom: 14 },
-  tab: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: "center" },
+  tabs: {
+    flexDirection: "row",
+    backgroundColor: "#E2E8F0",
+    borderRadius: wp(12),
+    padding: wp(4),
+    marginBottom: hp(14),
+  },
+  tab: { flex: 1, paddingVertical: 9, borderRadius: wp(9), alignItems: "center" },
   tabActive: { backgroundColor: "#FFFFFF" },
-  tabText: { fontSize: 13, fontFamily: fonts.semiBold, color: "#64748B" },
+  tabText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#64748B" },
   tabTextActive: { color: "#0B4A6F" },
 
-  card: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: 16, marginBottom: 12 },
-  cardHeadRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  cardTitle: { fontSize: 15, fontFamily: fonts.semiBold, color: "#0F172A" },
-  muted: { fontSize: 13, fontFamily: fonts.regular, color: "#94A3B8", marginVertical: 12 },
-  hint: { fontSize: 12, fontFamily: fonts.regular, color: "#94A3B8", marginBottom: 10 },
+  card: { backgroundColor: "#FFFFFF", borderRadius: wp(18), padding: wp(16), marginBottom: hp(12) },
+  cardHeadRow: { flexDirection: "row", alignItems: "flex-start", gap: wp(10) },
+  cardTitle: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#0F172A" },
+  muted: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#94A3B8", marginVertical: 12 },
+  hint: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#94A3B8", marginBottom: hp(10) },
   iconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(10),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  dayGroup: { marginBottom: 14 },
-  dayHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6, paddingHorizontal: 2 },
-  dayTitle: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
-  dayRel: { fontSize: 11, fontFamily: fonts.semiBold, color: colors.primary },
+  dayGroup: { marginBottom: hp(14) },
+  dayHeader: { flexDirection: "row", alignItems: "center", gap: wp(8), marginBottom: hp(6), paddingHorizontal: wp(2) },
+  dayTitle: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
+  dayRel: { fontSize: fontSize(11), fontFamily: fonts.semiBold, color: colors.primary },
 
   sessionRow: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 6,
-    gap: 12,
+    borderRadius: wp(14),
+    padding: wp(12),
+    marginBottom: hp(6),
+    gap: wp(12),
   },
   sessionRowCancelled: { backgroundColor: "#FFF7F7" },
-  sessionBar: { width: 4, alignSelf: "stretch", borderRadius: 2 },
-  sessionTime: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A" },
+  sessionBar: { width: 4, alignSelf: "stretch", borderRadius: wp(2) },
+  sessionTime: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
   struck: { textDecorationLine: "line-through", color: "#94A3B8" },
-  sessionSub: { fontSize: 12, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
-  sessionMeta: { fontSize: 11, fontFamily: fonts.regular, color: "#94A3B8", marginTop: 3 },
+  sessionSub: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  sessionMeta: { fontSize: fontSize(11), fontFamily: fonts.regular, color: "#94A3B8", marginTop: 3 },
 
   moreBtn: { alignItems: "center", paddingVertical: 12 },
-  moreBtnText: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary },
+  moreBtnText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: colors.primary },
 
-  empty: { alignItems: "center", paddingVertical: 40, gap: 6 },
-  emptyTitle: { fontSize: 15, fontFamily: fonts.semiBold, color: "#334155", marginTop: 6 },
-  emptySub: { fontSize: 12, fontFamily: fonts.regular, color: "#94A3B8", textAlign: "center", paddingHorizontal: 30 },
+  empty: { alignItems: "center", paddingVertical: 40, gap: wp(6) },
+  emptyTitle: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#334155", marginTop: 6 },
+  emptySub: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    color: "#94A3B8",
+    textAlign: "center",
+    paddingHorizontal: wp(30),
+  },
 
   overlay: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.4)", justifyContent: "flex-end" },
   sheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
-    padding: 20,
+    padding: wp(20),
     paddingBottom: 28,
     maxHeight: "88%",
   },
-  sheetHeader: { flexDirection: "row", alignItems: "flex-start", marginBottom: 6 },
-  sheetTitle: { fontSize: 19, fontFamily: fonts.semiBold, color: "#0F172A" },
-  sheetSub: { fontSize: 13, fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
+  sheetHeader: { flexDirection: "row", alignItems: "flex-start", marginBottom: hp(6) },
+  sheetTitle: { fontSize: fontSize(19), fontFamily: fonts.semiBold, color: "#0F172A" },
+  sheetSub: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
 
   detailRow: {
     flexDirection: "row",
@@ -798,26 +837,32 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
   },
-  detailLabel: { fontSize: 13, fontFamily: fonts.regular, color: "#64748B" },
-  detailValue: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A", maxWidth: "65%", textAlign: "right" },
+  detailLabel: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#64748B" },
+  detailValue: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+    maxWidth: "65%",
+    textAlign: "right",
+  },
   dangerBtn: {
     marginTop: 14,
-    height: 46,
-    borderRadius: 12,
+    height: hp(46),
+    borderRadius: wp(12),
     borderWidth: 1.5,
     borderColor: "#EF4444",
     alignItems: "center",
     justifyContent: "center",
   },
-  dangerText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#EF4444" },
+  dangerText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#EF4444" },
 
   pickRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
-    padding: 12,
+    gap: wp(12),
+    padding: wp(12),
     marginTop: 8,
-    borderRadius: 14,
+    borderRadius: wp(14),
     borderWidth: 1,
     borderColor: "#E2E8F0",
     backgroundColor: "#FFFFFF",
@@ -826,7 +871,7 @@ const styles = StyleSheet.create({
   radio: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: wp(10),
     borderWidth: 2,
     borderColor: "#CBD5E1",
     alignItems: "center",
@@ -834,23 +879,23 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   radioOn: { borderColor: "#0B4A6F" },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#0B4A6F" },
+  radioDot: { width: 10, height: 10, borderRadius: wp(5), backgroundColor: "#0B4A6F" },
   disabledBtn: { backgroundColor: "#CBD5E1" },
   disabledOutlineBtn: { borderColor: "#CBD5E1" },
   inactiveNotice: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: wp(8),
     marginTop: 12,
-    padding: 10,
-    borderRadius: 10,
+    padding: wp(10),
+    borderRadius: wp(10),
     backgroundColor: "#FEF2F2",
     borderWidth: 1,
     borderColor: "#FECACA",
   },
   inactiveNoticeText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#B91C1C",
   },

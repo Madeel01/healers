@@ -109,7 +109,7 @@ const SCREEN_LAYOUTS = {
     BroadcastManagement: { headerTitle: "Broadcast Management" },
     ComplainManagement: { headerTitle: "Complaint Management" },
     FeeManagement: { headerTitle: "Fee Management" },
-    AddNewPackage: { headerTitle: "Add New Package" },
+    AddNewPackage: { headerTitle: "Package" },
     InvoiceManagement: { headerTitle: "Invoice Management" },
     CreateNewInvoice: { headerTitle: "Create Invoice" },
     InvoiceDetail: { headerTitle: "Invoice Details" },

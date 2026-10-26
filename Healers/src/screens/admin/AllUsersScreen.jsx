@@ -225,6 +225,7 @@ function UserFormModal({
   onClose,
   onSaved,
   services = [],
+  insets
 }) {
   const isEdit = !!user;
   const isTherapist = role === "Therapist";
@@ -400,6 +401,7 @@ function UserFormModal({
       animationType="slide"
       transparent
       onRequestClose={onClose}
+      style={{paddingBottom:insets.bottom}}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -1003,6 +1005,7 @@ export default function AllUsersScreen({ navigation }) {
         animationType="fade"
         transparent
         onRequestClose={() => setAddMenuOpen(false)}
+        
       >
         <TouchableOpacity
           style={styles.overlay}
@@ -1172,6 +1175,8 @@ export default function AllUsersScreen({ navigation }) {
         onClose={closeForm}
         services={services}
         onSaved={onSaved}
+        insets={insets}
+
       />
     </View>
   );
@@ -1477,16 +1482,12 @@ const styles = StyleSheet.create({
   primaryBtn: {
     backgroundColor: "#0B4A6F",
     borderRadius: 14,
-    paddingVertical: 14,
+    paddingVertical: hp(14),
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
   },
-  primaryBtnText: {
-    color: "#FFFFFF",
-    fontSize: fontSize(16),
-    fontFamily: fonts.bold,
-  },
+  primaryBtnText: { color: "#FFFFFF", fontSize: fontSize(14), fontFamily: fonts.semiBold,lineHeight:18 },
   dropdown: {
     position: "absolute",
     width: wp(120),
@@ -1500,7 +1501,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   dropdownItem: {
-    height: 40,
+    height: hp(40),
     flexDirection: "row",
     alignItems: "center",
     gap: 10,

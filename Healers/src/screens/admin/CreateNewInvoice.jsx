@@ -18,7 +18,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -27,14 +26,17 @@ import {
   createInvoiceApi,
   getInvoiceChildrenApi,
 } from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
 import { sendInvoiceBroadcast } from '../../utils/invoiceBroadcast';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const CHILD_LIMIT = 5;
 
@@ -537,15 +539,11 @@ export default function CreateNewInvoiceScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
-      <TopBar
-        navigation={navigation}
-        headerTitle="Create New Invoice"
-      />
+    <View style={[styles.mainContainer, commonStyles.container]}>
       <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "padding"}
-        >
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
+      >
         <ScrollView
           style={styles.scrollArea}
           contentContainerStyle={styles.scrollContent}
@@ -556,7 +554,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
             <View style={styles.cardHeader}>
               <Feather
                 name="user-check"
-                size={18}
+                size={fontSize(18)}
                 color={colors.primary}
               />
 
@@ -575,7 +573,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
                   <View style={styles.searchContainer}>
                     <Feather
                       name="search"
-                      size={18}
+                      size={fontSize(18)}
                       color="#64748B"
                       style={styles.searchIcon}
                     />
@@ -604,7 +602,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
                         >
                           <Feather
                             name="x"
-                            size={18}
+                            size={fontSize(18)}
                             color="#94A3B8"
                           />
                         </TouchableOpacity>
@@ -632,7 +630,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
                           <View style={styles.emptyIconCircle}>
                             <Feather
                               name="users"
-                              size={24}
+                              size={fontSize(24)}
                               color="#94A3B8"
                             />
                           </View>
@@ -714,7 +712,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
 
                                 <Feather
                                   name="chevron-right"
-                                  size={20}
+                                  size={fontSize(20)}
                                   color="#94A3B8"
                                 />
                               </TouchableOpacity>
@@ -739,7 +737,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
                                   <>
                                     <Feather
                                       name="plus-circle"
-                                      size={16}
+                                      size={fontSize(16)}
                                       color={colors.primary}
                                     />
 
@@ -815,7 +813,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
                       >
                         <Feather
                           name="package"
-                          size={12}
+                          size={fontSize(12)}
                           color="#0369A1"
                         />
 
@@ -832,7 +830,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
                   <View style={styles.selectedActions}>
                     <Feather
                       name="check-circle"
-                      size={20}
+                      size={fontSize(20)}
                       color="#059669"
                     />
 
@@ -842,7 +840,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
                     >
                       <Feather
                         name="edit-2"
-                        size={14}
+                        size={fontSize(14)}
                         color={colors.primary}
                       />
                     </TouchableOpacity>
@@ -855,7 +853,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
             <View style={styles.cardHeader}>
               <Feather
                 name="file-text"
-                size={18}
+                size={fontSize(18)}
                 color={colors.primary}
               />
 
@@ -881,7 +879,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
 
                   <Feather
                     name="calendar"
-                    size={18}
+                    size={fontSize(18)}
                     color={colors.primary}
                   />
                 </TouchableOpacity>
@@ -925,7 +923,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
 
                   <Feather
                     name="calendar"
-                    size={18}
+                    size={fontSize(18)}
                     color={colors.primary}
                   />
                 </TouchableOpacity>
@@ -959,7 +957,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
             <View style={styles.cardHeader}>
               <Feather
                 name="shopping-bag"
-                size={18}
+                size={fontSize(18)}
                 color={colors.primary}
               />
 
@@ -990,7 +988,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
                     <View style={styles.packageIcon}>
                       <Feather
                         name="package"
-                        size={17}
+                        size={fontSize(17)}
                         color="#0369A1"
                       />
                     </View>
@@ -1102,7 +1100,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
                 <>
                   <Feather
                     name="send"
-                    size={16}
+                    size={fontSize(16)}
                     color="#FFFFFF"
                   />
 
@@ -1115,10 +1113,8 @@ export default function CreateNewInvoiceScreen({ navigation }) {
               )}
           </TouchableOpacity>
         </ScrollView>
-        </KeyboardAvoidingView>
-
-      <BottomBar activeTab="" />
-    </SafeAreaView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -1130,15 +1126,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: wp(16),
     paddingTop: 16,
-    paddingBottom: 30,
+    paddingBottom: hp(24),
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: wp(16),
+    padding: wp(16),
+    marginBottom: hp(16),
     borderWidth: 1,
     borderColor: "#F1F5F9",
     elevation: 1,
@@ -1154,21 +1150,21 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: hp(16),
     gap: 8,
   },
 
   cardHeaderTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.primary,
     lineHeight: 24,
   },
   inputLabel: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontFamily: fonts.regular,
     color: colors.blackFont,
-    marginBottom: 6,
+    marginBottom: hp(6),
     lineHeight: 22,
   },
 
@@ -1178,28 +1174,28 @@ const styles = StyleSheet.create({
     backgroundColor: "#F7FAFD",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    minHeight: 48,
-    marginBottom: 10,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    minHeight: hp(48),
+    marginBottom: hp(10),
   },
 
   searchIcon: {
-    marginRight: 8,
+    marginRight: wp(8),
   },
 
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#181C1E",
     fontFamily: fonts.regular,
-    paddingVertical: 0,
+    paddingVertical: hp(0),
   },
 
   childrenList: {
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 12,
+    borderRadius: wp(12),
     overflow: "hidden",
     backgroundColor: "#FFFFFF",
   },
@@ -1207,32 +1203,32 @@ const styles = StyleSheet.create({
   childSearchItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(11),
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
 
   searchAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: wp(44),
+    height: hp(44),
+    borderRadius: wp(22),
     marginRight: 11,
     backgroundColor: "#F1F5F9",
   },
 
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: wp(48),
+    height: hp(48),
+    borderRadius: wp(24),
     marginRight: 12,
     backgroundColor: "#E2E8F0",
   },
 
   avatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: wp(44),
+    height: hp(44),
+    borderRadius: wp(22),
     marginRight: 11,
     backgroundColor: "#DDECF5",
     alignItems: "center",
@@ -1240,9 +1236,9 @@ const styles = StyleSheet.create({
   },
 
   selectedAvatarFallback: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: wp(48),
+    height: hp(48),
+    borderRadius: wp(24),
     marginRight: 12,
     backgroundColor: "#DDECF5",
     alignItems: "center",
@@ -1250,7 +1246,7 @@ const styles = StyleSheet.create({
   },
 
   avatarFallbackText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: colors.primary,
     fontFamily: fonts.bold,
   },
@@ -1261,7 +1257,7 @@ const styles = StyleSheet.create({
   },
 
   childSearchName: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     lineHeight: 20,
     color: "#0F172A",
     fontFamily: fonts.semiBold,
@@ -1269,7 +1265,7 @@ const styles = StyleSheet.create({
 
   childSearchMeta: {
     marginTop: 2,
-    fontSize: 11,
+    fontSize: fontSize(11),
     lineHeight: 16,
     color: "#64748B",
     fontFamily: fonts.regular,
@@ -1277,7 +1273,7 @@ const styles = StyleSheet.create({
 
   childSearchEmail: {
     marginTop: 1,
-    fontSize: 10,
+    fontSize: fontSize(10),
     lineHeight: 15,
     color: "#94A3B8",
     fontFamily: fonts.regular,
@@ -1285,35 +1281,35 @@ const styles = StyleSheet.create({
 
   packageSearchText: {
     marginTop: 3,
-    fontSize: 10,
+    fontSize: fontSize(10),
     lineHeight: 15,
     color: "#0369A1",
     fontFamily: fonts.semiBold,
   },
 
   childLoadingContainer: {
-    paddingVertical: 30,
+    paddingVertical: hp(30),
     alignItems: "center",
     justifyContent: "center",
   },
 
   childLoadingText: {
     marginTop: 8,
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#64748B",
     fontFamily: fonts.regular,
   },
 
   noChildrenContainer: {
-    paddingVertical: 28,
-    paddingHorizontal: 20,
+    paddingVertical: hp(28),
+    paddingHorizontal: wp(20),
     alignItems: "center",
   },
 
   emptyIconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: wp(50),
+    height: hp(50),
+    borderRadius: wp(25),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
@@ -1321,14 +1317,14 @@ const styles = StyleSheet.create({
 
   noChildrenTitle: {
     marginTop: 10,
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#334155",
     fontFamily: fonts.semiBold,
   },
 
   noChildrenText: {
     marginTop: 4,
-    fontSize: 11,
+    fontSize: fontSize(11),
     lineHeight: 16,
     textAlign: "center",
     color: "#94A3B8",
@@ -1336,7 +1332,7 @@ const styles = StyleSheet.create({
   },
 
   loadMoreChildrenBtn: {
-    height: 46,
+    height: hp(46),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -1345,7 +1341,7 @@ const styles = StyleSheet.create({
   },
 
   loadMoreChildrenText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: colors.primary,
     fontFamily: fonts.semiBold,
   },
@@ -1354,8 +1350,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: wp(12),
+    padding: wp(12),
     borderWidth: 1,
     borderColor: "#DDE7EF",
   },
@@ -1365,7 +1361,7 @@ const styles = StyleSheet.create({
   },
 
   childName: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: colors.primary,
     lineHeight: 22,
@@ -1373,7 +1369,7 @@ const styles = StyleSheet.create({
 
   childSubtext: {
     marginTop: 2,
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: colors.blackFont,
     fontFamily: fonts.regular,
     lineHeight: 16,
@@ -1381,7 +1377,7 @@ const styles = StyleSheet.create({
 
   childEmail: {
     marginTop: 2,
-    fontSize: 10,
+    fontSize: fontSize(10),
     color: "#64748B",
     fontFamily: fonts.regular,
   },
@@ -1391,15 +1387,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(4),
+    borderRadius: wp(20),
     backgroundColor: "#E0F2FE",
   },
 
   packageBadgeText: {
     maxWidth: 180,
-    fontSize: 10,
+    fontSize: fontSize(10),
     color: "#0369A1",
     fontFamily: fonts.semiBold,
   },
@@ -1412,9 +1408,9 @@ const styles = StyleSheet.create({
   },
 
   changeChildBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: wp(30),
+    height: hp(30),
+    borderRadius: wp(15),
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
@@ -1426,23 +1422,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    height: hp(48),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
 
   dateText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#0F172A",
     fontFamily: fonts.regular,
   },
   row: {
     flexDirection: "row",
     gap: 12,
-    marginBottom: 12,
+    marginBottom: hp(12),
   },
 
   halfColumn: {
@@ -1453,10 +1449,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
-    fontSize: 14,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(14),
+    height: hp(48),
+    fontSize: fontSize(14),
     color: "#0F172A",
     fontFamily: fonts.regular,
   },
@@ -1464,34 +1460,34 @@ const styles = StyleSheet.create({
   itemBox: {
     position: "relative",
     backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
+    borderRadius: wp(12),
+    padding: wp(14),
+    marginBottom: hp(12),
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
   itemNumber: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#94A3B8",
     fontFamily: fonts.semiBold,
-    marginBottom: 10,
+    marginBottom: hp(10),
   },
   packageDisplay: {
-    minHeight: 54,
+    minHeight: hp(54),
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    marginBottom: 10,
+    borderRadius: wp(10),
+    paddingHorizontal: wp(12),
+    marginBottom: hp(10),
   },
 
   packageIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(16),
     backgroundColor: "#E0F2FE",
     alignItems: "center",
     justifyContent: "center",
@@ -1503,7 +1499,7 @@ const styles = StyleSheet.create({
   },
 
   packageName: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#0F172A",
     fontFamily: fonts.semiBold,
   },
@@ -1515,16 +1511,16 @@ const styles = StyleSheet.create({
 
   packageType: {
     marginTop: 2,
-    fontSize: 10,
+    fontSize: fontSize(10),
     color: "#64748B",
     fontFamily: fonts.regular,
   },
   priceInfoBox: {
     backgroundColor: "#EFF6FF",
-    borderRadius: 9,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 12,
+    borderRadius: wp(9),
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(8),
+    marginBottom: hp(12),
   },
 
   priceInfoRow: {
@@ -1535,25 +1531,25 @@ const styles = StyleSheet.create({
   },
 
   priceInfoLabel: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     color: "#64748B",
     fontFamily: fonts.regular,
   },
 
   priceInfoValue: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     color: "#334155",
     fontFamily: fonts.semiBold,
   },
 
   discountPriceLabel: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     color: "#BA1A1A",
     fontFamily: fonts.semiBold,
   },
 
   discountPriceValue: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#BA1A1A",
     fontFamily: fonts.bold,
   },
@@ -1565,13 +1561,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#00497B",
     borderStyle: "dashed",
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: wp(12),
+    paddingVertical: hp(12),
     gap: 8,
   },
 
   addItemBtnText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#00497B",
   },
@@ -1589,13 +1585,13 @@ const styles = StyleSheet.create({
   },
 
   totalLabel: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#00497B",
   },
 
   totalValue: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.bold,
     color: "#00497B",
   },
@@ -1603,34 +1599,36 @@ const styles = StyleSheet.create({
   draftBtn: {
     borderWidth: 1,
     borderColor: "#00497B",
-    borderRadius: 12,
-    minHeight: 50,
+    borderRadius: wp(12),
+    minHeight: hp(50),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
+    marginBottom: hp(10),
   },
 
   draftBtnText: {
-    fontSize: 15,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#00497B",
+    lineHeight: 18,
   },
 
   generateBtn: {
     flexDirection: "row",
     backgroundColor: "#00497B",
-    borderRadius: 12,
-    minHeight: 50,
+    borderRadius: wp(12),
+    minHeight: hp(50),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: hp(16),
     gap: 7,
   },
 
   generateBtnText: {
-    fontSize: 15,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
+    lineHeight: 18,
   },
 
   disabledButton: {

@@ -1,4 +1,7 @@
-import React, { useCallback, useState } from 'react';
+import React, {
+  useCallback,
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -13,7 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -25,10 +28,16 @@ import {
   getAvailability,
   updateAvailability,
 } from '../../api/admin/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
-import { colors, fonts } from '../../styles/theme';
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
 import { formatTo12Hour } from '../../utils/hoursformat';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -176,7 +185,13 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
       (rule.slots || []).forEach((s) => {
         days[s.day] = { enabled: true, startTime: s.startTime, endTime: s.endTime };
       });
-      setForm({ ...emptyForm(), type: "recurring", days, effectiveFrom: rule.effectiveFrom || dateToKey(new Date()), effectiveTo: rule.effectiveTo || "" });
+      setForm({
+        ...emptyForm(),
+        type: "recurring",
+        days,
+        effectiveFrom: rule.effectiveFrom || dateToKey(new Date()),
+        effectiveTo: rule.effectiveTo || "",
+      });
     } else {
       setForm({
         ...emptyForm(),
@@ -220,8 +235,8 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
       return false;
     }
     if (form.effectiveTo && form.effectiveTo < form.effectiveFrom) {
-        Alert.alert("Invalid dates", "End date cannot be before start date.");
-        return false;
+      Alert.alert("Invalid dates", "End date cannot be before start date.");
+      return false;
     }
     return true;
   };
@@ -229,26 +244,25 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
   const handleSave = async () => {
     if (saving || !validate()) return;
 
-    const payload =
-      form.type === "recurring"
-        ? {
-            therapistId,
-            type: "recurring",
-            effectiveFrom: form.effectiveFrom,
-            effectiveTo: form.effectiveTo || null,
-            slots: DAYS.filter((d) => form.days[d].enabled).map((d) => ({
-              day: d,
-              startTime: form.days[d].startTime,
-              endTime: form.days[d].endTime,
-            })),
-          }
-        : {
-            therapistId,
-            type: "custom",
-            date: form.date,
-            startTime: form.startTime,
-            endTime: form.endTime,
-          };
+    const payload = form.type === "recurring"
+      ? {
+        therapistId,
+        type: "recurring",
+        effectiveFrom: form.effectiveFrom,
+        effectiveTo: form.effectiveTo || null,
+        slots: DAYS.filter((d) => form.days[d].enabled).map((d) => ({
+          day: d,
+          startTime: form.days[d].startTime,
+          endTime: form.days[d].endTime,
+        })),
+      }
+      : {
+        therapistId,
+        type: "custom",
+        date: form.date,
+        startTime: form.startTime,
+        endTime: form.endTime,
+      };
 
     setSaving(true);
     try {
@@ -271,8 +285,8 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
     setDeletingId(rule._id);
     try {
       const res = await deleteAvailability(rule._id);
-      if(!res.data.success){
-        console.log(res,"ressss");
+      if (!res.data.success) {
+        console.log(res, "ressss");
         Alert.alert(res?.data?.message);
         return;
       }
@@ -292,7 +306,7 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
   };
 
   // ---------- date / time picker ----------
-  const isTimePicker = picker && !["date", "effectiveFrom","effectiveTo"].includes(picker.field);
+  const isTimePicker = picker && !["date", "effectiveFrom", "effectiveTo"].includes(picker.field);
 
   const pickerValue = () => {
     if (!picker) return new Date();
@@ -330,9 +344,8 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
   const renderRule = ({ item }) => {
     const isCustom = item.type === "custom";
     const slots = item.slots || [];
-    const sameTimes =
-      slots.length > 0 &&
-      slots.every((s) => s.startTime === slots[0].startTime && s.endTime === slots[0].endTime);
+    const sameTimes = slots.length > 0
+      && slots.every((s) => s.startTime === slots[0].startTime && s.endTime === slots[0].endTime);
 
     return (
       <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={() => setDetailRule(item)}>
@@ -345,18 +358,16 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
 
           <View style={styles.cardActions}>
             <TouchableOpacity style={styles.iconBtn} onPress={() => openEdit(item)}>
-              <Feather name="edit-2" size={16} color="#0B4A6F" />
+              <Feather name="edit-2" size={fontSize(16)} color="#0B4A6F" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.iconBtn}
               disabled={deletingId === item._id}
               onPress={() => handleDelete(item)}
             >
-              {deletingId === item._id ? (
-                <ActivityIndicator size="small" color="#EF4444" />
-              ) : (
-                <Feather name="trash-2" size={16} color="#EF4444" />
-              )}
+              {deletingId === item._id
+                ? <ActivityIndicator size="small" color="#EF4444" />
+                : <Feather name="trash-2" size={fontSize(16)} color="#EF4444" />}
             </TouchableOpacity>
           </View>
         </View>
@@ -366,28 +377,28 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
         </Text>
 
         <View style={styles.metaRow}>
-          <Feather name="clock" size={14} color="#64748B" />
+          <Feather name="clock" size={fontSize(14)} color="#64748B" />
           <Text style={styles.metaText}>
             {isCustom
               ? timeLabel(item.startTime, item.endTime)
               : sameTimes
-                ? timeLabel(slots[0].startTime, slots[0].endTime)
-                : "Different times each day"}
+              ? timeLabel(slots[0].startTime, slots[0].endTime)
+              : "Different times each day"}
           </Text>
         </View>
         {!isCustom && item.effectiveFrom && (
-            <View style={styles.metaRow}>
-                <Feather name="calendar" size={14} color="#64748B" />
-                <Text style={styles.metaText}>
-                    From {prettyDate(item.effectiveFrom)}
-                    {item.effectiveTo ? ` until ${prettyDate(item.effectiveTo)}` : " · no end date"}
-                </Text>
-            </View>
+          <View style={styles.metaRow}>
+            <Feather name="calendar" size={fontSize(14)} color="#64748B" />
+            <Text style={styles.metaText}>
+              From {prettyDate(item.effectiveFrom)}
+              {item.effectiveTo ? ` until ${prettyDate(item.effectiveTo)}` : " · no end date"}
+            </Text>
+          </View>
         )}
 
         <View style={styles.tapHint}>
           <Text style={styles.tapHintText}>View details</Text>
-          <Feather name="chevron-right" size={14} color="#94A3B8" />
+          <Feather name="chevron-right" size={fontSize(14)} color="#94A3B8" />
         </View>
       </TouchableOpacity>
     );
@@ -396,52 +407,51 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
   const modalTitle = !isEdit
     ? "Add Availability"
     : editingRule.type === "recurring"
-      ? "Edit Weekly Availability"
-      : "Edit Specific Date";
+    ? "Edit Weekly Availability"
+    : "Edit Specific Date";
 
   return (
-    <SafeAreaView style={styles.mainContainer}>
-      <TopBar
-        navigation={navigation}
-        isNotificationOpen={isNotificationOpen}
-        onToggleNotification={setIsNotificationOpen}
-        headerTitle="Availability"
-      />
+    <View style={styles.mainContainer}>
+      {loading
+        ? (
+          <View style={styles.centerFill}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        )
+        : (
+          <FlatList
+            data={rules}
+            keyExtractor={(item) => item._id}
+            renderItem={renderRule}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => fetchRules(true)}
+                colors={[colors.primary]}
+              />
+            }
+            ListHeaderComponent={
+              <View style={styles.headerBlock}>
+                <Text style={styles.pageTitle}>{therapistName || "Therapist"}</Text>
+                <Text style={styles.pageSubTitle}>
+                  Set when this therapist is free. Classes can only be scheduled inside these times.
+                </Text>
+              </View>
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Feather name="clock" size={fontSize(36)} color="#94A3B8" />
+                <Text style={styles.emptyTitle}>No availability yet</Text>
+                <Text style={styles.emptySub}>Tap + to add the first one.</Text>
+              </View>
+            }
+          />
+        )}
 
-      {loading ? (
-        <View style={styles.centerFill}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={rules}
-          keyExtractor={(item) => item._id}
-          renderItem={renderRule}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => fetchRules(true)} colors={[colors.primary]} />
-          }
-          ListHeaderComponent={
-            <View style={styles.headerBlock}>
-              <Text style={styles.pageTitle}>{therapistName || "Therapist"}</Text>
-              <Text style={styles.pageSubTitle}>
-                Set when this therapist is free. Classes can only be scheduled inside these times.
-              </Text>
-            </View>
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Feather name="clock" size={36} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>No availability yet</Text>
-              <Text style={styles.emptySub}>Tap + to add the first one.</Text>
-            </View>
-          }
-        />
-      )}
-
-      <TouchableOpacity style={[styles.fab, { bottom: insets.bottom + 90 }]} onPress={openAdd} activeOpacity={0.85}>
-        <Feather name="plus" size={28} color="#FFFFFF" />
+      <TouchableOpacity style={[styles.fab]} onPress={openAdd} activeOpacity={0.85}>
+        <Feather name="plus" size={fontSize(28)} color="#FFFFFF" />
       </TouchableOpacity>
 
       {/* ============ DETAILS MODAL ============ */}
@@ -450,6 +460,8 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
         transparent
         animationType="slide"
         onRequestClose={() => setDetailRule(null)}
+        style={{ paddingBottom: insets.bottom }}
+
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -460,35 +472,37 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
                     {detailRule.type === "custom" ? "Specific Date" : "Weekly Availability"}
                   </Text>
                   <TouchableOpacity onPress={() => setDetailRule(null)}>
-                    <Feather name="x" size={22} color="#64748B" />
+                    <Feather name="x" size={fontSize(22)} color="#64748B" />
                   </TouchableOpacity>
                 </View>
 
                 <Text style={styles.detailSub}>{therapistName || "Therapist"}</Text>
                 {detailRule.type === "recurring" && detailRule.effectiveFrom && (
-                    <Text style={styles.detailSub}>
-                        From {prettyDate(detailRule.effectiveFrom)}
-                        {detailRule.effectiveTo ? ` until ${prettyDate(detailRule.effectiveTo)}` : " · no end date"}
-                    </Text>
+                  <Text style={styles.detailSub}>
+                    From {prettyDate(detailRule.effectiveFrom)}
+                    {detailRule.effectiveTo ? ` until ${prettyDate(detailRule.effectiveTo)}` : " · no end date"}
+                  </Text>
                 )}
                 <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: 8 }}>
-                  {detailRule.type === "custom" ? (
-                    <View style={styles.detailRow}>
-                      <View>
-                        <Text style={styles.detailDay}>{prettyDate(detailRule.date)}</Text>
+                  {detailRule.type === "custom"
+                    ? (
+                      <View style={styles.detailRow}>
+                        <View>
+                          <Text style={styles.detailDay}>{prettyDate(detailRule.date)}</Text>
+                        </View>
+                        <Text style={styles.detailTime}>
+                          {timeLabel(detailRule.startTime, detailRule.endTime)}
+                        </Text>
                       </View>
-                      <Text style={styles.detailTime}>
-                        {timeLabel(detailRule.startTime, detailRule.endTime)}
-                      </Text>
-                    </View>
-                  ) : (
-                    (detailRule.slots || []).map((s) => (
-                      <View key={s.day} style={styles.detailRow}>
-                        <Text style={styles.detailDay}>{FULL_DAY[s.day]}</Text>
-                        <Text style={styles.detailTime}>{timeLabel(s.startTime, s.endTime)}</Text>
-                      </View>
-                    ))
-                  )}
+                    )
+                    : (
+                      (detailRule.slots || []).map((s) => (
+                        <View key={s.day} style={styles.detailRow}>
+                          <Text style={styles.detailDay}>{FULL_DAY[s.day]}</Text>
+                          <Text style={styles.detailTime}>{timeLabel(s.startTime, s.endTime)}</Text>
+                        </View>
+                      ))
+                    )}
                 </ScrollView>
 
                 <View style={styles.actionsRow}>
@@ -520,13 +534,19 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
       </Modal>
 
       {/* ============ ADD / EDIT MODAL ============ */}
-      <Modal visible={modalOpen} transparent animationType="slide" onRequestClose={closeModal}>
+      <Modal
+        style={{ paddingBottom: insets.bottom }}
+        visible={modalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={closeModal}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{modalTitle}</Text>
               <TouchableOpacity onPress={closeModal}>
-                <Feather name="x" size={22} color="#64748B" />
+                <Feather name="x" size={fontSize(22)} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -556,119 +576,121 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
                 </>
               )}
 
-              {form.type === "recurring" ? (
-                <>
-                  <View style={styles.labelRow}>
-                    <Text style={styles.fieldLabel}>Days</Text>
-                    <View style={styles.linksRow}>
-                      <TouchableOpacity onPress={selectWeekdays}>
-                        <Text style={styles.linkText}>Mon - Fri</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={applySameTimes}>
-                        <Text style={styles.linkText}>Same time for all</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.daysRow}>
-                    {DAYS.map((day) => {
-                      const active = form.days[day].enabled;
-                      return (
-                        <TouchableOpacity
-                          key={day}
-                          style={[styles.dayChip, active && styles.dayChipActive]}
-                          onPress={() => {
-                            setPicker(null);
-                            toggleDay(day);
-                          }}
-                        >
-                          <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>{day}</Text>
+              {form.type === "recurring"
+                ? (
+                  <>
+                    <View style={styles.labelRow}>
+                      <Text style={styles.fieldLabel}>Days</Text>
+                      <View style={styles.linksRow}>
+                        <TouchableOpacity onPress={selectWeekdays}>
+                          <Text style={styles.linkText}>Mon - Fri</Text>
                         </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+                        <TouchableOpacity onPress={applySameTimes}>
+                          <Text style={styles.linkText}>Same time for all</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <View style={styles.daysRow}>
+                      {DAYS.map((day) => {
+                        const active = form.days[day].enabled;
+                        return (
+                          <TouchableOpacity
+                            key={day}
+                            style={[styles.dayChip, active && styles.dayChipActive]}
+                            onPress={() => {
+                              setPicker(null);
+                              toggleDay(day);
+                            }}
+                          >
+                            <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>{day}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
                     <Text style={styles.fieldLabel}>Starting from</Text>
                     <TouchableOpacity style={styles.selector} onPress={() => setPicker({ field: "effectiveFrom" })}>
-                    <Text style={styles.selectorText}>
+                      <Text style={styles.selectorText}>
                         {form.effectiveFrom ? prettyDate(form.effectiveFrom) : "Select date"}
-                    </Text>
-                    <Feather name="calendar" size={18} color="#64748B" />
+                      </Text>
+                      <Feather name="calendar" size={fontSize(18)} color="#64748B" />
                     </TouchableOpacity>
                     {picker?.field === "effectiveFrom" && renderPicker()}
                     <View style={styles.labelRow}>
-                    <Text style={styles.fieldLabel}>Until (optional)</Text>
-                    {!!form.effectiveTo && (
+                      <Text style={styles.fieldLabel}>Until (optional)</Text>
+                      {!!form.effectiveTo && (
                         <TouchableOpacity onPress={() => setField("effectiveTo", "")}>
-                        <Text style={styles.linkText}>No end date</Text>
+                          <Text style={styles.linkText}>No end date</Text>
                         </TouchableOpacity>
-                    )}
+                      )}
                     </View>
                     <TouchableOpacity style={styles.selector} onPress={() => setPicker({ field: "effectiveTo" })}>
-                    <Text style={[styles.selectorText, !form.effectiveTo && styles.placeholder]}>
+                      <Text style={[styles.selectorText, !form.effectiveTo && styles.placeholder]}>
                         {form.effectiveTo ? prettyDate(form.effectiveTo) : "No end date"}
-                    </Text>
-                    <Feather name="calendar" size={18} color="#64748B" />
+                      </Text>
+                      <Feather name="calendar" size={fontSize(18)} color="#64748B" />
                     </TouchableOpacity>
                     {picker?.field === "effectiveTo" && renderPicker()}
-                  {DAYS.filter((d) => form.days[d].enabled).map((day) => (
-                    <View key={day} style={styles.dayBlock}>
-                      <Text style={styles.dayBlockTitle}>{FULL_DAY[day]}</Text>
-                      <View style={styles.timeRow}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.smallLabel}>Start</Text>
-                          <TouchableOpacity
-                            style={styles.selector}
-                            onPress={() => setPicker({ field: "startTime", day })}
-                          >
-                            <Text style={styles.selectorText}>{formatTo12Hour(form.days[day].startTime)}</Text>
-                            <Feather name="clock" size={16} color="#64748B" />
-                          </TouchableOpacity>
+                    {DAYS.filter((d) => form.days[d].enabled).map((day) => (
+                      <View key={day} style={styles.dayBlock}>
+                        <Text style={styles.dayBlockTitle}>{FULL_DAY[day]}</Text>
+                        <View style={styles.timeRow}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.smallLabel}>Start</Text>
+                            <TouchableOpacity
+                              style={styles.selector}
+                              onPress={() => setPicker({ field: "startTime", day })}
+                            >
+                              <Text style={styles.selectorText}>{formatTo12Hour(form.days[day].startTime)}</Text>
+                              <Feather name="clock" size={fontSize(16)} color="#64748B" />
+                            </TouchableOpacity>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.smallLabel}>End</Text>
+                            <TouchableOpacity
+                              style={styles.selector}
+                              onPress={() => setPicker({ field: "endTime", day })}
+                            >
+                              <Text style={styles.selectorText}>{formatTo12Hour(form.days[day].endTime)}</Text>
+                              <Feather name="clock" size={fontSize(16)} color="#64748B" />
+                            </TouchableOpacity>
+                          </View>
                         </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.smallLabel}>End</Text>
-                          <TouchableOpacity
-                            style={styles.selector}
-                            onPress={() => setPicker({ field: "endTime", day })}
-                          >
-                            <Text style={styles.selectorText}>{formatTo12Hour(form.days[day].endTime)}</Text>
-                            <Feather name="clock" size={16} color="#64748B" />
-                          </TouchableOpacity>
-                        </View>
+                        {picker?.day === day && renderPicker()}
                       </View>
-                      {picker?.day === day && renderPicker()}
-                    </View>
-                  ))}
-                </>
-              ) : (
-                <>
-                  <Text style={styles.fieldLabel}>Date</Text>
-                  <TouchableOpacity style={styles.selector} onPress={() => setPicker({ field: "date" })}>
-                    <Text style={[styles.selectorText, !form.date && styles.placeholder]}>
-                      {form.date ? prettyDate(form.date) : "Select date"}
-                    </Text>
-                    <Feather name="calendar" size={18} color="#64748B" />
-                  </TouchableOpacity>
+                    ))}
+                  </>
+                )
+                : (
+                  <>
+                    <Text style={styles.fieldLabel}>Date</Text>
+                    <TouchableOpacity style={styles.selector} onPress={() => setPicker({ field: "date" })}>
+                      <Text style={[styles.selectorText, !form.date && styles.placeholder]}>
+                        {form.date ? prettyDate(form.date) : "Select date"}
+                      </Text>
+                      <Feather name="calendar" size={fontSize(18)} color="#64748B" />
+                    </TouchableOpacity>
 
-                  <View style={styles.timeRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.fieldLabel}>Start time</Text>
-                      <TouchableOpacity style={styles.selector} onPress={() => setPicker({ field: "startTime" })}>
-                        <Text style={styles.selectorText}>{formatTo12Hour(form.startTime)}</Text>
-                        <Feather name="clock" size={18} color="#64748B" />
-                      </TouchableOpacity>
+                    <View style={styles.timeRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.fieldLabel}>Start time</Text>
+                        <TouchableOpacity style={styles.selector} onPress={() => setPicker({ field: "startTime" })}>
+                          <Text style={styles.selectorText}>{formatTo12Hour(form.startTime)}</Text>
+                          <Feather name="clock" size={fontSize(18)} color="#64748B" />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.fieldLabel}>End time</Text>
+                        <TouchableOpacity style={styles.selector} onPress={() => setPicker({ field: "endTime" })}>
+                          <Text style={styles.selectorText}>{formatTo12Hour(form.endTime)}</Text>
+                          <Feather name="clock" size={fontSize(18)} color="#64748B" />
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.fieldLabel}>End time</Text>
-                      <TouchableOpacity style={styles.selector} onPress={() => setPicker({ field: "endTime" })}>
-                        <Text style={styles.selectorText}>{formatTo12Hour(form.endTime)}</Text>
-                        <Feather name="clock" size={18} color="#64748B" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
 
-                  {picker && !picker.day && renderPicker()}
-                </>
-              )}
+                    {picker && !picker.day && renderPicker()}
+                  </>
+                )}
             </ScrollView>
 
             <View style={styles.actionsRow}>
@@ -680,80 +702,83 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
                 onPress={handleSave}
                 disabled={saving}
               >
-                {saving ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.saveBtnText}>{isEdit ? "Update" : "Save"}</Text>
-                )}
+                {saving
+                  ? <ActivityIndicator color="#FFFFFF" />
+                  : <Text style={styles.saveBtnText}>{isEdit ? "Update" : "Save"}</Text>}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-
-      <BottomBar activeTab="Therapist" onOpenNotifications={setIsNotificationOpen} />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: "#F8FAFC" },
   centerFill: { flex: 1, alignItems: "center", justifyContent: "center" },
-  listContent: { padding: 16, paddingBottom: 140, flexGrow: 1 },
+  listContent: { padding: wp(16), paddingBottom: hp(140), flexGrow: 1 },
 
   headerBlock: { marginBottom: 16 },
-  pageTitle: { fontSize: 22, fontFamily: fonts.semiBold, color: "#181C1E", lineHeight: 30 },
-  pageSubTitle: { fontSize: 13, fontFamily: fonts.regular, color: colors.blackFont, lineHeight: 19, marginTop: 2 },
+  pageTitle: { fontSize: fontSize(22), fontFamily: fonts.semiBold, color: "#181C1E", lineHeight: 30 },
+  pageSubTitle: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.regular,
+    color: colors.blackFont,
+    lineHeight: 19,
+    marginTop: 2,
+  },
 
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: wp(18),
+    padding: wp(16),
     marginBottom: 12,
     elevation: 2,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: hp(2) },
     shadowOpacity: 0.04,
     shadowRadius: 8,
   },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  typeBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
-  typeBadgeText: { fontSize: 11, fontFamily: fonts.semiBold },
+  typeBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: wp(12) },
+  typeBadgeText: { fontSize: fontSize(11), fontFamily: fonts.semiBold },
   badgeWeekly: { backgroundColor: "#E0F2FE" },
   badgeWeeklyText: { color: "#0B4A6F" },
   badgeCustom: { backgroundColor: "#FEF3C7" },
   badgeCustomText: { color: "#B45309" },
   cardActions: { flexDirection: "row", gap: 8 },
   iconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(10),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },
-  cardTitle: { fontSize: 17, fontFamily: fonts.semiBold, color: "#0F172A", marginBottom: 6 },
+  cardTitle: { fontSize: fontSize(17), fontFamily: fonts.semiBold, color: "#0F172A", marginBottom: 6 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 },
-  metaText: { fontSize: 13, fontFamily: fonts.regular, color: "#475569" },
+  metaText: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#475569" },
   tapHint: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", marginTop: 6 },
-  tapHintText: { fontSize: 12, fontFamily: fonts.regular, color: "#94A3B8" },
+  tapHintText: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#94A3B8" },
 
   emptyState: { alignItems: "center", paddingVertical: 60, gap: 6 },
-  emptyTitle: { fontSize: 15, fontFamily: fonts.semiBold, color: "#334155", marginTop: 6 },
-  emptySub: { fontSize: 12, fontFamily: fonts.regular, color: "#94A3B8" },
+  emptyTitle: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#334155", marginTop: 6 },
+  emptySub: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#94A3B8" },
 
   fab: {
     position: "absolute",
     right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    bottom: 15,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(16),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
     elevation: 6,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: hp(3) },
     shadowOpacity: 0.25,
     shadowRadius: 5,
   },
@@ -763,13 +788,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    padding: 22,
+    padding: wp(22),
     maxHeight: "90%",
   },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  modalTitle: { fontSize: 20, fontWeight: "800", color: "#0F172A" },
+  modalTitle: { fontSize: fontSize(20), fontWeight: "800", color: "#0F172A" },
 
-  detailSub: { fontSize: 13, fontFamily: fonts.regular, color: "#64748B" },
+  detailSub: { fontSize: fontSize(13), fontFamily: fonts.regular, color: "#64748B" },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -778,43 +803,43 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  detailDay: { fontSize: 15, fontFamily: fonts.semiBold, color: "#0F172A" },
-  detailTime: { fontSize: 14, fontFamily: fonts.regular, color: "#475569" },
+  detailDay: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#0F172A" },
+  detailTime: { fontSize: fontSize(14), fontFamily: fonts.regular, color: "#475569" },
 
-  fieldLabel: { fontSize: 13, fontWeight: "700", color: "#475569", marginBottom: 6, marginTop: 14 },
-  smallLabel: { fontSize: 12, fontWeight: "600", color: "#64748B", marginBottom: 4 },
+  fieldLabel: { fontSize: fontSize(13), fontWeight: "700", color: "#475569", marginBottom: 6, marginTop: 14 },
+  smallLabel: { fontSize: fontSize(12), fontWeight: "600", color: "#64748B", marginBottom: 4 },
   labelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
   linksRow: { flexDirection: "row", gap: 14 },
-  linkText: { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary, marginBottom: 6 },
+  linkText: { fontSize: fontSize(12), fontFamily: fonts.semiBold, color: colors.primary, marginBottom: 6 },
 
-  segment: { flexDirection: "row", backgroundColor: "#F1F5F9", borderRadius: 12, padding: 4 },
-  segmentBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: "center" },
+  segment: { flexDirection: "row", backgroundColor: "#F1F5F9", borderRadius: wp(12), padding: wp(4) },
+  segmentBtn: { flex: 1, paddingVertical: 10, borderRadius: wp(8), alignItems: "center" },
   segmentBtnActive: { backgroundColor: colors.primary },
-  segmentText: { fontSize: 14, fontFamily: fonts.semiBold, color: "#475569" },
+  segmentText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#475569" },
   segmentTextActive: { color: "#FFFFFF" },
 
   daysRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   dayChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: wp(20),
     backgroundColor: "#F1F5F9",
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
   dayChipActive: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
-  dayChipText: { fontSize: 13, fontFamily: fonts.semiBold, color: "#475569" },
+  dayChipText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#475569" },
   dayChipTextActive: { color: "#FFFFFF" },
 
   dayBlock: {
     marginTop: 14,
-    padding: 12,
-    borderRadius: 14,
+    padding: wp(12),
+    borderRadius: wp(14),
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  dayBlockTitle: { fontSize: 14, fontFamily: fonts.semiBold, color: "#0F172A", marginBottom: 8 },
+  dayBlockTitle: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A", marginBottom: 8 },
 
   selector: {
     flexDirection: "row",
@@ -823,45 +848,45 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 12,
+    borderRadius: wp(12),
     paddingHorizontal: 14,
-    height: 46,
+    height: hp(46),
   },
-  selectorText: { fontSize: 14, fontFamily: fonts.regular, color: "#0F172A" },
+  selectorText: { fontSize: fontSize(14), fontFamily: fonts.regular, color: "#0F172A" },
   placeholder: { color: "#94A3B8" },
   timeRow: { flexDirection: "row", gap: 12 },
 
   pickerDone: { alignSelf: "flex-end", paddingVertical: 8, paddingHorizontal: 12 },
-  pickerDoneText: { fontSize: 15, fontFamily: fonts.bold, color: "#0B598F" },
+  pickerDoneText: { fontSize: fontSize(15), fontFamily: fonts.bold, color: "#0B598F" },
 
   actionsRow: { flexDirection: "row", gap: 12, marginTop: 18 },
   cancelBtn: {
     flex: 1,
-    height: 48,
-    borderRadius: 12,
+    height: hp(48),
+    borderRadius: wp(12),
     borderWidth: 1.5,
     borderColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  cancelBtnText: { fontSize: 15, fontFamily: fonts.semiBold, color: colors.primary },
+  cancelBtnText: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: colors.primary },
   deleteBtn: {
     flex: 1,
-    height: 48,
-    borderRadius: 12,
+    height: hp(48),
+    borderRadius: wp(12),
     borderWidth: 1.5,
     borderColor: "#EF4444",
     alignItems: "center",
     justifyContent: "center",
   },
-  deleteBtnText: { fontSize: 15, fontFamily: fonts.semiBold, color: "#EF4444" },
+  deleteBtnText: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#EF4444" },
   saveBtn: {
     flex: 1.3,
-    height: 48,
-    borderRadius: 12,
+    height: hp(48),
+    borderRadius: wp(12),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  saveBtnText: { fontSize: 15, fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  saveBtnText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#FFFFFF",lineHeight:18 },
 });
