@@ -46,6 +46,18 @@ export const getChildCustomSlotOptions = async (childId, body) => {
   const res = await apiClient.post(`/admin/children/${childId}/custom-slot-options`, body);
   return res.data;
 };
+export const getChildCustomWeekOptions = async (childId, body) => {
+  const res = await apiClient.post(`/admin/children/${childId}/custom-week-options`, body);
+  return res.data; 
+};
+export const previewChildCustomSchedule = async (childId, body) => {
+  const res = await apiClient.post(`/admin/children/${childId}/custom-schedule/preview`, body);
+  return res.data; 
+}
+export const saveChildCustomSchedule = async (childId, body) => {
+  const res = await apiClient.post(`/admin/children/${childId}/custom-schedule`, body);
+  return res.data; 
+};
 
 export const createChildCustomAppointment = async (childId, body) => {
   const res = await apiClient.post(`/admin/children/${childId}/custom-appointments`, body);

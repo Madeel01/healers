@@ -45,7 +45,7 @@ const normalizeCnic = (v = "") => {
     ? `${d.slice(0, 5)}-${d.slice(5, 12)}-${d.slice(12)}`
     : null;
 };
-const SESSION_TIMES = [45, 60, 90, 120];
+const SESSION_TIMES = [30,45, 60, 90, 120];
 const DAY_MS = 86400000;
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -341,7 +341,7 @@ const analyzePlan = async (batch, body) => {
   const minutes = Number(body.sessionMinutes);
 
   if (!SESSION_TIMES.includes(minutes)) {
-    return { error: "Session time must be 45, 60, 90 or 120 minutes." };
+    return { error: "Session time must be 30, 45, 60, 90 or 120 minutes." };
   }
 
   const plans = Array.isArray(body.plans) ? body.plans : [];
@@ -669,6 +669,8 @@ const computeFreeSlots = async ({
   minutes,
   minDate = null,
   maxDate = null,
+  step = SLOT_STEP,
+  includeBooked = false,
 }) => {
   const st = await loadScheduleSettings();
   const today = todayKey(st.tz);
@@ -765,14 +767,21 @@ const computeFreeSlots = async ({
     }
 
     for (const w of windows) {
-      for (let a = toMin(w.startTime); a + minutes <= toMin(w.endTime); a += SLOT_STEP) {
+      for (let a = toMin(w.startTime); a + minutes <= toMin(w.endTime); a += step) {
         const b = a + minutes;
         if (seen.has(a)) continue;
         if (a <= nowMin) continue;
         if (!insideClinic(a, b, st)) continue;
-        if (busy.some((x) => x.a < b && a < x.b)) continue;
+
+        const isBusy = busy.some((x) => x.a < b && a < x.b);
+        if (isBusy && !includeBooked) continue;
+
         seen.add(a);
-        slots.push({ startTime: minutesToTime(a), endTime: minutesToTime(b) });
+        slots.push({
+          startTime: minutesToTime(a),
+          endTime: minutesToTime(b),
+          ...(includeBooked && { booked: isBusy }),
+        });
       }
     }
   }
@@ -5466,7 +5475,7 @@ exports.getBatchSlotOptions = async (req, res) => {
     if (!SESSION_TIMES.includes(minutes)) {
       return res.status(400).json({
         success: false,
-        message: "Session time must be 45, 60, 90 or 120 minutes.",
+        message: "Session time must be 30, 45, 60, 90 or 120 minutes.",
       });
     }
 
@@ -6455,7 +6464,7 @@ exports.getSessionSlotOptions = async (req, res) => {
     if (!SESSION_TIMES.includes(minutes)) {
       return res.status(400).json({
         success: false,
-        message: "Session time must be 45, 60, 90 or 120 minutes.",
+        message: "Session time must be 30, 45, 60, 90 or 120 minutes.",
       });
     }
 
@@ -6490,7 +6499,7 @@ exports.createAdditionalSession = async (req, res) => {
     if (!SESSION_TIMES.includes(minutes)) {
       return res.status(400).json({
         success: false,
-        message: "Session time must be 45, 60, 90 or 120 minutes.",
+        message: "Session time must be 30, 45, 60, 90 or 120 minutes.",
       });
     }
 
@@ -6839,13 +6848,13 @@ exports.getChildCustomSlotOptions = async (req, res) => {
     if (!SESSION_TIMES.includes(minutes)) {
       return res.status(400).json({
         success: false,
-        message: "Session time must be 45, 60, 90 or 120 minutes.",
+        message: "Session time must be 30, 45, 60, 90 or 120 minutes.",
       });
     }
 
     const [child, r] = await Promise.all([
       loadChild(childId),
-      computeFreeSlots({ therapistId, childIds: [childId], date, minutes }),
+      computeFreeSlots({ therapistId, childIds: [childId], date, minutes, step: minutes, includeBooked: true }),
     ]);
 
     if (!child) return res.status(404).json({ success: false, message: "Child not found." });
@@ -6875,7 +6884,7 @@ exports.createChildCustomAppointment = async (req, res) => {
     if (!SESSION_TIMES.includes(minutes)) {
       return res.status(400).json({
         success: false,
-        message: "Session time must be 45, 60, 90 or 120 minutes.",
+        message: "Session time must be 30, 45, 60, 90 or 120 minutes.",
       });
     }
 
@@ -7677,6 +7686,308 @@ exports.sendFeedbackReminderNotification = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to send feedback reminder.",
+      error: error.message,
+    });
+  }
+};
+
+const CUSTOM_MAX_RANGE_DAYS = 180;
+const MAX_CUSTOM_SESSIONS = 400;
+
+const rangeLabel = (x) => `${to12(minutesToTime(x.a))}-${to12(minutesToTime(x.b))}`;
+const findHit = (list, date, a, b) => list.find((x) => x.date === date && x.a < b && a < x.b);
+
+const checkCustomRange = (startDate, endDate, today) => {
+  if (!isValidDate(startDate) || !isValidDate(endDate)) return "Pick a valid start and end date.";
+  if (startDate < today) return "Start date cannot be in the past.";
+  if (endDate < startDate) return "End date cannot be before start date.";
+  if ((Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / DAY_MS > CUSTOM_MAX_RANGE_DAYS) {
+    return `Date range can be at most ${CUSTOM_MAX_RANGE_DAYS} days.`;
+  }
+  return null;
+};
+
+const loadCustomBusy = async ({ therapistId, childId, from, to }) => {
+  const tObj = new mongoose.Types.ObjectId(String(therapistId));
+  const cObj = new mongoose.Types.ObjectId(String(childId));
+  const [fy] = from.split("-").map(Number);
+  const [ty] = to.split("-").map(Number);
+  const gte = utcMidnight(from);
+  const lte = utcMidnight(to);
+
+  const rows = await Scheduling.aggregate([
+    {
+      $match: {
+        $or: [
+          { therapistId: tObj, year: { $gte: fy, $lte: ty } },
+          { appointments: { $elemMatch: { date: { $gte: gte, $lte: lte }, "children.childId": cObj } } },
+        ],
+      },
+    },
+    { $unwind: "$appointments" },
+    {
+      $match: {
+        "appointments.date": { $gte: gte, $lte: lte },
+        "appointments.sessionType": { $nin: INACTIVE_TYPES },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        mine: { $eq: ["$therapistId", tObj] },
+        date: "$appointments.date",
+        startTime: "$appointments.startTime",
+        endTime: "$appointments.endTime",
+        childIds: "$appointments.children.childId",
+      },
+    },
+  ]);
+
+  const therapist = [];
+  const child = [];
+  for (const r of rows) {
+    const item = { date: dateKeyOf(r.date), a: toMin(r.startTime), b: toMin(r.endTime) };
+    if (r.mine) therapist.push(item);
+    if ((r.childIds || []).some((id) => String(id) === String(childId))) child.push(item);
+  }
+  return { therapist, child };
+};
+const analyzeCustomPlan = async (childId, body) => {
+  const { therapistId } = body;
+  const minutes = Number(body.sessionMinutes);
+  const sessions = Array.isArray(body.sessions) ? body.sessions : [];
+
+  if (!mongoose.isValidObjectId(childId)) return { status: 404, error: "Child not found." };
+  if (!mongoose.isValidObjectId(therapistId)) return { status: 400, error: "Select a therapist." };
+  if (!SESSION_TIMES.includes(minutes)) {
+    return { status: 400, error: "Session time must be 30, 45, 60, 90 or 120 minutes." };
+  }
+  if (!sessions.length) return { status: 400, error: "Select at least one session." };
+  if (sessions.length > MAX_CUSTOM_SESSIONS) {
+    return { status: 400, error: `You can create at most ${MAX_CUSTOM_SESSIONS} sessions at once.` };
+  }
+
+  const st = await loadScheduleSettings();
+  const today = todayKey(st.tz);
+  const nowMin = clockMinutes(st.tz);
+
+  const seen = new Set();
+  const planned = [];
+  for (const s of sessions) {
+    if (!isValidDate(s?.date) || !TIME_REGEX.test(s?.startTime || "") || !TIME_REGEX.test(s?.endTime || "")) {
+      return { status: 400, error: "One of the selected sessions is invalid." };
+    }
+    if (toMin(s.endTime) - toMin(s.startTime) !== minutes) {
+      return { status: 400, error: `Every session must be ${minutes} minutes long.` };
+    }
+    if (s.date < today) return { status: 400, error: "Sessions cannot be in the past." };
+
+    const key = `${s.date}|${s.startTime}`;
+    if (seen.has(key)) return { status: 400, error: "The same session is selected twice." };
+    seen.add(key);
+    planned.push({ date: s.date, startTime: s.startTime, endTime: s.endTime });
+  }
+
+  const byDate = {};
+  for (const s of planned) (byDate[s.date] ||= []).push(s);
+  for (const list of Object.values(byDate)) {
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        if (timesOverlap(list[i], list[j])) {
+          return { status: 400, error: `Two selected sessions overlap on ${list[i].date}.` };
+        }
+      }
+    }
+  }
+
+  const dates = planned.map((s) => s.date).sort();
+  const from = dates[0];
+  const to = dates[dates.length - 1];
+
+  const [child, therapist, rules, busy] = await Promise.all([
+    loadChild(childId),
+    User.findOne({ _id: therapistId, role: "Therapist" }, "fullName").lean(),
+    TherapistAvailability.find({ therapistId, isActive: true }).lean(),
+    loadCustomBusy({ therapistId, childId, from, to }),
+  ]);
+  if (!child) return { status: 404, error: "Child not found." };
+  if (!therapist) return { status: 404, error: "Therapist not found." };
+
+  const conflicts = [];
+  for (const s of planned) {
+    const a = toMin(s.startTime);
+    const b = toMin(s.endTime);
+    const day = weekdayOf(s.date);
+    const reasons = [];
+
+    if (!st.workingDays.includes(day)) {
+      reasons.push(`${day} is not a clinic working day.`);
+    } else if (!insideClinic(a, b, st)) {
+      reasons.push("This time is outside clinic hours.");
+    } else if (s.date === today && a <= nowMin) {
+      reasons.push("This time has already passed.");
+    } else if (!availableOnDate(rules, s.date, a, b)) {
+      reasons.push(`${therapist.fullName} is not available at this time.`);
+    }
+
+    const tHit = findHit(busy.therapist, s.date, a, b);
+    if (tHit) reasons.push(`${therapist.fullName} already has a session at ${rangeLabel(tHit)}.`);
+
+    const cHit = findHit(busy.child, s.date, a, b);
+    if (cHit) reasons.push(`${child.fullName} already has a session at ${rangeLabel(cHit)}.`);
+
+    if (reasons.length) conflicts.push({ ...s, reasons });
+  }
+
+  planned.sort((x, y) => (x.date === y.date ? x.startTime.localeCompare(y.startTime) : x.date.localeCompare(y.date)));
+  conflicts.sort((x, y) => (x.date === y.date ? x.startTime.localeCompare(y.startTime) : x.date.localeCompare(y.date)));
+
+  return { minutes, sessions: planned, conflicts };
+};
+exports.getChildCustomWeekOptions = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const { therapistId, startDate, endDate } = req.body;
+    const minutes = Number(req.body.sessionMinutes);
+
+    if (!mongoose.isValidObjectId(childId)) {
+      return res.status(404).json({ success: false, message: "Child not found." });
+    }
+    if (!mongoose.isValidObjectId(therapistId)) {
+      return res.status(400).json({ success: false, message: "Select a therapist." });
+    }
+    if (!SESSION_TIMES.includes(minutes)) {
+      return res.status(400).json({
+        success: false,
+        message: "Session time must be 30, 45, 60, 90 or 120 minutes.",
+      });
+    }
+
+    const st = await loadScheduleSettings();
+    const today = todayKey(st.tz);
+    const nowMin = clockMinutes(st.tz);
+
+    const rangeError = checkCustomRange(startDate, endDate, today);
+    if (rangeError) return res.status(400).json({ success: false, message: rangeError });
+
+    const [child, therapist, rules, busy] = await Promise.all([
+      loadChild(childId),
+      User.exists({ _id: therapistId, role: "Therapist" }),
+      TherapistAvailability.find({ therapistId, isActive: true }).lean(),
+      loadCustomBusy({ therapistId, childId, from: startDate, to: endDate }),
+    ]);
+    if (!child) return res.status(404).json({ success: false, message: "Child not found." });
+    if (!therapist) return res.status(404).json({ success: false, message: "Therapist not found." });
+
+    const dates = {};
+    WORKING_DAYS.forEach((d) => (dates[d] = []));
+    for (let d = startDate; d <= endDate; d = addDays(d, 1)) {
+      const day = weekdayOf(d);
+      if (st.workingDays.includes(day)) dates[day].push(d);
+    }
+
+    const days = weeklyOptions(rules, startDate, endDate, minutes, st);
+
+    for (const day of WORKING_DAYS) {
+      days[day] = (days[day] || []).map((slot) => {
+        const a = toMin(slot.startTime);
+        const b = toMin(slot.endTime);
+        let bad = 0;
+
+        for (const date of dates[day]) {
+          if (date === today && a <= nowMin) bad++;
+          else if (!availableOnDate(rules, date, a, b)) bad++;
+          else if (findHit(busy.therapist, date, a, b) || findHit(busy.child, date, a, b)) bad++;
+        }
+
+        return {
+          ...slot,
+          booked: dates[day].length > 0 && bad === dates[day].length,
+          conflicts: bad, 
+        };
+      });
+    }
+
+    return res.json({ success: true, data: { days, dates } });
+  } catch (error) {
+    console.error("getChildCustomWeekOptions:", error);
+    return res.status(500).json({ success: false, message: "Failed to load available times." });
+  }
+};
+exports.previewChildCustomSchedule = async (req, res) => {
+  try {
+    const r = await analyzeCustomPlan(req.params.childId, req.body);
+    if (r.error) return res.status(r.status).json({ success: false, message: r.error });
+
+    return res.json({
+      success: true,
+      data: { total: r.sessions.length, conflicts: r.conflicts },
+    });
+  } catch (error) {
+    console.error("previewChildCustomSchedule:", error);
+    return res.status(500).json({ success: false, message: "Failed to check the schedule." });
+  }
+};
+exports.saveChildCustomSchedule = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const { therapistId } = req.body;
+
+    const r = await analyzeCustomPlan(childId, req.body);
+    if (r.error) return res.status(r.status).json({ success: false, message: r.error });
+
+    if (r.conflicts.length) {
+      return res.status(409).json({
+        success: false,
+        hasConflicts: true,
+        message: "Some sessions conflict with existing bookings. Review the schedule again.",
+        conflicts: r.conflicts,
+      });
+    }
+
+    const byMonth = new Map();
+    for (const s of r.sessions) {
+      const k = s.date.slice(0, 7);
+      if (!byMonth.has(k)) byMonth.set(k, []);
+      byMonth.get(k).push(s);
+    }
+
+    let created = 0;
+    for (const [k, list] of byMonth) {
+      const [year, month] = k.split("-").map(Number);
+      const schedule = (await Scheduling.findOne({ therapistId, year, month }))
+        || new Scheduling({ therapistId, year, month, appointments: [] });
+
+      for (const s of list) {
+        schedule.appointments.push({
+          date: utcMidnight(s.date),
+          startTime: s.startTime,
+          endTime: s.endTime,
+          type: "custom",
+          sessionType: "regular",
+          session_status: "Upcoming",
+          children: [{ childId, attendance_status: "Pending" }],
+        });
+        created++;
+      }
+      await schedule.save(); 
+    }
+
+    await TherapistAssignment.updateMany(
+      { therapistId: new mongoose.Types.ObjectId(therapistId) },
+      { $addToSet: { childIds: new mongoose.Types.ObjectId(childId) } },
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Appointments created.",
+      data: { created },
+    });
+  } catch (error) {
+    console.error("saveChildCustomSchedule:", error);
+    return res.status(500).json({
+      success: false,
+      message: error?.errors?.appointments?.message || "Failed to create appointments.",
       error: error.message,
     });
   }
