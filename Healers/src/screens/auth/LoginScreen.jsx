@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -118,99 +120,106 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={commonStyles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios"
+          ? "padding"
+          : "height"}
+        keyboardVerticalOffset={0}
       >
-        <View style={styles.footerBgCard}>
-          <Image
-            source={require("../../asstes/slide2_bg4.png")}
-            style={styles.footerBgImage}
-            resizeMode="cover"
-          />
-        </View>
-
-        <View style={styles.header}>
-          <Image
-            source={require("../../asstes/logo.png")}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>
-            Continue your journey of healing and growth.
-          </Text>
-        </View>
-
-        <View style={styles.cardContainer}>
-          <View style={styles.fieldContainer}>
-            <Text style={styles.label}>Email or Phone</Text>
-            <View style={styles.inputWrapper}>
-              <MaterialIcons name="person-outline" size={20} color="#6B7280" />
-              <TextInput
-                style={styles.input}
-                placeholder="name@example.com"
-                placeholderTextColor="#6B7280"
-                autoCapitalize="none"
-                value={identifier}
-                onChangeText={setIdentifier}
-              />
-            </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.footerBgCard}>
+            <Image
+              source={require("../../asstes/slide2_bg4.png")}
+              style={styles.footerBgImage}
+              resizeMode="cover"
+            />
           </View>
 
-          <View style={styles.fieldContainer}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.inputWrapper}>
-              <MaterialIcons name="lock-outline" size={20} color="#6B7280" />
-              <TextInput
-                style={styles.input}
-                placeholder="••••••••"
-                placeholderTextColor="#6B7280"
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                activeOpacity={0.7}
-              >
-                <MaterialIcons
-                  name={showPassword ? "visibility" : "visibility-off"}
-                  size={20}
-                  color="#6B7280"
+          <View style={styles.header}>
+            <Image
+              source={require("../../asstes/logo.png")}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>
+              Continue your journey of healing and growth.
+            </Text>
+          </View>
+
+          <View style={styles.cardContainer}>
+            <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Email or Phone</Text>
+              <View style={styles.inputWrapper}>
+                <MaterialIcons name="person-outline" size={20} color="#6B7280" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="name@example.com"
+                  placeholderTextColor="#6B7280"
+                  autoCapitalize="none"
+                  value={identifier}
+                  onChangeText={setIdentifier}
                 />
+              </View>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.inputWrapper}>
+                <MaterialIcons name="lock-outline" size={20} color="#6B7280" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  placeholderTextColor="#6B7280"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons
+                    name={showPassword ? "visibility" : "visibility-off"}
+                    size={20}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.optionsRow}>
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => setRememberMe(!rememberMe)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
+                  {rememberMe && <MaterialIcons name="check" size={14} color="#FFFFFF" />}
+                </View>
+                <Text style={styles.checkboxLabel}>Remember Me</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7}>
+                <Text style={styles.forgotText}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
-          </View>
 
-          <View style={styles.optionsRow}>
             <TouchableOpacity
-              style={styles.checkboxRow}
-              onPress={() => setRememberMe(!rememberMe)}
-              activeOpacity={0.8}
+              style={styles.loginButton}
+              onPress={handleLogin}
+              disabled={loading}
+              activeOpacity={0.85}
             >
-              <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
-                {rememberMe && <MaterialIcons name="check" size={14} color="#FFFFFF" />}
-              </View>
-              <Text style={styles.checkboxLabel}>Remember Me</Text>
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.loginButtonText}>Login</Text>}
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7}>
-              <Text style={styles.forgotText}>Forgot Password?</Text>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={handleLogin}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.loginButtonText}>Login</Text>}
-          </TouchableOpacity>
-
-          {
-            /* <View style={styles.biometricSection}>
+            {
+              /* <View style={styles.biometricSection}>
           <Text style={styles.biometricLabel}>Or use biometrics</Text>
           <TouchableOpacity
             style={styles.biometricButton}
@@ -221,18 +230,19 @@ export default function LoginScreen() {
             <MaterialIcons name="fingerprint" size={32} color={colors.primary} />
           </TouchableOpacity>
         </View> */
-          }
-        </View>
+            }
+          </View>
 
-        {
-          /* <View style={styles.footerRow}>
+          {
+            /* <View style={styles.footerRow}>
         <Text style={styles.footerText}>Don't have an account?</Text>
         <TouchableOpacity onPress={handleCreateAccount} activeOpacity={0.7}>
           <Text style={styles.createAccountText}>Create Account</Text>
         </TouchableOpacity>
       </View> */
-        }
-      </ScrollView>
+          }
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

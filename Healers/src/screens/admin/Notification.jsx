@@ -250,7 +250,6 @@ export default function NotificationScreen({ navigation }) {
         if (activeMenuId) setActiveMenuId(null);
       }}
     >
-
       <View style={styles.summaryRow}>
         <Text style={styles.summaryText}>
           {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
@@ -403,17 +402,17 @@ export default function NotificationScreen({ navigation }) {
                     confirmDelete(item);
                   }}
                   hitSlop={{
-                    top: 10,
-                    bottom: 10,
-                    left: 10,
-                    right: 10,
+                    top: hp(10),
+                    bottom: hp(10),
+                    left: wp(10),
+                    right: wp(10),
                   }}
                 >
-                  <Feather
+                   <Feather
                     name="x"
                     size={18}
                     color="#EF4444"
-                  />
+                  /> 
                 </TouchableOpacity>
 
                 {unread && <View style={styles.unreadDot} />}
@@ -431,11 +430,13 @@ export default function NotificationScreen({ navigation }) {
         onClose={() => setIsDetailOpen(false)}
       />
 
-      {/* {user?.role === "Therapist"
+      {
+        /* {user?.role === "Therapist"
         ? <TherapistBottomBar activeTab="Notifications" />
         : user?.role === "Admin"
         ? <BottomBar activeTab="Notifications" />
-        : <ChildBottomBar activeTab="Notifications" />} */}
+        : <ChildBottomBar activeTab="Notifications" />} */
+      }
     </SafeAreaView>
   );
 }
@@ -453,14 +454,14 @@ const styles = StyleSheet.create({
   deleteButton: {
     width: wp(30),
     height: hp(30),
-    borderRadius:wp(15),
+    borderRadius: wp(15),
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 8,
+    marginLeft: wp(8),
   },
   summaryText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#334155" },
   markAllBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 4 },
-  markAllText: {fontSize: fontSize(13), fontFamily:fonts.semiBold, color: colors.primary },
+  markAllText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: colors.primary },
 
   filterScroll: { flexGrow: 0, marginTop: 10 },
   filterRow: { paddingHorizontal: 20, gap: 8, paddingBottom: 4 },
@@ -470,7 +471,7 @@ const styles = StyleSheet.create({
     borderRadius: wp(14),
     backgroundColor: "#e9e9e9",
   },
-  filterChipText: {fontSize: fontSize(12), fontFamily:fonts.semiBold, color: "#475569" },
+  filterChipText: { fontSize: fontSize(12), fontFamily: fonts.semiBold, color: "#475569" },
   filterChipTextActive: { color: "#FFFFFF" },
 
   scrollArea: { flex: 1 },
@@ -504,15 +505,15 @@ const styles = StyleSheet.create({
 
   cardBody: { flex: 1 },
   cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  cardTitle: { flex: 1,fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#334155" },
+  cardTitle: { flex: 1, fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#334155" },
   cardTitleUnread: { color: "#0F172A" },
-  cardTime: {fontSize: fontSize(11), color: "#94A3B8" },
+  cardTime: { fontSize: fontSize(11), color: "#94A3B8" },
 
-  cardMessage: {fontSize: fontSize(13), color: "#64748B", lineHeight: 18, marginTop: 3 },
+  cardMessage: { fontSize: fontSize(13), color: "#64748B", lineHeight: 18, marginTop: 3 },
 
   cardFooterRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" },
   typeTag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  typeTagText: { fontSize: fontSize(10), fontFamily:fonts.semiBold },
+  typeTagText: { fontSize: fontSize(10), fontFamily: fonts.semiBold },
 
   attachmentRow: { flexDirection: "row", alignItems: "center", gap: 4, maxWidth: 140 },
   attachmentText: { fontSize: fontSize(11), color: "#64748B" },
@@ -520,16 +521,16 @@ const styles = StyleSheet.create({
   fromText: { fontSize: fontSize(11), color: "#94A3B8", marginLeft: "auto" },
 
   unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: wp(8),
+    height: hp(8),
+    borderRadius: wp(4),
     backgroundColor: "#2563EB",
-    marginLeft: 8,
-    marginTop: 4,
+    marginLeft: wp(8),
+    marginTop: hp(4),
   },
 
   centerLoader: { marginVertical: 40 },
   emptyContainer: { alignItems: "center", paddingVertical: 60, paddingHorizontal: 20 },
-  emptyTitle: { ffontSize: fontSize(16), fontFamily:fonts.semiBold, color: "#334155", marginTop: 12 },
-  emptyText: {fontSize: fontSize(13),color: "#64748B", textAlign: "center", marginTop: 6, lineHeight: 19 },
+  emptyTitle: { ffontSize: fontSize(16), fontFamily: fonts.semiBold, color: "#334155", marginTop: 12 },
+  emptyText: { fontSize: fontSize(13), color: "#64748B", textAlign: "center", marginTop: 6, lineHeight: 19 },
 });
