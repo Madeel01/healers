@@ -18,6 +18,7 @@ import {
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import BackToAdminButton from '../components/BackToAdminButton';
 import BottomBar from '../components/BottomBar';
 import TopBar from '../components/TopBar';
 import { AuthContext } from '../context/AuthContext';
@@ -118,7 +119,7 @@ const SCREEN_LAYOUTS = {
     BatchSchedule: { headerTitle: "Batch Schedule" },
     BatchScheduleCreate: { headerTitle: "Create Batch Schedule" },
     StaffOnLeave: { headerTitle: "Staff on Leave Today" },
-    ChildMessages: {headerTitle: "Messages" },
+    ChildMessages: { headerTitle: "Messages" },
     ChatDetails: { showFooter: false, showHeader: false, headerTitle: "Chat" },
     ChildProfile: { headerTitle: "Profile" },
     BatchSessionPostpone: { headerTitle: "Postpone Session" },
@@ -452,9 +453,13 @@ export default function AppNavigator() {
       onStateChange={updateLayout}
     >
       {!isAuthenticatedRole ? <AuthStack /> : (
-        <SafeAreaView style={[styles.container, commonStyles.container]}>
+        <SafeAreaView
+          style={[styles.container, commonStyles.container]}
+        >
           <View
-            style={layout.showHeader ? styles.visible : styles.hidden}
+            style={layout.showHeader
+              ? styles.visible
+              : styles.hidden}
           >
             <TopBar
               navigation={navigationRef}
@@ -473,14 +478,19 @@ export default function AppNavigator() {
           </View>
 
           <View
-            style={layout.showFooter ? styles.visible : styles.hidden}
+            style={layout.showFooter
+              ? styles.visible
+              : styles.hidden}
           >
             <BottomBar
               navigation={navigationRef}
               activeTab={activeTab}
-              setActiveTab={activeTab}
+              setActiveTab={setActiveTab}
             />
           </View>
+
+          {/* Visible on every impersonated Child/Therapist screen */}
+          <BackToAdminButton />
         </SafeAreaView>
       )}
     </NavigationContainer>

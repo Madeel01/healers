@@ -974,3 +974,121 @@ exports.removePushToken = async (req, res) => {
   );
   res.json({ success: true });
 };
+
+exports.adminImpersonateUser = async (req, res) => {
+  try {
+    const adminId = req.user?._id || req.user?.id;
+    const { userId } = req.body;
+
+    if (!adminId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid user ID is required",
+      });
+    }
+
+    // Check admin from database, not from request body
+    const admin = await User.findById(adminId);
+
+    if (
+      !admin
+      || admin.role?.toLowerCase() !== "admin"
+      || admin.isActive !== true
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Only active admins can login as another user",
+      });
+    }
+
+    // Do not allow nested impersonation
+    if (req.auth?.impersonation === true) {
+      return res.status(403).json({
+        success: false,
+        message: "Cannot impersonate another user from this session",
+      });
+    }
+
+    const targetUser = await User.findById(userId);
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Selected user not found",
+      });
+    }
+
+    const targetRole = String(targetUser.role || "").toLowerCase();
+
+    if (!["child", "therapist"].includes(targetRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only Child and Therapist accounts are supported",
+      });
+    }
+
+    if (targetUser.isActive !== true) {
+      return res.status(403).json({
+        success: false,
+        message: "Selected user is inactive",
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id: targetUser._id.toString(),
+        role: targetUser.role,
+        permissions: [], // no additional permissions
+        impersonation: true,
+        impersonatedBy: admin._id.toString(),
+        readOnly: true,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "30m" },
+    );
+
+    console.info("ADMIN_IMPERSONATION", {
+      adminId: String(admin._id),
+      targetUserId: String(targetUser._id),
+      targetRole: targetUser.role,
+      at: new Date().toISOString(),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Logged in as ${targetUser.role} successfully`,
+      token,
+      user: {
+        id: targetUser._id,
+        _id: targetUser._id,
+        fullName: targetUser.fullName,
+        email: targetUser.email,
+        phone: targetUser.phone,
+        role: targetUser.role,
+        permissions: [],
+        profileImage: targetUser.profileImage,
+        age: targetUser.age,
+        fatherCnic: targetUser.fatherCnic,
+      },
+      impersonation: {
+        active: true,
+        readOnly: true,
+        adminId: String(admin._id),
+      },
+    });
+  } catch (error) {
+    console.error("adminImpersonateUser error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to login as selected user",
+    });
+  }
+};

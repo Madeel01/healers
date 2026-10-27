@@ -1,5 +1,6 @@
 import React, {
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -28,6 +29,7 @@ import {
   getProgramTherapistsApi,
   getServices,
 } from '../../api/admin/api';
+import { adminLoginAsUserApi } from '../../api/authApi';
 import {
   addGoalToProgramApi,
   AddPrograms,
@@ -35,6 +37,7 @@ import {
   deleteProgramApi,
   getChildProgramSpeciality,
 } from '../../api/therapist/api';
+import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
@@ -86,6 +89,7 @@ export default function ProgramBuilderScreen({ navigation }) {
   const [savingProgram, setSavingProgram] = useState(false);
   const [savingGoalId, setSavingGoalId] = useState(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [loginLoading, setLoginLoading] = useState(false);
 
   const therapistRequestRef = useRef(0);
   const childRequestRef = useRef(0);
@@ -94,6 +98,7 @@ export default function ProgramBuilderScreen({ navigation }) {
   const childBusyRef = useRef(false);
   const selectedTherapistId = selectedTherapist?.therapistId || null;
   const selectedChildId = selectedChild?.childId || null;
+  const { loginAsUser } = useContext(AuthContext);
 
   const selectedAssignment = useMemo(() => (
     selectedTherapistId && selectedChildId
@@ -407,9 +412,40 @@ export default function ProgramBuilderScreen({ navigation }) {
   const filteredPrograms = programs.filter((program) =>
     String(program.programName || program.title || "").toLowerCase().includes(searchQuery.trim().toLowerCase())
   );
+
+  const handleLoginAsUser = async (userId) => {
+    if (!userId || loginLoading) return;
+
+    try {
+      setLoginLoading(true);
+
+      const response = await adminLoginAsUserApi(userId);
+
+      if (!response?.success || !response?.token || !response?.user) {
+        throw new Error(
+          response?.message || "Unable to login as selected user",
+        );
+      }
+
+      await loginAsUser(response.token, response.user);
+    } catch (error) {
+      console.error(
+        "Login as user failed:",
+        error?.response?.data?.message || error.message,
+      );
+
+      Alert.alert(
+        "Login Failed",
+        error?.response?.data?.message
+          || error.message
+          || "Unable to switch user",
+      );
+    } finally {
+      setLoginLoading(false);
+    }
+  };
   return (
     <View style={[styles.mainContainer, commonStyles.container]}>
-
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -489,6 +525,21 @@ export default function ProgramBuilderScreen({ navigation }) {
               <Text style={styles.loadMoreText}>Load More Therapists (+5)</Text>
             </TouchableOpacity>
           )}
+
+          {selectedTherapist && (
+            <TouchableOpacity
+              style={[
+                styles.loginTherapistBtn,
+                (!selectedTherapistId || loginLoading) && styles.disabledButton,
+              ]}
+              disabled={!selectedTherapistId || loginLoading}
+              onPress={() => handleLoginAsUser(selectedTherapistId)}
+            >
+              <Text style={styles.loginTherapistText}>
+                Login as Therapist
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.selectorSection}>
@@ -547,6 +598,19 @@ export default function ProgramBuilderScreen({ navigation }) {
                   <Text style={styles.loadMoreText}>Load More Children (+5)</Text>
                 </TouchableOpacity>
               )}
+
+              <TouchableOpacity
+                style={[
+                  styles.loginTherapistBtn,
+                  (!selectedChildId || loginLoading) && styles.disabledButton,
+                ]}
+                disabled={!selectedChildId || loginLoading}
+                onPress={() => handleLoginAsUser(selectedChildId)}
+              >
+                <Text style={styles.loginTherapistText}>
+                  Login as Child
+                </Text>
+              </TouchableOpacity>
             </>
           )}
         </View>
@@ -721,7 +785,6 @@ export default function ProgramBuilderScreen({ navigation }) {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-
     </View>
   );
 }
@@ -730,8 +793,8 @@ const styles = StyleSheet.create({
   horizontalOptions: {
     flexDirection: "row",
     alignItems: "center",
-    gap:wp(10),
-    paddingVertical:hp(4),
+    gap: wp(10),
+    paddingVertical: hp(4),
     paddingRight: 16,
   },
   sliderChip: {
@@ -744,14 +807,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    gap:wp(10),
+    gap: wp(10),
   },
   sliderChipSelected: {
     backgroundColor: "#E6FAF4",
     borderColor: "#00725E",
   },
   sliderTitle: {
-    fontSize:fontSize(14),
+    fontSize: fontSize(14),
     fontFamily: fonts.medium,
     color: "#0F172A",
     lineHeight: 24,
@@ -761,7 +824,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
   },
   sliderSubtitle: {
-    fontSize:fontSize(11),
+    fontSize: fontSize(11),
     fontFamily: fonts.regular,
     color: "#64748B",
   },
@@ -781,18 +844,18 @@ const styles = StyleSheet.create({
   headerBanner: {
     backgroundColor: colors.primary,
     paddingHorizontal: wp(20),
-    paddingVertical:hp(14),
+    paddingVertical: hp(14),
     marginBottom: 18,
   },
 
   bannerTitle: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: colors.white,
   },
 
   bannerSubtitle: {
-    fontSize:fontSize(11),
+    fontSize: fontSize(11),
     fontFamily: fonts.regular,
     color: colors.white,
     marginTop: 5,
@@ -809,14 +872,14 @@ const styles = StyleSheet.create({
   },
 
   sectionHeaderTitle: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: colors.blackFont,
     marginBottom: 12,
   },
 
   selectionHint: {
-    fontSize:fontSize(12),
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
     marginBottom: 10,
@@ -830,16 +893,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: wp(12),
-    gap:wp(8),
+    gap: wp(8),
     marginBottom: 12,
   },
 
   searchInput: {
     flex: 1,
-    fontSize:fontSize(14),
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#0F172A",
-    paddingVertical:hp(8),
+    paddingVertical: hp(8),
   },
 
   option: {
@@ -865,7 +928,7 @@ const styles = StyleSheet.create({
   },
 
   optionTitle: {
-    fontSize:fontSize(14),
+    fontSize: fontSize(14),
     fontFamily: fonts.medium,
     color: "#0F172A",
   },
@@ -876,7 +939,7 @@ const styles = StyleSheet.create({
   },
 
   optionSubtitle: {
-    fontSize:fontSize(11),
+    fontSize: fontSize(11),
     fontFamily: fonts.regular,
     color: "#64748B",
     marginTop: 4,
@@ -893,7 +956,7 @@ const styles = StyleSheet.create({
 
   loadMoreText: {
     color: "#004E9F",
-    fontSize:fontSize(12),
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
   },
 
@@ -909,7 +972,7 @@ const styles = StyleSheet.create({
 
   selectedInfoRow: {
     flexDirection: "row",
-    gap:wp(12),
+    gap: wp(12),
   },
 
   selectedInfoBox: {
@@ -917,14 +980,14 @@ const styles = StyleSheet.create({
   },
 
   selectedInfoLabel: {
-    fontSize:fontSize(10),
+    fontSize: fontSize(10),
     fontFamily: fonts.regular,
     color: "#64748B",
     marginBottom: 3,
   },
 
   selectedInfoValue: {
-    fontSize:fontSize(13),
+    fontSize: fontSize(13),
     fontFamily: fonts.medium,
     color: "#0F172A",
   },
@@ -941,7 +1004,7 @@ const styles = StyleSheet.create({
 
   actionButtonsRow: {
     flexDirection: "row",
-    gap:wp(12),
+    gap: wp(12),
   },
 
   allLabelsBtn: {
@@ -952,11 +1015,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap:wp(6),
+    gap: wp(6),
   },
 
   allLabelsText: {
-    fontSize:fontSize(14),
+    fontSize: fontSize(14),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
   },
@@ -975,13 +1038,13 @@ const styles = StyleSheet.create({
   },
 
   addProgramText: {
-    fontSize:fontSize(14),
+    fontSize: fontSize(14),
     fontFamily: fonts.bold,
     color: "#8BF6D9",
   },
 
   allProgramTitle: {
-    fontSize:fontSize(20),
+    fontSize: fontSize(20),
     fontFamily: fonts.bold,
     color: "#1D1B16",
     paddingHorizontal: wp(20),
@@ -991,14 +1054,14 @@ const styles = StyleSheet.create({
   emptyText: {
     textAlign: "center",
     color: "#64748B",
-    fontSize:fontSize(13),
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     marginVertical: 12,
   },
 
   programList: {
     paddingHorizontal: wp(20),
-    gap:wp(16),
+    gap: wp(16),
   },
 
   programCard: {
@@ -1013,19 +1076,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    gap:wp(10),
+    gap: wp(10),
     marginBottom: 5,
   },
 
   cardTitle: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#1D1B16",
     marginBottom: 4,
   },
 
   cardDescription: {
-    fontSize:fontSize(12),
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#6B7280",
     lineHeight: 20,
@@ -1047,7 +1110,7 @@ const styles = StyleSheet.create({
   goalLeftRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap:wp(10),
+    gap: wp(10),
     flex: 1,
   },
 
@@ -1061,7 +1124,7 @@ const styles = StyleSheet.create({
 
   goalTitle: {
     flex: 1,
-    fontSize:fontSize(12),
+    fontSize: fontSize(12),
     fontFamily: fonts.bold,
     color: "#006B58",
   },
@@ -1069,7 +1132,7 @@ const styles = StyleSheet.create({
   goalInputRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap:wp(8),
+    gap: wp(8),
     marginBottom: 14,
   },
 
@@ -1079,7 +1142,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F5F9",
     borderRadius: wp(8),
     paddingHorizontal: wp(12),
-    fontSize:fontSize(13),
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#0F172A",
   },
@@ -1095,7 +1158,7 @@ const styles = StyleSheet.create({
   saveGoalBtnText: {
     color: "#FFFFFF",
     fontFamily: fonts.bold,
-    fontSize:fontSize(13),
+    fontSize: fontSize(13),
   },
 
   addGoalBtn: {
@@ -1105,11 +1168,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap:wp(8),
+    gap: wp(8),
   },
 
   addGoalBtnText: {
-    fontSize:fontSize(15),
+    fontSize: fontSize(15),
     fontFamily: fonts.medium,
     color: "#8BF6D9",
   },
@@ -1138,7 +1201,7 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#0F172A",
   },
@@ -1147,15 +1210,36 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical:hp(13),
+    paddingVertical: hp(13),
     paddingHorizontal: wp(10),
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
 
   modalOptionText: {
-    fontSize:fontSize(14),
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#334155",
+  },
+
+  loginTherapistBtn: {
+    backgroundColor: "#004E9F",
+    minHeight: hp(48),
+    borderRadius: wp(12),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: wp(14),
+    paddingVertical: hp(10),
+    gap: wp(10),
+    marginTop: hp(14),
+  },
+
+  loginTherapistText: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#FFFFFF",
+    flexShrink: 1,
+    textAlign: "center",
   },
 });

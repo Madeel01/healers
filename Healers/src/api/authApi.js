@@ -50,3 +50,11 @@ export const markAllNotificationsAsReadApi = async () => {
   return response.data;
 };
 
+export const adminLoginAsUserApi = async (userId) => {
+  const response = await apiClient.post(
+    "/auth/users/impersonate",
+    { userId },
+  );
+
+  return response.data;
+};

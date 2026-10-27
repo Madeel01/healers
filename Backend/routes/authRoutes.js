@@ -19,8 +19,9 @@ const {
   resetPassword,
   savePushToken,
   removePushToken,
+  adminImpersonateUser,
 } = require("../controllers/authController");
-const { protect } = require("../middleware/authMiddleware");
+const { protect, blockImpersonationWrites } = require("../middleware/authMiddleware");
 const rateLimit = require("express-rate-limit");
 const { registerPushToken, sendNotification, unregisterPushToken } = require("../controllers/pushNotificationController");
 
@@ -53,5 +54,6 @@ router.post("/reset-password", resetPassword);
 router.post("/users/push-notifications/register", protect, registerPushToken);
 router.delete("/users/push-notifications/unregister", protect, unregisterPushToken);
 router.post("/users/push-notifications/send", protect, sendNotification);
+router.post("/users/impersonate", protect, blockImpersonationWrites, adminImpersonateUser);
 
 module.exports = router;
