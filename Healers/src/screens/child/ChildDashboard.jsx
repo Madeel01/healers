@@ -18,9 +18,9 @@ import {
   View,
 } from 'react-native';
 
+import { FontAwesome6 } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import Feather from '@expo/vector-icons/Feather';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useIsFocused } from '@react-navigation/native';
 
@@ -402,7 +402,8 @@ export default function ChildDashboardScreen({ navigation }) {
             activeOpacity={0.8}
           >
             <View style={[styles.iconCircle, { backgroundColor: "#FEE2E2" }]}>
-              <MaterialCommunityIcons name="receipt" size={fontSize(24)} color="#EF4444" />
+              {/* <MaterialCommunityIcons name="receipt" size={fontSize(24)} color="#EF4444" /> */}
+              <FontAwesome6 name="file-invoice" size={fontSize(24)} color="#EF4444" />
             </View>
             <Text style={styles.gridCardTitle}>Billing & Invoices</Text>
           </TouchableOpacity>
@@ -779,8 +780,8 @@ const styles = StyleSheet.create({
     gap: wp(12),
   },
   avatar: {
-    width: wp(38),
-    height: hp(38),
+    width: wp(42),
+    height: hp(42),
     borderRadius: wp(999),
   },
 
@@ -1013,8 +1014,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   counterBadge: {
-    width: wp(20),
-    height: hp(20),
+    width: wp(24),
+    height: hp(24),
     borderRadius: wp(999),
     backgroundColor: "#0F172A",
     alignItems: "center",
@@ -1024,7 +1025,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize(12),
     color: "#FFFFFF",
     fontFamily: fonts.regular,
-    lineHeight: 16,
+    lineHeight: 14,
   },
   classCard: {
     backgroundColor: "#FFFFFF",
@@ -1064,8 +1065,8 @@ const styles = StyleSheet.create({
     color: colors.blackFont,
   },
   avatarFallback: {
-    width: wp(32),
-    height: hp(32),
+      width: wp(42),
+    height: hp(42),
     borderRadius: wp(999),
     backgroundColor: colors.primary,
     alignItems: "center",
@@ -1076,6 +1077,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
+    lineHeight:24
   },
   modalOverlay: {
     flex: 1,

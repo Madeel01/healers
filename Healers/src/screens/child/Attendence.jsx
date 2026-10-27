@@ -13,19 +13,21 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { getChildAttendance } from '../../api/child/api';
-import ChildBottomBar from '../../components/ChildBottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const PAGE_LIMIT = 10;
 
@@ -321,7 +323,7 @@ const AttendanceScreen = () => {
         <View style={styles.timeRow}>
           <Feather
             name="clock"
-            size={17}
+            size={fontSize(17)}
             color="#64748B"
             style={styles.clockIcon}
           />
@@ -338,7 +340,7 @@ const AttendanceScreen = () => {
           <View style={styles.infoRow}>
             <Feather
               name="user"
-              size={17}
+              size={fontSize(17)}
               color="#64748B"
               style={styles.infoIcon}
             />
@@ -363,7 +365,7 @@ const AttendanceScreen = () => {
                 : sessionType === "postponed"
                 ? "clock"
                 : "info"}
-              size={17}
+              size={fontSize(17)}
               color="#B45309"
             />
 
@@ -400,7 +402,7 @@ const AttendanceScreen = () => {
         <View style={styles.errorContainer}>
           <Feather
             name="alert-circle"
-            size={38}
+            size={fontSize(38)}
             color="#DC2626"
           />
 
@@ -424,7 +426,7 @@ const AttendanceScreen = () => {
       <View style={styles.emptyContainer}>
         <Feather
           name="calendar"
-          size={40}
+          size={fontSize(40)}
           color="#94A3B8"
         />
 
@@ -440,16 +442,10 @@ const AttendanceScreen = () => {
   };
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, commonStyles.container]}
-      edges={["top", "bottom"]}
     >
-      <TopBar
-        headerTitle="Attendance"
-        isNotificationOpen={isNotificationOpen}
-        setIsNotificationOpen={setIsNotificationOpen}
-      />
-
+ 
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[
@@ -524,7 +520,7 @@ const AttendanceScreen = () => {
 
                 <Feather
                   name="calendar"
-                  size={18}
+                  size={fontSize(18)}
                   color="#FFFFFF"
                 />
               </TouchableOpacity>
@@ -551,7 +547,7 @@ const AttendanceScreen = () => {
 
                 <Feather
                   name="calendar"
-                  size={18}
+                  size={fontSize(18)}
                   color="#FFFFFF"
                 />
               </TouchableOpacity>
@@ -649,11 +645,7 @@ const AttendanceScreen = () => {
           )}
       </View>
 
-      <ChildBottomBar
-        activeTab="ChildAttendance"
-        setActiveTab={setActiveBottomTab}
-      />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -671,7 +663,7 @@ const styles = StyleSheet.create({
 
   tabButton: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical:hp(14),
     alignItems: "center",
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
@@ -682,7 +674,7 @@ const styles = StyleSheet.create({
   },
 
   tabText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     lineHeight: 24,
     color: "#334155",
   },
@@ -698,12 +690,12 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal:wp(20),
     paddingTop: 18,
   },
 
   sectionLabel: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     lineHeight: 20,
     fontFamily: fonts.bold,
     color: "#334155",
@@ -712,7 +704,7 @@ const styles = StyleSheet.create({
 
   dateRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: wp(10),
     marginBottom: 20,
   },
 
@@ -720,8 +712,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.primary,
     borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal:wp(12),
+    paddingVertical:hp(10),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -733,7 +725,7 @@ const styles = StyleSheet.create({
   },
 
   dateLabel: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     lineHeight: 15,
     fontFamily: fonts.regular,
     color: "#CBD5E1",
@@ -741,7 +733,7 @@ const styles = StyleSheet.create({
   },
 
   dateSelectorText: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     lineHeight: 19,
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
@@ -755,14 +747,14 @@ const styles = StyleSheet.create({
   },
 
   historyHeading: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     lineHeight: 20,
     fontFamily: fonts.bold,
     color: "#334155",
   },
 
   countText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     lineHeight: 18,
     fontFamily: fonts.regular,
     color: "#64748B",
@@ -792,15 +784,15 @@ const styles = StyleSheet.create({
   },
 
   cardDate: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     lineHeight: 24,
     fontFamily: fonts.bold,
     color: "#334155",
   },
 
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal:wp(12),
+    paddingVertical:hp(4),
     borderRadius: 999,
   },
 
@@ -816,7 +808,7 @@ const styles = StyleSheet.create({
   },
 
   statusText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     lineHeight: 16,
     fontFamily: fonts.bold,
   },
@@ -841,7 +833,7 @@ const styles = StyleSheet.create({
   },
 
   timeText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     lineHeight: 20,
     fontFamily: fonts.regular,
     color: "#334155",
@@ -864,13 +856,13 @@ const styles = StyleSheet.create({
   },
 
   infoLabel: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     color: "#94A3B8",
     marginBottom: 2,
   },
 
   infoValue: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontWeight: "600",
     color: "#334155",
   },
@@ -890,14 +882,14 @@ const styles = StyleSheet.create({
   },
 
   sessionMessageTitle: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontWeight: "700",
     color: "#92400E",
     marginBottom: 3,
   },
 
   sessionMessageText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     lineHeight: 18,
     color: "#A16207",
   },
@@ -910,20 +902,20 @@ const styles = StyleSheet.create({
 
   loadingText: {
     marginTop: 8,
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#64748B",
   },
 
   loadingMoreContainer: {
-    paddingVertical: 16,
+    paddingVertical:hp(16),
     alignItems: "center",
     justifyContent: "center",
   },
 
   loadingMoreText: {
     marginTop: 6,
-    fontSize: 12,
+    fontSize: fontSize(12),
     lineHeight: 18,
     fontFamily: fonts.regular,
     color: "#64748B",
@@ -933,12 +925,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 30,
+    paddingHorizontal:wp(30),
   },
 
   emptyTitle: {
     marginTop: 12,
-    fontSize: 16,
+    fontSize: fontSize(16),
     lineHeight: 22,
     fontFamily: fonts.bold,
     color: "#334155",
@@ -946,7 +938,7 @@ const styles = StyleSheet.create({
 
   emptyText: {
     marginTop: 6,
-    fontSize: 13,
+    fontSize: fontSize(13),
     lineHeight: 19,
     fontFamily: fonts.regular,
     color: "#64748B",
@@ -956,11 +948,11 @@ const styles = StyleSheet.create({
   errorContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 30,
+    paddingVertical:hp(30),
   },
 
   errorText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     lineHeight: 20,
     fontFamily: fonts.regular,
     color: "#DC2626",
@@ -970,14 +962,14 @@ const styles = StyleSheet.create({
 
   retryButton: {
     backgroundColor: "#0B64A4",
-    paddingHorizontal: 20,
-    paddingVertical: 9,
+    paddingHorizontal:wp(20),
+    paddingVertical:hp(9),
     borderRadius: 6,
   },
 
   retryText: {
     color: "#FFFFFF",
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.bold,
   },
 });

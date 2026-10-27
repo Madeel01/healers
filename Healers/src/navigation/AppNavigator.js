@@ -150,7 +150,7 @@ const SCREEN_LAYOUTS = {
     ChildMessages: { headerTitle: "Messages" },
     ChatDetails: { showFooter: false, showHeader: false, headerTitle: "Chat" },
     ChildProfile: { headerTitle: "Profile" },
-    Notifications: { showFooter: false, headerTitle: "Notifications" },
+    Notifications: { headerTitle: "Notifications" },
     TherapistComplaints: { headerTitle: "Complaints" },
     ComplaintDetails: { headerTitle: "Complaint Details" },
   },
@@ -163,7 +163,7 @@ const SCREEN_LAYOUTS = {
     ChildMessages: { headerTitle: "Messages" },
     ChatDetails: { showFooter: false, showHeader: false, headerTitle: "Chat" },
     ChildReport: { headerTitle: "Reports" },
-    Notifications: { showFooter: false, headerTitle: "Notifications" },
+    Notifications: { headerTitle: "Notifications" },
     ChildProfile: { headerTitle: "Profile" },
     ChildComplaints: { headerTitle: "Complaints" },
     ComplaintDetails: { headerTitle: "Complaint Details" },
@@ -220,6 +220,7 @@ const ACTIVE_TAB_ROUTES = {
     LeaveRequest: "TherapistDashboard",
     TherapistComplaints: "TherapistDashboard",
     ComplaintDetails: "TherapistDashboard",
+    Notifications: "Notifications",
   },
   Child: {
     ChildDashboard: "ChildDashboard",
@@ -232,6 +233,8 @@ const ACTIVE_TAB_ROUTES = {
     ChildInvoices: "ChildDashboard",
     ChildComplaints: "ChildDashboard",
     ComplaintDetails: "ChildDashboard",
+    Notifications: "Notifications",
+    ChildAttendance: "ChildAttendance",
   },
 };
 

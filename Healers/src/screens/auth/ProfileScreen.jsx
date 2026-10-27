@@ -19,7 +19,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 
@@ -28,7 +27,15 @@ import {
   updateChildProfile,
 } from '../../api/authApi';
 import { AuthContext } from '../../context/AuthContext';
-import { colors } from '../../styles/theme';
+import {
+  colors,
+  fonts,
+} from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const CLOUDINARY_CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
@@ -374,34 +381,13 @@ export default function ChildProfileScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios"
           ? "padding"
           : "height"}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Feather
-              name="arrow-left"
-              size={22}
-              color="#0F172A"
-            />
-          </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>
-            My Profile
-          </Text>
-
-          <View
-            style={styles.headerSpacer}
-          />
-        </View>
-
         <ScrollView
           ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
@@ -659,12 +645,12 @@ export default function ChildProfileScreen({ navigation }) {
           </View>
 
           {/* SAVE */}
+        </ScrollView>
+        <View style={styles.bottomContainer}>
           <TouchableOpacity
             style={[
               styles.saveButton,
-              (loading
-                || uploadingImage)
-              && styles.saveButtonDisabled,
+              (loading || uploadingImage) && styles.saveButtonDisabled,
             ]}
             disabled={loading || uploadingImage}
             onPress={handleUpdateProfile}
@@ -674,21 +660,19 @@ export default function ChildProfileScreen({ navigation }) {
               <>
                 <Feather
                   name="check"
-                  size={19}
+                  size={wp(19)}
                   color="#FFFFFF"
                 />
 
-                <Text
-                  style={styles.saveButtonText}
-                >
+                <Text style={styles.saveButtonText}>
                   Save Changes
                 </Text>
               </>
             )}
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -702,44 +686,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
 
-  header: {
-    height: 62,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 18,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F1F5F9",
-  },
-
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-
-  headerSpacer: {
-    width: 40,
-  },
-
   content: {
-    padding: 18,
-    paddingBottom: 35,
+    flexGrow: 1,
+    paddingHorizontal: wp(18),
+    paddingTop: hp(18),
+    paddingBottom: hp(25),
   },
 
   profileSection: {
     alignItems: "center",
-    paddingVertical: 20,
+    paddingVertical: hp(20),
   },
 
   imageWrapper: {
@@ -747,103 +703,104 @@ const styles = StyleSheet.create({
   },
 
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: wp(100),
+    height: wp(100),
+    borderRadius: wp(50),
   },
 
   profileImageFallback: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: wp(100),
+    height: wp(100),
+    borderRadius: wp(50),
     backgroundColor: "#DBEAFE",
     alignItems: "center",
     justifyContent: "center",
   },
 
   profileImageFallbackText: {
-    fontSize: 38,
-    fontWeight: "700",
+    fontSize: fontSize(38),
+    fontFamily: fonts.bold,
     color: "#2563EB",
   },
 
   cameraIcon: {
     position: "absolute",
     right: 0,
-    bottom: 2,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    bottom: 0,
+    width: wp(30),
+    height: wp(30),
+    borderRadius: wp(15),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 3,
+    borderWidth: wp(3),
     borderColor: "#FFFFFF",
   },
 
   changePhotoButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
+    gap: wp(6),
+    marginTop: hp(12),
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(7),
+    borderRadius: wp(20),
     backgroundColor: "#EFF6FF",
   },
 
   changePhotoText: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: fontSize(13),
+    fontFamily: fonts.semiBold,
     color: colors.primary,
   },
 
   profileName: {
-    marginTop: 10,
-    fontSize: 21,
-    fontWeight: "700",
+    marginTop: hp(10),
+    fontSize: fontSize(21),
+    fontFamily: fonts.bold,
     color: "#0F172A",
   },
 
   profileRole: {
-    marginTop: 3,
-    fontSize: 13,
+    marginTop: hp(3),
+    fontSize: fontSize(13),
+    fontFamily: fonts.regular,
     color: "#64748B",
   },
 
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 16,
+    borderRadius: wp(18),
+    padding: wp(18),
+    marginBottom: hp(16),
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
 
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: fontSize(16),
+    fontFamily: fonts.bold,
     color: "#0F172A",
-    marginBottom: 18,
+    marginBottom: hp(18),
   },
 
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: hp(16),
   },
 
   label: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: fontSize(13),
+    fontFamily: fonts.semiBold,
     color: "#334155",
-    marginBottom: 7,
+    marginBottom: hp(7),
   },
 
   inputWrapper: {
-    minHeight: 50,
+    minHeight: hp(50),
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    borderRadius: 12,
+    paddingHorizontal: wp(14),
+    borderRadius: wp(12),
     borderWidth: 1,
     borderColor: "#E2E8F0",
     backgroundColor: "#F8FAFC",
@@ -851,27 +808,40 @@ const styles = StyleSheet.create({
 
   input: {
     flex: 1,
-    marginLeft: 10,
-    fontSize: 14,
+    marginLeft: wp(10),
+    fontSize: fontSize(14),
+    fontFamily: fonts.regular,
     color: "#0F172A",
+    paddingVertical: hp(6),
   },
 
   passwordHint: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    lineHeight: hp(18),
     color: "#64748B",
-    marginTop: -8,
-    marginBottom: 17,
+    marginTop: -hp(8),
+    marginBottom: hp(17),
+  },
+
+  // FIXED BOTTOM AREA
+  bottomContainer: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: wp(18),
+    paddingTop: hp(12),
+    paddingBottom: Platform.OS === "ios" ? hp(20) : hp(12),
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
   },
 
   saveButton: {
-    height: 52,
-    borderRadius: 14,
+    height: hp(52),
+    borderRadius: wp(14),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    gap: 8,
+    gap: wp(8),
   },
 
   saveButtonDisabled: {
@@ -879,8 +849,9 @@ const styles = StyleSheet.create({
   },
 
   saveButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: fontSize(14),
+    fontFamily: fonts.bold,
     color: "#FFFFFF",
+    lineHeight:20
   },
 });

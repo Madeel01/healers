@@ -19,20 +19,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { getChildVideos } from '../../api/child/api';
-import ChildBottomBar from '../../components/ChildBottomBar';
-import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const CloudinaryVideoPlayer = ({ uri }) => {
   const player = useVideoPlayer(uri, (playerInstance) => {
@@ -41,7 +43,7 @@ const CloudinaryVideoPlayer = ({ uri }) => {
   });
 
   return (
-    <View style={{ width: "100%", height: 300 }}>
+    <View style={{ width: "100%", height: hp(300) }}>
       <VideoView
         player={player}
         nativeControls
@@ -182,17 +184,13 @@ export default function ChildVideoScreen({ navigation }) {
   }, [selectedChildId]);
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.mainContainer,
         commonStyles.container,
       ]}
     >
-      <TopBar
-        navigation={navigation}
-        headerTitle="Weekly Video"
-      />
-
+    
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -237,7 +235,7 @@ export default function ChildVideoScreen({ navigation }) {
           ? (
             <View
               style={{
-                paddingVertical: 40,
+                paddingVertical:hp(40),
                 alignItems: "center",
                 justifyContent: "center",
               }}
@@ -270,7 +268,7 @@ export default function ChildVideoScreen({ navigation }) {
                   >
                     <Ionicons
                       name="videocam-outline"
-                      size={45}
+                      size={fontSize(45)}
                       color="#94A3B8"
                     />
 
@@ -299,7 +297,7 @@ export default function ChildVideoScreen({ navigation }) {
                         <View style={styles.centerPlayBtn}>
                           <Ionicons
                             name="play"
-                            size={28}
+                            size={fontSize(28)}
                             color="#035388"
                           />
                         </View>
@@ -343,7 +341,7 @@ export default function ChildVideoScreen({ navigation }) {
               {loadingMoreVideos && (
                 <View
                   style={{
-                    paddingVertical: 20,
+                    paddingVertical:hp(20),
                     alignItems: "center",
                     justifyContent: "center",
                   }}
@@ -371,7 +369,7 @@ export default function ChildVideoScreen({ navigation }) {
                 <Text
                   style={{
                     textAlign: "center",
-                    paddingVertical: 15,
+                    paddingVertical:hp(15),
                     color: "#94A3B8",
                     fontFamily: fonts.regular,
                   }}
@@ -382,10 +380,6 @@ export default function ChildVideoScreen({ navigation }) {
             </View>
           )}
       </ScrollView>
-
-      <ChildBottomBar
-        activeTab="ChildVideo"
-      />
 
       <Modal
         visible={demoVideoModal}
@@ -409,7 +403,7 @@ export default function ChildVideoScreen({ navigation }) {
               >
                 <Feather
                   name="x"
-                  size={24}
+                  size={fontSize(24)}
                   color="#FFFFFF"
                 />
               </TouchableOpacity>
@@ -458,7 +452,7 @@ export default function ChildVideoScreen({ navigation }) {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 const styles = StyleSheet.create({
@@ -469,29 +463,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 28,
+    paddingBottom:hp(28),
   },
   headerBanner: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginBottom: 20,
+    paddingHorizontal:wp(20),
+    paddingVertical:hp(16),
+    marginBottom: hp(20),
   },
   bannerTitle: {
-    fontSize: 18,
+    fontSize:fontSize(18),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 24,
   },
   childChipsRow: {
-    paddingHorizontal: 20,
-    gap: 10,
-    marginBottom: 20,
+    paddingHorizontal:wp(20),
+    gap: wp(10),
+    marginBottom: hp(20),
   },
   childChip: {
-    paddingHorizontal: 20,
-    height: 44,
-    borderRadius: 32,
+    paddingHorizontal:wp(20),
+    height: hp(44),
+    borderRadius: wp(32),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -500,33 +494,33 @@ const styles = StyleSheet.create({
   },
 
   childChipText: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.medium,
     lineHeight: 24,
     color: "#004E9F",
   },
   videoList: {
-    paddingHorizontal: 20,
-    gap: 20,
+    paddingHorizontal:wp(20),
+    gap: wp(20),
   },
   videoCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: wp(12),
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(224,227,230.3)",
   },
   videoThumbnail: {
-    height: 180,
+    height: hp(180),
     backgroundColor: "#035388",
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
   },
   centerPlayBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: wp(52),
+    height: hp(52),
+    borderRadius: wp(26),
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
@@ -537,12 +531,12 @@ const styles = StyleSheet.create({
     bottom: 12,
     right: 12,
     backgroundColor: "rgba(0, 0, 0, 0.65)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal:wp(8),
+    paddingVertical:hp(4),
+    borderRadius: wp(6),
   },
   durationText: {
-    fontSize: 11,
+    fontSize:fontSize(11),
     fontFamily: fonts.medium,
     color: "#FFFFFF",
     lineHeight: 14,
@@ -551,22 +545,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal:wp(16),
+    paddingVertical:hp(14),
     backgroundColor: "#FFFFFF",
   },
   videoMetaColumn: {
     flex: 1,
   },
   videoChildName: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 20,
-    marginBottom: 2,
+    marginBottom: hp(2),
   },
   videoSubDetails: {
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 19,
@@ -577,7 +571,7 @@ const styles = StyleSheet.create({
   videoActionGroup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: wp(12),
   },
   fullModalOverlay: {
     flex: 1,
@@ -588,7 +582,7 @@ const styles = StyleSheet.create({
   demoPlayerContainer: {
     flex: 1,
     justifyContent: "space-between",
-    paddingVertical: 40,
+    paddingVertical:hp(40),
   },
   modalHeaderRow: {
     flexDirection: "row",
@@ -596,27 +590,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   demoModalTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 22,
   },
   youtubeWrapper: {
     width: "100%",
-    borderRadius: 16,
+    borderRadius: wp(16),
     overflow: "hidden",
     backgroundColor: "#000000",
   },
   closeDemoBtn: {
     backgroundColor: "#046A58",
-    height: 48,
-    borderRadius: 24,
+    height: hp(48),
+    borderRadius: wp(24),
     alignItems: "center",
     justifyContent: "center",
   },
   closeDemoText: {
-    fontSize: 15,
-    fontFamily: fonts.bold,
+    fontSize:fontSize(15),
+    fontFamily: fonts.semiBold,
     color: "#FFFFFF",
     lineHeight: 20,
   },

@@ -66,12 +66,15 @@ export default function LoginScreen() {
     try {
       const response = await loginUser(identifier.trim(), password, rememberMe);
       if (rememberMe) {
-        await AsyncStorage.setItem(
-          "rememberedEmail",
-          identifier.trim(),
-        );
+        await AsyncStorage.multiSet([
+          ["rememberedEmail", identifier.trim()],
+          ["rememberedPassword", password],
+        ]);
       } else {
-        await AsyncStorage.removeItem("rememberedEmail");
+        await AsyncStorage.multiRemove([
+          "rememberedEmail",
+          "rememberedPassword",
+        ]);
       }
 
       await login(response.token, response.user);
@@ -104,18 +107,29 @@ export default function LoginScreen() {
   };
 
   useEffect(() => {
-    const loadRememberedEmail = async () => {
-      const savedEmail = await AsyncStorage.getItem(
-        "rememberedEmail",
-      );
+    const loadRememberedCredentials = async () => {
+      try {
+        const values = await AsyncStorage.multiGet([
+          "rememberedEmail",
+          "rememberedPassword",
+        ]);
 
-      if (savedEmail) {
-        setIdentifier(savedEmail);
-        setRememberMe(true);
+        const savedEmail = values[0][1];
+        const savedPassword = values[1][1];
+
+        if (savedEmail && savedPassword) {
+          setIdentifier(savedEmail);
+          setPassword(savedPassword);
+          setRememberMe(true);
+        } else {
+          setRememberMe(false);
+        }
+      } catch (error) {
+        console.log("Error loading remembered credentials:", error);
       }
     };
 
-    loadRememberedEmail();
+    loadRememberedCredentials();
   }, []);
 
   return (

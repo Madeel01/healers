@@ -999,7 +999,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(15),
     paddingTop: 11,
     paddingBottom: 11,
-    borderRadius: wp(22),
+    borderRadius: wp(99),
     backgroundColor: "#F1F5F9",
     fontSize: fontSize(13),
     lineHeight: 19,
@@ -1010,7 +1010,7 @@ const styles = StyleSheet.create({
   sendButton: {
     width: wp(50),
     height: hp(50),
-    borderRadius: wp(22),
+    borderRadius: wp(99),
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.primary,
