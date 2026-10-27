@@ -45,18 +45,21 @@ const prettyFull = (k) => {
 };
 
 export default function ChildCustomAppointmentScreen({ navigation, route }) {
-  const { childId, childName } = route.params;
+  const { childId, childName,therapistIdByScreen } = route.params;
   const insets = useSafeAreaInsets();
   const [selectingTherapist, setSelectingTherapist] = useState(false);
   const { width } = useWindowDimensions();
   const isSmallDevice = width < 380;
+  const [autoSelectTherapist, setAutoSelectTherapist] = useState(
+    !!therapistIdByScreen
+  );
 
   const [selectedTherapist, setSelectedTherapist] = useState(null);
   const [search, setSearch] = useState("");
   const [therapists, setTherapists] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
 
-  const [therapistId, setTherapistId] = useState(null);
+  const [therapistId, setTherapistId] = useState(therapistIdByScreen??null);
   const [minutes, setMinutes] = useState(60);
   const [services, setServices] = useState([]);
 
@@ -84,7 +87,13 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
     setLoadingList(true);
     const t = setTimeout(async () => {
       try {
-        const res = await getUsersByRole({ role: "Therapist", search });
+        const res = await getUsersByRole({
+          role: "Therapist",
+          search,
+          ...(autoSelectTherapist && therapistIdByScreen
+            ? { therapistId: therapistIdByScreen }
+            : {}),
+        });
         if (alive) setTherapists(res?.data || []);
       } catch (e) {
         if (alive) setTherapists([]);
@@ -96,7 +105,19 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
       alive = false;
       clearTimeout(t);
     };
-  }, [search]);
+  }, [search, autoSelectTherapist]);
+  useEffect(() => {
+    if (!therapistIdByScreen || !therapists.length) return;
+
+    const therapist = therapists.find(
+      t => String(t._id || t.id) === String(therapistIdByScreen)
+    );
+
+    if (therapist) {
+      setSelectedTherapist(therapist);
+      setTherapistId(therapist._id || therapist.id);
+    }
+  }, [therapistIdByScreen, therapists]);
 
   // any change in the selection invalidates the last review
   const handlePlan = useCallback((p) => {
@@ -120,6 +141,7 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
   const changeTherapist = () => {
     setSelectedTherapist(null);
     setTherapistId(null);
+    setAutoSelectTherapist(false);
     setPlan(null);
     setReview(null);
     setSearch("");
@@ -157,7 +179,13 @@ export default function ChildCustomAppointmentScreen({ navigation, route }) {
       });
       if (!res?.success) return Alert.alert("Could not save", res?.message || "Please try again.");
       Alert.alert("Appointments created", `${res.data?.created ?? sessions.length} session(s) added.`, [
-        { text: "OK", onPress: () => navigation.goBack() },
+        {
+          text: "OK",
+          onPress: () =>
+            therapistIdByScreen
+              ? navigation.navigate("TherapistSchedule", { therapistId: therapistIdByScreen })
+              : navigation.goBack(),
+        }
       ]);
     } catch (e) {
       const data = e?.response?.data;

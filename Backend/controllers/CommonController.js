@@ -50,7 +50,39 @@ exports.getUsersByRole = async (req, res) => {
         $options: "i",
       };
     }
+    if (role === "Therapist" && therapistId) {
+      const therapist = await User.findOne({
+        _id: therapistId,
+        role: "Therapist",
+        isActive: true,
+      }, {
+        _id: 1,
+        fullName: 1,
+        role: 1,
+      }).lean();
 
+      if (!therapist) {
+        return res.status(200).json({
+          success: true,
+          count: 0,
+          data: [],
+        });
+      }
+
+      const assignments = await TherapistAssignment.find({
+        therapistId: therapist._id,
+        specialty: { $exists: true, $ne: "" },
+      }).select("specialty").lean();
+
+      return res.status(200).json({
+        success: true,
+        count: 1,
+        data: [{
+          ...therapist,
+          speciality: [...new Set(assignments.map(a => a.specialty))],
+        }],
+      });
+    }
     const users = await User.find(
       filter,
       {

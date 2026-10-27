@@ -2636,6 +2636,52 @@ exports.assignChildrenToTherapist = async (req, res) => {
     });
   }
 };
+
+
+const pad2 = (n) => String(n).padStart(2, "0");
+const mapSession = (ap, { today, nowMin, therapistId, fallbackSpec }) => {
+  const date = ap.dateKey; 
+  const isCustom = ap.type === "custom";
+  const isPast = date < today || (date === today && toMin(ap.endTime) <= nowMin);
+  return {
+    id: String(ap._id),
+    date,
+    startTime: ap.startTime,
+    endTime: ap.endTime,
+    therapistId,
+    type: ap.type,
+    sessionType: ap.sessionType || "regular",
+    batchId: ap.batchId?._id ? String(ap.batchId._id) : ap.batchId ? String(ap.batchId) : null,
+    batchName: isCustom ? "Appointment with" : (ap.batchId?.batchName || "Batch Session"),
+    speciality: ap.batchAssignmentId?.speciality || fallbackSpec || null,
+    children: (ap.children || []).map((c) => ({
+      childId: String(c.childId?._id || c.childId),
+      fullName: c.childId?.fullName || "Child",
+      attendance: c.attendance_status || "Pending",
+    })),
+    isPast,
+    canCancel: isCustom && !isPast && !INACTIVE_TYPES.includes(ap.sessionType),
+    canPostpone: isCustom && !isPast && !INACTIVE_TYPES.includes(ap.sessionType),
+  };
+};
+const baseSessionStages = (therapistId, tz) => [
+  { $match: { therapistId: new mongoose.Types.ObjectId(therapistId) } },
+  { $unwind: "$appointments" },
+  {
+    $addFields: {
+      "appointments.dateKey": {
+        $dateToString: { format: "%Y-%m-%d", date: "$appointments.date", timezone: tz },
+      },
+    },
+  },
+  {
+    $addFields: {
+      "appointments.endKey": {
+        $concat: ["$appointments.dateKey", " ", "$appointments.endTime"],
+      },
+    },
+  },
+];
 exports.getTherapistSchedule = async (req, res) => {
   try {
     const { therapistId } = req.params;
@@ -2660,51 +2706,84 @@ exports.getTherapistSchedule = async (req, res) => {
     const nowMin = clockMinutes(st.tz);
     const cutoff = addDays(today, -pastDays);
 
-    const [availability, assignments, schedules] = await Promise.all([
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 50);
+    const section = ["upcoming", "past"].includes(req.query.section) ? req.query.section : null;
+
+    const nowKey = `${today} ${pad2(Math.floor(nowMin / 60))}:${pad2(nowMin % 60)}`;
+    const base = baseSessionStages(therapistId, st.tz);
+
+    const fetchSection = async (sec, pg, fallbackSpec) => {
+      const isUp = sec === "upcoming";
+
+      const rows = await Scheduling.aggregate([
+        ...base,
+        {
+          $match: isUp
+            ? { "appointments.endKey": { $gt: nowKey } }
+            : {
+                "appointments.endKey": { $lte: nowKey },
+                "appointments.dateKey": { $gte: cutoff },
+              },
+        },
+        { $sort: { "appointments.dateKey": isUp ? 1 : -1, "appointments.startTime": isUp ? 1 : -1 } },
+        { $skip: (pg - 1) * limit },
+        { $limit: limit + 1 },
+        { $project: { appointments: 1 } },
+      ]);
+
+      const hasMore = rows.length > limit;
+      const pageRows = rows.slice(0, limit);
+
+      await Scheduling.populate(pageRows, [
+        { path: "appointments.batchId", select: "batchName" },
+        { path: "appointments.batchAssignmentId", select: "speciality" },
+        { path: "appointments.children.childId", select: "fullName" },
+      ]);
+
+      const items = pageRows.map((r) =>
+        mapSession(r.appointments, { today, nowMin, therapistId, fallbackSpec })
+      );
+      return { items, hasMore };
+    };
+
+    if (section) {
+      const assignments = await TherapistAssignment.find({ therapistId }, "specialty").lean();
+      const { items, hasMore } = await fetchSection(section, page, assignments[0]?.specialty);
+      return res.json({ success: true, data: { section, page, hasMore, items } });
+    }
+
+    const [availability, assignments, countRows, pastCountRows] = await Promise.all([
       TherapistAvailability.find({ therapistId, isActive: true })
         .sort({ type: -1, date: 1, createdAt: 1 })
         .lean(),
-
       TherapistAssignment.find({ therapistId }, "specialty").lean(),
 
-      Scheduling.find({ therapistId })
-        .populate("appointments.batchId", "batchName")
-        .populate("appointments.batchAssignmentId", "speciality")
-        .populate("appointments.children.childId", "fullName")
-        .lean(),
+      Scheduling.aggregate([
+        ...base,
+        {
+          $match: {
+            "appointments.endKey": { $gt: nowKey },
+            "appointments.sessionType": { $nin: INACTIVE_TYPES },
+          },
+        },
+        { $count: "n" },
+      ]),
+
+      Scheduling.aggregate([
+        ...base,
+        {
+          $match: {
+            "appointments.endKey": { $lte: nowKey },
+            "appointments.dateKey": { $gte: cutoff },
+            "appointments.sessionType": { $nin: INACTIVE_TYPES },
+          },
+        },
+        { $count: "n" },
+      ]),
     ]);
 
-    const sessions = [];
-
-    for (const sc of schedules) {
-      for (const ap of sc.appointments || []) {
-        const date = dateKeyOf(ap.date);
-        if (date < cutoff) continue;
-        const isCustom = ap.type === "custom";
-        sessions.push({
-          id: String(ap._id),
-          date,
-          startTime: ap.startTime,
-          endTime: ap.endTime,
-          type: ap.type, // "batch" or "custom"
-          sessionType: ap.sessionType || "regular",
-          batchId: ap.batchId?._id ? String(ap.batchId._id) : ap.batchId ? String(ap.batchId) : null,
-          batchName: isCustom ? "Custom Appointment" : (ap.batchId?.batchName || "Batch Session"),
-          speciality: ap.batchAssignmentId?.speciality || assignments[0]?.specialty || null,
-          children: (ap.children || []).map((c) => ({
-            childId: String(c.childId?._id || c.childId),
-            fullName: c.childId?.fullName || "Child",
-            attendance: c.attendance_status || "Pending",
-          })),
-          isPast: date < today || (date === today && toMin(ap.endTime) <= nowMin),
-        });
-      }
-    }
-
-    sessions.sort((a, b) => a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date.localeCompare(b.date));
-
-    const upcoming = sessions.filter((s) => !s.isPast);
-    const past = sessions.filter((s) => s.isPast).reverse();
+    const upcoming = await fetchSection("upcoming", 1, assignments[0]?.specialty);
 
     return res.json({
       success: true,
@@ -2720,8 +2799,9 @@ exports.getTherapistSchedule = async (req, res) => {
           specialties: [...new Set(assignments.map((a) => a.specialty).filter(Boolean))],
         },
         availability,
+        upcomingTotal: countRows[0]?.n || 0,
+        pastTotal: pastCountRows[0]?.n || 0,
         upcoming,
-        past,
       },
     });
   } catch (error) {

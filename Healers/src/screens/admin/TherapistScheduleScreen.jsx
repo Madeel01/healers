@@ -9,11 +9,14 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -23,8 +26,11 @@ import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 
 import {
+  cancelChildCustomAppointment,
+  deleteChildCustomAppointment,
   getServices,
   getTherapistSchedule,
+  getUsersByRole,
 } from '../../api/admin/api';
 import {
   colors,
@@ -36,6 +42,7 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
+import PostponeCustomModal from './components/ChildCustomPostpond';
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const FULL_DAY = {
@@ -106,8 +113,8 @@ function SessionRow({ s, past, onPress, specMeta }) {
     : null;
   const tm = TYPE_META[s.sessionType];
   const att = attendanceSummary(s.children);
-
-  const sub = past
+  const isCustom = s.type === "custom";
+  const sub = isCustom ? s.children[0]?.fullName : past
     ? s.children.length === 0
       ? "No children"
       : `${att.present} present · ${att.absent} absent${att.pending ? ` · ${att.pending} pending` : ""}`
@@ -120,9 +127,7 @@ function SessionRow({ s, past, onPress, specMeta }) {
           style={[
             styles.sessionBar,
             {
-              backgroundColor: s.type === "custom"
-                ? "#8B5CF6"
-                : s.sessionType === "cancel"
+              backgroundColor: s.sessionType === "cancel"
                 ? "#EF4444"
                 : spec?.color || "#0B4A6F",
             },
@@ -131,12 +136,12 @@ function SessionRow({ s, past, onPress, specMeta }) {
         <View style={{ flex: 1 }}>
           <Text style={[styles.sessionTime, isInactive(s) && styles.struck]}>{timeRange(s)}</Text>
           <Text style={styles.sessionSub} numberOfLines={1}>
-            {s.batchName || (s.type === "custom" ? "Custom Appointment" : "Individual session")}
+            {s.batchName || (s.type === "custom" ? "Appointment with" : "Individual session")}
           </Text>
           <Text style={styles.sessionMeta}>{sub}</Text>
         </View>
         <View style={{ alignItems: "flex-end", gap: 4 }}>
-          {s.type === "custom"
+          {/* {s.type === "custom"
             ? (
               <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
                 <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom</Text>
@@ -148,7 +153,7 @@ function SessionRow({ s, past, onPress, specMeta }) {
                   <Text style={[styles.chipText, { color: spec.color }]}>{spec.label}</Text>
                 </View>
               )
-            )}
+            )} */}
           {tm && (
             <View style={[styles.chip, { backgroundColor: tm.bg }]}>
               <Text style={[styles.chipText, { color: tm.color }]}>{tm.label}</Text>
@@ -160,7 +165,31 @@ function SessionRow({ s, past, onPress, specMeta }) {
     </TouchableOpacity>
   );
 }
-
+function ActionRow({ icon, bg, color, title, sub, onPress, disabled }) {
+  return (
+    <TouchableOpacity
+      style={[styles.actionItem, disabled && { opacity: 0.5 }]}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <View style={[styles.actionIcon, { backgroundColor: bg }]}>
+        <Feather name={icon} size={fontSize(18)} color={color} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={[
+            styles.actionItemTitle,
+            { color: color === "#7E22CE" ? "#0F172A" : color },
+          ]}
+        >
+          {title}
+        </Text>
+        <Text style={styles.actionItemSub}>{sub}</Text>
+      </View>
+      <Feather name="chevron-right" size={fontSize(18)} color="#94A3B8" />
+    </TouchableOpacity>
+  );
+}
 export default function TherapistScheduleScreen({ navigation, route }) {
   const { therapistId, therapistName, isActive } = route.params || {};
   const insets = useSafeAreaInsets();
@@ -174,14 +203,34 @@ export default function TherapistScheduleScreen({ navigation, route }) {
   const [pastLimit, setPastLimit] = useState(PAGE);
   const [detail, setDetail] = useState(null);
   const [services, setServices] = useState([]);
+  const [acting, setActing] = useState(false);
+  const [postponeTarget, setPostponeTarget] = useState(null);
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerItems, setPickerItems] = useState([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const EMPTY_LIST = { items: [], page: 0, hasMore: true, loading: false, loaded: false };
+  const [upcomingState, setUpcomingState] = useState(EMPTY_LIST);
+  const [pastState, setPastState] = useState(EMPTY_LIST);
 
   const load = useCallback(
     async (isRefresh = false) => {
       try {
         isRefresh ? setRefreshing(true) : setLoading(true);
-        const res = await getTherapistSchedule(therapistId);
-        if (res?.success) setData(res.data);
-        else Alert.alert("Error", res?.message || "Could not load the schedule.");
+        const res = await getTherapistSchedule(therapistId, { page: 1, limit: PAGE });
+        if (res?.success) {
+          const { upcoming, ...meta } = res.data;
+          setData(meta);
+          setUpcomingState({
+            items: upcoming.items,
+            page: 1,
+            hasMore: upcoming.hasMore,
+            loading: false,
+            loaded: true,
+          });
+          setPastState(EMPTY_LIST); // past reloads when its tab opens
+        } else Alert.alert("Error", res?.message || "Could not load the schedule.");
       } catch (e) {
         Alert.alert("Error", e?.response?.data?.message || "Could not load the schedule.");
       } finally {
@@ -191,6 +240,43 @@ export default function TherapistScheduleScreen({ navigation, route }) {
     },
     [therapistId],
   );
+  const loadMore = useCallback(
+    async (section) => {
+      const state = section === "upcoming" ? upcomingState : pastState;
+      const setState = section === "upcoming" ? setUpcomingState : setPastState;
+      if (state.loading || !state.hasMore) return;
+
+      setState((p) => ({ ...p, loading: true }));
+      try {
+        const next = state.page + 1;
+        const res = await getTherapistSchedule(therapistId, { section, page: next, limit: PAGE });
+        if (res?.success) {
+          setState((p) => ({
+            items: [...p.items, ...res.data.items],
+            page: next,
+            hasMore: res.data.hasMore,
+            loading: false,
+            loaded: true,
+          }));
+        } else {
+          setState((p) => ({ ...p, loading: false }));
+        }
+      } catch (e) {
+        setState((p) => ({ ...p, loading: false }));
+      }
+    },
+    [therapistId, upcomingState, pastState],
+  );
+
+  useEffect(() => {
+    if (tab === "past" && !pastState.loaded && !pastState.loading) loadMore("past");
+  }, [tab, pastState.loaded, pastState.loading, loadMore]);
+
+  const onScroll = ({ nativeEvent }) => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    const nearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 200;
+    if (nearBottom && (tab === "upcoming" || tab === "past")) loadMore(tab);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -228,9 +314,9 @@ export default function TherapistScheduleScreen({ navigation, route }) {
   );
 
   const today = data?.today || dateToKey(new Date());
-  const upcoming = data?.upcoming || [];
+  const upcoming = upcomingState.items;
+  const past = pastState.items;
   const therapistActive = data?.therapist?.isActive ?? isActive ?? true;
-  const past = data?.past || [];
   const availability = data?.availability || [];
   const specialties = data?.therapist?.specialties || [];
 
@@ -286,6 +372,99 @@ export default function TherapistScheduleScreen({ navigation, route }) {
     if (!therapistActive) return;
     navigation.navigate("TherapistAvailability", { therapistId, therapistName });
   };
+  const confirmAction = ({ title, message, confirmText, call, success }) =>
+    Alert.alert(title, message, [
+      { text: "Keep", style: "cancel" },
+      {
+        text: confirmText,
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setActing(true);
+            const res = await call();
+            if (!res?.success)
+              return Alert.alert(
+                "Could not complete",
+                res?.message || "Please try again.",
+              );
+            setDetail(null);
+            await load(1);
+            Alert.alert("Done", success);
+          } catch (e) {
+            Alert.alert(
+              "Could not complete",
+              e?.response?.data?.message || "Please try again.",
+            );
+          } finally {
+            setActing(false);
+          }
+        },
+      },
+    ]);
+
+  const cancelAppointment = (s) => {
+    const childId = s.children?.[0]?.childId;
+    if (!childId) return;
+    confirmAction({
+      title: "Cancel appointment",
+      message: `Cancel the appointment on ${prettyFull(s.date)}? It stays in the list as cancelled.`,
+      confirmText: "Cancel appointment",
+      call: () => cancelChildCustomAppointment(childId, s.id),
+      success: "Appointment cancelled.",
+    });
+  };
+
+  const deleteAppointment = (s) => {
+    const childId = s.children?.[0]?.childId;
+    if (!childId) return;
+    confirmAction({
+      title: "Delete appointment",
+      message: `Permanently delete the appointment on ${prettyFull(s.date)}?`,
+      confirmText: "Delete",
+      call: () => deleteChildCustomAppointment(childId, s.id),
+      success: "Appointment deleted.",
+    });
+  };
+
+  const postponeAppointment = (s) => {
+    setDetail(null);
+    setTimeout(() => setPostponeTarget(s), Platform.OS === "ios" ? 400 : 0);
+  };
+
+  useEffect(() => {
+    if (!pickerOpen) return undefined;
+    let alive = true;
+    setPickerLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await getUsersByRole({ role: "Child", search: pickerSearch.trim() });
+        if (alive) setPickerItems(res?.data || []);
+      } catch (e) {
+        if (alive) setPickerItems([]);
+      } finally {
+        if (alive) setPickerLoading(false);
+      }
+    }, 250);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [pickerOpen, pickerSearch]);
+
+  const openPicker = () => {
+    setPickerSearch("");
+    setPickerItems([]);
+    setPickerOpen(true);
+  };
+
+  const pickChild = (c) => {
+    setPickerOpen(false);
+    navigation.navigate("ChildCustomAppointment", {
+      childId: c._id || c.id,
+      childName: c.fullName || c.name,
+      therapistIdByScreen:therapistId
+    });
+  };
 
   if (loading) {
     return (
@@ -302,6 +481,8 @@ export default function TherapistScheduleScreen({ navigation, route }) {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={200}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -335,19 +516,24 @@ export default function TherapistScheduleScreen({ navigation, route }) {
 
           <View style={styles.statsRow}>
             <View style={styles.stat}>
-              <Text style={styles.statValue}>{activeUpcoming.length}</Text>
+              <Text style={styles.statValue}>{data?.upcomingTotal ?? 0}</Text>
               <Text style={styles.statLabel}>Upcoming</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.stat}>
+              <Text style={styles.statValue}>{data?.pastTotal ?? 0}</Text>
+              <Text style={styles.statLabel}>Past ({data?.pastDays || 90}d)</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
               <Text style={styles.statValue}>{therapistActive ? `${weeklyHours}h` : "—"}</Text>
               <Text style={styles.statLabel}>Weekly hours</Text>
             </View>
-            <View style={styles.statDivider} />
+            {/* <View style={styles.statDivider} />
             <View style={styles.stat}>
               <Text style={styles.statValue}>{batchCount}</Text>
               <Text style={styles.statLabel}>Batches</Text>
-            </View>
+            </View> */}
           </View>
         </View>
 
@@ -437,7 +623,7 @@ export default function TherapistScheduleScreen({ navigation, route }) {
                 <Feather name="calendar" size={fontSize(34)} color="#94A3B8" />
                 <Text style={styles.emptyTitle}>No upcoming sessions</Text>
                 <Text style={styles.emptySub}>
-                  Sessions appear here once this therapist is added to a batch schedule.
+                  Sessions appear here once this therapist have appointments with child.
                 </Text>
               </View>
             )
@@ -454,39 +640,37 @@ export default function TherapistScheduleScreen({ navigation, route }) {
                 </View>
               ))
             ))}
+            {tab === "upcoming" && upcomingState.loading && (
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
+            )}
 
         {/* ---------- PAST ---------- */}
-        {tab === "past"
-          && (past.length === 0
-            ? (
-              <View style={styles.empty}>
-                <Feather name="clock" size={fontSize(34)} color="#94A3B8" />
-                <Text style={styles.emptyTitle}>No past sessions</Text>
-                <Text style={styles.emptySub}>Showing the last {data?.pastDays || 90} days.</Text>
-              </View>
-            )
-            : (
-              <>
-                <Text style={styles.hint}>Showing the last {data?.pastDays || 90} days.</Text>
-                {groupByDate(past.slice(0, pastLimit)).map((g) => (
-                  <View key={g.date} style={styles.dayGroup}>
-                    <View style={styles.dayHeader}>
-                      <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
-                    </View>
-                    {g.items.map((s) => <SessionRow key={s.id} s={s} past onPress={setDetail} specMeta={specMeta} />)}
+        {tab === "past" && (
+          !pastState.loaded ? (
+            <ActivityIndicator color={colors.primary} style={{ marginVertical: 30 }} />
+          ) : past.length === 0 ? (
+            <View style={styles.empty}>
+              <Feather name="clock" size={fontSize(34)} color="#94A3B8" />
+              <Text style={styles.emptyTitle}>No past sessions</Text>
+              <Text style={styles.emptySub}>Showing the last {data?.pastDays || 90} days.</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.hint}>Showing the last {data?.pastDays || 90} days.</Text>
+              {groupByDate(past).map((g) => (
+                <View key={g.date} style={styles.dayGroup}>
+                  <View style={styles.dayHeader}>
+                    <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
                   </View>
-                ))}
-                {past.length > pastLimit && (
-                  <TouchableOpacity
-                    style={styles.moreBtn}
-                    onPress={() =>
-                      setPastLimit((n) => n + PAGE)}
-                  >
-                    <Text style={styles.moreBtnText}>Show more ({past.length - pastLimit} left)</Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            ))}
+                  {g.items.map((s) => <SessionRow key={s.id} s={s} past onPress={setDetail} specMeta={specMeta} />)}
+                </View>
+              ))}
+              {pastState.loading && (
+                <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
+              )}
+            </>
+          )
+        )}
       </ScrollView>
 
       {/* session details */}
@@ -515,7 +699,7 @@ export default function TherapistScheduleScreen({ navigation, route }) {
                 </View>
 
                 <View style={styles.chipRow}>
-                  {detail.type === "custom"
+                  {/* {detail.type === "custom"
                     ? (
                       <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
                         <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom Appointment</Text>
@@ -529,7 +713,7 @@ export default function TherapistScheduleScreen({ navigation, route }) {
                           </Text>
                         </View>
                       )
-                    )}
+                    )} */}
                   <View style={[styles.chip, { backgroundColor: TYPE_META[detail.sessionType]?.bg || "#F1F5F9" }]}>
                     <Text style={[styles.chipText, { color: TYPE_META[detail.sessionType]?.color || "#475569" }]}>
                       {TYPE_META[detail.sessionType]?.label || "Regular"}
@@ -538,35 +722,184 @@ export default function TherapistScheduleScreen({ navigation, route }) {
                 </View>
 
                 <Text style={styles.sheetBatch}>
-                  {detail.type === "custom" ? "Type: Individual / Custom" : `Batch: ${detail.batchName || "N/A"}`}
+                  {detail.type === "custom" ? "Type: Individual " : `Batch: ${detail.batchName || "N/A"}`}
                 </Text>
-
-                <Text style={styles.sheetSection}>Children ({detail.children.length})</Text>
-                <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
-                  {detail.children.length === 0 ? <Text style={styles.muted}>No children in this session.</Text> : (
+                {(detail.children.length === 0 || detail.children.length > 1) && (
+                  <Text style={styles.sheetSection}>Children ({detail.children.length})</Text>
+                )}
+                <View>
+                  {detail.children.length === 0 ? (
+                    <Text style={styles.muted}>No children in this session.</Text>
+                  ) : detail.children.length === 1 ? (
+                    <View style={styles.childRow}>
+                      <Text style={styles.childLabel}>Child Name</Text>
+                      <Text style={styles.childName}>
+                        {detail.children[0].fullName}
+                      </Text>
+                    </View>
+                  ) : (
                     detail.children.map((c, index) => {
                       const a = ATTENDANCE_META[c.attendance] || ATTENDANCE_META.Pending;
+
                       return (
                         <View key={`${c.childId}-${index}`} style={styles.childRow}>
                           <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>{(c.fullName || "?").slice(0, 1).toUpperCase()}</Text>
+                            <Text style={styles.avatarText}>
+                              {(c.fullName || "?").slice(0, 1).toUpperCase()}
+                            </Text>
                           </View>
-                          <Text style={[styles.childName, { flex: 1 }]}>{c.fullName}</Text>
+
+                          <Text style={[styles.childName, { flex: 1 }]}>
+                            {c.fullName}
+                          </Text>
+
                           {(detail.isPast || c.attendance !== "Pending") && (
                             <View style={[styles.chip, { backgroundColor: a.bg }]}>
-                              <Text style={[styles.chipText, { color: a.color }]}>{a.label}</Text>
+                              <Text style={[styles.chipText, { color: a.color }]}>
+                                {a.label}
+                              </Text>
                             </View>
                           )}
                         </View>
                       );
                     })
                   )}
-                </ScrollView>
+                </View>
+                {detail.type === "custom" && (
+                  <View>
+                    {detail.canPostpone ||
+                      detail.canCancel ||
+                      !detail.isPast ? (
+                      <>
+                        <Text style={styles.sheetSection}>Actions</Text>
+                        {acting && (
+                          <ActivityIndicator
+                            color={colors.primary}
+                            style={{ marginTop: 10 }}
+                          />
+                        )}
+                        {detail.canPostpone && (
+                          <ActionRow
+                            icon="calendar"
+                            bg="#F3E8FF"
+                            color="#7E22CE"
+                            disabled={acting}
+                            title="Postpone"
+                            sub="Choose a new date and available time"
+                            onPress={() => postponeAppointment(detail)}
+                          />
+                        )}
+                        {detail.canCancel && (
+                          <ActionRow
+                            icon="x-circle"
+                            bg="#FEF3C7"
+                            color="#B45309"
+                            disabled={acting}
+                            title="Cancel appointment"
+                            sub="Keep it in history as cancelled"
+                            onPress={() => cancelAppointment(detail)}
+                          />
+                        )}
+                        {!detail.isPast && (
+                          <ActionRow
+                            icon="trash-2"
+                            bg="#FEE2E2"
+                            color="#DC2626"
+                            disabled={acting}
+                            title="Delete"
+                            sub="Remove this appointment completely"
+                            onPress={() => deleteAppointment(detail)}
+                          />
+                        )}
+                      </>
+                    ) : (
+                      <View style={styles.pastInfo}>
+                        <Feather
+                          name="lock"
+                          size={fontSize(18)}
+                          color="#64748B"
+                        />
+                        <Text style={styles.pastInfoText}>
+                          This is a past appointment and can no longer be
+                          changed.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
               </>
             )}
           </View>
         </View>
       </Modal>
+      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
+          <View style={styles.overlay}>
+            <View style={styles.sheet}>
+              <View style={styles.sheetHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sheetTitle}>New appointment</Text>
+                  <Text style={styles.sheetSub}>Select the child first</Text>
+                </View>
+                <TouchableOpacity onPress={() => setPickerOpen(false)}>
+                  <Feather name="x" size={22} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.searchBox, { marginTop: 8 }]}>
+                <Feather name="search" size={18} color="#94A3B8" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search child..."
+                  placeholderTextColor="#94A3B8"
+                  value={pickerSearch}
+                  onChangeText={setPickerSearch}
+                />
+              </View>
+
+              {pickerLoading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 10 }} />}
+
+              <ScrollView style={{ maxHeight: 340, marginTop: 6 }} keyboardShouldPersistTaps="handled">
+                {!pickerLoading && pickerItems.length === 0 && <Text style={styles.muted}>No children found.</Text>}
+                {pickerItems.map((c) => (
+                  <TouchableOpacity
+                    key={c._id || c.id}
+                    style={styles.pickRow}
+                    onPress={() => pickChild(c)}
+                  >
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{(c.fullName || c.name || "?").slice(0, 1).toUpperCase()}</Text>
+                    </View>
+                    <Text style={[styles.childName, { flex: 1 }]}>{c.fullName || c.name}</Text>
+                    <Feather name="chevron-right" size={18} color="#94A3B8" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+      <TouchableOpacity
+        style={[styles.fab]}
+        activeOpacity={0.85}
+        onPress={openPicker}
+      >
+        <Feather name="plus" size={fontSize(27)} color="#FFFFFF" />
+        <Text style={styles.fabText}></Text>
+      </TouchableOpacity>
+      <PostponeCustomModal
+        visible={!!postponeTarget}
+        childId={postponeTarget?.children?.[0]?.childId}
+        appointment={postponeTarget}
+        onClose={() => setPostponeTarget(null)}
+        onDone={() => {
+          setPostponeTarget(null);
+          load(1);
+        }}
+      />
     </View>
   );
 }
@@ -674,7 +1007,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
-    marginTop: hp(16),
+    marginTop: hp(5),
     marginBottom: wp(4),
   },
   childRow: {
@@ -723,5 +1056,90 @@ const styles = StyleSheet.create({
     color: "#64748B",
     textAlign: "center",
     lineHeight: 18,
+  },
+  actionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 13,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+    gap: 12,
+  },
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionItemTitle: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+  },
+  actionItemSub: {
+    fontSize: fontSize(11),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  pastInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    padding: 12,
+  },
+  pastInfoText: {
+    flex: 1,
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+  },
+  childLabel: {
+    flex: 1,
+    fontSize: fontSize(14),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+  },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: hp(46),
+  },
+  searchInput: { flex: 1, fontSize: fontSize(14), color: "#0F172A" },
+  fab: {
+    position: "absolute",
+    right: 30,
+    bottom: 20,
+    height: hp(55),
+    paddingHorizontal: wp(16),
+    // paddingVertical: wp(30),
+    borderRadius: wp(15),
+    backgroundColor: colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+  },
+  fabText: { fontSize: fontSize(11), fontFamily: fonts.semiBold, color: "#FFFFFF", lineHeight: 20 },
+  pickRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
 });
