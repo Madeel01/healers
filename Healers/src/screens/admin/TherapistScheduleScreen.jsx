@@ -136,19 +136,12 @@ function SessionRow({ s, past, onPress, specMeta }) {
           <Text style={styles.sessionMeta}>{sub}</Text>
         </View>
         <View style={{ alignItems: "flex-end", gap: 4 }}>
-          {s.type === "custom"
-            ? (
-              <View style={[styles.chip, { backgroundColor: "#F3E8FF" }]}>
-                <Text style={[styles.chipText, { color: "#6B21A8" }]}>Custom</Text>
-              </View>
-            )
-            : (
-              spec && (
+          {spec && (
                 <View style={[styles.chip, { backgroundColor: spec.bg }]}>
                   <Text style={[styles.chipText, { color: spec.color }]}>{spec.label}</Text>
                 </View>
               )
-            )}
+            }
           {tm && (
             <View style={[styles.chip, { backgroundColor: tm.bg }]}>
               <Text style={[styles.chipText, { color: tm.color }]}>{tm.label}</Text>
