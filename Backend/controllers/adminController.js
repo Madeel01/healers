@@ -2816,6 +2816,7 @@ exports.getTherapistSchedule = async (req, res) => {
 
 exports.childUsers = async (req, res) => {
   try {
+    const adminId = req.user.id || req.user._id;
     const { page = 1, limit = 5, search = "", status = "active" } = req.query;
     const pageNum = Math.max(parseInt(page, 10) || 1, 1);
     const limitNum = Math.min(parseInt(limit, 10) || 5, 50);
@@ -2837,6 +2838,7 @@ exports.childUsers = async (req, res) => {
         fullName: 1, fatherName: 1, fatherCnic: 1, age: 1, email: 1, phone: 1,
         packageId: 1, discountedPrice: 1, isActive: 1,
         dateOfBirth: 1, gender: 1, diagnosis: 1, documents: 1, address: 1,
+        profileImage: 1, isOnline: 1, lastActive: 1,
       })
         .populate("packageId", "name price type")
         .sort({ createdAt: -1 })
@@ -2845,9 +2847,37 @@ exports.childUsers = async (req, res) => {
         .lean(),
     ]);
 
+    const adminObjectId = new mongoose.Types.ObjectId(adminId);
+    const childIds = children.map((c) => c._id);
+
+    const conversations = childIds.length
+      ? await Conversation.find({
+          $and: [
+            { participants: adminObjectId },
+            { participants: { $in: childIds } },
+            { participants: { $size: 2 } },
+          ],
+        })
+          .select("_id participants")
+          .lean()
+      : [];
+
+    const conversationByChild = {};
+    for (const conv of conversations) {
+      const other = conv.participants.find(
+        (p) => String(p) !== String(adminObjectId),
+      );
+      if (other) conversationByChild[String(other)] = conv._id;
+    }
+
+    const data = children.map((child) => ({
+      ...child,
+      conversationId: conversationByChild[String(child._id)] ?? null,
+    }));
+
     return res.status(200).json({
       success: true,
-      data: children,
+      data,
       hasMore: pageNum * limitNum < totalCount,
       totalCount,
     });

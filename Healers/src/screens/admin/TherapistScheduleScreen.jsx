@@ -9,6 +9,7 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -55,7 +56,27 @@ const FULL_DAY = {
   Sun: "Sunday",
 };
 const PAGE = 20;
-
+const AVATAR_COLORS = [
+  "#0B4A6F",
+  "#7C3AED",
+  "#DC2626",
+  "#059669",
+  "#D97706",
+  "#DB2777",
+  "#2563EB",
+  "#0891B2",
+  "#65A30D",
+  "#9333EA",
+  "#EA580C",
+  "#0D9488",
+];
+const getAvatarColor = (str = "") => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
 const TABS = [
   { id: "availability", label: "Availability" },
   { id: "upcoming", label: "Upcoming" },
@@ -106,7 +127,32 @@ const attendanceSummary = (children = []) => {
   const pending = children.length - present - absent;
   return { present, absent, pending };
 };
+const Avatar = ({ uri, name, color, style, textStyle }) => {
+  const [failed, setFailed] = useState(false);
 
+  useEffect(() => {
+    setFailed(false);
+  }, [uri]);
+
+  if (uri && !failed) {
+    return (
+      <Image
+        source={{ uri }}
+        style={[style, { backgroundColor: color }]}
+        resizeMode="cover"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <View style={[style, { backgroundColor: color }]}>
+      <Text style={textStyle}>
+        {name?.trim()?.charAt(0)?.toUpperCase() || "?"}
+      </Text>
+    </View>
+  );
+};
 function SessionRow({ s, past, onPress, specMeta }) {
   const spec = s.speciality
     ? specMeta(s.speciality)
@@ -743,11 +789,13 @@ export default function TherapistScheduleScreen({ navigation, route }) {
 
                       return (
                         <View key={`${c.childId}-${index}`} style={styles.childRow}>
-                          <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>
-                              {(c.fullName || "?").slice(0, 1).toUpperCase()}
-                            </Text>
-                          </View>
+                          <Avatar
+                            uri={c.profileImage}
+                            name={c.fullName || c.name}
+                            color={getAvatarColor(c.fullName || c.name)}
+                            style={styles.avatar}
+                            textStyle={styles.avatarText}
+                          />
 
                           <Text style={[styles.childName, { flex: 1 }]}>
                             {c.fullName}
@@ -870,9 +918,13 @@ export default function TherapistScheduleScreen({ navigation, route }) {
                     style={styles.pickRow}
                     onPress={() => pickChild(c)}
                   >
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{(c.fullName || c.name || "?").slice(0, 1).toUpperCase()}</Text>
-                    </View>
+                    <Avatar
+                      uri={c.profileImage}
+                      name={c.fullName || c.name}
+                      color={getAvatarColor(c.fullName || c.name)}
+                      style={styles.avatar}
+                      textStyle={styles.avatarText}
+                    />
                     <Text style={[styles.childName, { flex: 1 }]}>{c.fullName || c.name}</Text>
                     <Feather name="chevron-right" size={18} color="#94A3B8" />
                   </TouchableOpacity>
@@ -1027,7 +1079,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#0B4A6F" },
+  avatarText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#f3f5f7" },
   inactiveBadge: {
     flexDirection: "row",
     alignItems: "center",

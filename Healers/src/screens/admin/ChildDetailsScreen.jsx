@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
@@ -42,11 +42,11 @@ const formatDob = (v) => {
   return isNaN(d.getTime())
     ? "-"
     : d.toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        timeZone: "UTC",
-      });
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    });
 };
 
 const formatCnic = (c = "") =>
@@ -174,7 +174,53 @@ async function downloadAndOpen(doc, onProgress) {
     });
   }
 }
+const AVATAR_COLORS = [
+  "#0B4A6F",
+  "#7C3AED",
+  "#DC2626",
+  "#059669",
+  "#D97706",
+  "#DB2777",
+  "#2563EB",
+  "#0891B2",
+  "#65A30D",
+  "#9333EA",
+  "#EA580C",
+  "#0D9488",
+];
+const getAvatarColor = (str = "") => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
+const Avatar = ({ uri, name, color, style, textStyle }) => {
+  const [failed, setFailed] = useState(false);
 
+  useEffect(() => {
+    setFailed(false);
+  }, [uri]);
+
+  if (uri && !failed) {
+    return (
+      <Image
+        source={{ uri }}
+        style={[style, { backgroundColor: color }]}
+        resizeMode="cover"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <View style={[style, { backgroundColor: color }]}>
+      <Text style={textStyle}>
+        {name?.trim()?.charAt(0)?.toUpperCase() || "?"}
+      </Text>
+    </View>
+  );
+};
 
 const Row = ({ icon, label, value }) => (
   <View style={styles.row}>
@@ -268,9 +314,13 @@ export default function ChildDetailsScreen({ navigation, route }) {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{child.name?.trim()?.charAt(0)?.toUpperCase() || "?"}</Text>
-          </View>
+          <Avatar
+            uri={child.profileImage}
+            name={child.fullName || child.name}
+            color={getAvatarColor(child.fullName || child.name)}
+            style={styles.avatar}
+            textStyle={styles.avatarText}
+          />
           <Text style={styles.name}>{child.name}</Text>
           <View style={[styles.badge, active ? styles.badgeOn : styles.badgeOff]}>
             <View style={[styles.dot, { backgroundColor: active ? "#16A34A" : "#EF4444" }]} />
@@ -342,21 +392,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
   },
-  iconBtn: { width:wp(44), height:hp(44), alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize:fontSize(16), fontFamily: fonts.semiBold, color: colors.primary },
+  iconBtn: { width: wp(44), height: hp(44), alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: fontSize(16), fontFamily: fonts.semiBold, color: colors.primary },
   content: { padding: 16, paddingBottom: 40 },
 
   hero: { alignItems: "center", marginBottom: 16 },
   avatar: {
-    width:wp(72),
-    height:hp(72),
+    width: wp(72),
+    height: hp(72),
     borderRadius: wp(20),
     backgroundColor: "#0B4A6F",
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { color: "#FFFFFF", fontSize:fontSize(30), fontWeight: "700" },
-  name: { marginTop: 10, fontSize:fontSize(20), fontFamily: fonts.semiBold, color: "#0F172A", textAlign: "center" },
+  avatarText: { color: "#FFFFFF", fontSize: fontSize(30), fontWeight: "700" },
+  name: { marginTop: 10, fontSize: fontSize(20), fontFamily: fonts.semiBold, color: "#0F172A", textAlign: "center" },
   badge: {
     flexDirection: "row",
     alignItems: "center",
@@ -369,8 +419,8 @@ const styles = StyleSheet.create({
   },
   badgeOn: { backgroundColor: "#F0FDF4", borderColor: "#BBF7D0" },
   badgeOff: { backgroundColor: "#FEF2F2", borderColor: "#FECACA" },
-  dot: { width:wp(6), height:hp(6), borderRadius: wp(3) },
-  badgeText: { fontSize:fontSize(12), fontFamily: fonts.semiBold },
+  dot: { width: wp(6), height: hp(6), borderRadius: wp(3) },
+  badgeText: { fontSize: fontSize(12), fontFamily: fonts.semiBold },
 
   card: {
     backgroundColor: "#FFFFFF",
@@ -379,17 +429,17 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     elevation: 2,
     shadowColor: "#000",
-    shadowOffset: { width:wp(0), height:hp(2) },
+    shadowOffset: { width: wp(0), height: hp(2) },
     shadowOpacity: 0.04,
     shadowRadius: 8,
   },
-  cardTitle: { fontSize:fontSize(15), fontFamily: fonts.semiBold, color: "#0B4A6F", marginBottom: 10 },
+  cardTitle: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#0B4A6F", marginBottom: 10 },
   row: { flexDirection: "row", gap: 12, paddingVertical: 8 },
-  rowLabel: { fontSize:fontSize(12), color: "#64748B" },
-  rowValue: { fontSize:fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 2 },
-  muted: { fontSize:fontSize(13), color: "#94A3B8" },
+  rowLabel: { fontSize: fontSize(12), color: "#64748B" },
+  rowValue: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 2 },
+  muted: { fontSize: fontSize(13), color: "#94A3B8" },
 
-  sectionTitle: { fontSize:fontSize(16), fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 6, marginBottom: 10 },
+  sectionTitle: { fontSize: fontSize(16), fontFamily: fonts.semiBold, color: "#0F172A", marginTop: 6, marginBottom: 10 },
   docCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: wp(20),
@@ -397,12 +447,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     elevation: 2,
     shadowColor: "#000",
-    shadowOffset: { width:wp(0), height:hp(2) },
+    shadowOffset: { width: wp(0), height: hp(2) },
     shadowOpacity: 0.04,
     shadowRadius: 8,
   },
-  docLabel: { fontSize:fontSize(15), fontFamily: fonts.semiBold, color: "#0F172A" },
-  docHint: { fontSize:fontSize(12), color: "#64748B", marginTop: 2, marginBottom: 10 },
+  docLabel: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#0F172A" },
+  docHint: { fontSize: fontSize(12), color: "#64748B", marginTop: 2, marginBottom: 10 },
   docFile: {
     flexDirection: "row",
     alignItems: "center",
@@ -411,10 +461,10 @@ const styles = StyleSheet.create({
     borderRadius: wp(12),
     backgroundColor: "#F1F5F9",
   },
-  docThumb: { width:wp(52), height:hp(52), borderRadius: wp(8), backgroundColor: "#E2E8F0" },
+  docThumb: { width: wp(52), height: hp(52), borderRadius: wp(8), backgroundColor: "#E2E8F0" },
   docThumbPdf: { alignItems: "center", justifyContent: "center", backgroundColor: "#FEE2E2" },
-  docName: { fontSize:fontSize(13), fontWeight: "600", color: "#334155" },
-  docMeta: { fontSize:fontSize(11), color: "#64748B", marginTop: 2 },
+  docName: { fontSize: fontSize(13), fontWeight: "600", color: "#334155" },
+  docMeta: { fontSize: fontSize(11), color: "#64748B", marginTop: 2 },
   docEmpty: {
     padding: 14,
     borderRadius: wp(12),
@@ -423,5 +473,5 @@ const styles = StyleSheet.create({
     borderColor: "#CBD5E1",
     alignItems: "center",
   },
-  docEmptyText: { fontSize:fontSize(13), color: "#94A3B8" },
+  docEmptyText: { fontSize: fontSize(13), color: "#94A3B8" },
 });

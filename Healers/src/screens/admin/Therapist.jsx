@@ -16,12 +16,13 @@ import {
   Share,
   StyleSheet,
   Text,
+  Image,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { adminLoginAsUserApi } from '../../api/authApi';
 import Feather from '@expo/vector-icons/Feather';
 
 import {
@@ -67,7 +68,32 @@ const getAvatarColor = (str = "") => {
   const index = Math.abs(hash) % AVATAR_COLORS.length;
   return AVATAR_COLORS[index];
 };
+const Avatar = ({ uri, name, color, style, textStyle }) => {
+  const [failed, setFailed] = useState(false);
 
+  useEffect(() => {
+    setFailed(false);
+  }, [uri]);
+
+  if (uri && !failed) {
+    return (
+      <Image
+        source={{ uri }}
+        style={[style, { backgroundColor: color }]}
+        resizeMode="cover"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <View style={[style, { backgroundColor: color }]}>
+      <Text style={textStyle}>
+        {name?.trim()?.charAt(0)?.toUpperCase() || "?"}
+      </Text>
+    </View>
+  );
+};
 const STATUS_FILTERS = [
   { label: "All", value: "all" },
   { label: "Active", value: "active" },
@@ -108,7 +134,7 @@ const SegmentedToggle = ({ options, value, onChange }) => (
   </View>
 );
 export default function TherapistsScreen({ navigation }) {
-  const { user } = useContext(AuthContext);
+  const { user, loginAsUser } = useContext(AuthContext);
   const userId = user?.id;
   const insets = useSafeAreaInsets();
   const [therapists, setTherapists] = useState([]);
@@ -127,6 +153,7 @@ export default function TherapistsScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [touchedChildIds, setTouchedChildIds] = useState([]);
   const [services, setServices] = useState([]);
+  const [loginLoadingId, setLoginLoadingId] = useState(null);
 
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -739,6 +766,33 @@ export default function TherapistsScreen({ navigation }) {
     setPhoneTouched(true);
     setNewTherapist({ ...newTherapist, phone: value })
   };
+  const handleLoginAsTherapist = async (therapist) => {
+    if (!therapist?.id || loginLoadingId) return;
+
+    if (therapist.isActive === false) {
+      Alert.alert("Inactive Therapist", "Reactivate this therapist before logging in as them.");
+      return;
+    }
+
+    try {
+      setLoginLoadingId(therapist.id);
+
+      const response = await adminLoginAsUserApi(therapist.id);
+
+      if (!response?.success || !response?.token || !response?.user) {
+        throw new Error(response?.message || "Unable to login as selected user");
+      }
+
+      await loginAsUser(response.token, response.user);
+    } catch (error) {
+      Alert.alert(
+        "Login Failed",
+        error?.response?.data?.message || error?.message || "Unable to switch user",
+      );
+    } finally {
+      setLoginLoadingId(null);
+    }
+  };
 
   return (
     <View
@@ -859,11 +913,13 @@ export default function TherapistsScreen({ navigation }) {
                   style={styles.therapistAvatar}
                 /> */
                 }
-                <View style={[styles.therapistAvatarInitial, { backgroundColor: avatarColor }]}>
-                  <Text style={styles.therapistAvatarInitialText}>
-                    {therapist.name?.trim()?.charAt(0)?.toUpperCase() || "?"}
-                  </Text>
-                </View>
+                <Avatar
+                  uri={therapist.profileImage}
+                  name={therapist.name}
+                  color={avatarColor}
+                  style={styles.therapistAvatarInitial}
+                  textStyle={styles.therapistAvatarInitialText}
+                />
                 <View style={styles.therapistInfo}>
                   <View style={{ flexDirection: "row", alignItems: "center", flex: 1, flexWrap: "wrap" }}>
                     <Text style={styles.therapistName} numberOfLines={1} ellipsizeMode="tail">
@@ -996,7 +1052,7 @@ export default function TherapistsScreen({ navigation }) {
                 >
                   <Text style={styles.scheduleButtonText}>View Schedule</Text>
                 </TouchableOpacity>
-
+                
                 <TouchableOpacity
                   style={styles.mailButton}
                   onPress={() =>
@@ -1011,6 +1067,15 @@ export default function TherapistsScreen({ navigation }) {
                     })}
                 >
                   <Feather name="mail" size={20} color="#0B4A6F" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.loginButton, !!loginLoadingId && { opacity: 0.6 }]}
+                  disabled={!!loginLoadingId}
+                  onPress={() => handleLoginAsTherapist(therapist)}
+                >
+                  {loginLoadingId === therapist.id
+                    ? <ActivityIndicator size="small" color="#0B4A6F" />
+                    : <Feather name="log-in" size={20} color="#0B4A6F" />}
                 </TouchableOpacity>
               </View>
             </View>
@@ -1630,18 +1695,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   therapistAvatarInitial: {
-    width: wp(64),
-    height: hp(64),
-    borderRadius: wp(16),
-    marginRight: wp(14),
-    alignItems: "center",
-    justifyContent: "center",
+    width: wp(56),
+        height: hp(56),
+        borderRadius: wp(14),
+        marginRight: wp(14),
+        alignItems: "center",
+        justifyContent: "center",
   },
   therapistAvatarInitialText: {
-    color: "#FFFFFF",
-    fontSize: fontSize(24),
-    fontFamily: fonts.bold,
-    lineHeight: 28,
+    color: "#FFFFFF", fontSize: fontSize(22), fontFamily: fonts.semiBold,lineHeight:18
   },
   therapistInfo: {
     flex: 1,
@@ -2163,5 +2225,15 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: "#EF4444",
     borderWidth: 1.5,
+  },
+  loginButton: {
+    width: wp(48),
+    height: hp(48),
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
   },
 });

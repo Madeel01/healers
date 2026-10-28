@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Modal,
   Platform,
   RefreshControl,
@@ -101,6 +102,53 @@ const truncateText = (text, maxLength = 15) => {
   return value.length > maxLength
     ? `${value.slice(0, maxLength)}...`
     : value;
+};
+const AVATAR_COLORS = [
+  "#0B4A6F",
+  "#7C3AED",
+  "#DC2626",
+  "#059669",
+  "#D97706",
+  "#DB2777",
+  "#2563EB",
+  "#0891B2",
+  "#65A30D",
+  "#9333EA",
+  "#EA580C",
+  "#0D9488",
+];
+const getAvatarColor = (str = "") => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
+const Avatar = ({ uri, name, color, style, textStyle }) => {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [uri]);
+
+  if (uri && !failed) {
+    return (
+      <Image
+        source={{ uri }}
+        style={[style, { backgroundColor: color }]}
+        resizeMode="cover"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <View style={[style, { backgroundColor: color }]}>
+      <Text style={textStyle}>
+        {name?.trim()?.charAt(0)?.toUpperCase() || "?"}
+      </Text>
+    </View>
+  );
 };
 // ---------- card (declared outside the screen so it never remounts) ----------
 const SessionCard = memo(function SessionCard({
@@ -448,7 +496,7 @@ export default function ScheduleScreen({ navigation }) {
       x: 0,
       animated: false,
     });
-  }, [scope, range, items]);
+  }, [scope, items]);
   return (
     <View style={styles.main}>
       {/* search + filters */}
@@ -627,9 +675,13 @@ export default function ScheduleScreen({ navigation }) {
                       const showChip = detail.isPast || c.attendance !== "Pending";
                       return (
                         <View key={`${c.childId}-${index}`} style={styles.childRow}>
-                          <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>{(c.fullName || "?").slice(0, 1).toUpperCase()}</Text>
-                          </View>
+                          <Avatar
+                            uri={c.profileImage}
+                            name={c.fullName || c.name}
+                            color={getAvatarColor(c.fullName || c.name)}
+                            style={styles.avatar}
+                            textStyle={styles.avatarText}
+                          />
                           <Text style={[styles.childName, { flex: 1 }]}>{c.fullName}</Text>
                           {showChip && (
                             <View style={[styles.chip, { backgroundColor: a.bg }]}>
@@ -721,9 +773,13 @@ export default function ScheduleScreen({ navigation }) {
                   style={styles.pickRow}
                   onPress={() => pickChild(c)}
                 >
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{(c.fullName || c.name || "?").slice(0, 1).toUpperCase()}</Text>
-                  </View>
+                  <Avatar
+                    uri={c.profileImage}
+                    name={c.fullName || c.name}
+                    color={getAvatarColor(c.fullName || c.name)}
+                    style={styles.avatar}
+                    textStyle={styles.avatarText}
+                  />
                   <Text style={[styles.childName, { flex: 1 }]}>{c.fullName || c.name}</Text>
                   <Feather name="chevron-right" size={18} color="#94A3B8" />
                 </TouchableOpacity>
@@ -929,7 +985,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#0B4A6F" },
+  avatarText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#edeff0" },
   actionItem: { flexDirection: "row", alignItems: "center", paddingVertical: 13, borderTopWidth: 1, borderTopColor: "#F1F5F9", gap: 12 },
   actionIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   actionItemTitle: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },

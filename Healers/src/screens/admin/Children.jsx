@@ -1,14 +1,11 @@
-import React, {
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Modal,
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -21,6 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import { useRoute } from '@react-navigation/native';
+import { adminLoginAsUserApi } from '../../api/authApi';
+import { AuthContext } from '../../context/AuthContext';
 
 import {
   childUsers,
@@ -87,7 +86,32 @@ const ACTIVE_OPTIONS = [
   { label: "Active", value: true },
   { label: "Inactive", value: false },
 ];
+const Avatar = ({ uri, name, color, style, textStyle }) => {
+  const [failed, setFailed] = useState(false);
 
+  useEffect(() => {
+    setFailed(false);
+  }, [uri]);
+
+  if (uri && !failed) {
+    return (
+      <Image
+        source={{ uri }}
+        style={[style, { backgroundColor: color }]}
+        resizeMode="cover"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <View style={[style, { backgroundColor: color }]}>
+      <Text style={textStyle}>
+        {name?.trim()?.charAt(0)?.toUpperCase() || "?"}
+      </Text>
+    </View>
+  );
+};
 const SegmentedToggle = ({ options, value, onChange }) => (
   <View style={styles.segmentWrap}>
     {options.map((opt) => {
@@ -108,6 +132,9 @@ const SegmentedToggle = ({ options, value, onChange }) => (
   </View>
 );
 export default function ChildrenScreen({ navigation }) {
+  const { user, loginAsUser } = useContext(AuthContext);
+  const userId = user?.id;
+  const [loginLoadingId, setLoginLoadingId] = useState(null);
   const insets = useSafeAreaInsets();
 
   const [children, setChildren] = useState([]);
@@ -250,6 +277,10 @@ export default function ChildrenScreen({ navigation }) {
         gender: child.gender || "",
         diagnosis: child.diagnosis || "",
         documents: child.documents || {},
+        conversationId: child.conversationId ?? null,
+        profileImage: child.profileImage || "",
+        isOnline: child.isOnline || false,
+        lastActive: child.lastActive,
       }));
 
       setHasMore(hasMoreData);
@@ -633,6 +664,33 @@ export default function ChildrenScreen({ navigation }) {
     isAddModalOpen,
     isEditMode,
   ]);
+  const handleLoginAsChild = async (child) => {
+    if (!child?.id || loginLoadingId) return;
+
+    if (child.isActive === false) {
+      Alert.alert("Inactive Child", "Reactivate this child before logging in as them.");
+      return;
+    }
+
+    try {
+      setLoginLoadingId(child.id);
+
+      const response = await adminLoginAsUserApi(child.id);
+
+      if (!response?.success || !response?.token || !response?.user) {
+        throw new Error(response?.message || "Unable to login as selected user");
+      }
+
+      await loginAsUser(response.token, response.user);
+    } catch (error) {
+      Alert.alert(
+        "Login Failed",
+        error?.response?.data?.message || error?.message || "Unable to switch user",
+      );
+    } finally {
+      setLoginLoadingId(null);
+    }
+  };
 
   return (
     <View
@@ -732,16 +790,13 @@ export default function ChildrenScreen({ navigation }) {
                 ]}
               >
                 <View style={styles.cardHeaderRow}>
-                  <View
-                    style={[
-                      styles.avatarInitial,
-                      { backgroundColor: avatarColor },
-                    ]}
-                  >
-                    <Text style={styles.avatarInitialText}>
-                      {child.name?.trim()?.charAt(0)?.toUpperCase() || "?"}
-                    </Text>
-                  </View>
+                  <Avatar
+                    uri={child.profileImage}
+                    name={child.name}
+                    color={avatarColor}
+                    style={styles.avatarInitial}
+                    textStyle={styles.avatarInitialText}
+                  />
 
                   <View style={styles.childInfo}>
                     <View style={styles.nameRow}>
@@ -762,10 +817,10 @@ export default function ChildrenScreen({ navigation }) {
                       <Text style={styles.contactText}>{child.email}</Text>
                     </View>
 
-                    <View style={styles.contactRow}>
+                    {/* <View style={styles.contactRow}>
                       <Feather name="phone" size={14} color="#64748B" />
                       <Text style={styles.contactText}>{child.phone}</Text>
-                    </View>
+                    </View> */}
                     {!!child.packageId && (
                       <View style={styles.packagePill}>
                         <Feather name="package" size={12} color="#0B4A6F" />
@@ -780,7 +835,6 @@ export default function ChildrenScreen({ navigation }) {
                     )}
                   </View>
 
-                  {/* MENU */}
                   <View
                     onTouchStart={() => {
                       menuTouchRef.current = true;
@@ -837,19 +891,47 @@ export default function ChildrenScreen({ navigation }) {
                     )}
                   </View>
                 </View>
-                <TouchableOpacity
-                  style={styles.scheduleButton}
-                  activeOpacity={0.85}
-                  onPress={() =>
-                    navigation.navigate("ChildSchedule", {
-                      childId: child.id,
-                      childName: child.name,
-                      isActive: child.isActive,
-                    })}
-                >
-                  <Feather name="calendar" size={16} color="#FFFFFF" />
-                  <Text style={styles.scheduleButtonText}>View Schedule</Text>
-                </TouchableOpacity>
+                <View style={styles.cardActionsRow}>
+                  <TouchableOpacity
+                    style={styles.scheduleButton}
+                    activeOpacity={0.85}
+                    onPress={() =>
+                      navigation.navigate("ChildSchedule", {
+                        childId: child.id,
+                        childName: child.name,
+                        isActive: child.isActive,
+                      })}
+                  >
+                    <Feather name="calendar" size={16} color="#FFFFFF" />
+                    <Text style={styles.scheduleButtonText}>View Schedule</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.iconActionButton}
+                    onPress={() =>
+                      navigation.navigate("ChatDetails", {
+                        conversationId: child.conversationId,
+                        receiverId: child.id,
+                        partnerName: child.name,
+                        partnerImage: child.profileImage,
+                        isOnline: child.isOnline,
+                        lastSeen: child.lastActive,
+                        currentUserId: userId,
+                      })}
+                  >
+                    <Feather name="mail" size={20} color="#0B4A6F" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.iconActionButton, !!loginLoadingId && { opacity: 0.6 }]}
+                    disabled={!!loginLoadingId}
+                    onPress={() => handleLoginAsChild(child)}
+                  >
+                    {loginLoadingId === child.id
+                      ? <ActivityIndicator size="small" color="#0B4A6F" />
+                      : <Feather name="log-in" size={20} color="#0B4A6F" />}
+                  </TouchableOpacity>
+                </View>
               </View>
             );
           })}
@@ -1627,5 +1709,26 @@ const styles = StyleSheet.create({
     fontSize: fontSize(11),
     fontFamily: fonts.semiBold,
     color: "#DC2626",
+  },
+  cardActionsRow: { flexDirection: "row", gap: 12, marginTop: 4 },
+  scheduleButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  iconActionButton: {
+    width: wp(48),
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
