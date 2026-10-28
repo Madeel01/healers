@@ -236,6 +236,8 @@ function UserFormModal({
   const [showPw, setShowPw] = useState(false);
   const [showCpw, setShowCpw] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const isPhoneValid = PHONE_RX.test(String(form.phone ?? ""));
 
   useEffect(() => {
     if (!visible) return;
@@ -251,6 +253,7 @@ function UserFormModal({
     setConfirm("");
     setShowPw(false);
     setShowCpw(false);
+    setPhoneTouched(false);
   }, [visible, user, role]);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
@@ -394,7 +397,20 @@ function UserFormModal({
     };
 
   const req = <Text style={{ color: "red" }}>*</Text>;
+  const handlePhoneChange = (text) => {
+    setPhoneTouched(true);
+    let value = text.replace(/[^\d+]/g, "");
 
+    if (value.startsWith("+")) {
+      value = "+" + value.slice(1).replace(/\+/g, "");
+
+      value = value.slice(0, 13);
+    } else {
+      value = value.replace(/\+/g, "").slice(0, 11);
+    }
+
+    set("phone", value);
+  };
   return (
     <Modal
       visible={visible}
@@ -490,12 +506,16 @@ function UserFormModal({
 
               <Text style={styles.fieldLabel}>Phone {req}</Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  phoneTouched && !isPhoneValid && styles.inputError,
+                ]}
                 placeholder="03011234567"
                 placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
                 value={form.phone}
-                onChangeText={(t) => set("phone", t)}
+                onChangeText={handlePhoneChange}
+                maxLength={form?.phone?.startsWith("+92") ? 13 : 11}
               />
 
               {isTherapist && (
@@ -1531,5 +1551,9 @@ const styles = StyleSheet.create({
   passwordButtonText: {
     fontSize: fontSize(13),
     color: "#fff",
+  },
+  inputError: {
+    borderColor: "#EF4444",
+    borderWidth: 1.5,
   },
 });

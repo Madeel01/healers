@@ -89,6 +89,7 @@ const {
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
+const { getFeeDetails } = require("../controllers/invoiceController");
 
 router.get("/children/:childId/schedule", protect, getChildSchedule);
 router.get("/children/:childId/batch-options", protect, getChildBatchOptions);
@@ -193,5 +194,7 @@ router.delete("/services/:id", protect, deleteService);
 
 router.get("/settings", protect, getSettings);
 router.put("/settings", protect, updateSettings);
+
+router.get("/invoices/fee-details", protect, getFeeDetails);
 
 module.exports = router;

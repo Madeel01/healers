@@ -18,7 +18,9 @@ import {
 import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { setupNotificationListeners } from './src/utils/pushNotifications';
-
+import { installCustomAlert } from './src/utils/customAlert';
+import AlertHost from './src/components/AlertHost';
+installCustomAlert(); 
 export default function App() {
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -52,6 +54,7 @@ export default function App() {
       <AuthProvider>
         <AppNavigator />
       </AuthProvider>
+      <AlertHost/>
     </SafeAreaProvider>
   );
 }

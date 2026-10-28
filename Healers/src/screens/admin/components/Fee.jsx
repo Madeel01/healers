@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
+import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -51,6 +51,7 @@ export default function Fee({ customstyles }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const navigation = useNavigation();
 
   const loadSummary = useCallback(async (isRefresh = false) => {
     try {
@@ -199,9 +200,11 @@ export default function Fee({ customstyles }) {
             )}
 
             {financialCards.map((card) => (
-              <View
+              <TouchableOpacity
                 key={card.key}
                 style={styles.financialCard}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate("FeeDetail", { type: card.key, layout: { headerTitle: card.title }, })}
               >
                 <View
                   style={[
@@ -247,7 +250,13 @@ export default function Fee({ customstyles }) {
                 >
                   {card.subtitle}
                 </Text>
-              </View>
+                <MaterialIcons
+                  name="chevron-right"
+                  size={22}
+                  color="#94A3B8"
+                  style={{ position: "absolute", right: 14, top: 18 }}
+                />
+              </TouchableOpacity>
             ))}
           </>
         )}

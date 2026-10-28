@@ -937,7 +937,7 @@ exports.getAdminOverview = async (req, res) => {
     ] = await Promise.all([
       User.countDocuments({ role: "Child" }),
       User.countDocuments({ role: "Therapist" }),
-      User.countDocuments({ role: { $ne: "Admin" } }),
+      User.countDocuments({}),
       LeaveRequest.countDocuments({
         $or: [
           { isSeen: false },

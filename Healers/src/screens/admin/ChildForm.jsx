@@ -489,6 +489,10 @@ export default function ChildFormScreen({ navigation, route }) {
   const [fetchingParent, setFetchingParent] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState("Saving...");
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const isPhoneValid = /^(030\d{8}|\+923\d{9})$/.test(
+    String(form.phone ?? "")
+  );
 
   const scrollRef = useRef(null);
   const parentRequestIdRef = useRef(0);
@@ -917,7 +921,19 @@ export default function ChildFormScreen({ navigation, route }) {
       Alert.alert("Error", "Unable to share password.");
     }
   };
+  const handlePhoneChange = (text) => {
+    let value = text.replace(/[^\d+]/g, "");
 
+    if (value.startsWith("+")) {
+      value = "+" + value.slice(1).replace(/\+/g, "");
+
+      value = value.slice(0, 13);
+    } else {
+      value = value.replace(/\+/g, "").slice(0, 11);
+    }
+    setPhoneTouched(true);
+    setField("phone", value);
+  };
   return (
     <View style={commonStyles.container} edges={["top", "left", "right"]}>
 
@@ -1095,12 +1111,16 @@ export default function ChildFormScreen({ navigation, route }) {
                   Contact Number <Text style={styles.requiredText}>*</Text>
                 </Text>
                 <TextInput
-                  style={styles.formInput}
+                  style={[
+                    styles.formInput,
+                    phoneTouched && !isPhoneValid && styles.inputError,
+                  ]}
                   placeholder="0300 1234567"
                   placeholderTextColor="#94A3B8"
                   keyboardType="phone-pad"
                   value={form.phone}
-                  onChangeText={(t) => setField("phone", t)}
+                  onChangeText={handlePhoneChange}
+                  maxLength={form.phone.startsWith("+92") ? 13 : 11}
                 />
 
                 <Text style={styles.fieldLabel}>Email <Text style={styles.requiredText}>*</Text></Text>
@@ -1657,5 +1677,9 @@ const styles = StyleSheet.create({
   passwordButtonText: {
     fontSize: fontSize(13),
     color: "#fff",
+  },
+  inputError: {
+    borderColor: "#EF4444",
+    borderWidth: 1.5,
   },
 });

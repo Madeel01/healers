@@ -154,6 +154,11 @@ export default function TherapistsScreen({ navigation }) {
   const [originalAssignedIds, setOriginalAssignedIds] = useState([]);
   const [draftSpecialty, setDraftSpecialty] = useState("All");
   const [draftStatus, setDraftStatus] = useState("all");
+  const [phoneTouched, setPhoneTouched] = useState(false);
+
+  const isPhoneValid = /^(030\d{8}|\+923\d{9})$/.test(
+    String(newTherapist.phone ?? "")
+  );
 
   const activeFilterCount = (selectedFilter !== "All" ? 1 : 0) + (statusFilter !== "all" ? 1 : 0);
 
@@ -181,6 +186,7 @@ export default function TherapistsScreen({ navigation }) {
     setEditingTherapistId(null);
     setPassword("");
     setConfirmPassword("");
+    setPhoneTouched(false);
   };
 
   const openAddModal = () => {
@@ -358,6 +364,7 @@ export default function TherapistsScreen({ navigation }) {
       isActive: newTherapist.isActive ?? true,
     };
 
+    
     try {
       if (isEditMode) {
         const response = await updateTherapist(editingTherapistId, payload);
@@ -367,36 +374,40 @@ export default function TherapistsScreen({ navigation }) {
           prev.map((item) =>
             item.id === editingTherapistId
               ? {
-                ...item,
-                name: updated?.name || payload.name,
-                email: updated?.email || payload.email,
-                phone: updated?.phone || payload.phone,
-                address: updated?.address || payload.address,
-                // maxChildren: updated?.maxChildren || payload.maxChildren,
-                specialties: [
-                  {
-                    id: payload.specialty,
-                  },
-                ],
-                isActive: updated?.isActive ?? payload.isActive,
-              }
+                  ...item,
+                  name: updated?.name || payload.name,
+                  email: updated?.email || payload.email,
+                  phone: updated?.phone || payload.phone,
+                  address: updated?.address || payload.address,
+                  specialties: [{ id: payload.specialty }],
+                  isActive: updated?.isActive ?? payload.isActive,
+                }
               : item
           )
         );
+
+        await fetchTherapistData(1, true);
+
+        setIsAddModalOpen(false);
+        resetTherapistForm();
+        setPassword("");
+        setConfirmPassword("");
       } else {
         const response = await createTherapist(payload);
         const created = response?.data;
 
+        const createdTherapistId = created?.id || created?._id;
+        const createdTherapistName = created?.name || payload.name;
+
+        if (!createdTherapistId) {
+          throw new Error("Therapist created, but the server did not return an ID.");
+        }
+
         const newItem = {
-          id: created?.id || created?._id || Date.now().toString(),
-          name: created?.name || payload.name,
-          specialties: [
-            {
-              id: payload.specialty,
-            },
-          ],
+          id: createdTherapistId,
+          name: createdTherapistName,
+          specialties: [{ id: payload.specialty }],
           currentLoad: 0,
-          // maxLoad: created?.maxChildren || payload.maxChildren,
           email: created?.email || payload.email,
           phone: created?.phone || payload.phone,
           address: created?.address || payload.address,
@@ -404,25 +415,51 @@ export default function TherapistsScreen({ navigation }) {
         };
 
         setTherapists((prev) => [newItem, ...prev]);
+
+        await fetchTherapistData(1, true);
+
+        setIsAddModalOpen(false);
+        resetTherapistForm();
+        setPassword("");
+        setConfirmPassword("");
+
+        // Ask whether to configure availability now.
+        Alert.alert(
+          "Therapist Created Successfully",
+          `Would you like to set availability for ${createdTherapistName} now?`,
+          [
+            {
+              text: "Do It Later",
+              style: "cancel",
+            },
+            {
+              text: "Set Availability",
+              onPress: () => {
+                navigation.navigate("TherapistAvailability", {
+                  therapistId: createdTherapistId,
+                  therapistName: createdTherapistName,
+                });
+              },
+            },
+          ],
+          { cancelable: true }
+        );
       }
-
-      await fetchTherapistData(1, true);
-
-      setIsAddModalOpen(false);
-      resetTherapistForm();
-      setPassword("");
-      setConfirmPassword("");
     } catch (error) {
       console.log("Failed to save therapist:", error);
+
       const backendMessage = error?.response?.data?.message;
+
       Alert.alert(
         "Error",
-        backendMessage
-          || `Could not ${isEditMode ? "update" : "create"} this therapist. Please try again.`,
+        backendMessage ||
+          error?.message ||
+          `Could not ${isEditMode ? "update" : "create"} this therapist. Please try again.`
       );
     } finally {
       setSaving(false);
     }
+
   };
 
   const fetchTherapistData = async (pageNum = 1, resetList = false, isRefresh = false) => {
@@ -688,6 +725,19 @@ export default function TherapistsScreen({ navigation }) {
     } catch (error) {
       Alert.alert("Error", "Unable to share password.");
     }
+  };
+  const handlePhoneChange = (text) => {
+    let value = text.replace(/[^\d+]/g, "");
+
+    if (value.startsWith("+")) {
+      value = "+" + value.slice(1).replace(/\+/g, "");
+
+      value = value.slice(0, 13);
+    } else {
+      value = value.replace(/\+/g, "").slice(0, 11);
+    }
+    setPhoneTouched(true);
+    setNewTherapist({ ...newTherapist, phone: value })
   };
 
   return (
@@ -1181,12 +1231,16 @@ export default function TherapistsScreen({ navigation }) {
                   Phone <Text style={styles.requiredText}>*</Text>
                 </Text>
                 <TextInput
-                  style={styles.formInput}
+                  style={[
+                    styles.formInput,
+                    phoneTouched && !isPhoneValid && styles.inputError,
+                  ]}
                   placeholder="0300 1234567"
                   placeholderTextColor="#94A3B8"
                   keyboardType="phone-pad"
                   value={newTherapist.phone}
-                  onChangeText={(t) => setNewTherapist({ ...newTherapist, phone: t })}
+                  onChangeText={handlePhoneChange}
+                  maxLength={newTherapist?.phone?.startsWith("+92") ? 13 : 11}
                 />
 
                 <Text style={styles.fieldLabel}>Address</Text>
@@ -2105,5 +2159,9 @@ const styles = StyleSheet.create({
   passwordButtonText: {
     fontSize: fontSize(13),
     color: "#fff",
+  },
+  inputError: {
+    borderColor: "#EF4444",
+    borderWidth: 1.5,
   },
 });
