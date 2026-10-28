@@ -632,7 +632,7 @@ export default function CustomSlotPicker({ childId, therapistId, minutes, onChan
               display={Platform.OS === "ios" ? "inline" : "default"}
               minimumDate={pickerConfig.min ? fromKey(pickerConfig.min) : undefined}
               maximumDate={pickerConfig.max ? fromKey(pickerConfig.max) : undefined}
-              onValue  Change={handleDate}
+              onValueChange={handleDate}
               accentColor={colors.primary}
               themeVariant="light"
             />
