@@ -368,7 +368,7 @@ exports.getInvoices = async (req, res) => {
       query.childId = new mongoose.Types.ObjectId(childId);
     }
 
-    const trimmedSearch = String(search).trim();
+    const trimmedSearch = String(search || "").trim();
 
     if (trimmedSearch) {
       const escapedSearch = trimmedSearch.replace(
@@ -376,10 +376,35 @@ exports.getInvoices = async (req, res) => {
         "\\$&",
       );
 
-      query.invoiceNumber = {
-        $regex: escapedSearch,
-        $options: "i",
-      };
+      const searchRegex = new RegExp(escapedSearch, "i");
+
+      const matchingUsers = await User.find({
+        fullName: searchRegex,
+      })
+        .select("_id")
+        .lean();
+
+      const matchingUserIds = matchingUsers.map(
+        (user) => user._id,
+      );
+
+      query.$or = [
+        {
+          invoiceNumber: searchRegex,
+        },
+
+        {
+          childId: {
+            $in: matchingUserIds,
+          },
+        },
+
+        {
+          parentId: {
+            $in: matchingUserIds,
+          },
+        },
+      ];
     }
 
     const skip = (currentPage - 1) * pageLimit;

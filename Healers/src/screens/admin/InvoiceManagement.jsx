@@ -146,38 +146,13 @@ const getStatusTheme = (status) => {
   }
 };
 
-const MetricCard = ({
-  title,
-  value,
-  icon,
-  color,
-  background,
-  subtitle,
-}) => (
-  <View style={styles.metricCard}>
-    <View style={styles.metricTop}>
-      <View style={styles.metricText}>
-        <Text style={styles.metricLabel}>{title}</Text>
-        <Text
-          style={[styles.metricValue, { color }]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-        >
-          {formatCurrency(value)}
-        </Text>
-      </View>
-
-      <View
-        style={[
-          styles.metricIcon,
-          { backgroundColor: background },
-        ]}
-      >
-        <Feather name={icon} size={fontSize(21)} color={color} />
-      </View>
-    </View>
-
-    {!!subtitle && <Text style={styles.metricSubtitle}>{subtitle}</Text>}
+const MetricCard = ({ title, value, color, background, borderColor, subtitle }) => (
+  <View style={[styles.metricCard, { backgroundColor: background, borderColor }]}>
+    <Text style={styles.metricLabel}>{title}</Text>
+    <Text style={[styles.metricValue, { color }]} numberOfLines={1} adjustsFontSizeToFit>
+      {formatCurrency(value)}
+    </Text>
+    <Text style={styles.metricSubtitle}>{subtitle}</Text>
   </View>
 );
 
@@ -294,7 +269,7 @@ export default function InvoiceManagementScreen({
         const newInvoices = Array.isArray(result.data)
           ? result.data
           : [];
-;
+
         const pagination = result.pagination || {};
 
         if (append) {
@@ -643,84 +618,37 @@ export default function InvoiceManagementScreen({
         Oversee billing, track collections, and manage child session payments.
       </Text>
 
-      <TouchableOpacity
-        style={styles.createBtn}
-        activeOpacity={0.8}
-        onPress={handleCreateInvoice}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.metricsRow}
+        style={styles.metricsScroll}
       >
-        <Feather
-          name="plus"
-          size={fontSize(18)}
-          color="#FFFFFF"
+        <MetricCard
+          title="TOTAL REVENUE"
+          value={stats.totalRevenue}
+          color="#10364E"
+          background="#EDF7FF"
+          borderColor="#D6EAF8"
+          subtitle="Total active invoice amount"
         />
-        <Text style={styles.createBtnText}>
-          Create New Invoice
-        </Text>
-      </TouchableOpacity>
-
-      <MetricCard
-        title="TOTAL REVENUE"
-        value={stats.totalRevenue}
-        icon="bar-chart-2"
-        color={colors.primary}
-        background="#EBF3F9"
-        subtitle="Total active invoice amount"
-      />
-
-      <MetricCard
-        title="TOTAL OUTSTANDING"
-        value={stats.outstanding}
-        icon="alert-circle"
-        color="#BA1A1A"
-        background="#FEF2F2"
-        subtitle={`${stats.outstandingCount} unpaid ${
-          stats.outstandingCount === 1
-            ? "invoice"
-            : "invoices"
-        }`}
-      />
-
-      <MetricCard
-        title="TOTAL COLLECTED"
-        value={stats.collected}
-        icon="check-circle"
-        color="#006B58"
-        background="#ECFDF5"
-        subtitle={`${
-          Math.round(
-            collectedPercentage,
-          )
-        }% of total revenue collected`}
-      />
-
-      <View style={styles.progressCard}>
-        <View style={styles.progressHeader}>
-          <Text style={styles.progressTitle}>
-            Collection Progress
-          </Text>
-          <Text style={styles.progressPercent}>
-            {collectedPercentage.toFixed(1)}%
-          </Text>
-        </View>
-
-        <View style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${collectedPercentage}%` },
-            ]}
-          />
-        </View>
-
-        <View style={styles.progressLegend}>
-          <Text style={styles.progressCollected}>
-            Collected
-          </Text>
-          <Text style={styles.progressOutstanding}>
-            Outstanding
-          </Text>
-        </View>
-      </View>
+        <MetricCard
+          title="TOTAL OUTSTANDING"
+          value={stats.outstanding}
+          color="#DC2626"
+          background="#FFF3F4"
+          borderColor="#FCE0E3"
+          subtitle={`${stats.outstandingCount} unpaid invoices`}
+        />
+        <MetricCard
+          title="TOTAL COLLECTED"
+          value={stats.collected}
+          color="#008D61"
+          background="#EFFCF5"
+          borderColor="#D5F3E3"
+          subtitle={`${Math.round(collectedPercentage)}% of revenue collected`}
+        />
+      </ScrollView>
 
       <View style={styles.filterSection}>
         <View style={styles.searchBarContainer}>
@@ -732,7 +660,7 @@ export default function InvoiceManagementScreen({
 
           <TextInput
             style={styles.searchInput}
-            placeholder="Search invoice ID..."
+            placeholder="Search parent name, invoice ID..."
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -753,41 +681,28 @@ export default function InvoiceManagementScreen({
           )}
         </View>
 
-        <TouchableOpacity
-          style={styles.dropdownFilter}
-          onPress={() => setFilterModalVisible(true)}
-        >
-          <View style={styles.filterLeft}>
+        <View style={styles.filterControlsRow}>
+          <TouchableOpacity
+            style={styles.dropdownFilter}
+            onPress={() => setFilterModalVisible(true)}
+          >
+            <View style={styles.filterLeft}>
+              <Text style={styles.dropdownFilterText}>
+                {selectedStatus}
+              </Text>
+            </View>
+
             <Feather
-              name="filter"
-              size={fontSize(17)}
+              name="chevron-down"
+              size={fontSize(18)}
               color="#64748B"
             />
-
-            <Text style={styles.dropdownFilterText}>
-              {selectedStatus}
-            </Text>
-          </View>
-
-          <Feather
-            name="chevron-down"
-            size={fontSize(18)}
-            color="#64748B"
-          />
-        </TouchableOpacity>
-      </View>
-
-      {!loading && invoices.length > 0 && (
-        <View style={styles.resultHeader}>
-          <Text style={styles.resultTitle}>
-            Invoices
-          </Text>
-
-          <Text style={styles.resultCount}>
-            {invoices.length} loaded
-          </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.filterSettingsBtn} onPress={() => setFilterModalVisible(true)}>
+            <Feather name="sliders" size={fontSize(20)} color="#344453" />
+          </TouchableOpacity>
         </View>
-      )}
+      </View>
     </View>
   );
 
@@ -932,12 +847,6 @@ export default function InvoiceManagementScreen({
                 {item.invoiceNumber}
               </Text>
             </View>
-
-            <Feather
-              name="chevron-right"
-              size={fontSize(20)}
-              color="#94A3B8"
-            />
           </View>
 
           <View style={styles.invoiceDatesRow}>
@@ -953,7 +862,11 @@ export default function InvoiceManagementScreen({
             <View style={styles.invoiceDateBlock}>
               <Text style={styles.invoiceDateLabel}>Due Date</Text>
               <View style={styles.invoiceDateValueRow}>
-                <Feather name="calendar" size={fontSize(13)} color={item.status === "Overdue" ? "#B91C1C" : "#64748B"} />
+                <Feather
+                  name="calendar"
+                  size={fontSize(13)}
+                  color={item.status === "Overdue" ? "#B91C1C" : "#64748B"}
+                />
                 <Text style={[styles.invoiceDateValue, item.status === "Overdue" && styles.overdueDateValue]}>
                   {formatInvoiceDate(item.dueDate)}
                 </Text>
@@ -1027,8 +940,6 @@ export default function InvoiceManagementScreen({
             </Text>
           </View>
         </TouchableOpacity>
-
-        <View style={styles.divider} />
 
         <View style={styles.actionRow}>
           <TouchableOpacity
@@ -1534,7 +1445,6 @@ export default function InvoiceManagementScreen({
         commonStyles.container,
       ]}
     >
-    
       <FlatList
         data={invoices}
         keyExtractor={(item) => String(item._id)}
@@ -1545,8 +1455,12 @@ export default function InvoiceManagementScreen({
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        onScrollBeginDrag={() => { scrollTriggeredRef.current = true; }}
-        onMomentumScrollBegin={() => { scrollTriggeredRef.current = true; }}
+        onScrollBeginDrag={() => {
+          scrollTriggeredRef.current = true;
+        }}
+        onMomentumScrollBegin={() => {
+          scrollTriggeredRef.current = true;
+        }}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.15}
         refreshControl={
@@ -1559,9 +1473,12 @@ export default function InvoiceManagementScreen({
         }
       />
 
+      <TouchableOpacity style={styles.fab} onPress={handleCreateInvoice} activeOpacity={0.85}>
+        <Feather name="plus" size={fontSize(25)} color="#FFFFFF" />
+      </TouchableOpacity>
+
       {renderFilterModal()}
       {renderPaymentModal()}
-
     </View>
   );
 }
@@ -1569,29 +1486,6 @@ export default function InvoiceManagementScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-
-  listContent: {
-    paddingHorizontal: wp(16),
-    paddingTop: hp(16),
-    paddingBottom: hp(30),
-    flexGrow: 1,
-  },
-
-  screenTitle: {
-    fontSize: fontSize(24),
-    fontFamily: fonts.bold,
-    color: "#0F172A",
-    lineHeight: 34,
-    marginBottom: hp(5),
-  },
-
-  introDescription: {
-    fontSize: fontSize(15),
-    color: colors.blackFont,
-    lineHeight: 22,
-    fontFamily: fonts.regular,
-    marginBottom: hp(20),
   },
 
   createBtn: {
@@ -1611,17 +1505,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize(14),
     color: "#FFFFFF",
     fontFamily: fonts.semiBold,
-    lineHeight:18
-  },
-
-  metricCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: wp(18),
-    padding: wp(20),
-    marginBottom: hp(12),
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
-    elevation: 1,
+    lineHeight: 18,
   },
 
   metricTop: {
@@ -1635,33 +1519,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
 
-  metricLabel: {
-    fontSize: fontSize(12),
-    fontFamily: fonts.semiBold,
-    color: "#64748B",
-    letterSpacing: 0.5,
-    marginBottom: hp(8),
-  },
-
-  metricValue: {
-    fontSize: fontSize(27),
-    fontFamily: fonts.bold,
-    lineHeight: 38,
-  },
-
   metricIcon: {
     width: wp(46),
     height: hp(46),
     borderRadius: wp(10),
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  metricSubtitle: {
-    fontSize: fontSize(12),
-    color: "#64748B",
-    fontFamily: fonts.regular,
-    marginTop: 2,
   },
 
   progressCard: {
@@ -1722,53 +1585,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
 
-  filterSection: {
-    marginBottom: hp(16),
-    backgroundColor: "#FFFFFF",
-    borderRadius: wp(16),
-    padding: wp(16),
-    elevation: 1,
-  },
-
-  searchBarContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F7FAFD",
-    borderRadius: wp(12),
-    paddingHorizontal: wp(14),
-    height: 46,
-    marginBottom: hp(10),
-    gap: wp(8),
-  },
-
-  searchInput: {
-    flex: 1,
-    fontSize: fontSize(14),
-    color: colors.blackFont,
-    fontFamily: fonts.regular,
-    paddingVertical: 0,
-  },
-
-  dropdownFilter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#F7FAFD",
-    borderRadius: wp(12),
-    paddingHorizontal: wp(14),
-    height: 46,
-  },
-
   filterLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: wp(10),
-  },
-
-  dropdownFilterText: {
-    fontSize: fontSize(14),
-    fontFamily: fonts.semiBold,
-    color: "#0F172A",
   },
 
   resultHeader: {
@@ -1790,131 +1610,22 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
   },
 
-  invoiceCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: wp(16),
-    padding: wp(16),
-    marginBottom: hp(12),
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
-    elevation: 1,
-  },
-
-  invoiceHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: hp(16),
-  },
-
-  invoiceIconContainer: {
-    width: 42,
-    height: 42,
-    borderRadius: wp(11),
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-
   invoiceTextContainer: {
     flex: 1,
     marginRight: 8,
   },
 
-  parentName: {
-    fontSize: fontSize(16),
-    fontFamily: fonts.semiBold,
-    color: "#181C1E",
-  },
-
-  childSubtitle: {
-    marginTop: 3,
-    fontSize: fontSize(12),
-    color: colors.blackFont,
-    fontFamily: fonts.regular,
-  },
-
-  invoiceNumber: {
-    marginTop: 4,
-    fontSize: fontSize(11),
-    color: "#64748B",
-    fontFamily: fonts.regular,
-  },
-
-  invoiceDatesRow: {
-    flexDirection: "row",
-    gap: wp(10),
-    marginBottom: hp(14),
-  },
-  invoiceDateBlock: {
-    flex: 1,
-    padding: wp(10),
-    borderRadius: wp(10),
-    backgroundColor: "#F8FAFC",
-  },
-  invoiceDateLabel: {
-    fontSize: fontSize(11),
-    fontFamily: fonts.regular,
-    color: "#64748B",
-    marginBottom: hp(6),
-  },
   invoiceDateValueRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: wp(5),
   },
-  invoiceDateValue: {
-    fontSize: fontSize(12),
-    fontFamily: fonts.semiBold,
-    color: "#0F172A",
-    flexShrink: 1,
-  },
   overdueDateValue: {
     color: "#B91C1C",
   },
 
-  amountStatusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: hp(12),
-    gap: wp(8),
-  },
-
   amountBlock: {
     flex: 1,
-  },
-
-  amountLabel: {
-    fontSize: fontSize(11),
-    fontFamily: fonts.regular,
-    color: "#94A3B8",
-    letterSpacing: 0.5,
-  },
-
-  amountValue: {
-    marginTop: 4,
-    fontSize: fontSize(18),
-    fontFamily: fonts.semiBold,
-    color: "#00497B",
-  },
-
-  statusBadge: {
-    paddingHorizontal: wp(11),
-    paddingVertical: 6,
-    borderRadius: wp(20),
-    borderWidth: 1,
-  },
-
-  statusBadgeText: {
-    fontSize: fontSize(11),
-    fontFamily: fonts.semiBold,
-  },
-
-  balanceBox: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: wp(12),
-    padding: wp(12),
-    gap: wp(10),
   },
 
   balanceInfoRow: {
@@ -1924,89 +1635,10 @@ const styles = StyleSheet.create({
     gap: wp(8),
   },
 
-  balanceInfoLabel: {
-    fontSize: fontSize(12),
-    color: "#64748B",
-    fontFamily: fonts.regular,
-  },
-
-  collectedValue: {
-    fontSize: fontSize(13),
-    color: "#059669",
-    fontFamily: fonts.semiBold,
-  },
-
-  balanceInfoValue: {
-    fontSize: fontSize(13),
-    color: "#BA1A1A",
-    fontFamily: fonts.semiBold,
-  },
-
-  cardProgressTrack: {
-    height: 6,
-    backgroundColor: "#FEE2E2",
-    borderRadius: wp(10),
-    overflow: "hidden",
-  },
-
-  cardProgressFill: {
-    height: "100%",
-    backgroundColor: "#059669",
-  },
-
-  cardProgressText: {
-    fontSize: fontSize(11),
-    color: "#64748B",
-    fontFamily: fonts.regular,
-    textAlign: "right",
-  },
-
   divider: {
     height: 1,
     backgroundColor: "#F1F5F9",
     marginVertical: 14,
-  },
-
-  actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: wp(8),
-  },
-
-  iconCircleBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: wp(10),
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  editPaymentBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primary,
-    borderRadius: wp(9),
-    paddingHorizontal: wp(10),
-    height: 38,
-    gap: wp(7),
-  },
-
-  editPaymentText: {
-    fontSize: fontSize(12),
-    fontFamily: fonts.semiBold,
-    color: "#FFFFFF",
-  },
-
-  remindBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: wp(10),
-    backgroundColor: "#FEF2F2",
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   loadingContainer: {
@@ -2030,8 +1662,8 @@ const styles = StyleSheet.create({
   },
 
   emptyIcon: {
-    width: 70,
-    height: 70,
+    width: wp(70),
+    height: hp(70),
     borderRadius: wp(35),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
@@ -2128,8 +1760,8 @@ const styles = StyleSheet.create({
   },
 
   modalCloseBtn: {
-    width: 36,
-    height: 36,
+    width: wp(36),
+    height: hp(36),
     borderRadius: wp(18),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
@@ -2178,7 +1810,6 @@ const styles = StyleSheet.create({
     borderRadius: wp(20),
     overflow: "hidden",
     padding: wp(20),
-
   },
 
   paymentScrollContent: {
@@ -2409,5 +2040,173 @@ const styles = StyleSheet.create({
     fontSize: fontSize(13),
     color: "#64748B",
     fontFamily: fonts.semiBold,
+  },
+  filterControlsRow: { flexDirection: "row", alignItems: "center" },
+  // Group 18 redesign
+  listContent: { paddingHorizontal: wp(16), paddingTop: hp(20), paddingBottom: hp(30), flexGrow: 1 },
+  screenTitle: {
+    fontSize: fontSize(26),
+    fontFamily: fonts.bold,
+    color: "#10364E",
+    lineHeight: 36,
+    marginBottom: hp(10),
+  },
+  introDescription: {
+    fontSize: fontSize(15),
+    fontFamily: fonts.regular,
+    color: "#526B80",
+    lineHeight: 24,
+    marginBottom: hp(20),
+  },
+  metricsScroll: { marginBottom: hp(16) },
+  metricsRow: { gap: wp(12), paddingRight: wp(16) },
+  metricCard: {
+    width: wp(158),
+    minHeight: hp(145),
+    borderRadius: wp(18),
+    borderWidth: 1,
+    padding: wp(16),
+    justifyContent: "space-between",
+  },
+  metricLabel: { fontSize: fontSize(11), fontFamily: fonts.medium, color: "#64748B", lineHeight: 16, minHeight: 32 },
+  metricValue: { fontSize: fontSize(22), fontFamily: fonts.bold, lineHeight: 30, marginVertical: hp(10) },
+  metricSubtitle: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", lineHeight: 17 },
+  filterSection: {
+    marginBottom: hp(20),
+    backgroundColor: "#FFFFFF",
+    borderRadius: wp(22),
+    padding: wp(16),
+    elevation: 2,
+    shadowColor: "#8BA4B7",
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+  },
+  searchBarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F7FAFD",
+    borderRadius: wp(13),
+    paddingHorizontal: wp(14),
+    height: hp(50),
+    marginBottom: hp(12),
+    gap: wp(10),
+  },
+  searchInput: { flex: 1, fontSize: fontSize(14), color: "#10364E", fontFamily: fonts.regular, paddingVertical: 0 },
+  dropdownFilter: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F7FAFD",
+    borderRadius: wp(13),
+    paddingHorizontal: wp(14),
+    height: hp(50),
+    marginRight: wp(9),
+  },
+  dropdownFilterText: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#181C1E" },
+  filterSettingsBtn: {
+    width: wp(50),
+    height: hp(50),
+    borderRadius: wp(13),
+    backgroundColor: "#E8EDF1",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  invoiceCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: wp(24),
+    padding: wp(20),
+    marginBottom: hp(14),
+    elevation: 2,
+    shadowColor: "#7B91A5",
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+  },
+  invoiceHeaderRow: { flexDirection: "row", alignItems: "center", marginBottom: hp(18) },
+  invoiceIconContainer: {
+    width: wp(50),
+    height: wp(50),
+    borderRadius: wp(16),
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: wp(12),
+    borderWidth: 1,
+    borderColor: "#FBE9C8",
+  },
+  parentName: { fontSize: fontSize(17), fontFamily: fonts.bold, color: "#10364E" },
+  childSubtitle: { marginTop: hp(3), fontSize: fontSize(13), color: "#64748B", fontFamily: fonts.regular },
+  invoiceNumber: { marginTop: hp(4), fontSize: fontSize(12), color: "#91A3BD", fontFamily: fonts.regular },
+  invoiceDatesRow: { flexDirection: "row", gap: wp(10), marginBottom: hp(20) },
+  invoiceDateBlock: { flex: 1, padding: wp(12), borderRadius: wp(15), backgroundColor: "#F7FAFD" },
+  invoiceDateLabel: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#60758E", marginBottom: hp(6) },
+  invoiceDateValue: { fontSize: fontSize(12), fontFamily: fonts.semiBold, color: "#10364E", flexShrink: 1 },
+  amountStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: hp(20),
+    gap: wp(8),
+  },
+  amountLabel: { fontSize: fontSize(11), fontFamily: fonts.medium, color: "#91A3BD", letterSpacing: 0.5 },
+  amountValue: { marginTop: hp(6), fontSize: fontSize(21), fontFamily: fonts.bold, color: "#00497B" },
+  statusBadge: { paddingHorizontal: wp(15), paddingVertical: hp(8), borderRadius: wp(24), borderWidth: 1 },
+  statusBadgeText: { fontSize: fontSize(11), fontFamily: fonts.semiBold },
+  balanceBox: {
+    backgroundColor: "#F7FAFD",
+    borderRadius: wp(16),
+    padding: wp(16),
+    gap: hp(13),
+    marginBottom: hp(20),
+    borderWidth: 1,
+    borderColor: "#F0F4F8",
+  },
+  balanceInfoLabel: { fontSize: fontSize(13), color: "#60758E", fontFamily: fonts.regular },
+  collectedValue: { fontSize: fontSize(13), color: "#059669", fontFamily: fonts.semiBold },
+  balanceInfoValue: { fontSize: fontSize(13), color: "#DC2626", fontFamily: fonts.semiBold },
+  cardProgressTrack: { height: hp(7), backgroundColor: "#FCE1E4", borderRadius: wp(10), overflow: "hidden" },
+  cardProgressFill: { height: "100%", backgroundColor: "#059669" },
+  cardProgressText: { fontSize: fontSize(12), color: "#60758E", fontFamily: fonts.regular, textAlign: "right" },
+  actionRow: { flexDirection: "row", alignItems: "center", gap: wp(10) },
+  iconCircleBtn: {
+    width: wp(48),
+    height: hp(46),
+    borderRadius: wp(13),
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editPaymentBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#00497B",
+    borderRadius: wp(12),
+    paddingHorizontal: wp(8),
+    height: hp(46),
+    gap: wp(7),
+  },
+  editPaymentText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  remindBtn: {
+    width: wp(48),
+    height: hp(46),
+    borderRadius: wp(13),
+    backgroundColor: "#FFF6F6",
+    borderWidth: 1,
+    borderColor: "#FCD7D7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fab: {
+    position: "absolute",
+    bottom: hp(14),
+    right: wp(15),
+    width: wp(52),
+    height: wp(52),
+    borderRadius: wp(14),
+    backgroundColor: "#103E5D",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 5,
   },
 });
