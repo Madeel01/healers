@@ -501,3 +501,7 @@ export const getConversationId = async (senderId,receiverId) => {
   const response = await apiClient.get(`/chat/${senderId}/${receiverId}/conversation-id`);
   return response.data;
 }
+export const getFeeDetailsApi = async (params) => {
+  const res = await apiClient.get("/admin/invoices/fee-details", { params });
+  return res.data;
+};

@@ -1289,3 +1289,154 @@ exports.getMyInvoiceById = async (req, res) => {
     });
   }
 };
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+exports.getFeeDetails = async (req, res) => {
+  try {
+    const type = String(req.query.type || "");
+    if (!["overdue", "unpaid", "revenue"].includes(type)) {
+      return res.status(400).json({ success: false, message: "Invalid type." });
+    }
+
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 50);
+    const skip = (page - 1) * limit;
+    const search = String(req.query.search || "").trim();
+    const regex = search ? new RegExp(escapeRegex(search), "i") : null;
+
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+
+    if (type === "revenue") {
+      const year = parseInt(req.query.year, 10) || now.getFullYear();
+      const fyStart = new Date(year, 0, 1);
+      const fyEnd = new Date(year + 1, 0, 1);
+
+      const base = [
+        { $match: { status: { $nin: ["Draft", "Cancelled"] } } },
+        { $unwind: "$payments" },
+        { $match: { "payments.paidAt": { $gte: fyStart, $lt: fyEnd } } },
+        {
+          $lookup: {
+            from: User.collection.name,
+            localField: "childId",
+            foreignField: "_id",
+            as: "child",
+          },
+        },
+        {
+          $addFields: {
+            childName: { $ifNull: [{ $arrayElemAt: ["$child.fullName", 0] }, "Unknown Child"] },
+          },
+        },
+        ...(regex
+          ? [{ $match: { $or: [{ invoiceNumber: regex }, { childName: regex }] } }]
+          : []),
+      ];
+
+      const [rows, totalRows, yearRows] = await Promise.all([
+        Invoice.aggregate([
+          ...base,
+          { $sort: { "payments.paidAt": -1, _id: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+          {
+            $project: {
+              invoiceId: "$_id",
+              invoiceNumber: 1,
+              childName: 1,
+              amount: "$payments.amount",
+              paymentMethod: "$payments.paymentMethod",
+              note: "$payments.note",
+              paidAt: "$payments.paidAt",
+            },
+          },
+        ]),
+        Invoice.aggregate([
+          ...base,
+          { $group: { _id: null, amount: { $sum: "$payments.amount" }, count: { $sum: 1 } } },
+        ]),
+        Invoice.aggregate([
+          { $match: { status: { $nin: ["Draft", "Cancelled"] } } },
+          { $unwind: "$payments" },
+          { $group: { _id: { $year: "$payments.paidAt" } } },
+        ]),
+      ]);
+
+      const years = [...new Set([now.getFullYear(), ...yearRows.map((y) => y._id).filter(Boolean)])]
+        .sort((a, b) => b - a);
+
+      const total = totalRows[0]?.count || 0;
+      return res.json({
+        success: true,
+        data: rows.map((r, i) => ({ ...r, _id: `${r.invoiceId}-${skip + i}` })),
+        summary: { amount: totalRows[0]?.amount || 0, count: total, fiscalYear: year, years },
+        pagination: { page, limit, total, hasMore: page * limit < total },
+      });
+    }
+
+    const filter = type === "overdue"
+      ? {
+        status: { $in: ["Pending", "Partially Paid", "Overdue"] },
+        dueDate: { $lt: today },
+        balanceDue: { $gt: 0 },
+      }
+      : {
+        status: { $nin: ["Draft", "Cancelled", "Paid"] },
+        balanceDue: { $gt: 0 },
+      };
+
+    if (regex) {
+      const childIds = await User.find({ role: "Child", fullName: regex }).distinct("_id");
+      filter.$or = [{ invoiceNumber: regex }, { childId: { $in: childIds } }];
+    }
+
+    const [invoices, total, sumRows] = await Promise.all([
+      Invoice.find(filter)
+        .populate("childId", "_id fullName")
+        .populate("parentId", "_id fullName")
+        .sort({ dueDate: 1, _id: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Invoice.countDocuments(filter),
+      Invoice.aggregate([
+        { $match: filter },
+        { $group: { _id: null, amount: { $sum: "$balanceDue" }, children: { $addToSet: "$childId" } } },
+      ]),
+    ]);
+
+    const data = invoices.map((inv) => {
+      const due = inv.dueDate ? new Date(inv.dueDate) : null;
+      const daysOverdue = due && due < today ? Math.floor((today - due) / 86400000) : 0;
+      return {
+        _id: inv._id,
+        childId: inv.childId?._id || null,
+        invoiceNumber: inv.invoiceNumber,
+        childName: inv.childId?.fullName || "Unknown Child",
+        parentName: inv.parentId?.fullName || "",
+        dueDate: inv.dueDate,
+        status: inv.status,
+        totalAmount: inv.totalAmount,
+        paidAmount: inv.paidAmount,
+        balanceDue: inv.balanceDue,
+        daysOverdue,
+      };
+    });
+
+    return res.json({
+      success: true,
+      data,
+      summary: {
+        amount: sumRows[0]?.amount || 0,
+        count: total,
+        childrenCount: sumRows[0]?.children?.length || 0,
+      },
+      pagination: { page, limit, total, hasMore: page * limit < total },
+    });
+  } catch (error) {
+    console.error("getFeeDetails error:", error);
+    return res.status(500).json({ success: false, message: "Failed to load fee details." });
+  }
+};
