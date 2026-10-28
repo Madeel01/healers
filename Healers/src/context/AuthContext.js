@@ -29,24 +29,30 @@ import {
 
 export const AuthContext = createContext();
 
-const getTokenRemainingMs = (jwtToken) => {
+const getDecodedToken = (jwtToken) => {
   try {
-    const decoded = jwtDecode(jwtToken);
-
-    if (!decoded.exp) {
-      return 0;
-    }
-
-    return Math.max(0, decoded.exp * 1000 - Date.now());
-  } catch (error) {
-    console.log(" JWT Decode Error:", error.message);
-    return 0;
+    return jwtDecode(jwtToken);
+  } catch {
+    return null;
   }
+};
+
+const getTokenRemainingMs = (jwtToken) => {
+  if (!jwtToken) return 0;
+
+  const decoded = getDecodedToken(jwtToken);
+
+  if (!decoded?.exp) return 0;
+
+  return Math.max(0, decoded.exp * 1000 - Date.now());
+};
+
+const isImpersonationToken = (jwtToken) => {
+  return getDecodedToken(jwtToken)?.impersonation === true;
 };
 
 const formatRemainingTime = (milliseconds) => {
   const totalSeconds = Math.ceil(milliseconds / 1000);
-
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
 
@@ -61,21 +67,61 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [adminSession, setAdminSession] = useState(null);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+
   const appState = useRef(AppState.currentState);
   const tokenRef = useRef(null);
+  const userRef = useRef(null);
+  const adminSessionRef = useRef(null);
+
   const logoutInProgressRef = useRef(false);
   const sessionVersionRef = useRef(0);
   const internetAlertShownRef = useRef(false);
+  const switchingSessionRef = useRef(false);
 
-  const updateOnlineStatus = useCallback(async (isOnline, expectedToken = tokenRef.current) => {
-    if (!expectedToken) return;
+  const applySession = useCallback((jwtToken, userData) => {
+    sessionVersionRef.current += 1;
+    tokenRef.current = jwtToken;
+    userRef.current = userData;
 
-    try {
-      await updateOnlineStatusApi(isOnline);
-    } catch (error) {
-      console.log(" Failed to update online status:", error?.response?.data || error?.message);
-    }
+    setToken(jwtToken);
+    setUser(userData);
   }, []);
+
+  const clearImpersonation = useCallback(() => {
+    adminSessionRef.current = null;
+    setAdminSession(null);
+    setIsImpersonating(false);
+  }, []);
+
+  // Prevent online-status changes during impersonation.
+  const updateOnlineStatus = useCallback(
+    async (isOnline, expectedToken = tokenRef.current) => {
+      if (!expectedToken) return false;
+
+      if (isImpersonationToken(expectedToken)) {
+        return false;
+      }
+
+      if (tokenRef.current !== expectedToken) {
+        return false;
+      }
+
+      try {
+        // Assumes this API reads the active token from storage.
+        await updateOnlineStatusApi(isOnline);
+        return true;
+      } catch (error) {
+        console.log(
+          "Failed to update online status:",
+          error?.response?.data || error?.message,
+        );
+        return false;
+      }
+    },
+    [],
+  );
 
   const logout = useCallback(
     async (expectedToken) => {
@@ -88,57 +134,64 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      if (logoutInProgressRef.current) {
-        return;
-      }
+      if (logoutInProgressRef.current) return;
 
       logoutInProgressRef.current = true;
 
       try {
-        console.log("Logging out user...");
+        const impersonating = isImpersonationToken(currentToken);
 
-        // 1. Mark user offline BEFORE clearing JWT
-        if (currentToken) {
-          const success = await updateOnlineStatus(
-            false,
-            currentToken,
-          );
+        // If impersonating, clean up using the original admin token.
+        const cleanupToken = impersonating
+          ? adminSessionRef.current?.token
+          : currentToken;
 
-          console.log(
-            "Logout offline status result:",
-            success,
-          );
-        }
-
-        // 2. Unregister Firebase push token
-        const pushToken = await AsyncStorage.getItem("pushToken");
-
-        if (pushToken && currentToken) {
-          try {
-            await removePushTokenApi(
-              pushToken,
-              currentToken,
+        if (
+          cleanupToken
+          && getTokenRemainingMs(cleanupToken) > 0
+        ) {
+          // Online-status API uses the active stored token.
+          // Restore the admin token before admin cleanup.
+          if (impersonating && adminSessionRef.current) {
+            await setAuthData(
+              adminSessionRef.current.token,
+              adminSessionRef.current.user,
             );
 
-            await AsyncStorage.removeItem("pushToken");
+            tokenRef.current = adminSessionRef.current.token;
+          }
 
-            console.log("FCM token unregistered");
-          } catch (error) {
-            console.log(
-              "FCM unregister error:",
-              error?.response?.data || error?.message,
-            );
+          await updateOnlineStatus(false, cleanupToken);
+
+          const pushToken = await AsyncStorage.getItem("pushToken");
+
+          if (pushToken) {
+            try {
+              await removePushTokenApi(
+                pushToken,
+                cleanupToken,
+              );
+
+              await AsyncStorage.removeItem("pushToken");
+            } catch (error) {
+              console.log(
+                "FCM unregister error:",
+                error?.response?.data || error?.message,
+              );
+            }
           }
         }
       } catch (error) {
         console.log("Logout cleanup error:", error);
       } finally {
-        // 3. Clear authentication AFTER API requests
         tokenRef.current = null;
+        userRef.current = null;
         sessionVersionRef.current += 1;
 
         setToken(null);
         setUser(null);
+
+        clearImpersonation();
 
         try {
           await clearAuthData();
@@ -147,13 +200,76 @@ export const AuthProvider = ({ children }) => {
         }
 
         logoutInProgressRef.current = false;
-
-        console.log("User logged out");
       }
     },
-    [updateOnlineStatus],
+    [clearImpersonation, updateOnlineStatus],
   );
 
+  const returnToAdmin = useCallback(async () => {
+    const originalAdmin = adminSessionRef.current;
+
+    if (!originalAdmin?.token || !originalAdmin?.user) {
+      throw new Error("No admin session available");
+    }
+
+    if (getTokenRemainingMs(originalAdmin.token) <= 0) {
+      throw new Error(
+        "Admin session expired. Please log in again.",
+      );
+    }
+
+    if (switchingSessionRef.current) return;
+
+    switchingSessionRef.current = true;
+
+    try {
+      await setAuthData(
+        originalAdmin.token,
+        originalAdmin.user,
+      );
+
+      applySession(
+        originalAdmin.token,
+        originalAdmin.user,
+      );
+
+      clearImpersonation();
+
+      console.log("Returned to Admin successfully");
+    } finally {
+      switchingSessionRef.current = false;
+    }
+  }, [applySession, clearImpersonation]);
+
+  const handleSessionExpiry = useCallback(
+    async (expiredToken) => {
+      if (tokenRef.current !== expiredToken) return;
+
+      if (isImpersonationToken(expiredToken)) {
+        const originalAdmin = adminSessionRef.current;
+
+        if (
+          originalAdmin
+          && getTokenRemainingMs(originalAdmin.token) > 0
+        ) {
+          try {
+            await returnToAdmin();
+            return;
+          } catch (error) {
+            console.log(
+              "Failed to restore Admin session:",
+              error.message,
+            );
+          }
+        }
+      }
+
+      await logout(expiredToken);
+    },
+    [logout, returnToAdmin],
+  );
+
+  // Restore session when app starts.
   useEffect(() => {
     let mounted = true;
 
@@ -163,28 +279,27 @@ export const AuthProvider = ({ children }) => {
 
         if (!mounted) return;
 
-        if (data?.token && data?.user) {
-          const remainingMs = getTokenRemainingMs(data.token);
+        if (!data?.token || !data?.user) return;
 
-          if (remainingMs <= 0) {
-            await clearAuthData();
-
-            if (mounted) {
-              tokenRef.current = null;
-              setToken(null);
-              setUser(null);
-            }
-          } else {
-            tokenRef.current = data.token;
-            sessionVersionRef.current += 1;
-
-            setToken(data.token);
-            setUser(data.user);
-          }
-        } else {
+        // Original admin session is deliberately memory-only.
+        // A restored impersonation token cannot safely return
+        // to Admin after a full app restart.
+        if (
+          isImpersonationToken(data.token)
+          || getTokenRemainingMs(data.token) <= 0
+        ) {
+          await clearAuthData();
+          return;
         }
+
+        if (!mounted) return;
+
+        applySession(data.token, data.user);
       } catch (error) {
-        console.log("Failed to load auth state:", error);
+        console.log(
+          "Failed to load auth state:",
+          error?.message,
+        );
       } finally {
         if (mounted) {
           setIsLoading(false);
@@ -197,117 +312,223 @@ export const AuthProvider = ({ children }) => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [applySession]);
 
+  // Normal login.
   const login = useCallback(
     async (jwtToken, userData) => {
       if (getTokenRemainingMs(jwtToken) <= 0) {
         throw new Error("Invalid or expired token");
       }
 
+      if (isImpersonationToken(jwtToken)) {
+        throw new Error(
+          "Impersonation tokens must use loginAsUser",
+        );
+      }
+
       await setAuthData(jwtToken, userData);
 
-      sessionVersionRef.current += 1;
-      tokenRef.current = jwtToken;
-
-      setToken(jwtToken);
-      setUser(userData);
+      clearImpersonation();
+      applySession(jwtToken, userData);
 
       if (AppState.currentState === "active") {
         await updateOnlineStatus(true, jwtToken);
       }
     },
-    [updateOnlineStatus],
+    [applySession, clearImpersonation, updateOnlineStatus],
   );
 
-  const switchUser = async (jwtToken, userData) => {
-    const remainingMs = getTokenRemainingMs(jwtToken);
+  // Existing normal user-switch flow.
+  const switchUser = useCallback(
+    async (jwtToken, userData) => {
+      if (getTokenRemainingMs(jwtToken) <= 0) {
+        throw new Error("New user token is expired");
+      }
 
-    if (remainingMs <= 0) {
-      throw new Error("New user token is expired");
-    }
+      if (
+        isImpersonationToken(tokenRef.current)
+        || isImpersonationToken(jwtToken)
+      ) {
+        throw new Error(
+          "Normal user switching is disabled during impersonation",
+        );
+      }
 
-    const previousToken = tokenRef.current;
+      const previousToken = tokenRef.current;
 
-    if (previousToken && getTokenRemainingMs(previousToken) > 0) {
-      await updateOnlineStatus(false, previousToken);
-    }
+      if (
+        previousToken
+        && getTokenRemainingMs(previousToken) > 0
+      ) {
+        await updateOnlineStatus(false, previousToken);
 
-    if (previousToken) {
-      const pushToken = await AsyncStorage.getItem("pushToken");
+        const pushToken = await AsyncStorage.getItem("pushToken");
 
-      if (pushToken) {
-        try {
-          await removePushTokenApi(pushToken, previousToken);
-          await AsyncStorage.removeItem("pushToken");
-        } catch (error) {
-          console.log("Previous user FCM cleanup failed:", error);
+        if (pushToken) {
+          try {
+            await removePushTokenApi(
+              pushToken,
+              previousToken,
+            );
+
+            await AsyncStorage.removeItem("pushToken");
+          } catch (error) {
+            console.log(
+              "Previous user FCM cleanup failed:",
+              error?.message,
+            );
+          }
         }
       }
-    }
 
-    await setAuthData(jwtToken, userData);
+      await setAuthData(jwtToken, userData);
 
-    sessionVersionRef.current += 1;
-    tokenRef.current = jwtToken;
+      clearImpersonation();
+      applySession(jwtToken, userData);
+    },
+    [applySession, clearImpersonation, updateOnlineStatus],
+  );
 
-    setToken(jwtToken);
-    setUser(userData);
-  };
+  // Update user profile in context.
+  const updateUser = useCallback(
+    async (userData) => {
+      const currentToken = tokenRef.current;
 
-  const updateUser = async (userData) => {
-    const currentToken = tokenRef.current;
+      if (!currentToken) return;
 
-    if (!currentToken) return;
+      if (isImpersonationToken(currentToken)) {
+        throw new Error(
+          "Profile changes are disabled during impersonation",
+        );
+      }
 
-    if (getTokenRemainingMs(currentToken) <= 0) {
-      await logout(currentToken);
-      return;
-    }
+      if (getTokenRemainingMs(currentToken) <= 0) {
+        await handleSessionExpiry(currentToken);
+        return;
+      }
 
-    await setAuthData(currentToken, userData);
+      await setAuthData(currentToken, userData);
 
-    if (tokenRef.current === currentToken) {
-      setUser(userData);
-    }
-  };
+      if (tokenRef.current === currentToken) {
+        userRef.current = userData;
+        setUser(userData);
+      }
+    },
+    [handleSessionExpiry],
+  );
 
+  // Admin login as Child or Therapist.
+  const loginAsUser = useCallback(
+    async (jwtToken, userData) => {
+      const currentUser = userRef.current;
+      const currentToken = tokenRef.current;
+
+      const currentRole = String(currentUser?.role || "")
+        .trim()
+        .toLowerCase();
+
+      if (currentRole !== "admin") {
+        throw new Error(
+          `Only an admin can start impersonation. Current role: ${currentUser?.role || "unknown"}`,
+        );
+      }
+
+      if (adminSessionRef.current) {
+        throw new Error(
+          "Already impersonating another user",
+        );
+      }
+
+      if (
+        !currentToken
+        || getTokenRemainingMs(currentToken) <= 0
+      ) {
+        throw new Error("Admin session expired");
+      }
+
+      if (getTokenRemainingMs(jwtToken) <= 0) {
+        throw new Error(
+          "Invalid or expired impersonation token",
+        );
+      }
+
+      const decoded = getDecodedToken(jwtToken);
+
+      if (
+        decoded?.impersonation !== true
+        || String(decoded?.impersonatedBy)
+          !== String(currentUser?._id || currentUser?.id)
+      ) {
+        throw new Error(
+          "Invalid impersonation session",
+        );
+      }
+
+      const targetRole = String(userData?.role || "")
+        .trim()
+        .toLowerCase();
+
+      if (!["child", "therapist"].includes(targetRole)) {
+        throw new Error(
+          "Only Child and Therapist accounts are supported",
+        );
+      }
+
+      if (switchingSessionRef.current) return;
+
+      switchingSessionRef.current = true;
+
+      const originalAdmin = {
+        token: currentToken,
+        user: currentUser,
+      };
+
+      try {
+        await setAuthData(jwtToken, userData);
+
+        adminSessionRef.current = originalAdmin;
+        setAdminSession(originalAdmin);
+
+        applySession(jwtToken, userData);
+        setIsImpersonating(true);
+
+        console.log(
+          `Viewing as ${userData.role}: ${userData.fullName}`,
+        );
+      } finally {
+        switchingSessionRef.current = false;
+      }
+    },
+    [applySession],
+  );
+
+  // JWT expiration timer.
   useEffect(() => {
-    if (!token) {
-      console.log("⏹️ Token timer stopped");
-      return;
-    }
+    if (!token) return;
 
-    let intervalId = null;
-    let expirationTimeoutId = null;
     let cancelled = false;
-    let isExpiring = false;
+    let expirationTimeoutId = null;
+    let intervalId = null;
 
     const expireSession = async () => {
       if (
         cancelled
-        || isExpiring
         || tokenRef.current !== token
       ) {
         return;
       }
 
-      isExpiring = true;
+      console.log("JWT token expired");
 
-      clearInterval(intervalId);
-      clearTimeout(expirationTimeoutId);
-
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("🔴 JWT TOKEN EXPIRED");
-      console.log("⏰ Remaining Time: 00:00");
-      console.log("🚪 Automatically logging out...");
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-      await logout(token);
+      await handleSessionExpiry(token);
     };
 
     const checkRemainingTime = () => {
-      if (cancelled || tokenRef.current !== token) {
+      if (
+        cancelled
+        || tokenRef.current !== token
+      ) {
         return;
       }
 
@@ -315,39 +536,39 @@ export const AuthProvider = ({ children }) => {
 
       if (remainingMs <= 0) {
         expireSession();
-        return;
       }
-
-      const formattedTime = formatRemainingTime(remainingMs);
-
-      // console.log(`🟢 Auto Logout In: ${formattedTime}`);
     };
-
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("⏳ JWT AUTO LOGOUT TIMER STARTED");
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-    intervalId = setInterval(checkRemainingTime, 1000);
 
     const remainingMs = getTokenRemainingMs(token);
 
-    if (remainingMs > 0) {
+    if (remainingMs <= 0) {
+      expireSession();
+    } else {
       expirationTimeoutId = setTimeout(
         expireSession,
         remainingMs,
+      );
+
+      intervalId = setInterval(
+        checkRemainingTime,
+        1000,
       );
     }
 
     return () => {
       cancelled = true;
 
-      clearInterval(intervalId);
-      clearTimeout(expirationTimeoutId);
+      if (expirationTimeoutId) {
+        clearTimeout(expirationTimeoutId);
+      }
 
-      console.log("⏹️ JWT countdown cleanup");
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
-  }, [token, logout]);
+  }, [token, handleSessionExpiry]);
 
+  // App foreground/background online status.
   useEffect(() => {
     if (!token || !user) return;
 
@@ -357,17 +578,13 @@ export const AuthProvider = ({ children }) => {
       const remainingMs = getTokenRemainingMs(token);
 
       if (remainingMs <= 0) {
-        console.log("🔴 Token expired while app was backgrounded");
-        await logout(token);
+        await handleSessionExpiry(token);
         return;
       }
 
-      console.log(
-        "📱 App active - Remaining:",
-        formatRemainingTime(remainingMs),
-      );
-
-      await updateOnlineStatus(true, token);
+      if (!isImpersonationToken(token)) {
+        await updateOnlineStatus(true, token);
+      }
     };
 
     if (AppState.currentState === "active") {
@@ -386,8 +603,6 @@ export const AuthProvider = ({ children }) => {
           previousAppState?.match(/inactive|background/)
           && nextAppState === "active"
         ) {
-          console.log("📱 App returned to foreground");
-
           await checkActiveSession();
         }
 
@@ -395,7 +610,10 @@ export const AuthProvider = ({ children }) => {
           previousAppState === "active"
           && nextAppState.match(/inactive|background/)
         ) {
-          if (getTokenRemainingMs(token) > 0) {
+          if (
+            getTokenRemainingMs(token) > 0
+            && !isImpersonationToken(token)
+          ) {
             await updateOnlineStatus(false, token);
           }
         }
@@ -405,48 +623,65 @@ export const AuthProvider = ({ children }) => {
     return () => {
       subscription.remove();
     };
-  }, [token, user, logout, updateOnlineStatus]);
+  }, [
+    token,
+    user,
+    handleSessionExpiry,
+    updateOnlineStatus,
+  ]);
 
+  // Network connection monitoring.
   useEffect(() => {
     if (!token) {
       internetAlertShownRef.current = false;
       return;
     }
 
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      const isOffline = state.isConnected === false
-        || state.isInternetReachable === false;
+    const unsubscribe = NetInfo.addEventListener(
+      (state) => {
+        const isOffline = state.isConnected === false
+          || state.isInternetReachable === false;
 
-      if (isOffline && !internetAlertShownRef.current) {
-        internetAlertShownRef.current = true;
+        if (
+          isOffline
+          && !internetAlertShownRef.current
+        ) {
+          internetAlertShownRef.current = true;
 
-        Alert.alert(
-          "No Internet Connection",
-          "Your internet connection has been lost. You will be logged out.",
-          [
-            {
-              text: "OK",
-              onPress: async () => {
-                await logout(token);
+          Alert.alert(
+            "No Internet Connection",
+            "Your internet connection has been lost. You will be logged out.",
+            [
+              {
+                text: "OK",
+                onPress: async () => {
+                  await logout(token);
+                },
               },
-            },
-          ],
-          { cancelable: false },
-        );
-      }
+            ],
+            { cancelable: false },
+          );
+        }
 
-      if (!isOffline) {
-        internetAlertShownRef.current = false;
-      }
-    });
+        if (!isOffline) {
+          internetAlertShownRef.current = false;
+        }
+      },
+    );
 
     return () => {
       unsubscribe();
     };
   }, [token, logout]);
 
+  // Firebase push notifications.
   useEffect(() => {
     if (!token || !user) return;
+
+    // Never register a device against an impersonated user.
+    if (isImpersonationToken(token)) {
+      return;
+    }
 
     let cancelled = false;
 
@@ -455,17 +690,27 @@ export const AuthProvider = ({ children }) => {
         const pushToken = await registerForPushNotifications();
 
         if (!pushToken || cancelled) return;
+
         if (tokenRef.current !== token) return;
 
         await savePushTokenApi(pushToken, token);
 
-        if (cancelled || tokenRef.current !== token) {
-          await removePushTokenApi(pushToken, token)
-            .catch(console.error);
+        if (
+          cancelled
+          || tokenRef.current !== token
+        ) {
+          await removePushTokenApi(
+            pushToken,
+            token,
+          ).catch(console.error);
+
           return;
         }
 
-        await AsyncStorage.setItem("pushToken", pushToken);
+        await AsyncStorage.setItem(
+          "pushToken",
+          pushToken,
+        );
 
         console.log("FCM registered successfully");
       } catch (error) {
@@ -481,7 +726,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       cancelled = true;
     };
-  }, [token, user?._id]);
+  }, [token, user?._id, user?.id]);
 
   return (
     <AuthContext.Provider
@@ -490,10 +735,16 @@ export const AuthProvider = ({ children }) => {
         user,
         userRole: user?.role || null,
         isLoading,
+
         login,
         logout,
         switchUser,
         updateUser,
+
+        loginAsUser,
+        returnToAdmin,
+        isImpersonating,
+        adminSession,
       }}
     >
       {children}

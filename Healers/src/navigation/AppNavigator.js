@@ -18,6 +18,7 @@ import {
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import BackToAdminButton from '../components/BackToAdminButton';
 import BottomBar from '../components/BottomBar';
 import TopBar from '../components/TopBar';
 import { AuthContext } from '../context/AuthContext';
@@ -119,7 +120,7 @@ const SCREEN_LAYOUTS = {
     BatchScheduleCreate: { headerTitle: "Create Batch Schedule" },
     StaffOnLeave: { headerTitle: "Staff on Leave Today" },
     ChildMessages: { headerTitle: "Messages" },
-    ChatDetails: { showFooter: false, headerTitle: "Chat" },
+    ChatDetails: { showFooter: false, showHeader: false, headerTitle: "Chat" },
     ChildProfile: { headerTitle: "Profile" },
     BatchSessionPostpone: { headerTitle: "Postpone Session" },
     BatchAdditionalClass: { headerTitle: "Additional Class" },
@@ -140,16 +141,16 @@ const SCREEN_LAYOUTS = {
     TherapistDashboard: { showHeader: false, showFooter: true },
     AssignedChildren: { headerTitle: "Assigned Children" },
     FeedbackManagement: { headerTitle: "Feedback Management" },
-    AddFeedback: { headerTitle: "Add Feedback" },
+    AddFeedback: { headerTitle: "Feedback" },
     AttendanceTracking: { headerTitle: "Attendance Tracking" },
     WeeklyVideo: { headerTitle: "Weekly Videos" },
     LeaveRequest: { headerTitle: "Leave Request" },
     QuarterlyReports: { headerTitle: "Quarterly Reports" },
     ProgressTracking: { headerTitle: "Progress Tracking" },
     ChildMessages: { headerTitle: "Messages" },
-    ChatDetails: { showFooter: false, headerTitle: "Chat" },
+    ChatDetails: { showFooter: false, showHeader: false, headerTitle: "Chat" },
     ChildProfile: { headerTitle: "Profile" },
-    Notifications: { showFooter: false, headerTitle: "Notifications" },
+    Notifications: { headerTitle: "Notifications" },
     TherapistComplaints: { headerTitle: "Complaints" },
     ComplaintDetails: { headerTitle: "Complaint Details" },
   },
@@ -160,9 +161,9 @@ const SCREEN_LAYOUTS = {
     ChildAttendance: { headerTitle: "Attendance" },
     ChildVideo: { headerTitle: "Videos" },
     ChildMessages: { headerTitle: "Messages" },
-    ChatDetails: { showFooter: false, headerTitle: "Chat" },
+    ChatDetails: { showFooter: false, showHeader: false, headerTitle: "Chat" },
     ChildReport: { headerTitle: "Reports" },
-    Notifications: { showFooter: false, headerTitle: "Notifications" },
+    Notifications: { headerTitle: "Notifications" },
     ChildProfile: { headerTitle: "Profile" },
     ChildComplaints: { headerTitle: "Complaints" },
     ComplaintDetails: { headerTitle: "Complaint Details" },
@@ -181,7 +182,7 @@ const ACTIVE_TAB_ROUTES = {
     ChildDetails: "Children",
     ChildForm: "Children",
     Schedule: "Schedule",
-    Notifications:'Notifications',
+    Notifications: "Notifications",
     ChildSchedule: "Schedule",
     BatchSchedule: "Schedule",
     BatchScheduleCreate: "Schedule",
@@ -208,29 +209,32 @@ const ACTIVE_TAB_ROUTES = {
     AllUsers: "AdminDashboard",
   },
   Therapist: {
-    TherapistDashboard: "Home",
-    AssignedChildren: "Children",
-    FeedbackManagement: "Feedback",
-    AddFeedback: "Feedback",
-    AttendanceTracking: "Attendance",
-    WeeklyVideo: "Videos",
-    QuarterlyReports: "Reports",
-    ProgressTracking: "Progress",
-    LeaveRequest: "Home",
-    TherapistComplaints: "Home",
-    ComplaintDetails: "Home",
+    TherapistDashboard: "TherapistDashboard",
+    AssignedChildren: "AssignedChildren",
+    FeedbackManagement: "FeedbackManagement",
+    AddFeedback: "FeedbackManagement",
+    AttendanceTracking: "AttendanceTracking",
+    WeeklyVideo: "TherapistDashboard",
+    QuarterlyReports: "AssignedChildren",
+    ProgressTracking: "AssignedChildren",
+    LeaveRequest: "TherapistDashboard",
+    TherapistComplaints: "TherapistDashboard",
+    ComplaintDetails: "TherapistDashboard",
+    Notifications: "Notifications",
   },
   Child: {
-    ChildDashboard: "Home",
-    ChildFeedback: "Feedback",
-    CreateFeedback: "Feedback",
+    ChildDashboard: "ChildDashboard",
+    ChildFeedback: "ChildFeedback",
+    CreateFeedback: "ChildFeedback",
     ChildAttendance: "Attendance",
     ChildVideo: "Videos",
     ChildReport: "Reports",
-    ChildMessages: "Messages",
-    ChildInvoices: "Home",
-    ChildComplaints: "Home",
-    ComplaintDetails: "Home",
+    ChildMessages: "ChildDashboard",
+    ChildInvoices: "ChildDashboard",
+    ChildComplaints: "ChildDashboard",
+    ComplaintDetails: "ChildDashboard",
+    Notifications: "Notifications",
+    ChildAttendance: "ChildAttendance",
   },
 };
 
@@ -452,9 +456,13 @@ export default function AppNavigator() {
       onStateChange={updateLayout}
     >
       {!isAuthenticatedRole ? <AuthStack /> : (
-        <SafeAreaView style={[styles.container,commonStyles.container]}>
+        <SafeAreaView
+          style={[styles.container, commonStyles.container]}
+        >
           <View
-            style={layout.showHeader ? styles.visible : styles.hidden}
+            style={layout.showHeader
+              ? styles.visible
+              : styles.hidden}
           >
             <TopBar
               navigation={navigationRef}
@@ -473,14 +481,19 @@ export default function AppNavigator() {
           </View>
 
           <View
-            style={layout.showFooter ? styles.visible : styles.hidden}
+            style={layout.showFooter
+              ? styles.visible
+              : styles.hidden}
           >
             <BottomBar
               navigation={navigationRef}
               activeTab={activeTab}
-              setActiveTab={activeTab}
+              setActiveTab={setActiveTab}
             />
           </View>
+
+          {/* Visible on every impersonated Child/Therapist screen */}
+          <BackToAdminButton />
         </SafeAreaView>
       )}
     </NavigationContainer>

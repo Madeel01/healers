@@ -1,5 +1,6 @@
 import React, {
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -19,7 +20,6 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -29,6 +29,7 @@ import {
   getProgramTherapistsApi,
   getServices,
 } from '../../api/admin/api';
+import { adminLoginAsUserApi } from '../../api/authApi';
 import {
   addGoalToProgramApi,
   AddPrograms,
@@ -36,13 +37,17 @@ import {
   deleteProgramApi,
   getChildProgramSpeciality,
 } from '../../api/therapist/api';
-import BottomBar from '../../components/BottomBar';
-import TopBar from '../../components/TopBar';
+import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const PAGE_SIZE = 5;
 
@@ -84,6 +89,7 @@ export default function ProgramBuilderScreen({ navigation }) {
   const [savingProgram, setSavingProgram] = useState(false);
   const [savingGoalId, setSavingGoalId] = useState(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [loginLoading, setLoginLoading] = useState(false);
 
   const therapistRequestRef = useRef(0);
   const childRequestRef = useRef(0);
@@ -92,6 +98,7 @@ export default function ProgramBuilderScreen({ navigation }) {
   const childBusyRef = useRef(false);
   const selectedTherapistId = selectedTherapist?.therapistId || null;
   const selectedChildId = selectedChild?.childId || null;
+  const { loginAsUser } = useContext(AuthContext);
 
   const selectedAssignment = useMemo(() => (
     selectedTherapistId && selectedChildId
@@ -405,10 +412,40 @@ export default function ProgramBuilderScreen({ navigation }) {
   const filteredPrograms = programs.filter((program) =>
     String(program.programName || program.title || "").toLowerCase().includes(searchQuery.trim().toLowerCase())
   );
-  return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
-      <TopBar navigation={navigation} headerTitle="Program Builder" />
 
+  const handleLoginAsUser = async (userId) => {
+    if (!userId || loginLoading) return;
+
+    try {
+      setLoginLoading(true);
+
+      const response = await adminLoginAsUserApi(userId);
+
+      if (!response?.success || !response?.token || !response?.user) {
+        throw new Error(
+          response?.message || "Unable to login as selected user",
+        );
+      }
+
+      await loginAsUser(response.token, response.user);
+    } catch (error) {
+      console.error(
+        "Login as user failed:",
+        error?.response?.data?.message || error.message,
+      );
+
+      Alert.alert(
+        "Login Failed",
+        error?.response?.data?.message
+          || error.message
+          || "Unable to switch user",
+      );
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+  return (
+    <View style={[styles.mainContainer, commonStyles.container]}>
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -488,6 +525,21 @@ export default function ProgramBuilderScreen({ navigation }) {
               <Text style={styles.loadMoreText}>Load More Therapists (+5)</Text>
             </TouchableOpacity>
           )}
+
+          {selectedTherapist && (
+            <TouchableOpacity
+              style={[
+                styles.loginTherapistBtn,
+                (!selectedTherapistId || loginLoading) && styles.disabledButton,
+              ]}
+              disabled={!selectedTherapistId || loginLoading}
+              onPress={() => handleLoginAsUser(selectedTherapistId)}
+            >
+              <Text style={styles.loginTherapistText}>
+                Login as Therapist
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.selectorSection}>
@@ -546,6 +598,19 @@ export default function ProgramBuilderScreen({ navigation }) {
                   <Text style={styles.loadMoreText}>Load More Children (+5)</Text>
                 </TouchableOpacity>
               )}
+
+              <TouchableOpacity
+                style={[
+                  styles.loginTherapistBtn,
+                  (!selectedChildId || loginLoading) && styles.disabledButton,
+                ]}
+                disabled={!selectedChildId || loginLoading}
+                onPress={() => handleLoginAsUser(selectedChildId)}
+              >
+                <Text style={styles.loginTherapistText}>
+                  Login as Child
+                </Text>
+              </TouchableOpacity>
             </>
           )}
         </View>
@@ -720,9 +785,7 @@ export default function ProgramBuilderScreen({ navigation }) {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-
-      <BottomBar />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -730,28 +793,28 @@ const styles = StyleSheet.create({
   horizontalOptions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingVertical: 4,
+    gap: wp(10),
+    paddingVertical: hp(4),
     paddingRight: 16,
   },
   sliderChip: {
-    padding: 12,
-    paddingHorizontal: 20,
-    borderRadius: 28,
+    padding: wp(12),
+    paddingHorizontal: wp(20),
+    borderRadius: wp(28),
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    gap: 10,
+    gap: wp(10),
   },
   sliderChipSelected: {
     backgroundColor: "#E6FAF4",
     borderColor: "#00725E",
   },
   sliderTitle: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.medium,
     color: "#0F172A",
     lineHeight: 24,
@@ -761,7 +824,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
   },
   sliderSubtitle: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.regular,
     color: "#64748B",
   },
@@ -780,19 +843,19 @@ const styles = StyleSheet.create({
 
   headerBanner: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: wp(20),
+    paddingVertical: hp(14),
     marginBottom: 18,
   },
 
   bannerTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: colors.white,
   },
 
   bannerSubtitle: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.regular,
     color: colors.white,
     marginTop: 5,
@@ -801,22 +864,22 @@ const styles = StyleSheet.create({
   selectorSection: {
     marginHorizontal: 20,
     marginBottom: 16,
-    padding: 15,
+    padding: wp(15),
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: wp(16),
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
 
   sectionHeaderTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: colors.blackFont,
     marginBottom: 12,
   },
 
   selectionHint: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
     marginBottom: 10,
@@ -824,29 +887,30 @@ const styles = StyleSheet.create({
 
   searchInputContainer: {
     backgroundColor: "#F7FAFD",
-    borderRadius: 10,
-    minHeight: 44,
+    borderRadius: wp(10),
+    minHeight: hp(48),
+    maxHeight: hp(48),
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    gap: 8,
+    paddingHorizontal: wp(12),
+    gap: wp(8),
     marginBottom: 12,
   },
 
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#0F172A",
-    paddingVertical: 8,
+    paddingVertical: hp(8),
   },
 
   option: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 12,
-    borderRadius: 12,
+    padding: wp(12),
+    borderRadius: wp(12),
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -864,7 +928,7 @@ const styles = StyleSheet.create({
   },
 
   optionTitle: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.medium,
     color: "#0F172A",
   },
@@ -875,7 +939,7 @@ const styles = StyleSheet.create({
   },
 
   optionSubtitle: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.regular,
     color: "#64748B",
     marginTop: 4,
@@ -886,13 +950,13 @@ const styles = StyleSheet.create({
   },
 
   loadMoreBtn: {
-    padding: 12,
+    padding: wp(12),
     alignItems: "center",
   },
 
   loadMoreText: {
     color: "#004E9F",
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
   },
 
@@ -900,15 +964,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     marginHorizontal: 20,
     marginBottom: 16,
-    padding: 14,
-    borderRadius: 16,
+    padding: wp(14),
+    borderRadius: wp(16),
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
 
   selectedInfoRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: wp(12),
   },
 
   selectedInfoBox: {
@@ -916,14 +980,14 @@ const styles = StyleSheet.create({
   },
 
   selectedInfoLabel: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.regular,
     color: "#64748B",
     marginBottom: 3,
   },
 
   selectedInfoValue: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.medium,
     color: "#0F172A",
   },
@@ -931,8 +995,8 @@ const styles = StyleSheet.create({
   searchCard: {
     backgroundColor: "#FFFFFF",
     marginHorizontal: 20,
-    borderRadius: 22,
-    padding: 18,
+    borderRadius: wp(22),
+    padding: wp(18),
     borderWidth: 1,
     borderColor: "#E2E8F0",
     marginBottom: 22,
@@ -940,22 +1004,22 @@ const styles = StyleSheet.create({
 
   actionButtonsRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: wp(12),
   },
 
   allLabelsBtn: {
     flex: 1,
     backgroundColor: "#F58B2A",
-    height: 44,
-    borderRadius: 32,
+    height: hp(44),
+    borderRadius: wp(32),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: wp(6),
   },
 
   allLabelsText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
   },
@@ -963,8 +1027,8 @@ const styles = StyleSheet.create({
   addProgramBtn: {
     flex: 1,
     backgroundColor: "#00725E",
-    height: 44,
-    borderRadius: 32,
+    height: hp(44),
+    borderRadius: wp(32),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -974,36 +1038,36 @@ const styles = StyleSheet.create({
   },
 
   addProgramText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.bold,
     color: "#8BF6D9",
   },
 
   allProgramTitle: {
-    fontSize: 20,
+    fontSize: fontSize(20),
     fontFamily: fonts.bold,
     color: "#1D1B16",
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
     marginBottom: 18,
   },
 
   emptyText: {
     textAlign: "center",
     color: "#64748B",
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     marginVertical: 12,
   },
 
   programList: {
-    paddingHorizontal: 20,
-    gap: 16,
+    paddingHorizontal: wp(20),
+    gap: wp(16),
   },
 
   programCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 20,
+    borderRadius: wp(24),
+    padding: wp(20),
     borderWidth: 1,
     borderColor: "#94A2B6",
   },
@@ -1012,19 +1076,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    gap: 10,
+    gap: wp(10),
     marginBottom: 5,
   },
 
   cardTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#1D1B16",
     marginBottom: 4,
   },
 
   cardDescription: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#6B7280",
     lineHeight: 20,
@@ -1033,9 +1097,10 @@ const styles = StyleSheet.create({
 
   goalBox: {
     backgroundColor: "rgba(139,246,217,.2)",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    minHeight: 46,
+    borderRadius: wp(10),
+    paddingHorizontal: wp(14),
+    minHeight: hp(46),
+    maxHeight: hp(46),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1045,21 +1110,21 @@ const styles = StyleSheet.create({
   goalLeftRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: wp(10),
     flex: 1,
   },
 
   radioCircle: {
     width: 14,
     height: 14,
-    borderRadius: 7,
+    borderRadius: wp(7),
     borderWidth: 1.5,
     borderColor: "#717781",
   },
 
   goalTitle: {
     flex: 1,
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.bold,
     color: "#006B58",
   },
@@ -1067,47 +1132,47 @@ const styles = StyleSheet.create({
   goalInputRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: wp(8),
     marginBottom: 14,
   },
 
   goalTextInput: {
     flex: 1,
-    height: 42,
+    height: hp(42),
     backgroundColor: "#F1F5F9",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 13,
+    borderRadius: wp(8),
+    paddingHorizontal: wp(12),
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#0F172A",
   },
 
   saveGoalBtn: {
     backgroundColor: "#006B58",
-    height: 42,
-    paddingHorizontal: 14,
-    borderRadius: 8,
+    height: hp(42),
+    paddingHorizontal: wp(14),
+    borderRadius: wp(8),
     justifyContent: "center",
   },
 
   saveGoalBtnText: {
     color: "#FFFFFF",
     fontFamily: fonts.bold,
-    fontSize: 13,
+    fontSize: fontSize(13),
   },
 
   addGoalBtn: {
     backgroundColor: "#006B58",
-    height: 44,
-    borderRadius: 8,
+    height: hp(44),
+    borderRadius: wp(8),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: wp(8),
   },
 
   addGoalBtnText: {
-    fontSize: 15,
+    fontSize: fontSize(15),
     fontFamily: fonts.medium,
     color: "#8BF6D9",
   },
@@ -1117,14 +1182,14 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
   },
 
   modalContent: {
     width: "100%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: wp(16),
+    padding: wp(16),
     elevation: 5,
   },
 
@@ -1136,7 +1201,7 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#0F172A",
   },
@@ -1145,15 +1210,36 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 13,
-    paddingHorizontal: 10,
+    paddingVertical: hp(13),
+    paddingHorizontal: wp(10),
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
 
   modalOptionText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#334155",
+  },
+
+  loginTherapistBtn: {
+    backgroundColor: "#004E9F",
+    minHeight: hp(48),
+    borderRadius: wp(12),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: wp(14),
+    paddingVertical: hp(10),
+    gap: wp(10),
+    marginTop: hp(14),
+  },
+
+  loginTherapistText: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#FFFFFF",
+    flexShrink: 1,
+    textAlign: "center",
   },
 });

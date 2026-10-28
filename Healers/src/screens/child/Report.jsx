@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 
@@ -22,14 +21,17 @@ import {
   getChildPrograms,
   getChildStatsApi,
 } from '../../api/therapist/api';
-import ChildBottomBar from '../../components/ChildBottomBar';
-import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 export default function ReportScreen({ navigation }) {
   const { user } = useContext(AuthContext);
@@ -228,17 +230,12 @@ export default function ReportScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.mainContainer,
         commonStyles.container,
       ]}
     >
-      <TopBar
-        navigation={navigation}
-        headerTitle="Report"
-      />
-
       {childTherapists.length > 0 && (
         <View style={styles.therapistSliderWrapper}>
           <ScrollView
@@ -408,7 +405,7 @@ export default function ReportScreen({ navigation }) {
           >
             <Ionicons
               name="trophy-outline"
-              size={18}
+              size={fontSize(18)}
               color={colors.primary}
               style={{ marginRight: 8 }}
             />
@@ -529,15 +526,14 @@ export default function ReportScreen({ navigation }) {
             )}
         </View>
       </ScrollView>
-
-      <ChildBottomBar activeTab="ChildReport" />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
+    paddingTop: hp(10),
   },
 
   therapistSliderWrapper: {
@@ -546,18 +542,18 @@ const styles = StyleSheet.create({
   },
 
   therapistSlider: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    gap: 10,
+    paddingHorizontal: wp(20),
+    paddingVertical: hp(8),
+    gap: wp(10),
     alignItems: "center",
   },
 
   childChip: {
-    minWidth: 140,
-    maxWidth: 220,
-    borderRadius: 32,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    minWidth: wp(140),
+    maxWidth: wp(220),
+    borderRadius: wp(32),
+    paddingHorizontal: wp(20),
+    paddingVertical: hp(12),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -573,7 +569,7 @@ const styles = StyleSheet.create({
   },
 
   chipText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     lineHeight: 20,
     color: "#004E9F",
@@ -588,15 +584,15 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
     paddingTop: 8,
     paddingBottom: 20,
   },
 
   profileCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 37,
-    padding: 20,
+    borderRadius: wp(37),
+    padding: wp(20),
     alignItems: "center",
     marginBottom: 20,
     shadowColor: "#000",
@@ -611,9 +607,9 @@ const styles = StyleSheet.create({
 
   childAvatarWrapper: {
     backgroundColor: "#FFFFFF",
-    width: 128,
-    height: 128,
-    borderRadius: 24,
+    width: wp(128),
+    height: hp(128),
+    borderRadius: wp(24),
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
@@ -628,28 +624,29 @@ const styles = StyleSheet.create({
   },
 
   childAvatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 24,
+    width: wp(120),
+    height: hp(120),
+    borderRadius: wp(24),
   },
 
   avatarFallback: {
-    width: 120,
-    height: 120,
-    borderRadius: 24,
+   width: wp(120),
+    height: hp(120),
+    borderRadius: wp(24),
     backgroundColor: "#004E9F",
     alignItems: "center",
     justifyContent: "center",
   },
 
   avatarFallbackText: {
-    fontSize: 48,
+    fontSize: fontSize(48),
     fontFamily: fonts.bold || "System",
     color: "#FFFFFF",
+    lineHeight:40
   },
 
   childName: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 24,
@@ -661,19 +658,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: wp(8),
     marginBottom: 20,
   },
 
   ageBadge: {
     backgroundColor: "rgba(22,105,169,.1)",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(4),
+    borderRadius: wp(999),
   },
 
   ageBadgeText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.medium,
     color: "#005086",
     lineHeight: 24,
@@ -682,13 +679,13 @@ const styles = StyleSheet.create({
   therapistBadge: {
     maxWidth: "70%",
     backgroundColor: "rgba(255,183,129,.2)",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(4),
+    borderRadius: wp(999),
   },
 
   therapistBadgeText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.medium,
     color: "#7A3E00",
     lineHeight: 24,
@@ -697,8 +694,8 @@ const styles = StyleSheet.create({
   sessionBox: {
     width: "100%",
     backgroundColor: "#F1F4FA",
-    borderRadius: 18,
-    padding: 12,
+    borderRadius: wp(18),
+    padding: wp(12),
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -714,7 +711,7 @@ const styles = StyleSheet.create({
   },
 
   sessionLabel: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 24,
@@ -722,14 +719,14 @@ const styles = StyleSheet.create({
   },
 
   sessionValue: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#181C21",
     lineHeight: 24,
   },
 
   attendanceValue: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#004E9F",
     lineHeight: 24,
@@ -737,8 +734,8 @@ const styles = StyleSheet.create({
 
   sectionCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 20,
+    borderRadius: wp(24),
+    padding: wp(20),
     marginBottom: 20,
     shadowColor: "#000",
     shadowOffset: {
@@ -757,7 +754,7 @@ const styles = StyleSheet.create({
   },
 
   sectionCardTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: colors.primary,
     lineHeight: 24,
@@ -773,8 +770,8 @@ const styles = StyleSheet.create({
   goalItemCard: {
     borderWidth: 1,
     borderColor: "#EBEEF1",
-    borderRadius: 24,
-    padding: 16,
+    borderRadius: wp(24),
+    padding: wp(16),
     marginBottom: 12,
   },
 
@@ -787,7 +784,7 @@ const styles = StyleSheet.create({
 
   goalTitle: {
     flex: 1,
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 24,
@@ -795,21 +792,21 @@ const styles = StyleSheet.create({
   },
 
   progressBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(2),
+    borderRadius: wp(4),
     backgroundColor: "#8BF6D9",
   },
 
   progressBadgeText: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.bold,
     color: "#00725E",
     lineHeight: 24,
   },
 
   goalSubtext: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#C1C7D2",
     lineHeight: 16,
@@ -819,12 +816,12 @@ const styles = StyleSheet.create({
   progressBarBg: {
     height: 8,
     backgroundColor: "#EBEEF1",
-    borderRadius: 999,
+    borderRadius: wp(999),
     overflow: "hidden",
   },
 
   progressBarFill: {
     height: "100%",
-    borderRadius: 999,
+    borderRadius: wp(999),
   },
 });

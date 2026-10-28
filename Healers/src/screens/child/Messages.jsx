@@ -1,5 +1,6 @@
 import React, {
   memo,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -18,21 +19,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
   getAssignUser,
   getConversations,
 } from '../../api/child/api';
-import BottomBar from '../../components/BottomBar';
-import ChildBottomBar from '../../components/ChildBottomBar';
-import TherapistBottomBar from '../../components/TherapistBottomBar';
-import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const CareTeamSkeleton = ({ skeletonPulse }) => (
   <View style={styles.careTeamRow}>
@@ -207,21 +210,35 @@ export default function MessagingScreen({ navigation }) {
     }
   }, [careTeamLoading, skeletonPulse]);
 
-  useEffect(() => {
-    loadInitialData();
-    fetchMembers();
+  const screenFocusedRef = useRef(false);
 
-    const initialDataInterval = setInterval(() => {
-      refreshCurrentList();
-    }, 3000);
+  useFocusEffect(
+    useCallback(() => {
+      screenFocusedRef.current = true;
 
-    const membersInterval = setInterval(fetchMembers, 10000);
+      loadInitialData();
+      fetchMembers();
 
-    return () => {
-      clearInterval(initialDataInterval);
-      clearInterval(membersInterval);
-    };
-  }, []);
+      const initialDataInterval = setInterval(() => {
+        if (screenFocusedRef.current) {
+          refreshCurrentList();
+        }
+      }, 3000);
+
+      const membersInterval = setInterval(() => {
+        if (screenFocusedRef.current) {
+          fetchMembers();
+        }
+      }, 10000);
+
+      return () => {
+        screenFocusedRef.current = false;
+
+        clearInterval(initialDataInterval);
+        clearInterval(membersInterval);
+      };
+    }, [userId, role]),
+  );
 
   const loadInitialData = async () => {
     try {
@@ -329,10 +346,25 @@ export default function MessagingScreen({ navigation }) {
           parsedMembers = rawMembers;
         }
 
-        const currentIds = careTeamMembersRef.current.map((m) => m.id).join(",");
-        const newIds = parsedMembers.map((m) => m.id).join(",");
+        const currentMembers = careTeamMembersRef.current;
 
-        if (currentIds !== newIds) {
+        const hasChanges = currentMembers.length !== parsedMembers.length
+          || parsedMembers.some((newMember, index) => {
+            const oldMember = currentMembers[index];
+
+            if (!oldMember) return true;
+
+            return (
+              oldMember.id !== newMember.id
+              || oldMember.isOnline !== newMember.isOnline
+              || oldMember.lastActive !== newMember.lastActive
+              || oldMember.fullName !== newMember.fullName
+              || oldMember.profileImage !== newMember.profileImage
+            );
+          });
+
+        if (hasChanges) {
+          careTeamMembersRef.current = parsedMembers;
           setCareTeamMembers(parsedMembers);
         }
       }
@@ -424,9 +456,7 @@ export default function MessagingScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.container,commonStyles.container]}>
-      <TopBar navigation={navigation} headerTitle="Messages" />
-
+    <View style={[styles.container, commonStyles.container]}>
       <FlatList
         data={filteredMessages}
         keyExtractor={(item) => item.conversationId}
@@ -459,13 +489,7 @@ export default function MessagingScreen({ navigation }) {
           )
           : null}
       />
-
-      {user?.role === "Therapist"
-        ? <TherapistBottomBar activeTab="" />
-        : user?.role === "Admin"
-        ? <BottomBar activeTab="" />
-        : <ChildBottomBar activeTab="ChildMessages" />}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -473,15 +497,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerWrapper: {
-  },
+  headerWrapper: {},
   careTeamContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
     marginTop: 10,
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     lineHeight: 20,
     fontFamily: fonts.semiBold,
     color: "#475569",
@@ -491,25 +514,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: wp(12),
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    paddingHorizontal: 12,
-    height: 40,
+    paddingHorizontal: wp(12),
+    height: hp(48),
     marginBottom: 14,
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#0F172A",
-    paddingVertical: 0,
+    paddingVertical: hp(0),
   },
   clearButton: {
     padding: 4,
   },
   clearButtonText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#94A3B8",
     fontFamily: fonts.bold,
   },
@@ -520,36 +543,37 @@ const styles = StyleSheet.create({
   },
   careTeamItem: {
     alignItems: "center",
-    width: 64,
+    width: wp(64),
   },
   avatarWrapper: {
     position: "relative",
   },
   avatarCircleLarge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(28),
     alignItems: "center",
     justifyContent: "center",
   },
   avatarInitialsLarge: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.bold,
     color: "#1E293B",
+    lineHeight: 24,
   },
   onlineBadge: {
     position: "absolute",
     bottom: 2,
     right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: wp(12),
+    height: hp(12),
+    borderRadius: wp(6),
     backgroundColor: "#059669",
     borderWidth: 2,
     borderColor: "#F8FAFC",
   },
   careTeamName: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     lineHeight: 16,
     fontFamily: fonts.semiBold,
     color: "#1E293B",
@@ -557,41 +581,41 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   noMembersText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#94A3B8",
-    paddingVertical: 12,
+    paddingVertical: hp(12),
   },
   skeletonCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(28),
     backgroundColor: "#e5ecf4",
   },
   skeletonTitle: {
-    width: 44,
+    width: wp(44),
     height: 10,
-    borderRadius: 5,
+    borderRadius: wp(5),
     backgroundColor: "#e5ecf4",
     marginTop: 8,
   },
   filterRow: {
     flexDirection: "row",
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
     gap: 10,
     marginBottom: 16,
   },
   filterPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingHorizontal: wp(16),
+    paddingVertical: hp(10),
+    borderRadius: wp(20),
     backgroundColor: "#F1F5F9",
   },
   filterPillActive: {
     backgroundColor: "#005086",
   },
   filterText: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     lineHeight: 18,
     fontFamily: fonts.semiBold,
     color: "#475569",
@@ -601,7 +625,7 @@ const styles = StyleSheet.create({
   },
   chatCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: wp(16),
     padding: 16,
     marginHorizontal: 20,
     flexDirection: "row",
@@ -609,14 +633,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   avatarCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: wp(50),
+    height: hp(50),
+    borderRadius: wp(25),
     alignItems: "center",
     justifyContent: "center",
   },
   avatarInitials: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#1E293B",
   },
@@ -625,10 +649,10 @@ const styles = StyleSheet.create({
     top: -4,
     right: -4,
     backgroundColor: "#EF4444",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 5,
+    borderRadius: wp(10),
+    minWidth: wp(20),
+    height: hp(20),
+    paddingHorizontal: wp(5),
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1.5,
@@ -636,12 +660,13 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "#FFFFFF",
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.bold,
+    lineHeight: 12,
   },
   chatCardContent: {
     flex: 1,
-    marginLeft: 14,
+    marginLeft: wp(14),
   },
   cardHeaderRow: {
     flexDirection: "row",
@@ -649,13 +674,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   userName: {
-    fontSize: 17,
+    fontSize: fontSize(17),
     lineHeight: 22,
     fontFamily: fonts.bold,
     color: "#0F172A",
   },
   timeText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     lineHeight: 16,
     fontFamily: fonts.regular,
     color: "#64748B",
@@ -666,7 +691,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
   },
   designationText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     lineHeight: 16,
     fontFamily: fonts.regular,
     color: "#64748B",
@@ -674,7 +699,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   lastMessageText: {
-    fontSize: 14,
+    fontSize: fontSize(14),
     lineHeight: 20,
     fontFamily: fonts.regular,
     color: "#64748B",
@@ -684,7 +709,7 @@ const styles = StyleSheet.create({
     color: "#0F172A",
   },
   loadingFooter: {
-    paddingVertical: 20,
+    paddingVertical: hp(20),
     alignItems: "center",
     justifyContent: "center",
   },

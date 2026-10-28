@@ -17,11 +17,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FontAwesome6 } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import Feather from '@expo/vector-icons/Feather';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useIsFocused } from '@react-navigation/native';
 
@@ -35,7 +34,6 @@ import {
   getCNICUSERS,
   UnreadSummary,
 } from '../../api/child/api';
-import ChildBottomBar from '../../components/ChildBottomBar';
 import NotificationModal from '../../components/NotificationModal';
 import { AuthContext } from '../../context/AuthContext';
 import {
@@ -43,6 +41,11 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 export default function ChildDashboardScreen({ navigation }) {
   const { user, logout, switchUser } = useContext(AuthContext);
@@ -116,13 +119,13 @@ export default function ChildDashboardScreen({ navigation }) {
     } catch (error) {
       Alert.alert(
         "Error",
-         error?.response?.data?.message ||
-        error?.message
+        error?.response?.data?.message
+          || error?.message
           || "Error while switch User",
       );
       console.log(
         "switch user error:",
-        error?.response?.data ,
+        error?.response?.data,
       );
     } finally {
       setSwitchingUser(false);
@@ -267,7 +270,7 @@ export default function ChildDashboardScreen({ navigation }) {
   }, [notificationUnreadCount]);
 
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
+    <View style={[styles.mainContainer, commonStyles.container]}>
       <View style={styles.headerRow}>
         <View style={styles.profileContainer}>
           <TouchableOpacity
@@ -310,7 +313,7 @@ export default function ChildDashboardScreen({ navigation }) {
 
               <Feather
                 name="chevron-down"
-                size={16}
+                size={fontSize(16)}
                 color="#0F172A"
               />
             </TouchableOpacity>
@@ -338,7 +341,7 @@ export default function ChildDashboardScreen({ navigation }) {
               >
                 <Feather
                   name="bell"
-                  size={20}
+                  size={fontSize(20)}
                   color="#64748B"
                 />
               </Animated.View>
@@ -348,7 +351,7 @@ export default function ChildDashboardScreen({ navigation }) {
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.iconButton, { marginLeft: 8 }]} onPress={logout}>
-            <MaterialIcons name="logout" size={20} color="#DC2626" />
+            <MaterialIcons name="logout" size={fontSize(20)} color="#DC2626" />
           </TouchableOpacity>
         </View>
       </View>
@@ -365,7 +368,7 @@ export default function ChildDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("ChildFeedback")}
           >
             <View style={[styles.iconCircle, { backgroundColor: "#FDE6D2" }]}>
-              <Feather name="star" size={24} color="#F97316" />
+              <Feather name="star" size={fontSize(24)} color="#F97316" />
             </View>
             <Text style={styles.gridCardTitle}>Feedback</Text>
           </TouchableOpacity>
@@ -376,7 +379,7 @@ export default function ChildDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("ChildMessages")}
           >
             <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
-              <Feather name="message-square" size={24} color="#10B981" />
+              <Feather name="message-square" size={fontSize(24)} color="#10B981" />
               {unreadData.hasUnread && <View style={styles.cardBadgeDot} />}
             </View>
             <Text style={styles.gridCardTitle}>Messages</Text>
@@ -388,9 +391,9 @@ export default function ChildDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("Notifications")}
           >
             <View style={[styles.iconCircle, { backgroundColor: "#FEE2E2" }]}>
-              <Entypo name="modern-mic" size={24} color="#EF4444" />
+              <Entypo name="modern-mic" size={fontSize(24)} color="#EF4444" />
             </View>
-            <Text style={styles.gridCardTitle}>School {"\n"} Announcements</Text>
+            <Text style={styles.gridCardTitle}>School Announcements</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -399,7 +402,8 @@ export default function ChildDashboardScreen({ navigation }) {
             activeOpacity={0.8}
           >
             <View style={[styles.iconCircle, { backgroundColor: "#FEE2E2" }]}>
-              <MaterialCommunityIcons name="receipt" size={24} color="#EF4444" />
+              {/* <MaterialCommunityIcons name="receipt" size={fontSize(24)} color="#EF4444" /> */}
+              <FontAwesome6 name="file-invoice" size={fontSize(24)} color="#EF4444" />
             </View>
             <Text style={styles.gridCardTitle}>Billing & Invoices</Text>
           </TouchableOpacity>
@@ -414,7 +418,7 @@ export default function ChildDashboardScreen({ navigation }) {
             <View style={styles.messageBannerHeader}>
               <View style={styles.messageBannerTitleRow}>
                 <View style={styles.bannerIconBox}>
-                  <Feather name="message-square" size={16} color="#7CB342" />
+                  <Feather name="message-square" size={fontSize(16)} color="#7CB342" />
                 </View>
                 <Text style={styles.messageBannerTitle}>Messages</Text>
               </View>
@@ -459,7 +463,7 @@ export default function ChildDashboardScreen({ navigation }) {
               onPress={() => navigation.navigate("ChildVideo")}
             >
               <View style={[styles.actionIconCircle, { backgroundColor: "rgba(22,105,169,.4)" }]}>
-                <Feather name="play" size={20} color={colors.primary} />
+                <Feather name="play" size={fontSize(20)} color={colors.primary} />
               </View>
               <Text style={[styles.actionLabel, styles.actionLabelActive]}>Media</Text>
             </TouchableOpacity>
@@ -470,7 +474,7 @@ export default function ChildDashboardScreen({ navigation }) {
               onPress={() => navigation.navigate("ChildReport")}
             >
               <View style={[styles.actionIconCircle, { backgroundColor: "#FDE2D6" }]}>
-                <Feather name="calendar" size={20} color="#EA580C" />
+                <Feather name="calendar" size={fontSize(20)} color="#EA580C" />
               </View>
               <Text style={styles.actionLabel}>Reports</Text>
             </TouchableOpacity>
@@ -481,7 +485,7 @@ export default function ChildDashboardScreen({ navigation }) {
               onPress={() => navigation.navigate("ChildAttendance")}
             >
               <View style={[styles.actionIconCircle, { backgroundColor: "rgba(255,220,196,.6)" }]}>
-                <Feather name="user" size={20} color="#EA580C" />
+                <Feather name="user" size={fontSize(20)} color="#EA580C" />
               </View>
               <Text style={styles.actionLabel}>Attendance</Text>
             </TouchableOpacity>
@@ -499,7 +503,7 @@ export default function ChildDashboardScreen({ navigation }) {
           <View style={styles.complaintIconBox}>
             <Feather
               name="message-square"
-              size={22}
+              size={fontSize(22)}
               color="#EF4444"
             />
           </View>
@@ -516,7 +520,7 @@ export default function ChildDashboardScreen({ navigation }) {
 
           <Feather
             name="chevron-right"
-            size={21}
+            size={fontSize(21)}
             color="#CBD5E1"
           />
         </TouchableOpacity>
@@ -548,7 +552,7 @@ export default function ChildDashboardScreen({ navigation }) {
               <View style={styles.noSessionsCard}>
                 <Feather
                   name="calendar"
-                  size={24}
+                  size={fontSize(24)}
                   color="#94A3B8"
                 />
 
@@ -609,7 +613,7 @@ export default function ChildDashboardScreen({ navigation }) {
                       <View style={styles.sessionDetailsRow}>
                         <Feather
                           name="calendar"
-                          size={13}
+                          size={fontSize(13)}
                           color="#64748B"
                         />
                         <Text style={styles.sessionDetailText}>
@@ -627,7 +631,7 @@ export default function ChildDashboardScreen({ navigation }) {
                       <View style={styles.sessionDetailsRow}>
                         <Feather
                           name="clock"
-                          size={13}
+                          size={fontSize(13)}
                           color="#64748B"
                         />
                         <Text style={styles.sessionDetailText}>
@@ -662,7 +666,7 @@ export default function ChildDashboardScreen({ navigation }) {
                 onPress={() => setShowSwitchModal(false)}
                 style={styles.closeButton}
               >
-                <Feather name="x" size={22} color="#64748B" />
+                <Feather name="x" size={fontSize(22)} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -675,7 +679,7 @@ export default function ChildDashboardScreen({ navigation }) {
                   <View style={styles.emptyContainer}>
                     <Feather
                       name="users"
-                      size={40}
+                      size={fontSize(40)}
                       color="#94A3B8"
                     />
 
@@ -737,7 +741,7 @@ export default function ChildDashboardScreen({ navigation }) {
                         : (
                           <Feather
                             name="chevron-right"
-                            size={20}
+                            size={fontSize(20)}
                             color="#94A3B8"
                           />
                         )}
@@ -753,9 +757,7 @@ export default function ChildDashboardScreen({ navigation }) {
         visible={showNotificationModal}
         onClose={() => setShowNotificationModal(false)}
       />
-
-      <ChildBottomBar />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -768,31 +770,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingHorizontal: wp(20),
+    paddingVertical: hp(12),
     backgroundColor: "#fff",
   },
   profileContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: wp(12),
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 999,
+    width: wp(42),
+    height: hp(42),
+    borderRadius: wp(999),
   },
-  headerTitle: {
-    fontSize: 16,
-    fontFamily: fonts.semiBold,
-    color: "#0052A3",
-  },
+
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
   },
   iconButton: {
-    padding: 4,
+    padding: wp(4),
   },
   notificationWrapper: {
     position: "relative",
@@ -801,9 +799,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     right: 0,
-    width: 7,
-    height: 7,
-    borderRadius: 99,
+    width: wp(7),
+    height: hp(7),
+    borderRadius: wp(99),
     backgroundColor: "#DC2626",
   },
 
@@ -811,19 +809,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   userName: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#717781",
-    lineHeight: 24,
+    lineHeight: hp(20),
   },
   dropdownRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: wp(4),
   },
   userSubtext: {
     color: "#191C20",
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     lineHeight: 24,
   },
@@ -832,9 +830,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
     paddingTop: 12,
-    paddingBottom: 20,
+    paddingBottom: hp(20),
   },
   gridContainer: {
     flexDirection: "row",
@@ -846,9 +844,9 @@ const styles = StyleSheet.create({
   gridCard: {
     width: "47.5%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
+    borderRadius: wp(20),
+    paddingVertical: hp(24),
+    paddingHorizontal: wp(16),
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -858,9 +856,9 @@ const styles = StyleSheet.create({
     elevation: 1.5,
   },
   iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 27,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(27),
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
@@ -870,15 +868,15 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 2,
     right: 1,
-    width: 13,
-    height: 13,
-    borderRadius: 999,
+    width: wp(13),
+    height: hp(13),
+    borderRadius: wp(999),
     backgroundColor: "#EF4444",
     borderWidth: 2,
     borderColor: "#FFFFFF",
   },
   gridCardTitle: {
-    fontSize: 14,
+    fontSize: fontSize(13),
     fontFamily: fonts.semiBold,
     color: "#191C20",
     textAlign: "center",
@@ -886,8 +884,8 @@ const styles = StyleSheet.create({
   },
   messageBanner: {
     backgroundColor: "#E1F3D8",
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: wp(20),
+    padding: wp(20),
     marginBottom: 20,
   },
   messageBannerHeader: {
@@ -899,51 +897,52 @@ const styles = StyleSheet.create({
   messageBannerTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: wp(8),
   },
   bannerIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 14,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(14),
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
   messageBannerTitle: {
-    fontSize: 16,
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#191C20",
     lineHeight: 24,
   },
   badgeNew: {
     backgroundColor: "#7CB342",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(2),
+    borderRadius: wp(999),
   },
   badgeNewText: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
     color: "#FFFFFF",
+    lineHeight: 18,
   },
   messageCardContent: {
     backgroundColor: "rgba(255,255,255,.6)",
-    borderRadius: 20,
-    padding: 12,
+    borderRadius: wp(20),
+    padding: wp(12),
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: wp(12),
   },
   msgAvatarCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 999,
+    width: wp(42),
+    height: hp(42),
+    borderRadius: wp(999),
     backgroundColor: "#E1F3D8",
     alignItems: "center",
     justifyContent: "center",
   },
   msgAvatarText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#7CB342",
     lineHeight: 24,
@@ -952,27 +951,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   teacherName: {
-    fontSize: 16,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#191C20",
-    lineHeight: 24,
-  },
-  messageSnippet: {
-    fontSize: 14,
-    fontFamily: fonts.regular,
-    color: colors.blackFont,
     lineHeight: 20,
   },
+  messageSnippet: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    color: colors.blackFont,
+    lineHeight: 18,
+  },
   msgAvatarImage: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: wp(42),
+    height: hp(42),
+    borderRadius: wp(21),
   },
   quickActionsSection: {
     marginBottom: 20,
   },
   sectionHeaderTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#191C20",
     lineHeight: 24,
@@ -981,21 +980,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
-    gap: 32,
+    gap: wp(32),
   },
   actionItem: {
     alignItems: "center",
   },
   actionIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 999,
+    width: wp(48),
+    height: hp(48),
+    borderRadius: wp(999),
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
   },
   actionLabel: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#191C20",
     fontFamily: fonts.regular,
     lineHeight: 24,
@@ -1010,31 +1009,31 @@ const styles = StyleSheet.create({
   classesHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: wp(8),
     marginBottom: 12,
     justifyContent: "space-between",
   },
   counterBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 999,
+    width: wp(24),
+    height: hp(24),
+    borderRadius: wp(999),
     backgroundColor: "#0F172A",
     alignItems: "center",
     justifyContent: "center",
   },
   counterBadgeText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#FFFFFF",
     fontFamily: fonts.regular,
-    lineHeight: 16,
+    lineHeight: 14,
   },
   classCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 28,
-    padding: 20,
+    borderRadius: wp(28),
+    padding: wp(20),
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: wp(16),
     marginBottom: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -1043,9 +1042,9 @@ const styles = StyleSheet.create({
     elevation: 1.5,
   },
   classIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 24,
+    width: wp(52),
+    height: hp(52),
+    borderRadius: wp(24),
     backgroundColor: "#E0F2FE",
     alignItems: "center",
     justifyContent: "center",
@@ -1054,30 +1053,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   className: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     lineHeight: 24,
     color: "#191C20",
   },
   classSubtitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     lineHeight: 24,
     color: colors.blackFont,
   },
   avatarFallback: {
-    width: 38,
-    height: 38,
-    borderRadius: 999,
+      width: wp(42),
+    height: hp(42),
+    borderRadius: wp(999),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
 
   avatarFallbackText: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
+    lineHeight:24
   },
   modalOverlay: {
     flex: 1,
@@ -1089,9 +1089,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(20),
     paddingTop: 20,
-    paddingBottom: 30,
+    paddingBottom: hp(30),
     maxHeight: "75%",
   },
 
@@ -1103,57 +1103,57 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    fontSize: 21,
+    fontSize: fontSize(21),
     fontWeight: "700",
     color: "#0F172A",
   },
 
   modalSubtitle: {
     marginTop: 4,
-    fontSize: 13,
+    fontSize: fontSize(13),
     color: "#64748B",
   },
 
   closeButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: wp(38),
+    height: hp(38),
+    borderRadius: wp(19),
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },
 
   userList: {
-    gap: 10,
+    gap: wp(10),
   },
 
   switchUserCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    borderRadius: 14,
+    padding: wp(12),
+    borderRadius: wp(14),
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
 
   switchUserAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: wp(48),
+    height: hp(48),
+    borderRadius: wp(24),
   },
 
   switchUserAvatarFallback: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: wp(48),
+    height: hp(48),
+    borderRadius: wp(24),
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#DBEAFE",
   },
 
   switchUserAvatarText: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontWeight: "700",
     color: "#2563EB",
   },
@@ -1164,91 +1164,91 @@ const styles = StyleSheet.create({
   },
 
   switchUserName: {
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: fontSize(16),
+    fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
 
   switchUserRole: {
     marginTop: 2,
-    fontSize: 13,
+    fontSize: fontSize(13),
     color: "#2563EB",
   },
 
   switchUserEmail: {
     marginTop: 2,
-    fontSize: 12,
+    fontSize: fontSize(12),
     color: "#64748B",
   },
 
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 40,
+    paddingVertical: hp(40),
   },
 
   emptyText: {
     marginTop: 10,
-    fontSize: 14,
+    fontSize: fontSize(14),
     color: "#64748B",
   },
   sessionAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+     width: wp(52),
+    height: hp(52),
+    borderRadius: wp(26),
   },
   sessionInitial: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.semiBold,
     color: "#0284C7",
   },
   sessionDetailsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: wp(6),
     marginTop: 5,
   },
   sessionDetailText: {
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
   },
   sessionLoading: {
-    paddingVertical: 30,
+    paddingVertical: hp(30),
     alignItems: "center",
     justifyContent: "center",
   },
   noSessionsCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    paddingVertical: 24,
+    borderRadius: wp(20),
+    paddingVertical: hp(24),
     alignItems: "center",
     justifyContent: "center",
   },
   noSessionsText: {
     marginTop: 8,
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#64748B",
   },
   specialityBadge: {
     alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(4),
+    borderRadius: wp(999),
     marginTop: 5,
     marginBottom: 3,
   },
   specialityBadgeText: {
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.semiBold,
   },
   complaintCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: wp(14),
+    padding: wp(16),
     marginBottom: 28,
     shadowColor: "#000",
     shadowOffset: {
@@ -1261,9 +1261,9 @@ const styles = StyleSheet.create({
   },
 
   complaintIconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(12),
     backgroundColor: "#FEE2E2",
     alignItems: "center",
     justifyContent: "center",
@@ -1275,14 +1275,14 @@ const styles = StyleSheet.create({
   },
 
   complaintTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#191C20",
   },
 
   complaintSubtitle: {
     marginTop: 3,
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
   },

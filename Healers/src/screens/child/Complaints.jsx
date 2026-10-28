@@ -18,7 +18,6 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
@@ -27,16 +26,17 @@ import {
   createComplaintApi,
   getMyComplaintsApi,
 } from '../../api/child/api';
-import BottomBar from '../../components/BottomBar';
-import ChildBottomBar from '../../components/ChildBottomBar';
-import TherapistBottomBar from '../../components/TherapistBottomBar';
-import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const PAGE_LIMIT = 5;
 
@@ -424,7 +424,7 @@ export default function ComplaintsScreen({
           >
             <Feather
               name="message-square"
-              size={19}
+              size={fontSize(19)}
               color="#DC2626"
             />
           </View>
@@ -450,7 +450,7 @@ export default function ComplaintsScreen({
 
           <Feather
             name="chevron-right"
-            size={20}
+            size={fontSize(20)}
             color="#94A3B8"
           />
         </View>
@@ -518,7 +518,7 @@ export default function ComplaintsScreen({
               name={high
                 ? "alert-circle"
                 : "flag"}
-              size={12}
+              size={fontSize(12)}
               color={high
                 ? "#DC2626"
                 : "#64748B"}
@@ -544,7 +544,7 @@ export default function ComplaintsScreen({
             >
               <Feather
                 name="message-circle"
-                size={13}
+                size={fontSize(13)}
                 color={colors.primary}
               />
 
@@ -620,7 +620,7 @@ export default function ComplaintsScreen({
       >
         <Feather
           name="plus-circle"
-          size={18}
+          size={fontSize(18)}
           color="#FFFFFF"
         />
 
@@ -639,7 +639,7 @@ export default function ComplaintsScreen({
     >
       <Feather
         name="message-square"
-        size={32}
+        size={fontSize(32)}
         color="#CBD5E1"
       />
 
@@ -687,16 +687,12 @@ export default function ComplaintsScreen({
   };
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         commonStyles.container,
       ]}
     >
-      <TopBar
-        navigation={navigation}
-        headerTitle="Complaints"
-      />
 
       {loading
           && complaints.length === 0
@@ -772,7 +768,7 @@ export default function ComplaintsScreen({
                   >
                     <Feather
                       name="x"
-                      size={22}
+                      size={fontSize(22)}
                       color="#64748B"
                     />
                   </TouchableOpacity>
@@ -885,7 +881,7 @@ export default function ComplaintsScreen({
                         <>
                           <Feather
                             name="send"
-                            size={16}
+                            size={fontSize(16)}
                             color="#FFFFFF"
                           />
 
@@ -903,14 +899,8 @@ export default function ComplaintsScreen({
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-
-      {role === "Therapist"
-        ? <TherapistBottomBar activeTab="" />
-        : role === "Admin"
-        ? <BottomBar activeTab="" />
-        : <ChildBottomBar activeTab="" />}
         
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -921,7 +911,7 @@ const styles = StyleSheet.create({
   },
 
   listContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal:wp(20),
     paddingTop: 14,
     paddingBottom: 30,
   },
@@ -940,55 +930,56 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 24,
+    fontSize:fontSize(24),
     fontFamily: fonts.semiBold,
     color: "#191C20",
   },
 
   subtitle: {
     marginTop: 3,
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.regular,
     color: "#64748B",
   },
 
   totalBadge: {
-    minWidth: 38,
-    height: 38,
-    paddingHorizontal: 10,
-    borderRadius: 19,
+    minWidth: wp(38),
+    height:hp(38),
+    paddingHorizontal:wp(10),
+    borderRadius: wp(19),
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,80,134,0.10)",
   },
 
   totalText: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.semiBold,
     color: colors.primary,
+    lineHeight:18
   },
 
   addButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: wp(8),
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 13,
+    borderRadius: wp(12),
+    paddingVertical: hp(13),
     marginBottom: 18,
   },
 
   addButtonText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.semiBold,
   },
 
   card: {
-    padding: 16,
+    padding: wp(16),
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: wp(16),
     borderWidth: 1,
     borderColor: "#F1F5F9",
   },
@@ -999,9 +990,9 @@ const styles = StyleSheet.create({
   },
 
   iconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: wp(42),
+    height: hp(42),
+    borderRadius: wp(12),
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#FEE2E2",
@@ -1013,21 +1004,21 @@ const styles = StyleSheet.create({
   },
 
   cardTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#191C20",
   },
 
   date: {
     marginTop: 3,
-    fontSize: 11,
+    fontSize:fontSize(11),
     fontFamily: fonts.regular,
     color: "#94A3B8",
   },
 
   description: {
     marginTop: 13,
-    fontSize: 13,
+    fontSize:fontSize(13),
     lineHeight: 19,
     fontFamily: fonts.regular,
     color: "#64748B",
@@ -1042,26 +1033,26 @@ const styles = StyleSheet.create({
   badgeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: wp(8),
   },
 
   badge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    borderRadius: 20,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    gap: wp(5),
+    borderRadius: wp(20),
+    paddingHorizontal:wp(9),
+    paddingVertical: hp(5),
   },
 
   dot: {
     width: 6,
     height: 6,
-    borderRadius: 3,
+    borderRadius: wp(3),
   },
 
   badgeText: {
-    fontSize: 11,
+    fontSize:fontSize(11),
     fontFamily: fonts.semiBold,
   },
 
@@ -1069,62 +1060,62 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: wp(4),
   },
 
   messageCountText: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.semiBold,
     color: colors.primary,
   },
 
   lastMessage: {
     marginTop: 12,
-    padding: 10,
-    borderRadius: 10,
+    padding: wp(10),
+    borderRadius: wp(10),
     backgroundColor: "#F8FAFC",
   },
 
   lastMessageRole: {
-    fontSize: 10,
+    fontSize:fontSize(10),
     fontFamily: fonts.semiBold,
     color: colors.primary,
   },
 
   lastMessageText: {
     marginTop: 2,
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
   },
 
   footerLoader: {
-    paddingVertical: 20,
+    paddingVertical: hp(20),
     alignItems: "center",
   },
 
   footerText: {
     marginTop: 6,
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
   },
 
   empty: {
-    paddingVertical: 50,
+    paddingVertical: hp(50),
     alignItems: "center",
   },
 
   emptyTitle: {
     marginTop: 10,
-    fontSize: 17,
+    fontSize:fontSize(17),
     fontFamily: fonts.semiBold,
     color: "#334155",
   },
 
   emptyText: {
     marginTop: 5,
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.regular,
     color: "#94A3B8",
   },
@@ -1132,14 +1123,14 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "center",
-    padding: 20,
+    padding: wp(20),
     backgroundColor: "rgba(15,23,42,0.45)",
   },
 
   modal: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 20,
+    borderRadius: wp(18),
+    padding: wp(20),
   },
 
   modalHeader: {
@@ -1150,49 +1141,49 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    fontSize: 20,
+    fontSize:fontSize(20),
     fontFamily: fonts.semiBold,
     color: "#191C20",
   },
 
   label: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#334155",
     marginBottom: 6,
   },
 
   input: {
-    minHeight: 48,
+    minHeight: hp(48),
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 11,
+    borderRadius: wp(11),
     backgroundColor: "#F8FAFC",
-    paddingHorizontal: 13,
-    paddingVertical: 11,
+    paddingHorizontal:wp(13),
+    paddingVertical: hp(11),
     marginBottom: 14,
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     color: "#0F172A",
   },
 
   textArea: {
-    height: 120,
+    height: hp(120),
   },
 
   priorityRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: wp(10),
     marginBottom: 16,
   },
 
   priorityButton: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 11,
+    paddingVertical: hp(10),
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 10,
+    borderRadius: wp(10),
     backgroundColor: "#F8FAFC",
   },
 
@@ -1202,7 +1193,7 @@ const styles = StyleSheet.create({
   },
 
   priorityText: {
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.semiBold,
     color: "#64748B",
   },
@@ -1213,20 +1204,20 @@ const styles = StyleSheet.create({
 
   modalButtons: {
     flexDirection: "row",
-    gap: 10,
+    gap: wp(10),
   },
 
   cancel: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: hp(10),
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    borderRadius: 11,
+    borderRadius: wp(11),
   },
 
   cancelText: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#475569",
   },
@@ -1234,16 +1225,16 @@ const styles = StyleSheet.create({
   submit: {
     flex: 1,
     flexDirection: "row",
-    gap: 7,
+    gap: wp(7),
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 11,
+    paddingVertical: hp(12),
+    borderRadius: wp(11),
     backgroundColor: colors.primary,
   },
 
   submitText: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
   },

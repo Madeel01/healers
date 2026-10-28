@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 
 import {
   StyleSheet,
@@ -11,6 +11,7 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
+import { AuthContext } from '../context/AuthContext';
 import {
   fontSize,
   hp,
@@ -18,14 +19,45 @@ import {
 } from '../utils/responsive';
 
 export default function BottomBar({ activeTab = "AdminDashboard" }) {
+  const { user, logout } = useContext(AuthContext);
   const navigation = useNavigation();
 
   const tabs = [
-    { id: "AdminDashboard", label: "Home", iconType: "MaterialIcons", iconName: "home", iconSize: 19 },
-    { id: "Therapist", label: "Therapists", iconType: "FontAwesome5", iconName: "user-md", iconSize: 18 },
-    { id: "Children", label: "Children", iconType: "FontAwesome5", iconName: "child", iconSize: 18 },
-    { id: "Schedule", label: "Scheduling", iconType: "MaterialIcons", iconName: "event", iconSize: 19 },
-    { id: "Notifications", label: "Notifications", iconType: "MaterialIcons", iconName: "notifications", iconSize: 19 },
+    ...(user?.role === "Admin"
+      ? [
+        { id: "AdminDashboard", label: "Home", iconType: "MaterialIcons", iconName: "home", iconSize: 19 },
+        { id: "Therapist", label: "Therapists", iconType: "FontAwesome5", iconName: "user-md", iconSize: 18 },
+        { id: "Children", label: "Children", iconType: "FontAwesome5", iconName: "child", iconSize: 18 },
+        { id: "Schedule", label: "Scheduling", iconType: "MaterialIcons", iconName: "event", iconSize: 19 },
+        {
+          id: "Notifications",
+          label: "Notifications",
+          iconType: "MaterialIcons",
+          iconName: "notifications",
+          iconSize: 19,
+        },
+      ]
+      : []),
+
+    ...(user?.role === "Therapist"
+      ? [
+        { id: "TherapistDashboard", label: "Home", iconType: "MaterialIcons", iconName: "home", iconSize: 22 },
+        { id: "AssignedChildren", label: "Children", iconType: "FontAwesome5", iconName: "child", iconSize: 18 },
+        { id: "FeedbackManagement", label: "Feedback", iconType: "MaterialIcons", iconName: "feedback", iconSize: 22 },
+        { id: "AttendanceTracking", label: "Scheduling", iconType: "MaterialIcons", iconName: "event", iconSize: 22 },
+        { id: "Notifications", label: "Alerts", iconType: "MaterialIcons", iconName: "notifications", iconSize: 22 },
+      ]
+      : []),
+
+    ...(user?.role === "Child"
+      ? [
+        { id: "ChildDashboard", label: "Home", iconType: "MaterialIcons", iconName: "home", iconSize: 22 },
+        { id: "ChildReport", label: "Children", iconType: "FontAwesome5", iconName: "child", iconSize: 18 },
+        { id: "ChildFeedback", label: "Feedback", iconType: "MaterialIcons", iconName: "feedback", iconSize: 22 },
+        { id: "ChildAttendance", label: "Scheduling", iconType: "MaterialIcons", iconName: "event", iconSize: 22 },
+        { id: "Notifications", label: "Alerts", iconType: "MaterialIcons", iconName: "notifications", iconSize: 22 },
+      ]
+      : []),
   ];
 
   // const handlePress = (tabId) => {

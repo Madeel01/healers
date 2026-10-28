@@ -35,14 +35,14 @@ import {
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
-export default function ComplaintDetailsScreen({
-  navigation,
-  route,
-}) {
-  const {
-    user,
-  } = useContext(AuthContext);
+export default function ComplaintDetailsScreen({ navigation, route }) {
+  const { user } = useContext(AuthContext);
 
   const complaintId = route?.params?.complaintId;
 
@@ -558,17 +558,12 @@ export default function ComplaintDetailsScreen({
   }
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         commonStyles.container,
       ]}
     >
-      <TopBar
-        navigation={navigation}
-        headerTitle="Complaint Details"
-      />
-
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === "ios"
@@ -655,9 +650,9 @@ export default function ComplaintDetailsScreen({
             placeholder="Write a reply..."
             placeholderTextColor="#94A3B8"
             multiline
+            scrollEnabled={false}
             maxLength={1000}
             textAlignVertical="center"
-            blurOnSubmit={false}
           />
 
           <TouchableOpacity
@@ -692,7 +687,7 @@ export default function ComplaintDetailsScreen({
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -716,18 +711,18 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 30,
+    padding: wp(30),
   },
 
   emptyTitle: {
     marginTop: 12,
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#64748B",
   },
 
   listContent: {
-    padding: 16,
+    padding: wp(16),
     paddingBottom: 20,
   },
 
@@ -736,9 +731,9 @@ const styles = StyleSheet.create({
   },
 
   complaintCard: {
-    padding: 16,
+    padding: wp(16),
     marginBottom: 20,
-    borderRadius: 16,
+    borderRadius: wp(16),
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#F1F5F9",
@@ -750,38 +745,38 @@ const styles = StyleSheet.create({
   },
 
   complaintIcon: {
-    width: 44,
-    height: 44,
+    width: wp(44),
+    height: hp(44),
     marginRight: 12,
-    borderRadius: 12,
+    borderRadius: wp(12),
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#FEE2E2",
   },
 
   complaintTitle: {
-    fontSize: 18,
+    fontSize: fontSize(18),
     fontFamily: fonts.semiBold,
     color: "#191C20",
   },
 
   created: {
     marginTop: 3,
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.regular,
     color: "#94A3B8",
   },
 
   statusRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: wp(8),
     marginTop: 15,
   },
 
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(5),
+    borderRadius: wp(20),
     backgroundColor: "#FFF7ED",
   },
 
@@ -790,7 +785,7 @@ const styles = StyleSheet.create({
   },
 
   statusText: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.semiBold,
     color: "#C2410C",
   },
@@ -800,9 +795,9 @@ const styles = StyleSheet.create({
   },
 
   priorityBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(5),
+    borderRadius: wp(20),
     backgroundColor: "#F1F5F9",
   },
 
@@ -811,7 +806,7 @@ const styles = StyleSheet.create({
   },
 
   priorityText: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.semiBold,
     color: "#64748B",
   },
@@ -822,14 +817,14 @@ const styles = StyleSheet.create({
 
   descriptionLabel: {
     marginTop: 16,
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#64748B",
   },
 
   description: {
     marginTop: 5,
-    fontSize: 14,
+    fontSize: fontSize(14),
     lineHeight: 21,
     fontFamily: fonts.regular,
     color: "#334155",
@@ -837,26 +832,26 @@ const styles = StyleSheet.create({
 
   resolutionBox: {
     marginTop: 16,
-    padding: 12,
-    borderRadius: 12,
+    padding: wp(12),
+    borderRadius: wp(12),
     backgroundColor: "#ECFDF5",
   },
 
   resolutionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: wp(6),
   },
 
   resolutionTitle: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     fontFamily: fonts.semiBold,
     color: "#047857",
   },
 
   resolutionText: {
     marginTop: 6,
-    fontSize: 13,
+    fontSize: fontSize(13),
     lineHeight: 19,
     fontFamily: fonts.regular,
     color: "#065F46",
@@ -865,12 +860,12 @@ const styles = StyleSheet.create({
   conversationHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
+    gap: wp(7),
     marginTop: 25,
   },
 
   conversationTitle: {
-    fontSize: 16,
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#191C20",
   },
@@ -878,19 +873,19 @@ const styles = StyleSheet.create({
   noMessages: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 30,
+    paddingVertical: hp(30),
   },
 
   noMessagesTitle: {
     marginTop: 8,
-    fontSize: 14,
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#64748B",
   },
 
   noMessagesText: {
     marginTop: 3,
-    fontSize: 12,
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#94A3B8",
     textAlign: "center",
@@ -910,33 +905,33 @@ const styles = StyleSheet.create({
   },
 
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(16),
     marginRight: 7,
   },
 
   avatarFallback: {
-    width: 32,
-    height: 32,
+    width: wp(32),
+    height: hp(32),
     marginRight: 7,
-    borderRadius: 16,
+    borderRadius: wp(16),
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#E0F2FE",
   },
 
   avatarText: {
-    fontSize: 11,
+    fontSize: fontSize(11),
     fontFamily: fonts.semiBold,
     color: colors.primary,
   },
 
   messageBubble: {
     maxWidth: "78%",
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: 15,
+    paddingHorizontal: wp(13),
+    paddingVertical: hp(9),
+    borderRadius: wp(15),
   },
 
   ownBubble: {
@@ -953,7 +948,7 @@ const styles = StyleSheet.create({
 
   sender: {
     marginBottom: 3,
-    fontSize: 10,
+    fontSize: fontSize(10),
     fontFamily: fonts.semiBold,
     color: colors.primary,
   },
@@ -963,7 +958,7 @@ const styles = StyleSheet.create({
   },
 
   message: {
-    fontSize: 13,
+    fontSize: fontSize(13),
     lineHeight: 19,
     fontFamily: fonts.regular,
     color: "#334155",
@@ -975,7 +970,7 @@ const styles = StyleSheet.create({
 
   time: {
     marginTop: 4,
-    fontSize: 9,
+    fontSize: fontSize(9),
     fontFamily: fonts.regular,
     color: "#94A3B8",
   },
@@ -988,8 +983,8 @@ const styles = StyleSheet.create({
   replyBar: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 8,
-    paddingHorizontal: 10,
+    gap: wp(8),
+    paddingHorizontal: wp(10),
     paddingTop: 8,
     paddingBottom: 10,
     backgroundColor: "#FFFFFF",
@@ -999,23 +994,23 @@ const styles = StyleSheet.create({
 
   replyInput: {
     flex: 1,
-    minHeight: 44,
-    maxHeight: 110,
-    paddingHorizontal: 15,
+    minHeight: hp(50),
+    maxHeight: hp(50),
+    paddingHorizontal: wp(15),
     paddingTop: 11,
     paddingBottom: 11,
-    borderRadius: 22,
+    borderRadius: wp(99),
     backgroundColor: "#F1F5F9",
-    fontSize: 13,
+    fontSize: fontSize(13),
     lineHeight: 19,
     fontFamily: fonts.regular,
     color: "#0F172A",
   },
 
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: wp(50),
+    height: hp(50),
+    borderRadius: wp(99),
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.primary,

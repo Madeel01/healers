@@ -9,17 +9,15 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
+  Modal,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 
@@ -32,6 +30,7 @@ import {
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
+  commonStyles,
   fonts,
 } from '../../styles/theme';
 import {
@@ -42,494 +41,477 @@ import {
 import NotificationDetailModal from './components/NotificationDetailModal';
 
 const PAGE_SIZE = 15;
-
-const TYPE_META = {
-  System: { icon: "settings", color: "#475569", bg: "#E2E8F0" },
-  Appointment: { icon: "calendar", color: "#0F766E", bg: "#CCFBF1" },
-  Therapy: { icon: "activity", color: "#7C3AED", bg: "#EDE9FE" },
-  Message: { icon: "message-circle", color: "#2563EB", bg: "#DBEAFE" },
-  Reminder: { icon: "bell", color: "#B45309", bg: "#FEF3C7" },
-  Alert: { icon: "alert-triangle", color: "#B91C1C", bg: "#FEE2E2" },
-  General: { icon: "info", color: "#334155", bg: "#F1F5F9" },
+const TYPES = {
+  System: { icon: "settings", color: "#64748B", bg: "#F1F5F9" },
+  Appointment: { icon: "calendar", color: "#0D9488", bg: "#CCFBF1" },
+  Therapy: { icon: "activity", color: "#8B5CF6", bg: "#EDE9FE" },
+  Message: { icon: "message-circle", color: "#3B82F6", bg: "#DBEAFE" },
+  Reminder: { icon: "bell", color: "#D97706", bg: "#FEF3C7" },
+  Alert: { icon: "alert-triangle", color: "#DC2626", bg: "#FEE2E2" },
+  General: { icon: "info", color: "#64748B", bg: "#F1F5F9" },
 };
-const getTypeMeta = (type) => TYPE_META[type] || TYPE_META.General;
-
-const ATTACHMENT_ICON = { pdf: "file-text", image: "image", doc: "file" };
-
-const FILTER_OPTIONS = ["All", "System", "Appointment", "Therapy", "Message", "Reminder", "Alert", "General"];
-
-const timeAgo = (iso) => {
-  if (!iso) return "";
-  const mins = Math.floor(Math.max(0, Date.now() - new Date(iso).getTime()) / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const FILTERS = ["All", ...Object.keys(TYPES)];
+const getMeta = type => TYPES[type] || TYPES.General;
+const timeAgo = value => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const minutes = Math.floor(Math.max(0, Date.now() - date.getTime()) / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1440) return `${Math.floor(minutes / 60)}h ago`;
+  if (minutes < 10080) return `${Math.floor(minutes / 1440)}d ago`;
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 };
+const errorText = (e, fallback) => e?.response?.data?.message || e?.message || fallback;
 
-const errorMessage = (e, fallback) => e?.response?.data?.message || fallback;
-
-export default function NotificationScreen({ navigation }) {
+export default function NotificationScreen() {
   const insets = useSafeAreaInsets();
-  const menuTouchRef = useRef(false);
   const { user } = useContext(AuthContext);
-
-  const userID = user?.id;
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [activeBottomTab, setActiveBottomTab] = useState("Notification");
-  const [activeMenuId, setActiveMenuId] = useState(null);
+  const userID = user?.id || user?._id;
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [typeFilter, setTypeFilter] = useState("All");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
   const [detailItem, setDetailItem] = useState(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-
+  const [deleteItem, setDeleteItem] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const pageRef = useRef(1);
   const hasMoreRef = useRef(true);
-  const loadingMoreRef = useRef(false);
-  const requestIdRef = useRef(0);
+  const busyRef = useRef(false);
+  const requestRef = useRef(0);
 
-  const fetchNotifications = useCallback(async ({ pageNum = 1, refresh = false } = {}) => {
-    const reqId = ++requestIdRef.current;
-
+  const fetchNotifications = useCallback(async (page = 1, refresh = false) => {
+    const request = ++requestRef.current;
+    busyRef.current = true;
     if (refresh) setRefreshing(true);
-    else if (pageNum === 1) setLoading(true);
-    else {
-      loadingMoreRef.current = true;
-      setLoadingMore(true);
-    }
-
+    else if (page === 1) setLoading(true);
+    else setLoadingMore(true);
     try {
-      const res = await getAllNotifications({ page: pageNum, limit: PAGE_SIZE, typeFilter });
-      if (reqId !== requestIdRef.current) return;
-
-      const list = res?.data || [];
-      setNotifications((prev) => (pageNum === 1 ? list : [...prev, ...list]));
-      setUnreadCount(res?.unreadCount || 0);
+      const res = await getAllNotifications({ page, limit: PAGE_SIZE, typeFilter });
+      if (request !== requestRef.current) return;
+      const items = Array.isArray(res?.data) ? res.data : [];
+      setNotifications(prev => page === 1 ? items : [...prev, ...items.filter(n => !prev.some(p => p._id === n._id))]);
+      setUnreadCount(res?.unreadCount ?? 0);
       hasMoreRef.current = !!res?.hasMore;
-      pageRef.current = pageNum;
+      pageRef.current = page;
     } catch (e) {
-      console.log("Failed to fetch notifications:", e);
-      if (reqId === requestIdRef.current) {
-        Alert.alert("Could not load notifications", errorMessage(e, "Please try again."));
-      }
+      if (request === requestRef.current) Alert.alert("Unable to load", errorText(e, "Please try again."));
     } finally {
-      if (reqId === requestIdRef.current) {
+      if (request === requestRef.current) {
+        busyRef.current = false;
         setLoading(false);
         setRefreshing(false);
         setLoadingMore(false);
-        loadingMoreRef.current = false;
       }
     }
-  }, []);
+  }, [typeFilter]);
 
   useEffect(() => {
-    fetchNotifications({ pageNum: 1 });
-  }, [fetchNotifications, typeFilter]);
+    hasMoreRef.current = true;
+    fetchNotifications(1);
+    return () => {
+      requestRef.current += 1;
+    };
+  }, [fetchNotifications]);
 
-  const onRefresh = () => fetchNotifications({ pageNum: 1, refresh: true });
-
-  const handleScroll = ({ nativeEvent }) => {
-    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-    const nearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 40;
-
-    if (nearBottom && hasMoreRef.current && !loadingMoreRef.current && !loading && !refreshing) {
-      fetchNotifications({ pageNum: pageRef.current + 1 });
+  const loadMore = () => {
+    if (!busyRef.current && !loading && !refreshing && hasMoreRef.current) {
+      fetchNotifications(pageRef.current + 1);
     }
   };
 
-  const handleMarkAllRead = () => {
-    if (unreadCount === 0 || markingAll) return;
-
-    Alert.alert("Mark all as read", `Mark all ${unreadCount} unread notifications as read?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Mark all read",
-        onPress: async () => {
-          setMarkingAll(true);
-          const previous = notifications;
-          const previousUnread = unreadCount;
-
-          setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-          setUnreadCount(0);
-
-          try {
-            const res = await markAllNotificationsRead();
-            if (!res?.success) throw new Error(res?.message || "Failed");
-          } catch (e) {
-            setNotifications(previous);
-            setUnreadCount(previousUnread);
-            Alert.alert("Could not update", errorMessage(e, "Please try again."));
-          } finally {
-            setMarkingAll(false);
-          }
-        },
-      },
-    ]);
-  };
-  const handleOpenNotification = async (item) => {
-    if (!item.isRead) {
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === item._id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-
-      try {
-        const res = await markNotificationRead(item._id);
-        if (!res?.success) throw new Error(res?.message || "Failed");
-      } catch (e) {
-        setNotifications((prev) => prev.map((n) => (n._id === item._id ? { ...n, isRead: false, readAt: null } : n)));
-        setUnreadCount((prev) => prev + 1);
-        Alert.alert("Could not update", errorMessage(e, "Please try again."));
-      }
+  const markAll = async () => {
+    if (!unreadCount || markingAll) return;
+    setMarkingAll(true);
+    try {
+      const res = await markAllNotificationsRead();
+      if (!res?.success) throw new Error(res?.message || "Please try again.");
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (e) {
+      Alert.alert("Unable to update", errorText(e, "Please try again."));
+    } finally {
+      setMarkingAll(false);
     }
+  };
 
+  const openNotification = async item => {
     setDetailItem(item);
-    setIsDetailOpen(true);
+    if (item.isRead) return;
+    setNotifications(prev => prev.map(n => n._id === item._id ? { ...n, isRead: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+    try {
+      const res = await markNotificationRead(item._id);
+      if (!res?.success) throw new Error(res?.message || "Please try again.");
+    } catch (e) {
+      setNotifications(prev => prev.map(n => n._id === item._id ? { ...n, isRead: false } : n));
+      setUnreadCount(prev => prev + 1);
+      Alert.alert("Unable to update", errorText(e, "Please try again."));
+    }
   };
 
-  const confirmDelete = (item) => {
-    Alert.alert(
-      "Delete notification",
-      `Delete "${item.title}"?`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const res = await deleteBroadcast(item._id, true, userID);
+  const deleteNotification = async () => {
+    if (!deleteItem || deleting) return;
+    setDeleting(true);
+    try {
+      const res = await deleteBroadcast(deleteItem._id, true, userID);
+      if (!res?.data?.success) throw new Error(res?.data?.message || "Could not delete notification.");
+      setNotifications(prev => prev.filter(n => n._id !== deleteItem._id));
+      if (!deleteItem.isRead) setUnreadCount(prev => Math.max(0, prev - 1));
+      if (detailItem?._id === deleteItem._id) setDetailItem(null);
+      setDeleteItem(null);
+    } catch (e) {
+      Alert.alert("Delete failed", errorText(e, "Please try again."));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-              if (!res?.data?.success) {
-                Alert.alert(
-                  "Error",
-                  res?.data?.message || "Could not delete.",
-                );
-                return;
-              }
-
-              setNotifications((prev) => prev.filter((notification) => notification._id !== item._id));
-
-              setUnreadCount((prev) => item.isRead ? prev : Math.max(0, prev - 1));
-            } catch (e) {
-              console.log("e", e);
-              Alert.alert(
-                "Error",
-                e?.response?.data?.message || "Could not delete.",
-              );
-            }
-          },
-        },
-      ],
+  const renderItem = ({ item }) => {
+    const meta = getMeta(item.type);
+    const unread = !item.isRead;
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={[styles.card, unread && styles.unreadCard]}
+        onPress={() => openNotification(item)}
+      >
+        <View style={[styles.typeIcon, { backgroundColor: meta.bg }]}>
+          <Feather name={meta.icon} size={wp(21)} color={meta.color} />
+        </View>
+        <View style={styles.cardContent}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.cardTitle, unread && styles.cardTitleUnread]} numberOfLines={2}>
+              {item.title || "Notification"}
+            </Text>
+            {unread && <View style={styles.unreadDot} />}
+          </View>
+          <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
+          <View style={styles.cardBottom}>
+            <View style={[styles.tag, { backgroundColor: meta.bg }]}>
+              <Text style={[styles.tagText, { color: meta.color }]}>{item.type || "General"}</Text>
+            </View>
+            {item.attachment?.url && <Feather name="paperclip" size={wp(13)} color="#94A3B8" />}
+            <Text style={styles.timeText}>{timeAgo(item.sentAt || item.createdAt)}</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          onPress={() => setDeleteItem(item)}
+          style={styles.deleteIcon}
+          hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+          accessibilityLabel="Delete notification"
+        >
+          <Feather name="trash-2" size={wp(17)} color="#94A3B8" />
+        </TouchableOpacity>
+      </TouchableOpacity>
     );
   };
 
-  const visibleNotifications = typeFilter === "All"
-    ? notifications
-    : notifications.filter((n) => n.type === typeFilter);
-
   return (
-    <SafeAreaView
-      style={styles.mainContainer}
-      onTouchStart={() => {
-        if (menuTouchRef.current) {
-          menuTouchRef.current = false;
-          return;
-        }
-        if (activeMenuId) setActiveMenuId(null);
-      }}
-    >
-
-      <View style={styles.summaryRow}>
-        <Text style={styles.summaryText}>
-          {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
-        </Text>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={handleMarkAllRead} disabled={markingAll} style={styles.markAllBtn}>
-            {markingAll ? <ActivityIndicator size="small" color={colors.primary} /> : (
-              <>
-                <Feather name="check-circle" size={14} color={colors.primary} />
-                <Text style={styles.markAllText}>Mark all read</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        )}
+    <View style={[styles.screen,commonStyles.container]}>
+      <View style={styles.header}>
+        <View style={styles.headerTitleRow}>
+          <View style={styles.headerIcon}>
+            <Feather name="bell" size={wp(23)} color={colors.primary} />
+          </View>
+          <View style={styles.headerTextBlock}>
+            <Text style={styles.heading}>Notifications</Text>
+            <Text style={styles.subtitle}>Stay updated with what's new</Text>
+          </View>
+        </View>
+        <View style={styles.summary}>
+          <View style={styles.unreadSummary}>
+            <View style={styles.summaryDot} />
+            <Text style={styles.summaryLabel}>
+              {unreadCount
+                ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
+                : "You’re all caught up!"}
+            </Text>
+          </View>
+          {unreadCount > 0 && (
+            <TouchableOpacity onPress={markAll} disabled={markingAll} style={styles.markAll}>
+              {markingAll
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <Feather name="check-check" size={wp(15)} color={colors.primary} />}
+              <Text style={styles.markAllText}>Mark all read</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterScroll}
-        contentContainerStyle={styles.filterRow}
-      >
-        {FILTER_OPTIONS.map((opt) => {
-          const active = typeFilter === opt;
-          const meta = opt === "All" ? null : getTypeMeta(opt);
-          return (
-            <TouchableOpacity
-              key={opt}
-              style={[
-                styles.filterChip,
-                active && { backgroundColor: meta?.color || colors.primary },
-              ]}
-              onPress={() => setTypeFilter(opt)}
-            >
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{opt}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      <View style={styles.filtersWrap}>
+        <FlatList
+          horizontal
+          data={FILTERS}
+          keyExtractor={x => x}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filters}
+          renderItem={({ item }) => {
+            const selected = typeFilter === item;
+            return (
+              <TouchableOpacity
+                style={[styles.chip, selected && styles.selectedChip]}
+                onPress={() => setTypeFilter(item)}
+              >
+                <Text style={[styles.chipText, selected && styles.selectedChipText]}>{item}</Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
 
-      <ScrollView
-        style={styles.scrollArea}
-        onScrollBeginDrag={() => setActiveMenuId(null)}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        keyboardShouldPersistTaps="handled"
+      <FlatList
+        data={loading ? [] : notifications}
+        keyExtractor={item => String(item._id)}
+        renderItem={renderItem}
+        style={styles.list}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom + hp(25) },
+          !loading && !notifications.length && styles.emptyList,
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[colors.primary]}
+            onRefresh={() => fetchNotifications(1, true)}
             tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
-      >
-        {loading && <ActivityIndicator size="large" color={colors.primary} style={styles.centerLoader} />}
-
-        {!loading && visibleNotifications.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Feather name="bell-off" size={44} color="#94A3B8" />
-            <Text style={styles.emptyTitle}>No notifications</Text>
-            <Text style={styles.emptyText}>
-              {typeFilter === "All"
-                ? "You're all caught up — nothing here yet."
-                : `No ${typeFilter.toLowerCase()} notifications.`}
-            </Text>
-          </View>
-        )}
-
-        {!loading
-          && visibleNotifications.map((item) => {
-            const meta = getTypeMeta(item.type);
-            const unread = !item.isRead;
-
-            return (
-              <TouchableOpacity
-                key={item._id}
-                style={[styles.card, unread && styles.cardUnread]}
-                activeOpacity={0.7}
-                onPress={() => handleOpenNotification(item)}
-              >
-                <View style={[styles.iconCircle, { backgroundColor: meta.bg }]}>
-                  <Feather name={meta.icon} size={18} color={meta.color} />
-                </View>
-
-                <View style={styles.cardBody}>
-                  <View style={styles.cardTopRow}>
-                    <Text
-                      style={[
-                        styles.cardTitle,
-                        unread && styles.cardTitleUnread,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.title}
-                    </Text>
-
-                    <Text style={styles.cardTime}>
-                      {timeAgo(item.sentAt || item.createdAt)}
-                    </Text>
-                  </View>
-
-                  <Text style={styles.cardMessage} numberOfLines={2}>
-                    {item.message}
-                  </Text>
-
-                  <View style={styles.cardFooterRow}>
-                    <View
-                      style={[
-                        styles.typeTag,
-                        { backgroundColor: meta.bg },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.typeTagText,
-                          { color: meta.color },
-                        ]}
-                      >
-                        {item.type}
-                      </Text>
-                    </View>
-
-                    {item.attachment?.url && (
-                      <View style={styles.attachmentRow}>
-                        <Feather
-                          name={ATTACHMENT_ICON[item.attachment.type]
-                            || "paperclip"}
-                          size={12}
-                          color="#64748B"
-                        />
-
-                        <Text
-                          style={styles.attachmentText}
-                          numberOfLines={1}
-                        >
-                          {item.attachment.name || "Attachment"}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    confirmDelete(item);
-                  }}
-                  hitSlop={{
-                    top: 10,
-                    bottom: 10,
-                    left: 10,
-                    right: 10,
-                  }}
-                >
-                  <Feather
-                    name="x"
-                    size={18}
-                    color="#EF4444"
-                  />
-                </TouchableOpacity>
-
-                {unread && <View style={styles.unreadDot} />}
-              </TouchableOpacity>
-            );
-          })}
-
-        {loadingMore && <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />}
-
-        <View style={{ height: insets.bottom + 90 }} />
-      </ScrollView>
-      <NotificationDetailModal
-        visible={isDetailOpen}
-        notification={notifications.find((n) => n._id === detailItem?._id) || detailItem}
-        onClose={() => setIsDetailOpen(false)}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.3}
+        ListEmptyComponent={loading
+          ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          )
+          : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Feather name="bell-off" size={wp(35)} color={colors.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>Nothing here yet</Text>
+              <Text style={styles.emptyDescription}>
+                {typeFilter === "All"
+                  ? "New notifications will appear here when they arrive."
+                  : `You don't have any ${typeFilter.toLowerCase()} notifications.`}
+              </Text>
+            </View>
+          )}
+        ListFooterComponent={loadingMore
+          ? <ActivityIndicator style={styles.footerLoader} color={colors.primary} />
+          : null}
       />
 
-      {/* {user?.role === "Therapist"
-        ? <TherapistBottomBar activeTab="Notifications" />
-        : user?.role === "Admin"
-        ? <BottomBar activeTab="Notifications" />
-        : <ChildBottomBar activeTab="Notifications" />} */}
-    </SafeAreaView>
+      <NotificationDetailModal
+        visible={!!detailItem}
+        notification={notifications.find(n => n._id === detailItem?._id) || detailItem}
+        onClose={() => setDetailItem(null)}
+      />
+
+      <Modal
+        transparent
+        visible={!!deleteItem}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => !deleting && setDeleteItem(null)}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.dialog}>
+            <View style={styles.dangerIcon}>
+              <Feather name="trash-2" size={wp(28)} color="#DC2626" />
+            </View>
+            <Text style={styles.dialogTitle}>Delete notification?</Text>
+            <Text style={styles.dialogDescription}>
+              Are you sure you want to delete this notification? This action cannot be undone.
+            </Text>
+            <View style={styles.itemPreview}>
+              <Text style={styles.previewText} numberOfLines={2}>{deleteItem?.title}</Text>
+            </View>
+            <View style={styles.dialogActions}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setDeleteItem(null)} disabled={deleting}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmButton} onPress={deleteNotification} disabled={deleting}>
+                {deleting ? <ActivityIndicator color="#FFFFFF" /> : (
+                  <>
+                    <Feather name="trash-2" size={wp(16)} color="#FFFFFF" />
+                    <Text style={styles.confirmText}>Delete</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: "#F8FAFC" },
-
-  summaryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: wp(20),
-    paddingBottom: 4,
-  },
-  deleteButton: {
-    width: wp(30),
-    height: hp(30),
-    borderRadius:wp(15),
+  screen: { paddingTop:hp(10)},
+  header: { backgroundColor: "#FFFFFF", paddingHorizontal: wp(20), paddingTop: hp(16), paddingBottom: hp(16) },
+  headerTitleRow: { flexDirection: "row", alignItems: "center" },
+  headerIcon: {
+    width: wp(48),
+    height: wp(48),
+    borderRadius: wp(15),
+    backgroundColor: "#EEF2FF",
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 8,
+    marginRight: wp(12),
   },
-  summaryText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#334155" },
-  markAllBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 4 },
-  markAllText: {fontSize: fontSize(13), fontFamily:fonts.semiBold, color: colors.primary },
-
-  filterScroll: { flexGrow: 0, marginTop: 10 },
-  filterRow: { paddingHorizontal: 20, gap: 8, paddingBottom: 4 },
-  filterChip: {
-    paddingHorizontal: wp(16),
-    paddingVertical: hp(7),
-    borderRadius: wp(14),
-    backgroundColor: "#e9e9e9",
+  headerTextBlock: { flex: 1 },
+  heading: { fontSize: fontSize(23), fontFamily: fonts.bold, color: "#0F172A" },
+  subtitle: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#94A3B8", marginTop: hp(2) },
+  summary: { marginTop: hp(19), flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  unreadSummary: { flexDirection: "row", alignItems: "center", flexShrink: 1 },
+  summaryDot: { width: wp(7), height: wp(7), borderRadius: wp(4), backgroundColor: colors.primary, marginRight: wp(8) },
+  summaryLabel: { fontSize: fontSize(12), fontFamily: fonts.medium, color: "#64748B" },
+  markAll: { flexDirection: "row", alignItems: "center", gap: wp(5), paddingLeft: wp(8) },
+  markAllText: { fontSize: fontSize(12), fontFamily: fonts.semibold, color: colors.primary },
+  filtersWrap: {
+    backgroundColor: "#FFFFFF",
+    paddingBottom: hp(15),
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEF2F7",
   },
-  filterChipText: {fontSize: fontSize(12), fontFamily:fonts.semiBold, color: "#475569" },
-  filterChipTextActive: { color: "#FFFFFF" },
-
-  scrollArea: { flex: 1 },
-  scrollContent: { paddingHorizontal: wp(20), paddingTop: 12, paddingBottom: 12 },
-
+  filters: { paddingHorizontal: wp(20), gap: wp(8) },
+  chip: {
+    paddingHorizontal: wp(17),
+    paddingVertical: hp(9),
+    borderRadius: wp(22),
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  selectedChip: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: fontSize(12), fontFamily: fonts.medium, color: "#64748B" },
+  selectedChipText: { fontFamily: fonts.semibold, color: "#FFFFFF" },
+  list: { flex: 1 },
+  listContent: { paddingHorizontal: wp(18), paddingTop: hp(16) },
+  emptyList: { flexGrow: 1, justifyContent: "center" },
   card: {
     flexDirection: "row",
+    alignItems: "flex-start",
+    padding: wp(14),
+    marginBottom: hp(11),
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    alignItems: "center",
-    padding: 14,
-    marginBottom: 12,
+    borderRadius: wp(17),
     borderWidth: 1,
-    borderColor: "#EEF2F6",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 6,
-    elevation: 1,
+    borderColor: "#EDF1F7",
+    shadowColor: "#1E293B",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 9,
+    elevation: 2,
   },
-  cardUnread: { backgroundColor: "#F8FBFF", borderColor: "#DCEBFC" },
-
-  iconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+  unreadCard: {
+    backgroundColor: "#F9FBFF",
+    borderColor: "#DCE8FF",
+    borderLeftWidth: wp(3),
+    borderLeftColor: colors.primary,
+  },
+  typeIcon: {
+    width: wp(44),
+    height: wp(44),
+    borderRadius: wp(14),
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: wp(12),
   },
-
-  cardBody: { flex: 1 },
-  cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  cardTitle: { flex: 1,fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#334155" },
-  cardTitleUnread: { color: "#0F172A" },
-  cardTime: {fontSize: fontSize(11), color: "#94A3B8" },
-
-  cardMessage: {fontSize: fontSize(13), color: "#64748B", lineHeight: 18, marginTop: 3 },
-
-  cardFooterRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" },
-  typeTag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  typeTagText: { fontSize: fontSize(10), fontFamily:fonts.semiBold },
-
-  attachmentRow: { flexDirection: "row", alignItems: "center", gap: 4, maxWidth: 140 },
-  attachmentText: { fontSize: fontSize(11), color: "#64748B" },
-
-  fromText: { fontSize: fontSize(11), color: "#94A3B8", marginLeft: "auto" },
-
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#2563EB",
-    marginLeft: 8,
-    marginTop: 4,
+  cardContent: { flex: 1, minWidth: 0 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: wp(7) },
+  cardTitle: { flex: 1, fontSize: fontSize(14), fontFamily: fonts.medium, color: "#334155" },
+  cardTitleUnread: { fontFamily: fonts.bold, color: "#0F172A" },
+  unreadDot: { width: wp(7), height: wp(7), borderRadius: wp(4), backgroundColor: colors.primary },
+  message: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    lineHeight: hp(19),
+    color: "#64748B",
+    marginTop: hp(5),
   },
-
-  centerLoader: { marginVertical: 40 },
-  emptyContainer: { alignItems: "center", paddingVertical: 60, paddingHorizontal: 20 },
-  emptyTitle: { ffontSize: fontSize(16), fontFamily:fonts.semiBold, color: "#334155", marginTop: 12 },
-  emptyText: {fontSize: fontSize(13),color: "#64748B", textAlign: "center", marginTop: 6, lineHeight: 19 },
+  cardBottom: { flexDirection: "row", alignItems: "center", gap: wp(7), marginTop: hp(11) },
+  tag: { paddingHorizontal: wp(9), paddingVertical: hp(4), borderRadius: wp(7) },
+  tagText: { fontSize: fontSize(10), fontFamily: fonts.semibold },
+  timeText: { marginLeft: "auto", fontSize: fontSize(10), fontFamily: fonts.regular, color: "#94A3B8" },
+  deleteIcon: { padding: wp(5), marginLeft: wp(4) },
+  loadingWrap: { paddingTop: hp(90) },
+  footerLoader: { marginVertical: hp(16) },
+  emptyState: { alignItems: "center", paddingHorizontal: wp(25) },
+  emptyIcon: {
+    width: wp(90),
+    height: wp(90),
+    borderRadius: wp(45),
+    backgroundColor: "#EEF2FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: hp(20),
+  },
+  emptyTitle: { fontSize: fontSize(18), fontFamily: fonts.bold, color: "#0F172A" },
+  emptyDescription: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.regular,
+    color: "#94A3B8",
+    textAlign: "center",
+    lineHeight: hp(21),
+    marginTop: hp(7),
+  },
+  overlay: { flex: 1, backgroundColor: "rgba(15,23,42,0.55)", justifyContent: "center", paddingHorizontal: wp(25) },
+  dialog: { backgroundColor: "#FFFFFF", borderRadius: wp(24), padding: wp(24), alignItems: "center" },
+  dangerIcon: {
+    width: wp(70),
+    height: wp(70),
+    borderRadius: wp(35),
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: hp(17),
+  },
+  dialogTitle: { fontSize: fontSize(19), fontFamily: fonts.bold, color: "#0F172A" },
+  dialogDescription: {
+    fontSize: fontSize(13),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    lineHeight: hp(21),
+    textAlign: "center",
+    marginTop: hp(9),
+  },
+  itemPreview: {
+    width: "100%",
+    backgroundColor: "#F8FAFC",
+    borderRadius: wp(12),
+    padding: wp(13),
+    marginTop: hp(18),
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  previewText: { fontSize: fontSize(12), fontFamily: fonts.medium, color: "#475569", textAlign: "center" },
+  dialogActions: { flexDirection: "row", gap: wp(10), marginTop: hp(22), width: "100%" },
+  cancelButton: {
+    flex: 1,
+    height: hp(48),
+    borderRadius: wp(12),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F1F5F9",
+  },
+  cancelText: { fontSize: fontSize(14), fontFamily: fonts.semibold, color: "#475569" },
+  confirmButton: {
+    flex: 1,
+    height: hp(48),
+    borderRadius: wp(12),
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: wp(7),
+    backgroundColor: "#DC2626",
+  },
+  confirmText: { fontSize: fontSize(14), fontFamily: fonts.semibold, color: "#FFFFFF" },
 });

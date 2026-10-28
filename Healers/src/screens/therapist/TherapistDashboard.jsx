@@ -16,7 +16,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -29,7 +28,6 @@ import { getUnreadNotificationCountApi } from '../../api/authApi';
 import { UnreadSummary } from '../../api/child/api';
 import { getDashboardStatsApi } from '../../api/therapist/api';
 import NotificationModal from '../../components/NotificationModal';
-import TherapistBottomBar from '../../components/TherapistBottomBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
@@ -37,6 +35,11 @@ import {
   fonts,
 } from '../../styles/theme';
 import { formatTo12Hour } from '../../utils/hoursformat';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 export default function TherapistDashboardScreen({ navigation }) {
   const { user, logout } = useContext(AuthContext);
@@ -198,7 +201,7 @@ export default function TherapistDashboardScreen({ navigation }) {
   }, [notificationUnreadCount]);
   
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
+    <View style={[styles.mainContainer, commonStyles.container]}>
       <View style={styles.headerRow}>
         <View style={styles.profileContainer}>
           <TouchableOpacity
@@ -249,7 +252,7 @@ export default function TherapistDashboardScreen({ navigation }) {
               >
                 <Feather
                   name="bell"
-                  size={20}
+                  size={fontSize(20)}
                   color="#64748B"
                 />
               </Animated.View>
@@ -259,7 +262,7 @@ export default function TherapistDashboardScreen({ navigation }) {
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.iconButton, { marginLeft: 8 }]} onPress={logout}>
-            <MaterialIcons name="logout" size={20} color="#DC2626" />
+            <MaterialIcons name="logout" size={fontSize(20)} color="#DC2626" />
           </TouchableOpacity>
         </View>
       </View>
@@ -290,11 +293,11 @@ export default function TherapistDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("AssignedChildren")}
           >
             <View style={styles.cardIconBox}>
-              <Feather name="users" size={16} color="#1E3A8A" />
+              <Feather name="users" size={fontSize(16)} color="#1E3A8A" />
             </View>
             <View style={styles.cardValueRow}>
               <Text style={styles.cardValue}>{stats.assignedChildren}</Text>
-              <Feather name="chevron-right" size={16} color="#9CA3AF" />
+              <Feather name="chevron-right" size={fontSize(16)} color="#9CA3AF" />
             </View>
             <Text style={styles.cardLabel}>Assigned Children</Text>
           </TouchableOpacity>
@@ -305,11 +308,11 @@ export default function TherapistDashboardScreen({ navigation }) {
             activeOpacity={0.85}
           >
             <View style={styles.cardIconBox}>
-              <Feather name="calendar" size={16} color="#065F46" />
+              <Feather name="calendar" size={fontSize(16)} color="#065F46" />
             </View>
             <View style={styles.cardValueRow}>
               <Text style={styles.cardValue}>{stats.todaySessions}</Text>
-              <Feather name="chevron-right" size={16} color="#9CA3AF" />
+              <Feather name="chevron-right" size={fontSize(16)} color="#9CA3AF" />
             </View>
             <Text style={styles.cardLabel}>Today's Sessions</Text>
           </TouchableOpacity>
@@ -320,11 +323,11 @@ export default function TherapistDashboardScreen({ navigation }) {
             activeOpacity={0.85}
           >
             <View style={styles.cardIconBox}>
-              <Feather name="star" size={16} color="#D97706" />
+              <Feather name="star" size={fontSize(16)} color="#D97706" />
             </View>
             <View style={styles.cardValueRow}>
               <Text style={styles.cardValue}>{stats.monthlyFeedback}</Text>
-              <Feather name="chevron-right" size={16} color="#9CA3AF" />
+              <Feather name="chevron-right" size={fontSize(16)} color="#9CA3AF" />
             </View>
             <Text style={styles.cardLabel}>Monthly Feedback</Text>
           </TouchableOpacity>
@@ -335,11 +338,11 @@ export default function TherapistDashboardScreen({ navigation }) {
             activeOpacity={0.85}
           >
             <View style={styles.cardIconBox}>
-              <Feather name="bar-chart-2" size={16} color="#047857" />
+              <Feather name="bar-chart-2" size={fontSize(16)} color="#047857" />
             </View>
             <View style={styles.cardValueRow}>
               <Text style={styles.cardValue}>{stats.overallAttendance}</Text>
-              <Feather name="chevron-right" size={16} color="#9CA3AF" />
+              <Feather name="chevron-right" size={fontSize(16)} color="#9CA3AF" />
             </View>
             <Text style={styles.cardLabel}>Overall Attendance</Text>
           </TouchableOpacity>
@@ -354,7 +357,7 @@ export default function TherapistDashboardScreen({ navigation }) {
             <View style={styles.messageBannerHeader}>
               <View style={styles.messageBannerTitleRow}>
                 <View style={styles.bannerIconBox}>
-                  <Feather name="message-square" size={16} color="#7CB342" />
+                  <Feather name="message-square" size={fontSize(16)} color="#7CB342" />
                 </View>
                 <Text style={styles.messageBannerTitle}>Messages</Text>
               </View>
@@ -399,7 +402,7 @@ export default function TherapistDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("ProgramBuilder")}
           >
             <View style={[styles.actionIconBox, { backgroundColor: "#DBEAFE" }]}>
-              <Feather name="plus" size={24} color="#1669A9" />
+              <Feather name="plus" size={fontSize(24)} color="#1669A9" />
             </View>
             <Text style={styles.actionLabel}>Add Child Program</Text>
           </TouchableOpacity> */
@@ -410,7 +413,7 @@ export default function TherapistDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("ChildMessages")}
           >
             <View style={[styles.actionIconBox, { backgroundColor: "#DBEAFE" }]}>
-              <Feather name="message-square" size={24} color="#1669A9" />
+              <Feather name="message-square" size={fontSize(24)} color="#1669A9" />
             </View>
             <Text style={styles.actionLabel}>Messages</Text>
           </TouchableOpacity>
@@ -420,7 +423,7 @@ export default function TherapistDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("WeeklyVideo")}
           >
             <View style={[styles.actionIconBox, { backgroundColor: "#F3E8FF" }]}>
-              <Feather name="video" size={22} color="#9333EA" />
+              <Feather name="video" size={fontSize(22)} color="#9333EA" />
             </View>
             <Text style={styles.actionLabel}>Upload Therapy Video</Text>
           </TouchableOpacity>
@@ -430,7 +433,7 @@ export default function TherapistDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("QuarterlyReports")}
           >
             <View style={[styles.actionIconBox, { backgroundColor: "#E0E7FF" }]}>
-              <MaterialIcons name="note-add" size={22} color="#4F46E5" />
+              <MaterialIcons name="note-add" size={fontSize(22)} color="#4F46E5" />
             </View>
             <Text style={styles.actionLabel}>Create/ Upload Report</Text>
           </TouchableOpacity>
@@ -440,7 +443,7 @@ export default function TherapistDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("LeaveRequest")}
           >
             <View style={[styles.actionIconBox, { backgroundColor: "#DCFCE7" }]}>
-              <Feather name="home" size={22} color="#16A34A" />
+              <Feather name="home" size={fontSize(22)} color="#16A34A" />
             </View>
             <Text style={styles.actionLabel}>Request Leave</Text>
           </TouchableOpacity>
@@ -451,7 +454,7 @@ export default function TherapistDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("ProgressTracking")}
           >
             <View style={[styles.actionIconBox, { backgroundColor: "#DBEAFE" }]}>
-              <Feather name="map-pin" size={22} color="#1669A9" />
+              <Feather name="map-pin" size={fontSize(22)} color="#1669A9" />
             </View>
             <Text style={styles.actionLabel}>Tracking</Text>
           </TouchableOpacity> */
@@ -469,7 +472,7 @@ export default function TherapistDashboardScreen({ navigation }) {
           <View style={styles.complaintIconBox}>
             <Feather
               name="message-square"
-              size={22}
+              size={fontSize(22)}
               color="#EF4444"
             />
           </View>
@@ -486,7 +489,7 @@ export default function TherapistDashboardScreen({ navigation }) {
 
           <Feather
             name="chevron-right"
-            size={21}
+            size={fontSize(21)}
             color="#CBD5E1"
           />
         </TouchableOpacity>
@@ -512,7 +515,7 @@ export default function TherapistDashboardScreen({ navigation }) {
             activeOpacity={0.85}
             onPress={() => navigation.navigate("AttendanceTracking")}
           >
-            <Feather name="calendar" size={16} color="#004E9F" style={{ marginRight: 6 }} />
+            <Feather name="calendar" size={fontSize(16)} color="#004E9F" style={{ marginRight: 6 }} />
             <Text style={styles.scheduleNextBtnText}>View Schedule</Text>
           </TouchableOpacity>
         </View>
@@ -522,8 +525,7 @@ export default function TherapistDashboardScreen({ navigation }) {
         visible={showNotificationModal}
         onClose={() => setShowNotificationModal(false)}
       />
-      <TherapistBottomBar activeTab={"TherapistDashboard"} />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -535,46 +537,48 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingHorizontal:wp(20),
+    paddingTop: hp(8),
+    paddingBottom:hp(12),
     backgroundColor: "#fff",
   },
   profileContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: wp(12),
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: wp(38),
+    height: hp(38),
+    borderRadius: wp(19),
   },
   avatarFallback: {
-    width: 38,
-    height: 38,
-    borderRadius: 999,
+    width: wp(38),
+    height: hp(38),
+    borderRadius: wp(999),
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
 
   avatarFallbackText: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
+    lineHeight:24,
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#0052A3",
+    lineHeight:24,
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
   },
   iconButton: {
-    padding: 4,
+    padding: wp(4),
   },
   notificationWrapper: {
     position: "relative",
@@ -583,9 +587,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     right: 0,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: wp(6),
+    height: hp(6),
+    borderRadius: wp(3),
     backgroundColor: "#DC2626",
   },
 
@@ -593,23 +597,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 30,
+    paddingHorizontal:wp(20),
+    paddingTop: hp(10),
+    paddingBottom:hp(30),
   },
 
   welcomeSection: {
-    marginBottom: 20,
+    marginBottom: hp(20),
   },
   greetingText: {
-    fontSize: 26,
+    fontSize:fontSize(26),
     fontFamily: fonts.bold,
     color: "#181C1E",
-    marginBottom: 6,
-    lineHeight: 36,
+    marginBottom: hp(6),
+    lineHeight: 34,
   },
   greetingSubtext: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 22,
@@ -620,22 +624,22 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
     rowGap: 14,
-    marginBottom: 28,
+    marginBottom: hp(28),
   },
   gridCard: {
     width: "48%",
-    borderRadius: 24,
-    padding: 20,
+    borderRadius: wp(24),
+    padding: wp(20),
     justifyContent: "space-between",
   },
   cardIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(8),
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
+    marginBottom: hp(10),
   },
   cardValueRow: {
     flexDirection: "row",
@@ -643,30 +647,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   cardValue: {
-    fontSize: 30,
+    fontSize:fontSize(30),
     fontFamily: fonts.bold,
     color: "#1F2937",
     lineHeight: 36,
   },
   cardLabel: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#6B7280",
     lineHeight: 16,
   },
 
   sectionHeaderTitle: {
-    fontSize: 18,
+    fontSize:fontSize(18),
     fontFamily: fonts.bold,
     color: "#1F2937",
     lineHeight: 28,
-    marginBottom: 15,
+    marginBottom: hp(15),
   },
   actionsRow: {
     flexDirection: "row",
-    gap: 15,
+    gap: wp(15),
     flexWrap: "wrap",
-    marginBottom: 16,
+    marginBottom: hp(16),
   },
 
   actionItem: {
@@ -674,15 +678,15 @@ const styles = StyleSheet.create({
     width: "21%",
   },
   actionIconBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
+    width: wp(64),
+    height: hp(64),
+    borderRadius: wp(18),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: hp(8),
   },
   actionLabel: {
-    fontSize: 10,
+    fontSize:fontSize(10),
     fontFamily: fonts.bold,
     color: "#4B5563",
     textAlign: "center",
@@ -691,105 +695,105 @@ const styles = StyleSheet.create({
 
   sessionBanner: {
     backgroundColor: "#004E9F",
-    borderRadius: 32,
-    padding: 24,
-    paddingTop: 40,
+    borderRadius: wp(32),
+    padding: wp(24),
+    paddingTop: hp(40),
   },
   bannerTag: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.semiBold,
     color: "rgba(256,256,256,.8)",
     letterSpacing: 1.4,
     lineHeight: 20,
   },
   bannerTitle: {
-    fontSize: 26,
+    fontSize:fontSize(26),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 32,
     marginVertical: 8,
   },
   bannerDescription: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     color: "#fff",
     lineHeight: 24,
-    marginBottom: 20,
+    marginBottom: hp(20),
   },
   scheduleNextBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 999,
+    borderRadius: wp(999),
     paddingVertical: 12,
   },
   scheduleNextBtnText: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#004E9F",
     lineHeight: 20,
   },
   messageBanner: {
     backgroundColor: "#E1F3D8",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: wp(20),
+    padding: wp(20),
+    marginBottom: hp(20),
   },
   messageBannerHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: hp(12),
   },
   messageBannerTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: wp(8),
   },
   bannerIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 14,
+    width: wp(32),
+    height: hp(32),
+    borderRadius: wp(14),
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
   messageBannerTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     color: "#191C20",
     lineHeight: 24,
   },
   badgeNew: {
     backgroundColor: "#7CB342",
-    paddingHorizontal: 8,
+    paddingHorizontal:wp(8),
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: wp(999),
   },
   badgeNewText: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontWeight: "700",
     color: "#FFFFFF",
   },
   messageCardContent: {
     backgroundColor: "rgba(255,255,255,.6)",
-    borderRadius: 20,
-    padding: 12,
+    borderRadius: wp(20),
+    padding: wp(12),
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: wp(12),
   },
   msgAvatarCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 999,
+    width: wp(42),
+    height: hp(42),
+    borderRadius: wp(999),
     backgroundColor: "#E1F3D8",
     alignItems: "center",
     justifyContent: "center",
   },
   msgAvatarText: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#7CB342",
     lineHeight: 24,
@@ -798,33 +802,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   teacherName: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#191C20",
     lineHeight: 24,
   },
   messageSnippet: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 20,
   },
   msgAvatarImage: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: wp(42),
+    height: hp(42),
+    borderRadius: wp(21),
   },
   complaintCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 28,
+    borderRadius: wp(14),
+    padding: wp(16),
+    marginBottom: hp(28),
     shadowColor: "#000",
     shadowOffset: {
-      width: 0,
-      height: 4,
+      width: wp(0),
+      height: hp(4),
     },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -833,9 +837,9 @@ const styles = StyleSheet.create({
   },
 
   complaintIconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(12),
     backgroundColor: "#FEE2E2",
     alignItems: "center",
     justifyContent: "center",
@@ -847,14 +851,14 @@ const styles = StyleSheet.create({
   },
 
   complaintTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#191C20",
   },
 
   complaintSubtitle: {
     marginTop: 3,
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
   },

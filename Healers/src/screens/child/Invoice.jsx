@@ -14,18 +14,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { getMyInvoicesApi } from '../../api/child/api';
-import ChildBottomBar from '../../components/ChildBottomBar';
-import TopBar from '../../components/TopBar';
 import {
   colors,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const PAGE_LIMIT = 5;
 
@@ -229,7 +231,7 @@ export default function ChildInvoicesScreen({ navigation }) {
           <View style={styles.invoiceIcon}>
             <Feather
               name="file-text"
-              size={20}
+              size={fontSize(20)}
               color={colors.primary}
             />
           </View>
@@ -245,7 +247,7 @@ export default function ChildInvoicesScreen({ navigation }) {
 
           <Feather
             name="chevron-right"
-            size={20}
+            size={fontSize(20)}
             color="#94A3B8"
           />
         </View>
@@ -289,7 +291,7 @@ export default function ChildInvoicesScreen({ navigation }) {
         </View>
 
         <View style={styles.viewRow}>
-          <Feather name="eye" size={15} color={colors.primary} />
+          <Feather name="eye" size={fontSize(15)} color={colors.primary} />
           <Text style={styles.viewText}>View Invoice</Text>
         </View>
       </TouchableOpacity>
@@ -371,11 +373,8 @@ export default function ChildInvoicesScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <TopBar
-        navigation={navigation}
-        headerTitle="Billing & Invoices"
-      />
+    <View style={styles.container}>
+     
 
       <FlatList
         data={invoices}
@@ -395,7 +394,7 @@ export default function ChildInvoicesScreen({ navigation }) {
                 <>
                   <Feather
                     name="file-text"
-                    size={35}
+                    size={fontSize(35)}
                     color="#94A3B8"
                   />
                   <Text style={styles.emptyText}>
@@ -426,8 +425,7 @@ export default function ChildInvoicesScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       />
 
-      <ChildBottomBar />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -437,39 +435,39 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   listContent: {
-    padding: 16,
+    padding:wp(16),
     paddingBottom: 30,
     flexGrow: 1,
   },
   title: {
-    fontSize: 24,
+    fontSize:fontSize(24),
     fontFamily: fonts.bold,
     color: "#0F172A",
   },
   subtitle: {
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.regular,
     color: "#64748B",
-    marginTop: 5,
-    marginBottom: 20,
+    marginTop:hp(5),
+    marginBottom: hp(20),
     lineHeight: 20,
   },
   summaryCard: {
     backgroundColor: colors.primary,
-    borderRadius: 18,
-    padding: 20,
-    marginBottom: 24,
+    borderRadius: wp(18),
+    padding:wp(20),
+    marginBottom: hp(24),
   },
   summaryLabel: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     color: "#DBEAFE",
     fontFamily: fonts.semiBold,
   },
   summaryAmount: {
-    fontSize: 28,
+    fontSize:fontSize(28),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
-    marginTop: 8,
+    marginTop:hp(8),
   },
   summaryDivider: {
     height: 1,
@@ -481,29 +479,29 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   summarySmallLabel: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     color: "#DBEAFE",
     fontFamily: fonts.regular,
   },
   summarySmallValue: {
-    fontSize: 15,
+    fontSize:fontSize(15),
     color: "#FFFFFF",
     fontFamily: fonts.semiBold,
-    marginTop: 5,
+    marginTop:hp(5),
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize:fontSize(18),
     fontFamily: fonts.bold,
     color: "#0F172A",
-    marginBottom: 14,
+    marginBottom: hp(14),
   },
   filterList: {
-    marginBottom: 18,
+    marginBottom: hp(18),
   },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 22,
+    borderRadius: wp(22),
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -514,7 +512,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   filterText: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#64748B",
   },
@@ -523,9 +521,9 @@ const styles = StyleSheet.create({
   },
   invoiceCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: wp(16),
+    padding:wp(16),
+    marginBottom: hp(12),
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
@@ -533,57 +531,57 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 18,
+    marginBottom: hp(18),
   },
   invoiceIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: wp(44),
+    height: hp(44),
+    borderRadius: wp(12),
     backgroundColor: "#EFF6FF",
     alignItems: "center",
     justifyContent: "center",
   },
   invoiceNumber: {
-    fontSize: 15,
+    fontSize:fontSize(15),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
   dateText: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
-    marginTop: 4,
+    marginTop:hp(4),
   },
   dateRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: hp(14),
   },
   label: {
-    fontSize: 11,
+    fontSize:fontSize(11),
     fontFamily: fonts.regular,
     color: "#94A3B8",
-    marginBottom: 5,
+    marginBottom: hp(5),
   },
   value: {
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.semiBold,
     color: "#334155",
   },
   statusBadge: {
-    borderRadius: 20,
+    borderRadius: wp(20),
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   statusText: {
-    fontSize: 11,
+    fontSize:fontSize(11),
     fontFamily: fonts.semiBold,
   },
   divider: {
     height: 1,
     backgroundColor: "#F1F5F9",
-    marginBottom: 14,
+    marginBottom: hp(14),
   },
   amountRow: {
     flexDirection: "row",
@@ -591,7 +589,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   amount: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.bold,
     color: "#0F172A",
   },
@@ -601,12 +599,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 7,
     backgroundColor: "#EFF6FF",
-    borderRadius: 10,
+    borderRadius: wp(10),
     paddingVertical: 11,
-    marginTop: 16,
+    marginTop:hp(16),
   },
   viewText: {
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.semiBold,
     color: colors.primary,
   },
@@ -618,6 +616,6 @@ const styles = StyleSheet.create({
   emptyText: {
     color: "#64748B",
     fontFamily: fonts.regular,
-    fontSize: 14,
+    fontSize:fontSize(14),
   },
 });

@@ -29,7 +29,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Feather from '@expo/vector-icons/Feather';
@@ -42,14 +42,17 @@ import {
   therapistUsers,
   uploadToCloudinaryFileSystem,
 } from '../../api/therapist/api';
-import TherapistBottomBar from '../../components/TherapistBottomBar';
-import TopBar from '../../components/TopBar';
 import { AuthContext } from '../../context/AuthContext';
 import {
   colors,
   commonStyles,
   fonts,
 } from '../../styles/theme';
+import {
+  fontSize,
+  hp,
+  wp,
+} from '../../utils/responsive';
 
 const CloudinaryVideoPlayer = ({ uri }) => {
   const player = useVideoPlayer(uri, (playerInstance) => {
@@ -58,7 +61,7 @@ const CloudinaryVideoPlayer = ({ uri }) => {
   });
 
   return (
-    <View style={{ width: "100%", height: 300 }}>
+    <View style={{ width: "100%", height: hp(300) }}>
       <VideoView
         player={player}
         nativeControls
@@ -76,6 +79,7 @@ export default function WeeklyVideoScreen({
   navigation,
 }) {
   const { user } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
 
   const cameraRef = useRef(null);
 
@@ -1010,18 +1014,15 @@ export default function WeeklyVideoScreen({
   };
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.mainContainer,
         commonStyles.container,
       ]}
     >
-      <TopBar
-        navigation={navigation}
-        headerTitle="Weekly Video"
-      />
+     
       {loadingUploadVideos
-        ? <ActivityIndicator size="small" color="#004E9F" style={[styles.scrollArea, { marginBottom: 20 }]} />
+        ? <ActivityIndicator size="small" color="#004E9F" style={[styles.scrollArea, { marginBottom: hp(20) }]} />
         : (
           <ScrollView
             style={styles.scrollArea}
@@ -1073,7 +1074,7 @@ export default function WeeklyVideoScreen({
                     size="small"
                     color="#004E9F"
                     style={{
-                      marginBottom: 20,
+                      marginBottom: hp(20),
                     }}
                   />
                 )
@@ -1151,7 +1152,7 @@ export default function WeeklyVideoScreen({
               >
                 <Ionicons
                   name="play"
-                  size={24}
+                  size={fontSize(24)}
                   color="#fff"
                 />
               </TouchableOpacity>
@@ -1170,7 +1171,7 @@ export default function WeeklyVideoScreen({
                   >
                     <AntDesign
                       name="cloud-upload"
-                      size={18}
+                      size={fontSize(18)}
                       color={colors.primary}
                     />
                   </View>
@@ -1201,7 +1202,7 @@ export default function WeeklyVideoScreen({
                   >
                     <Ionicons
                       name="disc-outline"
-                      size={20}
+                      size={fontSize(20)}
                       color="#BA1A1A"
                     />
                   </View>
@@ -1227,7 +1228,7 @@ export default function WeeklyVideoScreen({
               ? (
                 <View
                   style={{
-                    paddingVertical: 40,
+                    paddingVertical:hp(40),
                     alignItems: "center",
                     justifyContent: "center",
                   }}
@@ -1254,13 +1255,13 @@ export default function WeeklyVideoScreen({
                     ? (
                       <View
                         style={{
-                          padding: 30,
+                          padding: wp(30),
                           alignItems: "center",
                         }}
                       >
                         <Ionicons
                           name="videocam-outline"
-                          size={45}
+                          size={fontSize(45)}
                           color="#94A3B8"
                         />
 
@@ -1289,7 +1290,7 @@ export default function WeeklyVideoScreen({
                             <View style={styles.centerPlayBtn}>
                               <Ionicons
                                 name="play"
-                                size={28}
+                                size={fontSize(28)}
                                 color="#035388"
                               />
                             </View>
@@ -1335,7 +1336,7 @@ export default function WeeklyVideoScreen({
                               >
                                 {deletingVideoId === (video._id || video.id)
                                   ? <ActivityIndicator size="small" color="#475569" />
-                                  : <Feather name="trash-2" size={18} color="#475569" />}
+                                  : <Feather name="trash-2" size={fontSize(18)} color="#475569" />}
                               </TouchableOpacity>
                             </View>
                           </View>
@@ -1346,7 +1347,7 @@ export default function WeeklyVideoScreen({
                   {loadingMoreVideos && (
                     <View
                       style={{
-                        paddingVertical: 20,
+                        paddingVertical:hp(20),
                         alignItems: "center",
                         justifyContent: "center",
                       }}
@@ -1374,7 +1375,7 @@ export default function WeeklyVideoScreen({
                     <Text
                       style={{
                         textAlign: "center",
-                        paddingVertical: 15,
+                        paddingVertical:hp(15),
                         color: "#94A3B8",
                         fontFamily: fonts.regular,
                       }}
@@ -1422,7 +1423,7 @@ export default function WeeklyVideoScreen({
               >
                 <Feather
                   name="x"
-                  size={24}
+                  size={fontSize(24)}
                   color="#FFFFFF"
                 />
               </TouchableOpacity>
@@ -1495,7 +1496,7 @@ export default function WeeklyVideoScreen({
         <View style={styles.fullModalOverlay}>
           <View style={styles.recorderContainer}>
             <View style={styles.modalHeaderRow}>
-              <View style={[commonStyles.flexClass, { gap: 5 }]}>
+              <View style={[commonStyles.flexClass, { gap: wp(5) }]}>
                 <View
                   style={[
                     styles.redDot,
@@ -1519,15 +1520,15 @@ export default function WeeklyVideoScreen({
                     top: 20,
                     alignSelf: "center",
                     backgroundColor: "rgba(0,0,0,0.7)",
-                    paddingHorizontal: 20,
-                    paddingVertical: 10,
-                    borderRadius: 20,
+                    paddingHorizontal:wp(20),
+                    paddingVertical:hp(10),
+                    borderRadius: wp(20),
                   }}
                 >
                   <Text
                     style={{
                       color: "#fff",
-                      fontSize: 20,
+                      fontSize:fontSize(20),
                       fontWeight: "bold",
                     }}
                   >
@@ -1542,7 +1543,7 @@ export default function WeeklyVideoScreen({
               >
                 <Feather
                   name="x"
-                  size={24}
+                  size={fontSize(24)}
                   color="#FFFFFF"
                 />
               </TouchableOpacity>
@@ -1573,7 +1574,7 @@ export default function WeeklyVideoScreen({
                         right: 15,
                         bottom: 30,
                         zIndex: 10,
-                        gap: 10,
+                        gap: wp(10),
                       }}
                     >
                       <TouchableOpacity
@@ -1581,7 +1582,7 @@ export default function WeeklyVideoScreen({
                         style={{
                           width: 45,
                           height: 45,
-                          borderRadius: 25,
+                          borderRadius: wp(25),
                           backgroundColor: "rgba(0,0,0,0.65)",
                           alignItems: "center",
                           justifyContent: "center",
@@ -1589,7 +1590,7 @@ export default function WeeklyVideoScreen({
                       >
                         <Ionicons
                           name="add"
-                          size={28}
+                          size={fontSize(28)}
                           color="#FFFFFF"
                         />
                       </TouchableOpacity>
@@ -1599,7 +1600,7 @@ export default function WeeklyVideoScreen({
                         style={{
                           width: 45,
                           height: 45,
-                          borderRadius: 25,
+                          borderRadius: wp(25),
                           backgroundColor: "rgba(0,0,0,0.65)",
                           alignItems: "center",
                           justifyContent: "center",
@@ -1607,14 +1608,14 @@ export default function WeeklyVideoScreen({
                       >
                         <Ionicons
                           name="remove"
-                          size={28}
+                          size={fontSize(28)}
                           color="#FFFFFF"
                         />
                       </TouchableOpacity>
                       <Text
                         style={{
                           color: "#FFFFFF",
-                          fontSize: 16,
+                          fontSize:fontSize(16),
                           fontWeight: "bold",
                           textAlign: "center",
                         }}
@@ -1639,7 +1640,7 @@ export default function WeeklyVideoScreen({
                   <View style={styles.cameraFallbackBox}>
                     <Ionicons
                       name="camera-outline"
-                      size={64}
+                      size={fontSize(64)}
                       color="#94A3B8"
                     />
 
@@ -1672,7 +1673,7 @@ export default function WeeklyVideoScreen({
                   >
                     <Ionicons
                       name="camera-reverse-outline"
-                      size={30}
+                      size={fontSize(30)}
                       color="#FFFFFF"
                     />
 
@@ -1695,7 +1696,7 @@ export default function WeeklyVideoScreen({
                       name={isRecording
                         ? "stop"
                         : "disc"}
-                      size={32}
+                      size={fontSize(32)}
                       color="#FFFFFF"
                     />
 
@@ -1745,7 +1746,7 @@ export default function WeeklyVideoScreen({
                   >
                     <Feather
                       name="x"
-                      size={20}
+                      size={fontSize(20)}
                       color="#64748B"
                     />
                   </TouchableOpacity>
@@ -1756,7 +1757,7 @@ export default function WeeklyVideoScreen({
                 >
                   <Feather
                     name="search"
-                    size={16}
+                    size={fontSize(16)}
                     color="#94A3B8"
                     style={{
                       marginRight: 8,
@@ -1818,7 +1819,7 @@ export default function WeeklyVideoScreen({
                           {isSelected && (
                             <Feather
                               name="check"
-                              size={18}
+                              size={fontSize(18)}
                               color="#0B598F"
                             />
                           )}
@@ -1833,8 +1834,7 @@ export default function WeeklyVideoScreen({
         </TouchableWithoutFeedback>
       </Modal>
 
-      <TherapistBottomBar activeTab="Children" />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1850,12 +1850,12 @@ const styles = StyleSheet.create({
   },
   headerBanner: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginBottom: 20,
+    paddingHorizontal:wp(20),
+    paddingVertical:hp(16),
+    marginBottom: hp(20),
   },
   bannerTitle: {
-    fontSize: 18,
+    fontSize:fontSize(18),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 24,
@@ -1864,30 +1864,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    marginBottom: 12,
+    paddingHorizontal:wp(20),
+    marginBottom: hp(12),
   },
   sectionHeaderTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.bold,
     color: colors.blackFont,
     lineHeight: 24,
   },
   viewAllText: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     color: "#004E9F",
     lineHeight: 24,
   },
   childChipsRow: {
-    paddingHorizontal: 20,
-    gap: 10,
-    marginBottom: 20,
+    paddingHorizontal:wp(20),
+    gap: wp(10),
+    marginBottom: hp(20),
   },
   childChip: {
-    paddingHorizontal: 20,
-    height: 44,
-    borderRadius: 32,
+    paddingHorizontal:wp(20),
+    height: hp(44),
+    borderRadius: wp(32),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1900,7 +1900,7 @@ const styles = StyleSheet.create({
     borderColor: "#D7E3FF",
   },
   childChipText: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.medium,
     lineHeight: 24,
     color: "#004E9F",
@@ -1908,97 +1908,97 @@ const styles = StyleSheet.create({
   mediaActionCard: {
     backgroundColor: "rgba(121,255,231,.2)",
     marginHorizontal: 20,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: wp(16),
+    padding: wp(16),
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#c6c9cc",
-    marginBottom: 24,
+    marginBottom: hp(24),
   },
   playPreviewCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: wp(48),
+    height: hp(48),
+    borderRadius: wp(24),
     backgroundColor: "#006B58",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
+    marginBottom: hp(20),
   },
   actionButtonsRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: wp(8),
     width: "100%",
   },
   uploadBtn: {
     flex: 1,
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    borderRadius: wp(12),
+    paddingVertical:hp(8),
+    paddingHorizontal:wp(8),
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: wp(10),
   },
   recordBtn: {
     flex: 1,
     backgroundColor: "#C65647",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    borderRadius: wp(12),
+    paddingVertical:hp(8),
+    paddingHorizontal:wp(8),
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: wp(8),
   },
   btnIconBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
+    width: wp(34),
+    height: hp(34),
+    borderRadius: wp(8),
     backgroundColor: "#8BF6D9",
     alignItems: "center",
     justifyContent: "center",
   },
   recordIconBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
+    width: wp(34),
+    height: hp(34),
+    borderRadius: wp(8),
     backgroundColor: "rgba(255,218,214,.4)",
     alignItems: "center",
     justifyContent: "center",
   },
   btnTitle: {
-    fontSize: 13,
+    fontSize:fontSize(12),
     fontFamily: fonts.medium,
     color: "#FFFFFF",
-    lineHeight: 19,
+    lineHeight: 16,
   },
   btnSubtitle: {
-    fontSize: 10,
+    fontSize:fontSize(9),
     fontFamily: fonts.regular,
     color: "rgba(255, 255, 255, 0.8)",
     lineHeight: 15,
   },
   videoList: {
-    paddingHorizontal: 20,
-    gap: 20,
+    paddingHorizontal:wp(20),
+    gap: wp(20),
   },
   videoCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: wp(12),
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(224,227,230.3)",
   },
   videoThumbnail: {
-    height: 180,
+    height: hp(160),
     backgroundColor: "#035388",
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
   },
   centerPlayBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: wp(52),
+    height: hp(52),
+    borderRadius: wp(26),
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
@@ -2006,15 +2006,15 @@ const styles = StyleSheet.create({
   },
   durationBadge: {
     position: "absolute",
-    bottom: 12,
-    right: 12,
+    bottom: hp(12),
+    right: wp(12),
     backgroundColor: "rgba(0, 0, 0, 0.65)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal:wp(8),
+    paddingVertical:hp(4),
+    borderRadius: wp(6),
   },
   durationText: {
-    fontSize: 11,
+    fontSize:fontSize(11),
     fontFamily: fonts.medium,
     color: "#FFFFFF",
     lineHeight: 14,
@@ -2023,22 +2023,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal:wp(16),
+    paddingVertical:hp(14),
     backgroundColor: "#FFFFFF",
   },
   videoMetaColumn: {
     flex: 1,
   },
   videoChildName: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 20,
-    marginBottom: 2,
+    marginBottom: hp(2),
   },
   videoSubDetails: {
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 19,
@@ -2049,21 +2049,21 @@ const styles = StyleSheet.create({
   videoActionGroup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: wp(12),
   },
   iconActionBtn: {
-    padding: 6,
+    padding: wp(6),
   },
   fullModalOverlay: {
     flex: 1,
     backgroundColor: "#0F172A",
     justifyContent: "center",
-    padding: 20,
+    padding: wp(20),
   },
   demoPlayerContainer: {
     flex: 1,
     justifyContent: "space-between",
-    paddingVertical: 40,
+    paddingVertical:hp(40),
   },
   modalHeaderRow: {
     flexDirection: "row",
@@ -2071,26 +2071,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   demoModalTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 22,
   },
   youtubeWrapper: {
     width: "100%",
-    borderRadius: 16,
+    borderRadius: wp(16),
     overflow: "hidden",
     backgroundColor: "#000000",
   },
   closeDemoBtn: {
     backgroundColor: "#046A58",
     height: 48,
-    borderRadius: 24,
+    borderRadius: wp(24),
     alignItems: "center",
     justifyContent: "center",
   },
   closeDemoText: {
-    fontSize: 15,
+    fontSize:fontSize(15),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 20,
@@ -2098,31 +2098,31 @@ const styles = StyleSheet.create({
   recorderContainer: {
     flex: 1,
     justifyContent: "space-between",
-    paddingVertical: 40,
+    paddingVertical:hp(40),
   },
   recordingStatusBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: wp(8),
   },
   redDot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: wp(5),
     backgroundColor: "#64748B",
   },
   redDotActive: {
     backgroundColor: "#DC2626",
   },
   recordingStatusText: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 16,
   },
   viewfinderContainer: {
     height: 340,
-    borderRadius: 20,
+    borderRadius: wp(20),
     overflow: "hidden",
     backgroundColor: "#1E293B",
     borderWidth: 2,
@@ -2131,53 +2131,53 @@ const styles = StyleSheet.create({
   },
   cameraFallbackBox: {
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal:wp(20),
   },
   fallbackTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 22,
     marginTop: 12,
   },
   fallbackSubText: {
-    fontSize: 12,
+    fontSize:fontSize(12),
     fontFamily: fonts.regular,
     color: "#94A3B8",
     textAlign: "center",
     lineHeight: 16,
     marginTop: 4,
-    marginBottom: 16,
+    marginBottom: hp(16),
   },
   grantPermissionBtn: {
     backgroundColor: "#035388",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal:wp(16),
+    paddingVertical:hp(8),
+    borderRadius: wp(8),
   },
   grantPermissionText: {
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
   },
   recorderControls: {
     alignItems: "center",
-    gap: 16,
+    gap: wp(16),
   },
   controlButtonsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
-    paddingHorizontal: 20,
+    paddingHorizontal:wp(20),
   },
   flipCameraBtn: {
     alignItems: "center",
     justifyContent: "center",
-    padding: 8,
+    padding: wp(8),
   },
   flipCameraText: {
-    fontSize: 11,
+    fontSize:fontSize(11),
     fontFamily: fonts.medium,
     color: "#94A3B8",
     lineHeight: 14,
@@ -2189,7 +2189,7 @@ const styles = StyleSheet.create({
   recordToggleButton: {
     width: 72,
     height: 72,
-    borderRadius: 999,
+    borderRadius: wp(999),
     backgroundColor: "#DC2626",
     alignItems: "center",
     justifyContent: "center",
@@ -2199,14 +2199,14 @@ const styles = StyleSheet.create({
   },
   saveRecordBtn: {
     backgroundColor: "#046A58",
-    paddingHorizontal: 24,
+    paddingHorizontal:wp(24),
     height: 40,
-    borderRadius: 20,
+    borderRadius: wp(20),
     alignItems: "center",
     justifyContent: "center",
   },
   saveRecordText: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 18,
@@ -2216,39 +2216,39 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal:wp(20),
   },
   modalContent: {
     width: "100%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: wp(16),
+    padding: wp(16),
     elevation: 5,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: hp(12),
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize:fontSize(16),
     fontFamily: fonts.bold,
     color: "#0F172A",
     lineHeight: 22,
   },
   modalSearchContainer: {
     backgroundColor: "#F1F5F9",
-    borderRadius: 8,
+    borderRadius: wp(8),
     height: 38,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    marginBottom: 12,
+    paddingHorizontal:wp(10),
+    marginBottom: hp(12),
   },
   modalSearchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize:fontSize(13),
     fontFamily: fonts.regular,
     color: "#0F172A",
   },
@@ -2256,15 +2256,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical:hp(10),
+    paddingHorizontal:wp(10),
+    borderRadius: wp(8),
   },
   modalOptionSelected: {
     backgroundColor: "#F1F5F9",
   },
   modalOptionText: {
-    fontSize: 14,
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     color: "#334155",
     lineHeight: 20,
@@ -2277,12 +2277,12 @@ const styles = StyleSheet.create({
   btnText: {
     color: "#fff",
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize:fontSize(12),
   },
   uploadingText: {
     color: "#fff",
     fontFamily: fonts.regular,
-    fontSize: 14,
+    fontSize:fontSize(14),
     textAlign: "center",
   },
 });
