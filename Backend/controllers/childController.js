@@ -1904,7 +1904,7 @@ exports.getAssignTherapist = async (req, res) => {
       !rawChildId
       || !mongoose.Types.ObjectId.isValid(rawChildId)
     ) {
-      return res.status(400).json({
+      return res.json({
         success: false,
         message: "Valid child ID is required.",
       });
@@ -1936,7 +1936,7 @@ exports.getAssignTherapist = async (req, res) => {
       }));
 
     if (therapists.length === 0) {
-      return res.status(404).json({
+      return res.json({
         success: false,
         message: "No active therapists assigned for this child.",
       });

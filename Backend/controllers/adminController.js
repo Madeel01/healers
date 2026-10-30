@@ -2210,7 +2210,7 @@ exports.updateTherapist = async (req, res) => {
     }
     if (phone) {
       const phoneTrimmed = phone.trim();
-      const phoneRegex = /^(030\d{8}|\+923\d{9})$/;
+      const phoneRegex = /^(03\d{9}|\+923\d{9})$/;
       if (!phoneRegex.test(phoneTrimmed)) {
         return res.status(400).json({
           success: false,

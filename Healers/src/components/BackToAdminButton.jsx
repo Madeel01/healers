@@ -23,7 +23,7 @@ import {
   wp,
 } from '../utils/responsive';
 
-export default function BackToAdminButton() {
+export default function BackToAdminButton({ currentScreen }) {
   const { isImpersonating, returnToAdmin, userRole } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
   const role = String(userRole || "").trim().toLowerCase();
@@ -66,7 +66,14 @@ export default function BackToAdminButton() {
 
   return (
     <View
-      style={[styles.floatingContainer,{bottom:insets.bottom + hp(80)}]}
+      style={[
+        styles.floatingContainer,
+        {
+          bottom:
+            insets.bottom +
+            hp(currentScreen === "ComplaintDetails" ? 150 : 80),
+        },
+      ]}
       pointerEvents="box-none"
     >
       <TouchableOpacity

@@ -739,7 +739,7 @@ export default function ScheduleScreen({ navigation }) {
       </Modal>
 
       {/* ---------- pick a child for a custom appointment ---------- */}
-      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
+      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)} style={{ paddingBottom: insets.bottom }}>
         <View style={styles.overlay}>
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>

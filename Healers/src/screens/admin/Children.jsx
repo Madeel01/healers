@@ -450,7 +450,13 @@ export default function ChildrenScreen({ navigation }) {
             const previous = children;
             setChildren((prev) => prev.filter((item) => item.id !== child.id));
             try {
-              await deleteChild(child.id);
+              const res = await deleteChild(child.id);
+              Alert.alert(
+                              "Deleted",
+                              res.message
+                                || "Therapist deleted.",
+                            );
+              fetchChildrenData(1,true,true);
             } catch (error) {
               console.log("Failed to delete child:", error);
               setChildren(previous);

@@ -565,11 +565,9 @@ export default function ComplaintDetailsScreen({ navigation, route }) {
       ]}
     >
       <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === "ios"
-          ? "padding"
-          : "height"}
-        keyboardVerticalOffset={0}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
       >
         <FlatList
           ref={listRef}
@@ -623,9 +621,7 @@ export default function ComplaintDetailsScreen({ navigation, route }) {
           }
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={Platform.OS === "ios"
-            ? "interactive"
-            : "on-drag"}
+          keyboardDismissMode={"none"}
           onContentSizeChange={() => {
             if (keyboardVisible) {
               setTimeout(() => {

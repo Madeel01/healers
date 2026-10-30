@@ -880,7 +880,7 @@ export default function TherapistScheduleScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
-      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
+      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)} style={{ paddingBottom: insets.bottom }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : "padding"}

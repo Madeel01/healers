@@ -87,7 +87,7 @@ export default function ReportScreen({ navigation }) {
         "Error fetching therapists for child:",
         error,
       );
-
+      
       setChildTherapists([]);
       setSelectedTherapist(null);
     }

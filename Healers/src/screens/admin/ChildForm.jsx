@@ -490,7 +490,7 @@ export default function ChildFormScreen({ navigation, route }) {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState("Saving...");
   const [phoneTouched, setPhoneTouched] = useState(false);
-  const isPhoneValid = /^(030\d{8}|\+923\d{9})$/.test(
+  const isPhoneValid = /^(03\d{9}|\+923\d{9})$/.test(
     String(form.phone ?? "")
   );
 

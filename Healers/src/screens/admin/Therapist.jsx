@@ -183,7 +183,7 @@ export default function TherapistsScreen({ navigation }) {
   const [draftStatus, setDraftStatus] = useState("all");
   const [phoneTouched, setPhoneTouched] = useState(false);
 
-  const isPhoneValid = /^(030\d{8}|\+923\d{9})$/.test(
+  const isPhoneValid = /^(03\d{9}|\+923\d{9})$/.test(
     String(newTherapist.phone ?? "")
   );
 
@@ -288,6 +288,11 @@ export default function TherapistsScreen({ navigation }) {
                     || "This therapist has past appointments, so they were marked inactive instead of deleted.",
                 );
               }
+              Alert.alert(
+                "Deleted",
+                res.message
+                  || "Therapist deleted.",
+              );
               await fetchTherapistData(1, true);
             } catch (error) {
               console.log("Failed to delete therapist:", error);
