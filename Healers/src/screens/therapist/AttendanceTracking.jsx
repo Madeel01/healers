@@ -793,7 +793,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  /* Modal Styles */
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.4)",

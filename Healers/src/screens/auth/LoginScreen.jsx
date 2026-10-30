@@ -42,12 +42,12 @@ export default function LoginScreen() {
   const navigation = useNavigation();
   const { login } = useContext(AuthContext);
 
-  // const [identifier, setIdentifier] = useState("admin@gmail.com");
+  const [identifier, setIdentifier] = useState("admin@gmail.com");
   // const [identifier, setIdentifier] = useState("child@gmail.com");
   // const [identifier, setIdentifier] = useState("therapist@gmail.com");
   // const [password, setPassword] = useState("test@123");
-  const [identifier, setIdentifier] = useState("madeel@callhub.cc");
-  const [password, setPassword] = useState("Test@123");
+  // const [identifier, setIdentifier] = useState("madeel@callhub.cc");
+  const [password, setPassword] = useState("test@123");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
