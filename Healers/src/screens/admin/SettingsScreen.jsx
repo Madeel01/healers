@@ -130,7 +130,7 @@ function TimeField({ label, value, onChange }) {
             mode="time"
             is24Hour={false}
             display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={handleChange}
+            onValueChange={handleChange}
           />
 
           {Platform.OS === "ios" && (
@@ -320,9 +320,7 @@ export default function SettingsScreen({ navigation }) {
           </View>
         )
         : (
-          <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
+          <View style={{ flex: 1 }}
           >
             <ScrollView
               contentContainerStyle={styles.content}
@@ -478,7 +476,7 @@ export default function SettingsScreen({ navigation }) {
                   </Text>
                 )}
             </TouchableOpacity>
-          </KeyboardAvoidingView>
+          </View>
         )}
     </View>
   );
@@ -498,7 +496,7 @@ const styles = StyleSheet.create({
 
   content: {
     paddingHorizontal: 16,
-    paddingBottom: 30,
+    paddingBottom: hp(154),
   },
 
   pageTitle: {

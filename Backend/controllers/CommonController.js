@@ -59,6 +59,7 @@ exports.getUsersByRole = async (req, res) => {
         _id: 1,
         fullName: 1,
         role: 1,
+        profileImage:1,
       }).lean();
 
       if (!therapist) {
@@ -89,6 +90,7 @@ exports.getUsersByRole = async (req, res) => {
         _id: 1,
         fullName: 1,
         role: 1,
+        profileImage:1,
       }
     )
       .sort({ fullName: 1 })

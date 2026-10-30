@@ -42,6 +42,7 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
+import { getConversationId } from '../../api/admin/api';
 
 export default function ChatDetailsScreen({ route, navigation }) {
   const {

@@ -7,6 +7,8 @@ import React, {
 
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   View,
 } from 'react-native';
@@ -391,6 +393,7 @@ function getActiveRoute(state) {
 export default function AppNavigator() {
   const { token, userRole, isLoading } = useContext(AuthContext);
   const normalizedRole = userRole?.toString().trim();
+  const [activeScreen, setActiveScreen] = useState("");
 
   const [layout, setLayout] = useState(DEFAULT_LAYOUT);
   const [activeTab, setActiveTab] = useState("AdminDashboard");
@@ -402,6 +405,9 @@ export default function AppNavigator() {
     const route = getActiveRoute(navigationRef.getRootState());
 
     if (!route) return;
+    setActiveScreen((previous) =>
+      previous === route.name ? previous : route.name
+    );
 
     const routeLayout = SCREEN_LAYOUTS[normalizedRole]?.[route.name] || {};
     const overrideLayout = route.params?.layout || {};
@@ -475,14 +481,19 @@ export default function AppNavigator() {
               onToggleNotification={setIsNotificationOpen}
             />
           </View>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "padding"}
+          >
 
-          <View style={styles.content}>
-            {normalizedRole === "Admin"
-              ? <AdminStack />
-              : normalizedRole === "Therapist"
-              ? <TherapistStack />
-              : <ChildStack />}
-          </View>
+            <View style={styles.content}>
+              {normalizedRole === "Admin"
+                ? <AdminStack />
+                : normalizedRole === "Therapist"
+                ? <TherapistStack />
+                : <ChildStack />}
+            </View>
+          </KeyboardAvoidingView>
 
           <View
             style={layout.showFooter
@@ -497,7 +508,7 @@ export default function AppNavigator() {
           </View>
 
           {/* Visible on every impersonated Child/Therapist screen */}
-          <BackToAdminButton />
+          <BackToAdminButton currentScreen={activeScreen} />
         </SafeAreaView>
       )}
     </NavigationContainer>
