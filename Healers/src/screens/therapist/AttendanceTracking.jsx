@@ -1,847 +1,1588 @@
 import React, {
   useCallback,
-  useContext,
+  useEffect,
+  useMemo,
   useState,
 } from 'react';
 
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 
 import Feather from '@expo/vector-icons/Feather';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 
 import {
   getAttendanceApi,
-  therapistUsers,
   updateAttendanceStatusApi,
 } from '../../api/therapist/api';
-import { AuthContext } from '../../context/AuthContext';
-import {
-  colors,
-  commonStyles,
-  fonts,
-} from '../../styles/theme';
-import { formatTo12Hour } from '../../utils/hoursformat';
-import {
-  fontSize,
-  hp,
-  wp,
-} from '../../utils/responsive';
+import { fonts } from '../../styles/theme';
 
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
+const BLUE = "#075BB8";
+const DARK = "#10243D";
+const MUTED = "#8A9DBA";
 
-const MONTH_RANGES = [
-  ...MONTH_NAMES.map((month, index) => {
-    const nextMonth = MONTH_NAMES[(index + 1) % 12];
-    return {
-      label: `${month} - ${nextMonth}`,
-      months: [month, nextMonth],
-      monthIndex: index + 1,
-    };
-  }),
-];
+const pad = (n) => String(n).padStart(2, "0");
 
-export default function AttendanceTrackingScreen({ navigation, route }) {
-  const { user } = useContext(AuthContext);
-  const filterType = route?.params?.filterType;
+const dateKey = (date) => {
+  const d = new Date(date);
 
-  const currentMonthIdx = new Date().getMonth();
-  const defaultRangeLabel = MONTH_RANGES[currentMonthIdx]?.label || "All Months";
+  return [
+    d.getFullYear(),
+    pad(d.getMonth() + 1),
+    pad(d.getDate()),
+  ].join("-");
+};
 
-  const [children, setChildren] = useState([]);
-  const [selectedChildId, setSelectedChildId] = useState(null);
-  const [selectedRange, setSelectedRange] = useState(defaultRangeLabel);
-  const [showFullHistory, setShowFullHistory] = useState(false);
+const addDays = (date, count) =>
+  new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate() + count
+  );
 
-  const [attendanceRecords, setAttendanceRecords] = useState([]);
+const startWeek = (date) =>
+  addDays(date, -((date.getDay() + 6) % 7));
+
+const sameDate = (a, b) =>
+  dateKey(a) === dateKey(b);
+
+const time12 = (time) => {
+  if (!time) return "--";
+
+  const [h, m] = String(time).split(":").map(Number);
+
+  if (!Number.isFinite(h)) return time;
+
+  return `${h % 12 || 12}:${pad(m || 0)} ${
+    h >= 12 ? "PM" : "AM"
+  }`;
+};
+
+const getMonthWeeks = (month) => {
+  const lastDay = new Date(
+    month.getFullYear(),
+    month.getMonth() + 1,
+    0
+  ).getDate();
+
+  const result = [];
+
+  for (let day = 1; day <= lastDay; day += 7) {
+    result.push({
+      start: day,
+      end: Math.min(day + 6, lastDay),
+      label: `Week ${result.length + 1}`,
+    });
+  }
+
+  return result;
+};
+
+const getAppointmentDateTime = (item) => {
+  const [year, month, day] = item.date
+    .split("-")
+    .map(Number);
+
+  const [hours, minutes] = String(
+    item.startTime || "00:00"
+  )
+    .split(":")
+    .map(Number);
+
+  return new Date(
+    year,
+    month - 1,
+    day,
+    hours || 0,
+    minutes || 0
+  );
+};
+
+const formatAttendanceDate = (dateString) => {
+  if (!dateString) return "--";
+
+  // Parse YYYY-MM-DD without timezone shifting
+  const [year, month, day] = dateString
+    .slice(0, 10)
+    .split("-")
+    .map(Number);
+
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+export default function AttendanceTrackingScreen({ route }) {
+  const [mode, setMode] = useState(
+    route?.params?.filterType === "today"
+      ? "Today"
+      : "Week"
+  );
+
+  const [selectedDate, setSelectedDate] = useState(
+    new Date()
+  );
+
+  const [month, setMonth] = useState(() => {
+    const today = new Date();
+
+    return new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      1
+    );
+  });
+
+  const [weekIndex, setWeekIndex] = useState(
+    Math.floor((new Date().getDate() - 1) / 7)
+  );
+
+  const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(null);
 
-  const [childDropdownVisible, setChildDropdownVisible] = useState(false);
-  const [monthDropdownVisible, setMonthDropdownVisible] = useState(false);
+  const [full, setFull] = useState(false);
+  const [monthPicker, setMonthPicker] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchChildren();
-    }, []),
+  const [childFilterVisible, setChildFilterVisible] =
+    useState(false);
+
+  const [selectedChildId, setSelectedChildId] =
+    useState(null);
+
+  const [childSearch, setChildSearch] = useState("");
+
+  const weeks = useMemo(
+    () => getMonthWeeks(month),
+    [month]
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      if (selectedChildId) {
-        fetchAttendanceData();
-      }
-    }, [selectedChildId, selectedRange]),
-  );
-  useFocusEffect(
-    useCallback(() => {
-      if (route?.params?.filterType === "today") {
-        setSelectedRange("Today");
-        setSelectedChildId(null);
-      }
-    }, [route?.params]),
-  );
-  const fetchChildren = async () => {
-    try {
-      const response = await therapistUsers({ filter: user?.id });
-      const fetchedUsers = response?.data || [];
-      setChildren(fetchedUsers);
+  // ========================================
+  // FETCH ATTENDANCE
+  // ========================================
 
-      if (fetchedUsers.length > 0 && !selectedChildId) {
-        const initialId = fetchedUsers[0]._id || fetchedUsers[0].id;
-        setSelectedChildId(initialId);
-      }
-    } catch (error) {
-      console.error("Error fetching children:", error);
-    }
-  };
-
-  const fetchAttendanceData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
-      const params = {};
+      const params = {
+        year: selectedDate.getFullYear(),
+        month: selectedDate.getMonth() + 1,
+        mode: mode.toLowerCase(),
+        date: dateKey(selectedDate),
+      };
 
-      if (selectedChildId) {
-        params.childId = selectedChildId;
-      }
+      const response = await getAttendanceApi(params);
 
-      if (selectedRange === "Today") {
-        const now = new Date();
-        params.month = now.getMonth() + 1;
-        params.year = now.getFullYear();
-        params.filter = true;
-      } else {
-        const activeConfig = MONTH_RANGES.find((r) => r.label === selectedRange);
-        if (activeConfig?.monthIndex) {
-          params.month = activeConfig.monthIndex;
-          params.year = new Date().getFullYear();
-          params.filter = false;
-        }
-      }
+      const result = response?.data?.success
+        ? response.data
+        : response;
 
-      const res = await getAttendanceApi(params);
-      if (res?.success) {
-        setAttendanceRecords(res.data || []);
-      }
-    } catch (error) {
-      console.error("Error fetching scheduling data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const activeChild = children.find(
-    (c) => (c._id || c.id) === selectedChildId,
-  ) || {};
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const formattedAppointments = attendanceRecords.map(
-    (item) => {
-      const dateObj = new Date(item.date);
-      const startDateTime = new Date(item.date);
-
-      if (item.startTime) {
-        const [hours, minutes] = item.startTime
-          .split(":")
-          .map(Number);
-
-        startDateTime.setHours(
-          hours || 0,
-          minutes || 0,
-          0,
-          0,
+      if (!result?.success) {
+        throw new Error(
+          result?.message ||
+          "Failed to fetch attendance"
         );
       }
 
-      return {
-        id: item.appointmentId,
-        attendanceDocId: item.attendanceId,
-        childAttendanceId: item.childAttendanceId,
-        childId: item.childId,
-        childName: item.childName,
-        fatherName: item.fatherName
-          || item.parentName,
-        profileImage: item.profileImage,
-        dateObj,
-        date: dateObj.toLocaleDateString(
-          "en-US",
-          {
-            month: "short",
-            day: "2-digit",
-          },
-        ),
-        time: `${item.startTime} - ${item.endTime}`,
-        startTime: item.startTime,
-        endTime: item.endTime,
-        status: item.attendanceStatus === "Complete"
-          ? "Present"
-          : item.attendanceStatus,
-        isFutureDate: startDateTime > new Date(),
-      };
-    },
+      setRecords(result.data || []);
+    } catch (error) {
+      console.error("Attendance error:", error);
+
+      Alert.alert(
+        "Attendance",
+        error?.response?.data?.message ||
+          error.message ||
+          "Unable to fetch attendance."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [mode, selectedDate]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
   );
 
-  const visibleAppointments = showFullHistory
-    ? formattedAppointments
-    : formattedAppointments.slice(0, 5);
+  useEffect(() => {
+    if (route?.params?.filterType === "today") {
+      const today = new Date();
 
-  const handleToggleStatus = async (
-    attendanceDocId,
-    appointmentId,
-    childId,
-    targetStatus,
-    currentStatus,
-    isFutureDate,
-  ) => {
-    if (isFutureDate) return;
+      setMode("Today");
+      setSelectedDate(today);
 
-    const nextStatus = currentStatus === targetStatus
-      ? "Pending"
-      : targetStatus;
-
-    const dbStatus = nextStatus === "Present"
-      ? "Complete"
-      : nextStatus;
-
-    try {
-      await updateAttendanceStatusApi({
-        attendanceId: attendanceDocId,
-        appointmentId,
-        childId,
-        status: dbStatus,
-      });
-
-      setAttendanceRecords((prev) =>
-        prev.map((item) =>
-          item.attendanceId === attendanceDocId
-            && item.appointmentId === appointmentId
-            && item.childId === childId
-            ? {
-              ...item,
-              attendanceStatus: dbStatus,
-            }
-            : item
+      setMonth(
+        new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          1
         )
       );
-    } catch (error) {
-      console.log(
-        "Attendance update error:",
-        error?.response?.data,
+    }
+  }, [route?.params?.filterType]);
+
+  // ========================================
+  // MODE AND DATE SELECTION
+  // ========================================
+
+  const changeMode = (nextMode) => {
+    setMode(nextMode);
+    setFull(false);
+
+    if (
+      nextMode === "Today" ||
+      nextMode === "Tomorrow"
+    ) {
+      const date = addDays(
+        new Date(),
+        nextMode === "Tomorrow" ? 1 : 0
       );
 
-      fetchAttendanceData();
+      setSelectedDate(date);
+
+      setMonth(
+        new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          1
+        )
+      );
+    } else if (nextMode === "Month") {
+      setWeekIndex(
+        Math.floor(
+          (selectedDate.getDate() - 1) / 7
+        )
+      );
     }
   };
 
+  const chooseDate = (date) => {
+    setSelectedDate(date);
+
+    setMonth(
+      new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        1
+      )
+    );
+
+    setFull(false);
+  };
+
+  const moveMonth = (direction) => {
+    const date = new Date(
+      month.getFullYear(),
+      month.getMonth() + direction,
+      1
+    );
+
+    setMonth(date);
+    setSelectedDate(date);
+    setWeekIndex(0);
+  };
+
+  // ========================================
+  // DAYS
+  // ========================================
+
+  const days = useMemo(() => {
+    if (
+      mode === "Today" ||
+      mode === "Tomorrow"
+    ) {
+      return [];
+    }
+
+    if (mode === "Week") {
+      return Array.from(
+        { length: 7 },
+        (_, index) =>
+          addDays(
+            startWeek(selectedDate),
+            index
+          )
+      );
+    }
+
+    const week = weeks[
+      Math.min(weekIndex, weeks.length - 1)
+    ];
+
+    if (!week) return [];
+
+    return Array.from(
+      {
+        length:
+          week.end - week.start + 1,
+      },
+      (_, index) =>
+        new Date(
+          month.getFullYear(),
+          month.getMonth(),
+          week.start + index
+        )
+    );
+  }, [
+    mode,
+    selectedDate,
+    month,
+    weekIndex,
+    weeks,
+  ]);
+
+  // ========================================
+  // FILTER CHILDREN
+  // ========================================
+
+  const childOptions = useMemo(() => {
+    const map = new Map();
+
+    records.forEach((item) => {
+      if (!map.has(item.childId)) {
+        map.set(item.childId, {
+          childId: item.childId,
+          childName: item.childName,
+        });
+      }
+    });
+
+    return Array.from(map.values()).sort(
+      (a, b) =>
+        a.childName.localeCompare(
+          b.childName
+        )
+    );
+  }, [records]);
+
+  const filteredModalChildren = useMemo(() => {
+    const search = childSearch
+      .trim()
+      .toLowerCase();
+
+    return childOptions.filter((item) =>
+      item.childName
+        .toLowerCase()
+        .includes(search)
+    );
+  }, [childOptions, childSearch]);
+
+  const filteredRecords = useMemo(() => {
+    if (!selectedChildId) {
+      return records;
+    }
+
+    return records.filter(
+      (item) =>
+        item.childId === selectedChildId
+    );
+  }, [records, selectedChildId]);
+
+  const shown = full
+    ? filteredRecords
+    : filteredRecords.slice(0, 5);
+
+  // ========================================
+  // UPDATE ATTENDANCE
+  // ========================================
+
+  const update = async (
+    item,
+    targetStatus
+  ) => {
+    if (updating) return;
+
+    if (
+      !item.attendanceId ||
+      !item.appointmentId
+    ) {
+      return;
+    }
+
+    const appointmentDateTime =
+      getAppointmentDateTime(item);
+
+    if (
+      appointmentDateTime > new Date()
+    ) {
+      Alert.alert(
+        "Not Allowed",
+        "You cannot mark future attendance."
+      );
+      return;
+    }
+
+    const nextStatus =
+      item.attendanceStatus === targetStatus
+        ? "Pending"
+        : targetStatus;
+
+    const updateId =
+      `${item.attendanceId}:${item.appointmentId}:${item.childId}`;
+
+    setUpdating(updateId);
+
+    try {
+      const response =
+        await updateAttendanceStatusApi({
+          attendanceId:
+            item.attendanceId,
+          appointmentId:
+            item.appointmentId,
+          childId: item.childId,
+          status: nextStatus,
+        });
+
+      const result = response?.data?.success
+        ? response.data
+        : response;
+
+      if (!result?.success) {
+        throw new Error(
+          result?.message ||
+          "Update failed"
+        );
+      }
+
+      setRecords((previous) =>
+        previous.map((record) => {
+          if (
+            record.attendanceId ===
+              item.attendanceId &&
+            record.appointmentId ===
+              item.appointmentId &&
+            record.childId ===
+              item.childId
+          ) {
+            return {
+              ...record,
+              attendanceStatus:
+                nextStatus,
+            };
+          }
+
+          return record;
+        })
+      );
+    } catch (error) {
+      Alert.alert(
+        "Update Failed",
+        error?.response?.data?.message ||
+          error.message ||
+          "Unable to update attendance."
+      );
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const dayHeader =
+    selectedDate.toLocaleDateString(
+      "en-US",
+      {
+        weekday: "short",
+        month: "long",
+        day: "2-digit",
+        year: "numeric",
+      }
+    );
+
+  // ========================================
+  // RENDER
+  // ========================================
+
   return (
-    <View style={[styles.mainContainer, commonStyles.container]}>
+    <View style={styles.screen}>
       <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={
+          styles.content
+        }
         showsVerticalScrollIndicator={false}
       >
-        {selectedRange !== "Today" && (
-          <>
-            <View style={styles.searchRow}>
-              <TouchableOpacity
-                style={styles.searchBarContainer}
-                activeOpacity={0.8}
-                onPress={() => setChildDropdownVisible(true)}
-              >
-                <Feather name="search" size={18} color="#717781" style={styles.searchIcon} />
-                <Text style={styles.selectedChildText}>
-                  {activeChild?.fullName || activeChild?.name || "Select Child"}
-                </Text>
-              </TouchableOpacity>
+        {/* MONTH HEADER */}
 
-              <TouchableOpacity
-                style={styles.filterBtn}
-                activeOpacity={0.8}
-                onPress={() => setChildDropdownVisible(true)}
-              >
-                <Ionicons name="options-outline" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.childInfoCard}>
-              <Text style={styles.childSectionTitle}>Child Information</Text>
-              <View style={styles.inputRow}>
-                <View style={styles.fieldBox}>
-                  <Text style={styles.fieldLabel}>Name</Text>
-                  <View style={styles.fieldValueContainer}>
-                    <Text style={styles.fieldValueText}>{activeChild?.fullName || activeChild?.name || "-"}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldBox}>
-                  <Text style={styles.fieldLabel}>Parents</Text>
-                  <View style={styles.fieldValueContainer}>
-                    <Text style={styles.fieldValueText}>
-                      {activeChild?.fatherName || activeChild?.parentName || "-"}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </>
-        )}
-        <View style={styles.dateHeaderBanner}>
+        <View style={styles.banner}>
           <TouchableOpacity
-            style={styles.dateDropdownBtn}
-            activeOpacity={0.7}
-            onPress={() => selectedRange === "Today" ? "" : setMonthDropdownVisible(true)}
+            onPress={() =>
+              setMonthPicker(true)
+            }
+            style={styles.bannerLeft}
           >
-            <Text style={styles.dateDropdownText}>{selectedRange}</Text>
-            <Feather name="chevron-down" size={18} color="#FFFFFF" />
+            <Feather
+              name="calendar"
+              size={20}
+              color="#FFFFFF"
+            />
+
+            <Text
+              style={styles.bannerTitle}
+            >
+              {month.toLocaleDateString(
+                "en-US",
+                {
+                  month: "long",
+                  year: "numeric",
+                }
+              )}
+            </Text>
+
+            <Feather
+              name="chevron-down"
+              size={17}
+              color="#FFFFFF"
+            />
           </TouchableOpacity>
 
-          <View style={styles.statusPillBadge}>
-            <Text style={styles.statusPillText}>Status</Text>
+          <View
+            style={styles.statusHeader}
+          >
+            <Text
+              style={
+                styles.statusHeaderText
+              }
+            >
+              Status
+            </Text>
           </View>
         </View>
 
-        <View style={styles.attendanceContainer}>
-          {loading
-            ? <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
-            : visibleAppointments.length > 0
-            ? (
-              <>
-                {visibleAppointments.map((item, index) => {
-                  const isPresent = item.status === "Present";
-                  const isAbsent = item.status === "Absent";
-                  const isPending = item.status === "Pending";
-                  const isDisabled = item.isFutureDate;
-                  let toggleGroupBg = "hsl(60, 26%, 93%)";
-                  if (isPresent) toggleGroupBg = "#E0F7F1";
-                  if (isAbsent) toggleGroupBg = "rgba(186,26,26,0.10)";
-                  if (isDisabled) toggleGroupBg = "rgba(0,0,0,.20)";
+        {/* MODES */}
 
-                  return (
-                    <View
-                      key={`${item.id}-${index}`}
-                      style={[
-                        styles.attendanceRow,
-                        index < visibleAppointments.length - 1 && styles.borderBottom,
-                        isDisabled && styles.disabledRow,
-                      ]}
-                    >
-                      <View style={styles.dateColumn}>
-                        {selectedRange === "Today" && (
-                          <Text style={{ fontFamily: fonts.bold, fontSize:fontSize(14), color: "#1E293B", marginBottom: 2 }}>
-                            {item.childName}
-                          </Text>
-                        )}
-                        <Text style={[styles.dateText, isDisabled && styles.disabledText]}>{item.date}</Text>
-                        <Text style={[styles.timeText, isDisabled && styles.disabledText]}>
-                          {formatTo12Hour(item.time)}
-                        </Text>
-                      </View>
+        <View style={styles.modeRow}>
+          {[
+            ["Today", "sun"],
+            ["Tomorrow", "calendar"],
+            ["Week", "check-square"],
+            ["Month", "bar-chart-2"],
+          ].map(([value, icon]) => (
+            <TouchableOpacity
+              key={value}
+              onPress={() =>
+                changeMode(value)
+              }
+              style={[
+                styles.modeBtn,
+                mode === value &&
+                  styles.modeActive,
+              ]}
+            >
+              <Feather
+                name={icon}
+                size={20}
+                color={
+                  mode === value
+                    ? "#FFFFFF"
+                    : "#60718A"
+                }
+              />
 
-                      <View style={[styles.toggleGroup, { backgroundColor: toggleGroupBg }]}>
-                        <TouchableOpacity
-                          style={[
-                            styles.toggleIconBtn,
-                            isPresent && styles.presentActiveBg,
-                            !isPresent && styles.inactiveToggleBg,
-                          ]}
-                          activeOpacity={isDisabled ? 1 : 0.7}
-                          disabled={isDisabled}
-                          onPress={() =>
-                            handleToggleStatus(
-                              item.attendanceDocId,
-                              item.id,
-                              item.childId,
-                              "Present",
-                              item.status,
-                              item.isFutureDate,
-                            )}
-                        >
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={20}
-                            color={isPresent ? "#006B58" : "#8A9099"}
-                          />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[
-                            styles.toggleIconBtn,
-                            isAbsent && styles.absentActiveBg,
-                            !isAbsent && styles.inactiveToggleBg,
-                          ]}
-                          activeOpacity={isDisabled ? 1 : 0.7}
-                          disabled={isDisabled}
-                          onPress={() =>
-                            handleToggleStatus(
-                              item.attendanceDocId,
-                              item.id,
-                              item.childId,
-                              "Absent",
-                              item.status,
-                              item.isFutureDate,
-                            )}
-                        >
-                          <Ionicons
-                            name="close-circle"
-                            size={20}
-                            color={isAbsent ? "#BA1A1A" : "#8A9099"}
-                          />
-                        </TouchableOpacity>
-                      </View>
-
-                      <View style={styles.statusBadgeColumn}>
-                        {isPresent && (
-                          <View style={styles.presentBadge}>
-                            <Text style={[styles.presentBadgeText, styles.statusBadgeText]}>Present</Text>
-                          </View>
-                        )}
-                        {isAbsent && (
-                          <View style={styles.absentBadge}>
-                            <Text style={[styles.absentBadgeText, styles.statusBadgeText]}>Absent</Text>
-                          </View>
-                        )}
-                        {(isPending && !isDisabled) && (
-                          <View style={styles.pendingBadge}>
-                            <Text style={[styles.pendingBadgeText, styles.statusBadgeText]}>Pending</Text>
-                          </View>
-                        )}
-                        {isDisabled && (
-                          <View style={styles.pendingBadge}>
-                            <Text style={[styles.pendingBadgeText, styles.statusBadgeText]}>Not Yet</Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  );
-                })}
-
-                {formattedAppointments.length > 5 && (
-                  <TouchableOpacity
-                    style={styles.fullHistoryBtn}
-                    activeOpacity={0.7}
-                    onPress={() => setShowFullHistory(!showFullHistory)}
-                  >
-                    <Text style={styles.fullHistoryText}>
-                      {showFullHistory ? "HIDE HISTORY" : "VIEW FULL HISTORY"}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )
-            : (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No attendance records found</Text>
-              </View>
-            )}
+              <Text
+                style={[
+                  styles.modeText,
+                  mode === value && {
+                    color: "#FFFFFF",
+                  },
+                ]}
+              >
+                {value}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
+
+        {/* MONTH WEEKS */}
+
+        {mode === "Month" && (
+          <View style={styles.weekRow}>
+            {weeks.map(
+              (week, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => {
+                    setWeekIndex(index);
+
+                    chooseDate(
+                      new Date(
+                        month.getFullYear(),
+                        month.getMonth(),
+                        week.start
+                      )
+                    );
+                  }}
+                  style={[
+                    styles.weekBtn,
+                    weekIndex === index &&
+                      styles.weekActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.weekTitle,
+                      weekIndex === index && {
+                        color: "#FFFFFF",
+                      },
+                    ]}
+                  >
+                    {week.label}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.weekRange,
+                      weekIndex === index && {
+                        color: "#DDEAFF",
+                      },
+                    ]}
+                  >
+                    {pad(week.start)} -{" "}
+                    {pad(week.end)}
+                  </Text>
+                </TouchableOpacity>
+              )
+            )}
+          </View>
+        )}
+
+        {/* DATE SELECTOR */}
+
+        {days.length > 0 && (
+          <View style={styles.daysRow}>
+            {days.map((day) => {
+              const selected =
+                sameDate(
+                  day,
+                  selectedDate
+                );
+
+              return (
+                <TouchableOpacity
+                  key={dateKey(day)}
+                  onPress={() =>
+                    chooseDate(day)
+                  }
+                  style={[
+                    styles.dayBtn,
+                    selected &&
+                      styles.dayActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.dayName,
+                      selected && {
+                        color: "#DBEAFE",
+                      },
+                    ]}
+                  >
+                    {day.toLocaleDateString(
+                      "en-US",
+                      {
+                        weekday: "short",
+                      }
+                    )}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.dayNumber,
+                      selected && {
+                        color: "#FFFFFF",
+                      },
+                    ]}
+                  >
+                    {day.getDate()}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {/* ATTENDANCE HEADER */}
+
+        <View
+          style={styles.sectionHeader}
+        >
+          <Text
+            style={styles.sectionTitle}
+          >
+            {dayHeader}
+          </Text>
+
+          <Text style={styles.count}>
+            {filteredRecords.length}{" "}
+            Appointments
+          </Text>
+
+          <TouchableOpacity
+            style={styles.refresh}
+            onPress={() =>
+              setChildFilterVisible(
+                true
+              )
+            }
+          >
+            <Feather
+              name="sliders"
+              size={16}
+              color="#60718A"
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* ATTENDANCE LIST */}
+
+        {loading ? (
+          <ActivityIndicator
+            size="small"
+            color={BLUE}
+            style={{
+              marginTop: 35,
+            }}
+          />
+        ) : shown.length === 0 ? (
+          <View
+            style={styles.empty}
+          >
+            <Text
+              style={styles.emptyText}
+            >
+              No scheduled appointments
+              for this date
+            </Text>
+          </View>
+        ) : (
+          shown.map((item) => {
+            const present =
+              item.attendanceStatus ===
+              "Present";
+
+            const absent =
+              item.attendanceStatus ===
+              "Absent";
+
+            const future =
+              getAppointmentDateTime(
+                item
+              ) > new Date();
+
+            const profileUri =
+              typeof item.profileImage ===
+              "string"
+                ? item.profileImage
+                : item.profileImage?.url;
+
+            const rowId =
+              `${item.attendanceId}:${item.appointmentId}:${item.childId}`;
+
+            return (
+              <View
+                key={rowId}
+                style={
+                  styles.childCard
+                }
+              >
+                {profileUri ? (
+                  <Image
+                    source={{
+                      uri: profileUri,
+                    }}
+                    style={
+                      styles.avatar
+                    }
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.avatar,
+                      styles.avatarFallback,
+                    ]}
+                  >
+                    <Feather
+                      name="user"
+                      size={23}
+                      color="#7489A2"
+                    />
+                  </View>
+                )}
+
+<View style={styles.childInfo}>
+  <Text
+    style={styles.childName}
+    numberOfLines={2}
+  >
+    {item.childName}
+  </Text>
+
+  {/* Appointment Date */}
+  <View style={styles.childDateRow}>
+    <Feather
+      name="calendar"
+      size={12}
+      color="#075BB8"
+    />
+
+    <Text style={styles.childDate}>
+      {formatAttendanceDate(item.date)}
+    </Text>
+  </View>
+
+  {/* Appointment Time */}
+  <View style={styles.childTimeRow}>
+    <Feather
+      name="clock"
+      size={12}
+      color="#8A9DBA"
+    />
+
+    <Text style={styles.childTime}>
+      {time12(item.startTime)} - {time12(item.endTime)}
+    </Text>
+  </View>
+</View>
+                <View
+                  style={
+                    styles.controls
+                  }
+                >
+                  <TouchableOpacity
+                    disabled={
+                      future ||
+                      !!updating
+                    }
+                    onPress={() =>
+                      update(
+                        item,
+                        "Present"
+                      )
+                    }
+                    style={[
+                      styles.control,
+                      present &&
+                        styles.presentControl,
+                    ]}
+                  >
+                    <Feather
+                      name="check"
+                      size={15}
+                      color={
+                        present
+                          ? "#FFFFFF"
+                          : "#B4C2D2"
+                      }
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    disabled={
+                      future ||
+                      !!updating
+                    }
+                    onPress={() =>
+                      update(
+                        item,
+                        "Absent"
+                      )
+                    }
+                    style={[
+                      styles.control,
+                      absent &&
+                        styles.absentControl,
+                    ]}
+                  >
+                    <Feather
+                      name="x"
+                      size={15}
+                      color={
+                        absent
+                          ? "#FFFFFF"
+                          : "#B4C2D2"
+                      }
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View
+                  style={[
+                    styles.pill,
+                    present
+                      ? styles.pillPresent
+                      : absent
+                      ? styles.pillAbsent
+                      : styles.pillPending,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.pillText,
+                      {
+                        color: present
+                          ? "#009D73"
+                          : absent
+                          ? "#E23838"
+                          : "#BD7400",
+                      },
+                    ]}
+                  >
+                    {future
+                      ? "Not Yet"
+                      : item.attendanceStatus}
+                  </Text>
+                </View>
+
+                {updating ===
+                  rowId && (
+                  <ActivityIndicator
+                    size="small"
+                    color={BLUE}
+                  />
+                )}
+              </View>
+            );
+          })
+        )}
+
+        {!loading &&
+          filteredRecords.length > 5 && (
+            <TouchableOpacity
+              onPress={() =>
+                setFull(!full)
+              }
+              style={
+                styles.history
+              }
+            >
+              <Text
+                style={
+                  styles.historyText
+                }
+              >
+                {full
+                  ? "Hide Full History"
+                  : "View Full History ›"}
+              </Text>
+            </TouchableOpacity>
+          )}
       </ScrollView>
 
-      <Modal
-        visible={childDropdownVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setChildDropdownVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setChildDropdownVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.dropdownMenu}>
-                <Text style={styles.dropdownMenuTitle}>Select Child</Text>
-                {children.map((child) => {
-                  const id = child._id || child.id;
-                  const isSelected = id === selectedChildId;
-                  return (
-                    <TouchableOpacity
-                      key={id}
-                      style={[styles.dropdownOption, isSelected && styles.dropdownOptionSelected]}
-                      onPress={() => {
-                        setSelectedChildId(id);
-                        setChildDropdownVisible(false);
-                      }}
-                    >
-                      <Text style={[styles.dropdownOptionText, isSelected && styles.dropdownOptionTextSelected]}>
-                        {child.fullName || child.name}
-                      </Text>
-                      {isSelected && <Feather name="check" size={18} color="#0B598F" />}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+      {/* CHILD FILTER MODAL */}
 
       <Modal
-        visible={monthDropdownVisible}
-        transparent={true}
+        transparent
+        visible={
+          childFilterVisible
+        }
         animationType="fade"
-        onRequestClose={() => setMonthDropdownVisible(false)}
+        onRequestClose={() =>
+          setChildFilterVisible(
+            false
+          )
+        }
       >
-        <TouchableWithoutFeedback onPress={() => setMonthDropdownVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.dropdownMenu}>
-                <Text style={styles.dropdownMenuTitle}>Select Month Range</Text>
-                <ScrollView style={{ maxHeight: 300 }}>
-                  {MONTH_RANGES.map((rangeObj) => {
-                    const isSelected = rangeObj.label === selectedRange;
-                    return (
-                      <TouchableOpacity
-                        key={rangeObj.label}
-                        style={[styles.dropdownOption, isSelected && styles.dropdownOptionSelected]}
-                        onPress={() => {
-                          setSelectedRange(rangeObj.label);
-                          setMonthDropdownVisible(false);
-                        }}
-                      >
-                        <Text style={[styles.dropdownOptionText, isSelected && styles.dropdownOptionTextSelected]}>
-                          {rangeObj.label}
-                        </Text>
-                        {isSelected && <Feather name="check" size={18} color="#0B598F" />}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            </TouchableWithoutFeedback>
+        <View
+          style={styles.overlay}
+        >
+          <View
+            style={styles.modal}
+          >
+            <View
+              style={
+                styles.modalHeader
+              }
+            >
+              <Text
+                style={
+                  styles.modalTitle
+                }
+              >
+                Filter Children
+              </Text>
+
+              <TouchableOpacity
+                onPress={() =>
+                  setChildFilterVisible(
+                    false
+                  )
+                }
+              >
+                <Feather
+                  name="x"
+                  size={22}
+                  color={DARK}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View
+              style={
+                styles.searchBox
+              }
+            >
+              <Feather
+                name="search"
+                size={18}
+                color={MUTED}
+              />
+
+              <TextInput
+                style={
+                  styles.searchInput
+                }
+                placeholder="Search child name..."
+                placeholderTextColor={
+                  MUTED
+                }
+                value={
+                  childSearch
+                }
+                onChangeText={
+                  setChildSearch
+                }
+              />
+            </View>
+
+            <ScrollView
+              style={{
+                maxHeight: 350,
+              }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <TouchableOpacity
+                style={
+                  styles.filterOption
+                }
+                onPress={() => {
+                  setSelectedChildId(
+                    null
+                  );
+
+                  setChildFilterVisible(
+                    false
+                  );
+                }}
+              >
+                <Feather
+                  name="users"
+                  size={20}
+                  color={BLUE}
+                />
+
+                <Text
+                  style={
+                    styles.filterOptionText
+                  }
+                >
+                  All Children
+                </Text>
+
+                {!selectedChildId && (
+                  <Feather
+                    name="check-circle"
+                    size={20}
+                    color={BLUE}
+                  />
+                )}
+              </TouchableOpacity>
+
+              {filteredModalChildren.map(
+                (child) => (
+                  <TouchableOpacity
+                    key={
+                      child.childId
+                    }
+                    style={
+                      styles.filterOption
+                    }
+                    onPress={() => {
+                      setSelectedChildId(
+                        child.childId
+                      );
+
+                      setChildFilterVisible(
+                        false
+                      );
+
+                      setFull(false);
+                    }}
+                  >
+                    <Feather
+                      name="user"
+                      size={20}
+                      color={BLUE}
+                    />
+
+                    <Text
+                      style={
+                        styles.filterOptionText
+                      }
+                    >
+                      {child.childName}
+                    </Text>
+
+                    {selectedChildId ===
+                      child.childId && (
+                      <Feather
+                        name="check-circle"
+                        size={20}
+                        color={BLUE}
+                      />
+                    )}
+                  </TouchableOpacity>
+                )
+              )}
+            </ScrollView>
           </View>
-        </TouchableWithoutFeedback>
+        </View>
+      </Modal>
+
+      {/* MONTH PICKER */}
+
+      <Modal
+        transparent
+        visible={monthPicker}
+        animationType="fade"
+        onRequestClose={() =>
+          setMonthPicker(false)
+        }
+      >
+        <View
+          style={styles.overlay}
+        >
+          <View
+            style={styles.modal}
+          >
+            <Text
+              style={
+                styles.modalTitle
+              }
+            >
+              Select Month
+            </Text>
+
+            <View
+              style={
+                styles.monthNav
+              }
+            >
+              <TouchableOpacity
+                onPress={() =>
+                  moveMonth(-1)
+                }
+              >
+                <Feather
+                  name="chevron-left"
+                  size={25}
+                  color={BLUE}
+                />
+              </TouchableOpacity>
+
+              <Text
+                style={
+                  styles.monthNavText
+                }
+              >
+                {month.toLocaleDateString(
+                  "en-US",
+                  {
+                    month: "long",
+                    year: "numeric",
+                  }
+                )}
+              </Text>
+
+              <TouchableOpacity
+                onPress={() =>
+                  moveMonth(1)
+                }
+              >
+                <Feather
+                  name="chevron-right"
+                  size={25}
+                  color={BLUE}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.done}
+              onPress={() =>
+                setMonthPicker(false)
+              }
+            >
+              <Text
+                style={
+                  styles.doneText
+                }
+              >
+                Done
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-  },
-  scrollArea: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: wp(20),
-    paddingTop: 12,
-    paddingBottom: 20,
-  },
+// ========================================
+// STYLES
+// ========================================
 
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 10,
-    backgroundColor: "#FFFFFF",
-    padding: wp(12),
-    borderRadius: wp(12),
-  },
-  searchBarContainer: {
+const styles = StyleSheet.create({
+  screen: {
     flex: 1,
+    backgroundColor: "#F7F9FC",
+  },
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 35,
+  },
+  banner: {
+    backgroundColor: BLUE,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 64,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F7FAFD",
-    borderRadius: wp(8),
-    paddingHorizontal: wp(12),
-    height: hp(40),
+    justifyContent: "space-between",
+    marginBottom: 16,
   },
-  searchIcon: {
-    marginRight: 8,
+  bannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
-  selectedChildText: {
-    fontSize:fontSize(16),
-    fontFamily: fonts.regular,
-    color: "#717781",
-    lineHeight: 20,
+  bannerTitle: {
+    color: "#FFFFFF",
+    fontFamily: fonts.bold,
+    fontSize: 17,
   },
-  filterBtn: {
-    backgroundColor: "#1669A9",
-    width: wp(40),
-    height: hp(40),
-    borderRadius: wp(8),
+  statusHeader: {
+    backgroundColor: "#91F1EC",
+    borderRadius: 12,
+    paddingHorizontal: 22,
+    paddingVertical: 9,
+  },
+  statusHeaderText: {
+    color: "#07508D",
+    fontSize: 12,
+    fontFamily: fonts.semiBold,
+  },
+  modeRow: {
+    flexDirection: "row",
+    gap: 9,
+    marginBottom: 18,
+  },
+  modeBtn: {
+    flex: 1,
+    minWidth: 0,
+    height: 62,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    elevation: 1,
+  },
+  modeActive: {
+    backgroundColor: BLUE,
+  },
+  modeText: {
+    fontSize: 11,
+    color: "#60718A",
+    fontFamily: fonts.medium,
+  },
+  weekRow: {
+    backgroundColor: "#FFFFFF",
+    padding: 10,
+    borderRadius: 15,
+    flexDirection: "row",
+    gap: 5,
+    marginBottom: 16,
+    flexWrap: "wrap",
+  },
+  weekBtn: {
+    flexGrow: 1,
+    minWidth: "17%",
+    backgroundColor: "#EDF2FC",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 5,
+    alignItems: "center",
+  },
+  weekActive: {
+    backgroundColor: "#1F70F2",
+  },
+  weekTitle: {
+    fontSize: 11,
+    fontFamily: fonts.semiBold,
+    color: DARK,
+  },
+  weekRange: {
+    fontSize: 9,
+    color: "#718096",
+    marginTop: 4,
+  },
+  daysRow: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    flexDirection: "row",
+    justifyContent: "space-around",
+    padding: 10,
+    marginBottom: 20,
+  },
+  dayBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    height: 54,
+    borderRadius: 13,
+  },
+  dayActive: {
+    backgroundColor: "#1D70EE",
+  },
+  dayName: {
+    fontSize: 11,
+    color: MUTED,
+  },
+  dayNumber: {
+    fontSize: 15,
+    fontFamily: fonts.bold,
+    color: DARK,
+    marginTop: 4,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+    gap: 10,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontFamily: fonts.bold,
+    color: DARK,
+    flex: 1,
+  },
+  count: {
+    fontSize: 11,
+    color: MUTED,
+    fontFamily: fonts.medium,
+  },
+  refresh: {
+    width: 32,
+    height: 32,
+    borderRadius: 11,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
-
-  childInfoCard: {
+  childCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: wp(8),
-    padding: wp(20),
-    borderWidth: 1,
-    borderColor: "#C1C7D2",
+    borderRadius: 17,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+    elevation: 1,
+    minHeight: 70,
+  },
+  avatar: {
+    height: 44,
+    width: 44,
+    borderRadius: 22,
+  },
+  avatarFallback: {
+    backgroundColor: "#EAF0F7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  childInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  childName: {
+    fontSize: 12,
+    fontFamily: fonts.bold,
+    color: DARK,
+  },
+  childTime: {
+    fontSize: 10,
+    color: MUTED,
+    marginTop: 5,
+  },
+  controls: {
+    flexDirection: "row",
+    padding: 4,
+    borderRadius: 12,
+    backgroundColor: "#F6F8FB",
+    gap: 3,
+  },
+  control: {
+    height: 27,
+    width: 27,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  presentControl: {
+    backgroundColor: "#0CA47D",
+  },
+  absentControl: {
+    backgroundColor: "#E63A45",
+  },
+  pill: {
+    minWidth: 65,
+    paddingHorizontal: 7,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  pillPresent: {
+    backgroundColor: "#E3F8F1",
+  },
+  pillAbsent: {
+    backgroundColor: "#FDEDED",
+  },
+  pillPending: {
+    backgroundColor: "#FFF2D8",
+  },
+  pillText: {
+    fontSize: 10,
+    fontFamily: fonts.semiBold,
+  },
+  history: {
+    backgroundColor: "#ECF2FF",
+    borderRadius: 15,
+    alignItems: "center",
+    paddingVertical: 16,
+    marginTop: 12,
+  },
+  historyText: {
+    fontSize: 13,
+    color: "#166DF3",
+    fontFamily: fonts.bold,
+  },
+  empty: {
+    padding: 28,
+    alignItems: "center",
+  },
+  emptyText: {
+    color: MUTED,
+    fontSize: 13,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: "#0006",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modal: {
+    backgroundColor: "#FFFFFF",
+    padding: 20,
+    borderRadius: 18,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
-  childSectionTitle: {
-    fontSize:fontSize(16),
+  modalTitle: {
+    fontSize: 17,
     fontFamily: fonts.bold,
-    color: colors.primary,
-    lineHeight: 24,
+    color: DARK,
+  },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F7F9FC",
+    borderRadius: 12,
+    paddingHorizontal: 12,
     marginBottom: 12,
   },
-  inputRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  fieldBox: {
+  searchInput: {
     flex: 1,
+    height: 44,
+    marginLeft: 8,
+    color: DARK,
   },
-  fieldLabel: {
-    fontSize:fontSize(12),
-    fontFamily: fonts.medium,
-    color: "#717781",
-    marginBottom: 4,
-    lineHeight: 18,
-  },
-  fieldValueContainer: {
-    backgroundColor: "#F7FAFD",
-    borderRadius: wp(8),
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    paddingHorizontal: wp(12),
-    height: 38,
-    justifyContent: "center",
-  },
-  fieldValueText: {
-    fontSize:fontSize(14),
-    fontFamily: fonts.regular,
-    color: "#181C1E",
-    lineHeight: 20,
-  },
-
-  dateHeaderBanner: {
-    backgroundColor: "#005086",
-    borderRadius: wp(0),
-    marginHorizontal: -16,
-    paddingHorizontal: wp(20),
-    paddingVertical: hp(10),
+  filterOption: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  dateDropdownBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  dateDropdownText: {
-    fontSize:fontSize(14),
-    fontFamily: fonts.medium,
-    color: "#FFFFFF",
-    lineHeight: 24,
-  },
-  statusPillBadge: {
-    backgroundColor: "#8BF6D9",
-    paddingHorizontal: wp(12),
-    paddingVertical: hp(4),
-    borderRadius: wp(8),
-  },
-  statusPillText: {
-    fontSize:fontSize(12),
-    fontFamily: fonts.medium,
-    color: colors.primary,
-    lineHeight: 16,
-  },
-
-  attendanceContainer: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: wp(12),
-    borderWidth: 1,
-    borderColor: "#E0E3E6",
-    overflow: "hidden",
-  },
-  attendanceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: wp(14),
-    paddingVertical: hp(12),
-  },
-  borderBottom: {
+    gap: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-
-  dateColumn: {
-    width: 100,
-  },
-  dateText: {
-    fontSize:fontSize(12),
-    fontFamily: fonts.bold,
-    color: "#181C1E",
-    lineHeight: 16,
-  },
-  timeText: {
-    fontSize:fontSize(10),
-    fontFamily: fonts.regular,
-    color: "#717781",
-    lineHeight: 15,
-  },
-
-  toggleGroup: {
-    flexDirection: "row",
-    backgroundColor: "rgba(139,246,217,.3)",
-    borderRadius: wp(8),
-    padding: wp(3),
-    gap: 4,
-  },
-  toggleIconBtn: {
-    width: wp(32),
-    height: hp(28),
-    borderRadius: wp(6),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  presentActiveBg: {
-    backgroundColor: "#FFFFFF",
-  },
-  absentActiveBg: {
-    backgroundColor: "#FFFFFF",
-  },
-  inactiveToggleBg: {
-    backgroundColor: "transparent",
-  },
-
-  statusBadgeColumn: {
-    width: wp(85),
-    alignItems: "flex-end",
-  },
-  presentBadge: {
-    backgroundColor: "rgba(0,107,88,.1)",
-    paddingHorizontal: wp(6),
-    paddingVertical: hp(2),
-    borderRadius: wp(4),
-    borderWidth: 1,
-    borderColor: "rgba(0,107,88,.2)",
-  },
-  statusBadgeText: {
-    fontSize:fontSize(14),
-    fontFamily: fonts.regular,
-    lineHeight: 20,
-  },
-  presentBadgeText: {
-    color: "#006B58",
-  },
-  absentBadge: {
-    backgroundColor: "rgba(186,26,26,.1)",
-    paddingHorizontal: wp(6),
-    paddingVertical: hp(2),
-    borderRadius: wp(4),
-    borderWidth: 1,
-    borderColor: "rgba(186,26,26,.2)",
-  },
-  absentBadgeText: {
-    color: "#BA1A1A",
-  },
-  pendingBadge: {
-    backgroundColor: "#E0E3E6",
-    paddingHorizontal: wp(6),
-    paddingVertical: hp(2),
-    borderRadius: wp(4),
-    borderWidth: 1,
-    borderColor: "#C1C7D2",
-  },
-  pendingBadgeText: {
-    color: "#717781",
-  },
-
-  fullHistoryBtn: {
-    backgroundColor: "#F1F4F7",
-    paddingVertical: hp(12),
-    alignItems: "center",
-    justifyContent: "center",
-    borderTopWidth: 1,
-    borderTopColor: "#E0E3E6",
-  },
-  fullHistoryText: {
-    fontSize:fontSize(10),
-    fontFamily: fonts.bold,
-    color: colors.primary,
-    lineHeight: 15,
-  },
-
-  emptyContainer: {
-    paddingVertical: hp(32),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyText: {
-    fontSize:fontSize(13),
-    fontFamily: fonts.medium,
-    color: "#64748B",
-    lineHeight: 18,
-  },
-
-  /* Modal Styles */
-  modalOverlay: {
+  filterOptionText: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: wp(20),
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: DARK,
   },
-  dropdownMenu: {
-    width: "100%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: wp(16),
-    padding: wp(16),
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  dropdownMenuTitle: {
-    fontSize:fontSize(15),
-    fontFamily: fonts.bold,
-    color: "#0F172A",
-    marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    lineHeight: 20,
-  },
-  dropdownOption: {
+  monthNav: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: hp(10),
-    paddingHorizontal: wp(8),
-    borderRadius: wp(8),
+    marginVertical: 28,
   },
-  dropdownOptionSelected: {
-    backgroundColor: "#F1F5F9",
+  monthNavText: {
+    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    color: DARK,
   },
-  dropdownOptionText: {
-    fontSize:fontSize(14),
-    fontFamily: fonts.regular,
-    color: "#334155",
-    lineHeight: 20,
+  done: {
+    backgroundColor: BLUE,
+    borderRadius: 10,
+    padding: 13,
+    alignItems: "center",
   },
-  dropdownOptionTextSelected: {
-    fontFamily: fonts.bold,
-    color: "#0B598F",
-    lineHeight: 20,
+  doneText: {
+    color: "#FFFFFF",
+    fontFamily: fonts.semiBold,
   },
+  childDateRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 5,
+  marginTop: 5,
+},
+
+childDate: {
+  fontSize: 10,
+  fontFamily: fonts.medium,
+  color: "#075BB8",
+},
+
+childTimeRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 5,
+  marginTop: 4,
+},
+
+childTime: {
+  fontSize: 10,
+  fontFamily: fonts.regular,
+  color: "#8A9DBA",
+},
 });
