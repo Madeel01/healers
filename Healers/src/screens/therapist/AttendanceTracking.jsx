@@ -1244,7 +1244,7 @@ const styles = StyleSheet.create({
     gap: wp(10),
   },
   sectionTitle: {
-    fontSize: fontSize(15),
+    fontSize: fontSize(14),
     fontFamily: fonts.bold,
     color: DARK,
     flex: 1,
@@ -1291,6 +1291,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize(12),
     fontFamily: fonts.bold,
     color: DARK,
+    lineHeight:16
   },
   childTime: {
     fontSize: fontSize(10),
