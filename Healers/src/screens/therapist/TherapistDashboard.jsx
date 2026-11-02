@@ -41,6 +41,24 @@ import {
   wp,
 } from '../../utils/responsive';
 
+const getGreeting = () => {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 12) {
+    return "Good Morning";
+  }
+
+  if (hour >= 12 && hour < 17) {
+    return "Good Afternoon";
+  }
+
+  if (hour >= 17 && hour < 21) {
+    return "Good Evening";
+  }
+
+  return "Good Night";
+};
+
 export default function TherapistDashboardScreen({ navigation }) {
   const { user, logout } = useContext(AuthContext);
 
@@ -50,7 +68,7 @@ export default function TherapistDashboardScreen({ navigation }) {
   const profileImage = user?.profileImage || "";
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
-
+  const [greeting, setGreeting] = useState(getGreeting());
   const [stats, setStats] = useState({
     assignedChildren: 0,
     todaySessions: 0,
@@ -199,7 +217,19 @@ export default function TherapistDashboardScreen({ navigation }) {
     bellShake.stopAnimation();
     bellShake.setValue(0);
   }, [notificationUnreadCount]);
-  
+
+  useFocusEffect(
+    useCallback(() => {
+      setGreeting(getGreeting());
+
+      const interval = setInterval(() => {
+        setGreeting(getGreeting());
+      }, 60000);
+
+      return () => clearInterval(interval);
+    }, []),
+  );
+
   return (
     <View style={[styles.mainContainer, commonStyles.container]}>
       <View style={styles.headerRow}>
@@ -281,7 +311,9 @@ export default function TherapistDashboardScreen({ navigation }) {
         }
       >
         <View style={styles.welcomeSection}>
-          <Text style={styles.greetingText}>Good Morning, {userName} 👋</Text>
+          <Text style={styles.greetingText}>
+            {greeting}, {userName} 👋
+          </Text>
           <Text style={styles.greetingSubtext}>
             You have {stats.todaySessions} sessions scheduled for today. Ready to make a difference?
           </Text>
@@ -537,9 +569,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal:wp(20),
+    paddingHorizontal: wp(20),
     paddingTop: hp(8),
-    paddingBottom:hp(12),
+    paddingBottom: hp(12),
     backgroundColor: "#fff",
   },
   profileContainer: {
@@ -562,16 +594,16 @@ const styles = StyleSheet.create({
   },
 
   avatarFallbackText: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
-    lineHeight:24,
+    lineHeight: 24,
   },
   headerTitle: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#0052A3",
-    lineHeight:24,
+    lineHeight: 24,
   },
   headerActions: {
     flexDirection: "row",
@@ -597,23 +629,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal:wp(20),
+    paddingHorizontal: wp(20),
     paddingTop: hp(10),
-    paddingBottom:hp(30),
+    paddingBottom: hp(30),
   },
 
   welcomeSection: {
     marginBottom: hp(20),
   },
   greetingText: {
-    fontSize:fontSize(26),
+    fontSize: fontSize(26),
     fontFamily: fonts.bold,
     color: "#181C1E",
     marginBottom: hp(6),
     lineHeight: 34,
   },
   greetingSubtext: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 22,
@@ -647,20 +679,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   cardValue: {
-    fontSize:fontSize(30),
+    fontSize: fontSize(30),
     fontFamily: fonts.bold,
     color: "#1F2937",
     lineHeight: 36,
   },
   cardLabel: {
-    fontSize:fontSize(12),
+    fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
     color: "#6B7280",
     lineHeight: 16,
   },
 
   sectionHeaderTitle: {
-    fontSize:fontSize(18),
+    fontSize: fontSize(18),
     fontFamily: fonts.bold,
     color: "#1F2937",
     lineHeight: 28,
@@ -686,7 +718,7 @@ const styles = StyleSheet.create({
     marginBottom: hp(8),
   },
   actionLabel: {
-    fontSize:fontSize(10),
+    fontSize: fontSize(10),
     fontFamily: fonts.bold,
     color: "#4B5563",
     textAlign: "center",
@@ -700,21 +732,21 @@ const styles = StyleSheet.create({
     paddingTop: hp(40),
   },
   bannerTag: {
-    fontSize:fontSize(14),
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "rgba(256,256,256,.8)",
     letterSpacing: 1.4,
     lineHeight: 20,
   },
   bannerTitle: {
-    fontSize:fontSize(26),
+    fontSize: fontSize(26),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 32,
     marginVertical: 8,
   },
   bannerDescription: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#fff",
     lineHeight: 24,
@@ -729,7 +761,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   scheduleNextBtnText: {
-    fontSize:fontSize(14),
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#004E9F",
     lineHeight: 20,
@@ -760,19 +792,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   messageBannerTitle: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#191C20",
     lineHeight: 24,
   },
   badgeNew: {
     backgroundColor: "#7CB342",
-    paddingHorizontal:wp(8),
+    paddingHorizontal: wp(8),
     paddingVertical: 4,
     borderRadius: wp(999),
   },
   badgeNewText: {
-    fontSize:fontSize(12),
+    fontSize: fontSize(12),
     fontWeight: "700",
     color: "#FFFFFF",
   },
@@ -793,7 +825,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   msgAvatarText: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#7CB342",
     lineHeight: 24,
@@ -802,13 +834,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   teacherName: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#191C20",
     lineHeight: 24,
   },
   messageSnippet: {
-    fontSize:fontSize(14),
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 20,
@@ -833,7 +865,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 2,
-    marginTop:20
+    marginTop: 20,
   },
 
   complaintIconBox: {
@@ -851,14 +883,14 @@ const styles = StyleSheet.create({
   },
 
   complaintTitle: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#191C20",
   },
 
   complaintSubtitle: {
     marginTop: 3,
-    fontSize:fontSize(12),
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
   },
