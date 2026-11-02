@@ -48,6 +48,7 @@ const LEAVE_TYPES = [
   "Maternity / Paternity Leave",
   "Unpaid Leave",
   "Emergency Leave",
+  "Short Leave",
 ];
 
 export default function LeaveRequestScreen({ navigation }) {

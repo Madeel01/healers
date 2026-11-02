@@ -81,6 +81,17 @@ const appointmentSchema = new mongoose.Schema(
       ],
       default: "Upcoming",
     },
+    therapist_attendance: {
+      type: String,
+      enum: [
+        "pending",
+        "present",
+        "absent",
+        "cancel",
+        "postpond"
+      ],
+      default: "pending"
+    },
     children: {
       type: [appointmentChildSchema],
       default: [],
