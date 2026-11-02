@@ -63,7 +63,7 @@ const appointmentSchema = new mongoose.Schema(
 
     sessionType: {
       type: String,
-      enum: ["regular", "postponed", "additional", "alternate","cancel"],
+      enum: ["regular", "postponed", "additional", "alternate", "cancel"],
       default: "regular",
     },
 
@@ -88,6 +88,17 @@ const appointmentSchema = new mongoose.Schema(
     reminderSentAt: {
       type: Date,
       default: null,
+    },
+    therapist_attendance: {
+      type: String,
+      enum: [
+        "pending",
+        "present",
+        "absent",
+        "cancel",
+        "postpond",
+      ],
+      default: "pending",
     },
   },
   { _id: true },
@@ -171,6 +182,5 @@ schedulingSchema.index({ "appointments.batchId": 1 });
 schedulingSchema.index({ "appointments.batchAssignmentId": 1 });
 schedulingSchema.index({ "appointments.children.childId": 1 });
 schedulingSchema.index({ "appointments._id": 1 });
-
 
 module.exports = mongoose.model("Scheduling", schedulingSchema);
