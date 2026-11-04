@@ -7,8 +7,11 @@ import React, {
 } from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   Image,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -26,7 +29,11 @@ import {
 
 import { getUnreadNotificationCountApi } from '../../api/authApi';
 import { UnreadSummary } from '../../api/child/api';
-import { getDashboardStatsApi } from '../../api/therapist/api';
+import {
+  getDashboardStatsApi,
+  getTherapistAttendanceApi,
+  markTherapistAttendanceApi,
+} from '../../api/therapist/api';
 import NotificationModal from '../../components/NotificationModal';
 import { AuthContext } from '../../context/AuthContext';
 import {
@@ -83,6 +90,17 @@ export default function TherapistDashboardScreen({ navigation }) {
     totalUnreadCount: 0,
     latestUnreadMessage: null,
   });
+
+  const [therapistAttendance, setTherapistAttendance] = useState({
+    latestAttendance: null,
+    dueAppointment: null,
+  });
+
+  const [showTherapistAttendanceModal, setShowTherapistAttendanceModal] = useState(false);
+  const [attendanceSubmitting, setAttendanceSubmitting] = useState(false);
+  const [dismissedAppointmentId, setDismissedAppointmentId] = useState(null);
+  const [clockNow, setClockNow] = useState(Date.now());
+
   useFocusEffect(
     useCallback(() => {
       fetchDashboardStats();
@@ -230,6 +248,173 @@ export default function TherapistDashboardScreen({ navigation }) {
     }, []),
   );
 
+  const fetchTherapistAttendance = async () => {
+    try {
+      const response = await getTherapistAttendanceApi();
+      const result = response?.data?.success
+        ? response.data
+        : response;
+
+      if (result?.success) {
+        const data = result.data || {};
+
+        setTherapistAttendance({
+          latestAttendance: data.latestAttendance || null,
+          dueAppointment: data.dueAppointment || null,
+        });
+
+        const due = data.dueAppointment;
+
+        if (
+          due?.appointmentId
+          && due.therapistAttendance === "pending"
+          && due.appointmentId !== dismissedAppointmentId
+        ) {
+          setShowTherapistAttendanceModal(true);
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Fetch therapist attendance error:",
+        error?.response?.data || error.message,
+      );
+    }
+  };
+
+  const submitTherapistAttendance = async (status) => {
+    const appointment = therapistAttendance.dueAppointment;
+
+    if (!appointment?.appointmentId || attendanceSubmitting) {
+      return;
+    }
+
+    try {
+      setAttendanceSubmitting(true);
+
+      const response = await markTherapistAttendanceApi(
+        appointment.appointmentId,
+        status,
+      );
+
+      const result = response?.data?.success
+        ? response.data
+        : response;
+
+      if (!result?.success) {
+        throw new Error(
+          result?.message || "Unable to mark attendance.",
+        );
+      }
+
+      const saved = result.data;
+
+      setTherapistAttendance((previous) => ({
+        ...previous,
+        latestAttendance: saved,
+        dueAppointment: {
+          ...appointment,
+          therapistAttendance: saved.therapistAttendance,
+          markedAt: saved.markedAt,
+        },
+      }));
+
+      setShowTherapistAttendanceModal(false);
+      setDismissedAppointmentId(appointment.appointmentId);
+
+      await fetchTherapistAttendance();
+    } catch (error) {
+      Alert.alert(
+        "Attendance",
+        error?.response?.data?.message
+          || error.message
+          || "Unable to mark therapist attendance.",
+      );
+    } finally {
+      setAttendanceSubmitting(false);
+    }
+  };
+
+  const dismissTherapistAttendanceModal = () => {
+    const appointment = therapistAttendance.dueAppointment;
+
+    if (appointment?.appointmentId) {
+      setDismissedAppointmentId(appointment.appointmentId);
+    }
+
+    setShowTherapistAttendanceModal(false);
+  };
+
+  const formatMarkedAt = (value) => {
+    if (!value) return null;
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) return null;
+
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const attendanceLabel = (status) => {
+    switch (status) {
+      case "present":
+        return "Present";
+      case "absent":
+        return "Absent";
+      case "cancel":
+        return "Cancelled";
+      case "postpond":
+        return "Postponed";
+      default:
+        return "Pending";
+    }
+  };
+
+  const attendanceColor = (status) => {
+    switch (status) {
+      case "present":
+        return {
+          backgroundColor: "#E8FBF2",
+          color: "#009D73",
+        };
+      case "absent":
+        return {
+          backgroundColor: "#FFF0F0",
+          color: "#DC2626",
+        };
+      case "cancel":
+        return {
+          backgroundColor: "#FFF0F0",
+          color: "#DC2626",
+        };
+      case "postpond":
+        return {
+          backgroundColor: "#EEF5FF",
+          color: "#2563EB",
+        };
+      default:
+        return {
+          backgroundColor: "#FFF5DF",
+          color: "#A16207",
+        };
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchTherapistAttendance();
+
+      const refreshInterval = setInterval(() => {
+        setClockNow(Date.now());
+        fetchTherapistAttendance();
+      }, 30000);
+
+      return () => clearInterval(refreshInterval);
+    }, [userId]),
+  );
+
   return (
     <View style={[styles.mainContainer, commonStyles.container]}>
       <View style={styles.headerRow}>
@@ -318,6 +503,75 @@ export default function TherapistDashboardScreen({ navigation }) {
             You have {stats.todaySessions} sessions scheduled for today. Ready to make a difference?
           </Text>
         </View>
+
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={styles.checkAttendanceCard}
+          onPress={() => {
+            const appointment = therapistAttendance.dueAppointment;
+
+            if (
+              appointment?.appointmentId
+              && appointment.therapistAttendance === "pending"
+            ) {
+              setShowTherapistAttendanceModal(true);
+            } else {
+              navigation.navigate("AttendanceTracking", {
+                filterType: "today",
+                attendanceType: "therapist",
+              });
+            }
+          }}
+        >
+          <View style={styles.checkAttendanceIcon}>
+            <Feather
+              name="calendar"
+              size={fontSize(21)}
+              color="#FFFFFF"
+            />
+          </View>
+
+          <View style={styles.checkAttendanceInfo}>
+            <Text style={styles.checkAttendanceTitle}>
+              Check Attendance
+            </Text>
+
+            <Text style={styles.checkAttendanceSubtext}>
+              {therapistAttendance.latestAttendance?.markedAt
+                ? `Marked at ${
+                  formatMarkedAt(
+                    therapistAttendance.latestAttendance.markedAt,
+                  )
+                }`
+                : "Not marked yet"}
+            </Text>
+          </View>
+
+          {(() => {
+            const status = therapistAttendance.latestAttendance?.therapistAttendance
+              || "pending";
+
+            const badge = attendanceColor(status);
+
+            return (
+              <View
+                style={[
+                  styles.attendanceStatusBadge,
+                  { backgroundColor: badge.backgroundColor },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.attendanceStatusText,
+                    { color: badge.color },
+                  ]}
+                >
+                  {attendanceLabel(status)}
+                </Text>
+              </View>
+            );
+          })()}
+        </TouchableOpacity>
 
         <View style={styles.gridContainer}>
           <TouchableOpacity
@@ -557,6 +811,140 @@ export default function TherapistDashboardScreen({ navigation }) {
         visible={showNotificationModal}
         onClose={() => setShowNotificationModal(false)}
       />
+
+      <Modal
+        visible={showTherapistAttendanceModal}
+        transparent
+        animationType="fade"
+        onRequestClose={dismissTherapistAttendanceModal}
+      >
+        <View style={styles.therapistAttendanceOverlay}>
+          <View style={styles.therapistAttendanceModal}>
+            <TouchableOpacity
+              style={styles.attendanceCloseButton}
+              onPress={dismissTherapistAttendanceModal}
+              disabled={attendanceSubmitting}
+            >
+              <Feather
+                name="x"
+                size={fontSize(22)}
+                color="#8A9DBA"
+              />
+            </TouchableOpacity>
+
+            <View style={styles.attendanceModalIcon}>
+              <Feather
+                name="calendar"
+                size={fontSize(28)}
+                color="#00A878"
+              />
+            </View>
+
+            <Text style={styles.attendanceModalTitle}>
+              Mark Your Attendance
+            </Text>
+
+            <Text style={styles.attendanceModalSubtitle}>
+              Please mark your attendance to continue.
+            </Text>
+
+            {therapistAttendance.dueAppointment && (
+              <Text style={styles.attendanceSessionTime}>
+                Session: {formatTo12Hour(
+                  therapistAttendance.dueAppointment.startTime,
+                )}
+                {" - "}
+                {formatTo12Hour(
+                  therapistAttendance.dueAppointment.endTime,
+                )}
+              </Text>
+            )}
+
+            <View style={styles.attendanceOptionsGrid}>
+              {[
+                {
+                  label: "Present",
+                  status: "present",
+                  icon: "check",
+                  background: "#F0FDF8",
+                  border: "#C6F6DF",
+                  color: "#059669",
+                },
+                {
+                  label: "Absent",
+                  status: "absent",
+                  icon: "x",
+                  background: "#FFF5F5",
+                  border: "#FED7D7",
+                  color: "#DC2626",
+                },
+                {
+                  label: "Cancel",
+                  status: "cancel",
+                  icon: "slash",
+                  background: "#FFF5F5",
+                  border: "#FED7D7",
+                  color: "#DC2626",
+                },
+                {
+                  label: "Postpone",
+                  status: "postpond",
+                  icon: "clock",
+                  background: "#F2F7FF",
+                  border: "#D6E6FF",
+                  color: "#3478F6",
+                },
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.status}
+                  disabled={attendanceSubmitting}
+                  style={[
+                    styles.attendanceOption,
+                    {
+                      backgroundColor: option.background,
+                      borderColor: option.border,
+                    },
+                  ]}
+                  onPress={() => submitTherapistAttendance(option.status)}
+                >
+                  {attendanceSubmitting
+                    ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={option.color}
+                      />
+                    )
+                    : (
+                      <>
+                        <View
+                          style={[
+                            styles.attendanceOptionIcon,
+                            { backgroundColor: option.color },
+                          ]}
+                        >
+                          <Feather
+                            name={option.icon}
+                            size={fontSize(17)}
+                            color="#FFFFFF"
+                          />
+                        </View>
+
+                        <Text
+                          style={[
+                            styles.attendanceOptionText,
+                            { color: option.color },
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </>
+                    )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -893,5 +1281,152 @@ const styles = StyleSheet.create({
     fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
+  },
+
+  checkAttendanceCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: wp(18),
+    padding: wp(14),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: wp(12),
+    marginBottom: hp(20),
+    elevation: 2,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+  },
+
+  checkAttendanceIcon: {
+    width: wp(44),
+    height: wp(44),
+    borderRadius: wp(13),
+    backgroundColor: "#08B887",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  checkAttendanceInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  checkAttendanceTitle: {
+    fontSize: fontSize(14),
+    fontFamily: fonts.semiBold,
+    color: "#172033",
+  },
+
+  checkAttendanceSubtext: {
+    fontSize: fontSize(11),
+    fontFamily: fonts.regular,
+    color: "#8A9DBA",
+    marginTop: 4,
+  },
+
+  attendanceStatusBadge: {
+    paddingHorizontal: wp(12),
+    paddingVertical: hp(7),
+    borderRadius: wp(20),
+  },
+
+  attendanceStatusText: {
+    fontSize: fontSize(11),
+    fontFamily: fonts.semiBold,
+  },
+
+  therapistAttendanceOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.42)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: wp(24),
+  },
+
+  therapistAttendanceModal: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: "#FFFFFF",
+    borderRadius: wp(24),
+    paddingHorizontal: wp(20),
+    paddingTop: hp(24),
+    paddingBottom: hp(22),
+    alignItems: "center",
+  },
+
+  attendanceCloseButton: {
+    position: "absolute",
+    right: wp(16),
+    top: hp(14),
+    padding: wp(4),
+    zIndex: 1,
+  },
+
+  attendanceModalIcon: {
+    width: wp(64),
+    height: wp(64),
+    borderRadius: wp(18),
+    backgroundColor: "#E9FBF4",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: hp(14),
+  },
+
+  attendanceModalTitle: {
+    fontSize: fontSize(18),
+    fontFamily: fonts.bold,
+    color: "#172033",
+    textAlign: "center",
+  },
+
+  attendanceModalSubtitle: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    textAlign: "center",
+    marginTop: hp(8),
+  },
+
+  attendanceSessionTime: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.medium,
+    color: "#475569",
+    marginTop: hp(12),
+    marginBottom: hp(14),
+  },
+
+  attendanceOptionsGrid: {
+    width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: wp(10),
+    marginTop: hp(18),
+  },
+
+  attendanceOption: {
+    width: "48%",
+    minHeight: hp(52),
+    borderWidth: 1,
+    borderRadius: wp(15),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    paddingHorizontal: wp(10),
+    gap: wp(9),
+  },
+
+  attendanceOptionIcon: {
+    width: wp(29),
+    height: wp(29),
+    borderRadius: wp(20),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  attendanceOptionText: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.semiBold,
   },
 });

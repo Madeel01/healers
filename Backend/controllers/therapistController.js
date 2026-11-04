@@ -2766,3 +2766,206 @@ exports.updateFeedbackVisibility = async (req, res) => {
     });
   }
 };
+
+exports.getTherapistAttendance = async (req, res) => {
+  try {
+    const therapistId = req.user?._id || req.user?.id;
+
+    if (!mongoose.isValidObjectId(therapistId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid therapist ID is required.",
+      });
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    const schedule = await Scheduling.findOne({
+      therapistId: new mongoose.Types.ObjectId(therapistId),
+      year,
+      month,
+    }).lean();
+
+    const appointments = (schedule?.appointments || [])
+      .filter((appointment) => {
+        return !["cancel", "postponed"].includes(
+          appointment.sessionType,
+        );
+      })
+      .map((appointment) => {
+        const date = new Date(appointment.date);
+        const dateString = [
+          date.getFullYear(),
+          String(date.getMonth() + 1).padStart(2, "0"),
+          String(date.getDate()).padStart(2, "0"),
+        ].join("-");
+
+        return {
+          appointmentId: String(appointment._id),
+          date: dateString,
+          startTime: appointment.startTime,
+          endTime: appointment.endTime,
+          sessionStatus: appointment.session_status,
+          therapistAttendance:
+            appointment.therapist_attendance || "pending",
+          markedAt:
+            appointment.therapist_attendance_marked_at || null,
+        };
+      })
+      .sort((a, b) => {
+        const aTime = new Date(`${a.date}T${a.startTime}:00`);
+        const bTime = new Date(`${b.date}T${b.startTime}:00`);
+        return bTime - aTime;
+      });
+
+    const latestMarked = appointments.find(
+      (appointment) => appointment.markedAt,
+    );
+
+    const upcoming = appointments
+      .filter((appointment) => {
+        const start = new Date(
+          `${appointment.date}T${appointment.startTime}:00`,
+        );
+        const end = new Date(
+          `${appointment.date}T${appointment.endTime}:00`,
+        );
+
+        return end >= now && start.getTime() <= now.getTime() + 5 * 60 * 1000;
+      })
+      .sort((a, b) => {
+        return new Date(`${a.date}T${a.startTime}:00`)
+          - new Date(`${b.date}T${b.startTime}:00`);
+      })[0] || null;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        latestAttendance: latestMarked || {
+          therapistAttendance: "pending",
+          markedAt: null,
+          appointmentId: null,
+          date: null,
+          startTime: null,
+          endTime: null,
+        },
+        dueAppointment: upcoming,
+      },
+    });
+  } catch (error) {
+    console.error("getTherapistAttendance error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch therapist attendance.",
+    });
+  }
+};
+
+exports.markTherapistAttendance = async (req, res) => {
+  try {
+    const therapistId = req.user?._id || req.user?.id;
+    const { appointmentId } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = [
+      "present",
+      "absent",
+      "cancel",
+      "postpond",
+    ];
+
+    if (
+      !mongoose.isValidObjectId(therapistId) ||
+      !mongoose.isValidObjectId(appointmentId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid therapist or appointment ID.",
+      });
+    }
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid therapist attendance status.",
+      });
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    // Find the schedule belonging to this authenticated therapist.
+    const schedule = await Scheduling.findOne({
+      therapistId: new mongoose.Types.ObjectId(therapistId),
+      year,
+      month,
+      "appointments._id": new mongoose.Types.ObjectId(appointmentId),
+    });
+
+    if (!schedule) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found for this therapist.",
+      });
+    }
+
+    const appointment = schedule.appointments.id(appointmentId);
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found.",
+      });
+    }
+
+    // Do not permit attendance to be marked more than 5 minutes
+    // before the appointment starts.
+    const date = new Date(appointment.date);
+    const dateString = [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    const [hours, minutes] = appointment.startTime.split(":").map(Number);
+    const startTime = new Date(
+      `${dateString}T${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`,
+    );
+
+    if (now.getTime() < startTime.getTime() - 5 * 60 * 1000) {
+      return res.status(400).json({
+        success: false,
+        message: "You can mark attendance within 5 minutes of the session start.",
+      });
+    }
+
+    appointment.therapist_attendance = status;
+    appointment.therapist_attendance_marked_at = now;
+
+    await schedule.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Therapist attendance marked successfully.",
+      data: {
+        appointmentId: String(appointment._id),
+        therapistAttendance: appointment.therapist_attendance,
+        markedAt: appointment.therapist_attendance_marked_at,
+        date: dateString,
+        startTime: appointment.startTime,
+        endTime: appointment.endTime,
+      },
+    });
+  } catch (error) {
+    console.error("markTherapistAttendance error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to mark therapist attendance.",
+    });
+  }
+};

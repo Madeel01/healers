@@ -100,6 +100,11 @@ const appointmentSchema = new mongoose.Schema(
       ],
       default: "pending",
     },
+
+    therapist_attendance_marked_at: {
+      type: Date,
+      default: null,
+    },
   },
   { _id: true },
 );

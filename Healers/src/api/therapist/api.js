@@ -288,3 +288,14 @@ export const updateFeedbackVisibility = async (feedbackId, isVisibleToParent) =>
 
   return response.data;
 };
+
+export const getTherapistAttendanceApi = () => {
+  return apiClient.get("/therapist/therapist-attendance");
+};
+
+export const markTherapistAttendanceApi = (appointmentId, status) => {
+  return apiClient.patch(
+    `/therapist/therapist-attendance/${appointmentId}`,
+    { status },
+  );
+};
