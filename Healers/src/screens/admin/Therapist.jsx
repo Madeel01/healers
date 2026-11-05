@@ -337,7 +337,7 @@ export default function TherapistsScreen({ navigation }) {
     }
 
     const phone = newTherapist.phone.trim();
-    const phoneRegex = /^(030\d{8}|\+923\d{9})$/;
+    const phoneRegex = /^(03\d{9}|\+923\d{9})$/;
 
     if (!phoneRegex.test(phone)) {
       Alert.alert(
@@ -1108,7 +1108,7 @@ export default function TherapistsScreen({ navigation }) {
           activeOpacity={1}
           onPress={() => setIsFilterModalOpen(false)}
         >
-          <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
+          <TouchableOpacity activeOpacity={1} style={[styles.modalContent, { paddingBottom: insets.bottom + 24}]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Therapist Filter</Text>
               <TouchableOpacity onPress={() => setIsFilterModalOpen(false)}>

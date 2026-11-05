@@ -153,6 +153,7 @@ export default function TherapistDashboardScreen({ navigation }) {
       if (response?.success) {
         setUnreadData(response.data);
       }
+      console.log(response.data,"dataa");
     } catch (err) {
       console.log("fetchUnreadSummary error:", err);
     }

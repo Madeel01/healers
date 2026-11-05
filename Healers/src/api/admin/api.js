@@ -505,3 +505,8 @@ export const getFeeDetailsApi = async (params) => {
   const res = await apiClient.get("/admin/invoices/fee-details", { params });
   return res.data;
 };
+
+export const getAdminQuarterlyReports = async (params) => {
+  const res = await apiClient.get("/admin/quarterly-reports", { params });
+  return res.data;
+};

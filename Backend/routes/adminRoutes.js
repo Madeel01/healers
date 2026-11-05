@@ -86,6 +86,8 @@ const {
   saveChildCustomSchedule,
   cancelChildCustomAppointment,
   postponeChildCustomAppointment,
+  adminListQuarterlyReports,
+  adminGetQuarterlyReport,
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
@@ -112,7 +114,7 @@ router.post("/children/:childId/custom/:appointmentId/postpone", protect, postpo
 
 
 router.get("/schedule", protect, getSessions);
-router.get("/overview", getAdminOverview);
+router.get("/overview", protect, getAdminOverview);
 router.get("/get_therapists", protect, getTherapistsUsers);
 router.get("/get_therapists_child", assignTherapistsUsers);
 router.get("/users", protect, getUsersByRole);
@@ -196,5 +198,8 @@ router.get("/settings", protect, getSettings);
 router.put("/settings", protect, updateSettings);
 
 router.get("/invoices/fee-details", protect, getFeeDetails);
+
+router.get("/quarterly-reports", protect, adminListQuarterlyReports);
+router.get("/quarterly-reports/:id", protect, adminGetQuarterlyReport);
 
 module.exports = router;

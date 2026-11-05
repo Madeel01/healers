@@ -20,6 +20,7 @@ const {
   savePushToken,
   removePushToken,
   adminImpersonateUser,
+  getChildSummery,
 } = require("../controllers/authController");
 const { protect, blockImpersonationWrites } = require("../middleware/authMiddleware");
 const rateLimit = require("express-rate-limit");
@@ -45,6 +46,7 @@ router.get("/users/notifications/unread", protect, getUnreadNotifications);
 router.post("/users/notifications/:notificationId/read", protect, markNotificationAsRead);
 router.post("/users/notifications/read-all", protect, markAllNotificationsAsRead);
 router.get("/users/notifications/unread-count", protect, getUnreadNotificationCount);
+router.get("/users/summery/unread-count", protect, getChildSummery);
 router.post("/forgot-password", otpLimiter, forgotPassword);
 router.post("/verify-reset-otp", otpLimiter, verifyResetOtp);
 router.post("/reset-password", resetPassword);

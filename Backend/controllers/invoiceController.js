@@ -1060,7 +1060,7 @@ const syncOverdueInvoices = async (childId) => {
 exports.getChildInvoices = async (req, res) => {
   try {
     const childId = req.user?._id || req.user?.id;
-
+    
     if (!childId || !mongoose.Types.ObjectId.isValid(childId)) {
       return res.status(401).json({
         success: false,
@@ -1095,13 +1095,23 @@ exports.getChildInvoices = async (req, res) => {
         message: "Invalid invoice status.",
       });
     }
-
+    
     const childObjectId = new mongoose.Types.ObjectId(
       childId,
     );
 
     await syncOverdueInvoices(childObjectId);
-
+    await Invoice.updateMany(
+      {
+        childId: childObjectId,
+        isSeen: false,
+      },
+      {
+        $set: {
+          isSeen: true,
+        },
+      },
+    );
     const query = {
       childId: childObjectId,
       status: {

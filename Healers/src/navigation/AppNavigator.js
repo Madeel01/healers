@@ -26,6 +26,8 @@ import TopBar from '../components/TopBar';
 import { AuthContext } from '../context/AuthContext';
 import AddNewPackageScreen from '../screens/admin/AddNewPackage';
 import AdminDashboard from '../screens/admin/AdminDashboard';
+import AdminQuarterlyReportsScreen
+  from '../screens/admin/AdminQuarterlyReportsScreen';
 import AllPackagesScreen from '../screens/admin/AllPackages';
 import AllUsersScreen from '../screens/admin/AllUsersScreen';
 import BatchAdditionalClassScreen
@@ -46,6 +48,7 @@ import ChildScheduleScreen from '../screens/admin/ChildScheduleScreen';
 import ComplainManagementScreen from '../screens/admin/ComplainManagement';
 import CreateNewInvoiceScreen from '../screens/admin/CreateNewInvoice';
 import FeedbackScreen from '../screens/admin/Feedback';
+import FeeDetailScreen from '../screens/admin/FeeDetailScreen';
 import FeeManagementScreen from '../screens/admin/FeeManagement';
 import InvoiceDetailScreen from '../screens/admin/InvoiceDetailScreen';
 import InvoiceManagementScreen from '../screens/admin/InvoiceManagement';
@@ -90,7 +93,6 @@ import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
 import { commonStyles } from '../styles/theme';
-import FeeDetailScreen from '../screens/admin/FeeDetailScreen';
 
 const Stack = createNativeStackNavigator();
 const navigationRef = createNavigationContainerRef();
@@ -140,6 +142,7 @@ const SCREEN_LAYOUTS = {
     SendPushNotification: { headerTitle: "Send Notification" },
     AllUsers: { headerTitle: "All Users" },
     FeeDetail: { headerTitle: "Fee Details" },
+    AdminQuarterlyReports: { headerTitle: "Quarterly Reports" },
   },
   Therapist: {
     TherapistDashboard: { showHeader: false, showFooter: true },
@@ -212,6 +215,7 @@ const ACTIVE_TAB_ROUTES = {
     SendPushNotification: "AdminDashboard",
     AllUsers: "AdminDashboard",
     FeeDetail: "AdminDashboard",
+    AdminQuarterlyReports: "AdminDashboard",
   },
   Therapist: {
     TherapistDashboard: "TherapistDashboard",
@@ -289,6 +293,7 @@ const ADMIN_SCREENS = [
   ["ChildDetails", ChildDetailsScreen],
   ["SendPushNotification", SendPushNotificationScreen],
   ["AllUsers", AllUsersScreen],
+  ["AdminQuarterlyReports", AdminQuarterlyReportsScreen],
 ];
 
 const THERAPIST_SCREENS = [
@@ -391,23 +396,26 @@ function getActiveRoute(state) {
 }
 
 export default function AppNavigator() {
-  const { token, userRole, isLoading } = useContext(AuthContext);
+  const {
+    token,
+    userRole,
+    isLoading,
+    isImpersonating,
+  } = useContext(AuthContext);
   const normalizedRole = userRole?.toString().trim();
   const [activeScreen, setActiveScreen] = useState("");
 
   const [layout, setLayout] = useState(DEFAULT_LAYOUT);
   const [activeTab, setActiveTab] = useState("AdminDashboard");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-
+  const sessionKey = `${normalizedRole}-${token || "no-token"}`;
   const updateLayout = useCallback(() => {
     if (!navigationRef.isReady()) return;
 
     const route = getActiveRoute(navigationRef.getRootState());
 
     if (!route) return;
-    setActiveScreen((previous) =>
-      previous === route.name ? previous : route.name
-    );
+    setActiveScreen((previous) => previous === route.name ? previous : route.name);
 
     const routeLayout = SCREEN_LAYOUTS[normalizedRole]?.[route.name] || {};
     const overrideLayout = route.params?.layout || {};
@@ -436,7 +444,16 @@ export default function AppNavigator() {
       setActiveTab((previous) => previous === nextTab ? previous : nextTab);
     }
   }, [normalizedRole]);
+  useEffect(() => {
+    setActiveScreen("");
+    setLayout(DEFAULT_LAYOUT);
+    setActiveTab("AdminDashboard");
+    setIsNotificationOpen(false);
 
+    if (!token) {
+      return;
+    }
+  }, [sessionKey]);
   useEffect(() => {
     if (!token) {
       setLayout(DEFAULT_LAYOUT);
@@ -485,13 +502,14 @@ export default function AppNavigator() {
             style={{ flex: 1 }}
             behavior={Platform.OS === "ios" ? "padding" : "padding"}
           >
-
             <View style={styles.content}>
               {normalizedRole === "Admin"
-                ? <AdminStack />
+                ? <AdminStack key={sessionKey} />
                 : normalizedRole === "Therapist"
-                ? <TherapistStack />
-                : <ChildStack />}
+                ? <TherapistStack key={sessionKey} />
+                : normalizedRole === "Child"
+                ? <ChildStack key={sessionKey} />
+                : null}
             </View>
           </KeyboardAvoidingView>
 

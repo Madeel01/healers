@@ -20,6 +20,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+
 
 import {
   deleteBroadcast,
@@ -50,7 +52,7 @@ const TYPES = {
   Alert: { icon: "alert-triangle", color: "#DC2626", bg: "#FEE2E2" },
   General: { icon: "info", color: "#64748B", bg: "#F1F5F9" },
 };
-const FILTERS = ["All", ...Object.keys(TYPES)];
+const FILTERS = ["All","Unread", ...Object.keys(TYPES)];
 const getMeta = type => TYPES[type] || TYPES.General;
 const timeAgo = value => {
   if (!value) return "";
@@ -175,39 +177,41 @@ export default function NotificationScreen() {
     const meta = getMeta(item.type);
     const unread = !item.isRead;
     return (
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={[styles.card, unread && styles.unreadCard]}
-        onPress={() => openNotification(item)}
-      >
-        <View style={[styles.typeIcon, { backgroundColor: meta.bg }]}>
-          <Feather name={meta.icon} size={wp(21)} color={meta.color} />
-        </View>
-        <View style={styles.cardContent}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.cardTitle, unread && styles.cardTitleUnread]} numberOfLines={2}>
-              {item.title || "Notification"}
-            </Text>
-            {unread && <View style={styles.unreadDot} />}
-          </View>
-          <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
-          <View style={styles.cardBottom}>
-            <View style={[styles.tag, { backgroundColor: meta.bg }]}>
-              <Text style={[styles.tagText, { color: meta.color }]}>{item.type || "General"}</Text>
-            </View>
-            {item.attachment?.url && <Feather name="paperclip" size={wp(13)} color="#94A3B8" />}
-            <Text style={styles.timeText}>{timeAgo(item.sentAt || item.createdAt)}</Text>
-          </View>
-        </View>
+      <View style={styles.cardShadow}>
         <TouchableOpacity
-          onPress={() => setDeleteItem(item)}
-          style={styles.deleteIcon}
-          hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-          accessibilityLabel="Delete notification"
+          activeOpacity={0.85}
+          style={[styles.card, unread && styles.unreadCard]}
+          onPress={() => openNotification(item)}
         >
-          <Feather name="trash-2" size={wp(17)} color="#94A3B8" />
+          <View style={[styles.typeIcon, { backgroundColor: meta.bg }]}>
+            <Feather name={meta.icon} size={wp(21)} color={meta.color} />
+          </View>
+          <View style={styles.cardContent}>
+            <View style={styles.titleRow}>
+              <Text style={[styles.cardTitle, unread && styles.cardTitleUnread]} numberOfLines={2}>
+                {item.title || "Notification"}
+              </Text>
+              {unread && <View style={styles.unreadDot} />}
+            </View>
+            <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
+            <View style={styles.cardBottom}>
+              <View style={[styles.tag, { backgroundColor: meta.bg }]}>
+                <Text style={[styles.tagText, { color: meta.color }]}>{item.type || "General"}</Text>
+              </View>
+              {item.attachment?.url && <Feather name="paperclip" size={wp(13)} color="#94A3B8" />}
+              <Text style={styles.timeText}>{timeAgo(item.sentAt || item.createdAt)}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => setDeleteItem(item)}
+            style={styles.deleteIcon}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+            accessibilityLabel="Delete notification"
+          >
+            <Feather name="trash-2" size={wp(17)} color="#94A3B8" />
+          </TouchableOpacity>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -236,7 +240,7 @@ export default function NotificationScreen() {
             <TouchableOpacity onPress={markAll} disabled={markingAll} style={styles.markAll}>
               {markingAll
                 ? <ActivityIndicator size="small" color={colors.primary} />
-                : <Feather name="check-check" size={wp(15)} color={colors.primary} />}
+                : <MaterialIcons name="done-all" size={wp(15)} color={colors.primary} />}
               <Text style={styles.markAllText}>Mark all read</Text>
             </TouchableOpacity>
           )}
@@ -396,20 +400,30 @@ const styles = StyleSheet.create({
   list: { flex: 1 },
   listContent: { paddingHorizontal: wp(18), paddingTop: hp(16) },
   emptyList: { flexGrow: 1, justifyContent: "center" },
+  cardShadow: {
+    marginBottom: hp(11),
+    borderRadius: wp(17),
+    backgroundColor: "#FFFFFF",
+    elevation: 3,
+  },
   card: {
     flexDirection: "row",
     alignItems: "flex-start",
     padding: wp(14),
-    marginBottom: hp(11),
+    // marginBottom: hp(11),
     backgroundColor: "#FFFFFF",
+    // overflow: "hidden",
     borderRadius: wp(17),
     borderWidth: 1,
     borderColor: "#EDF1F7",
-    shadowColor: "#1E293B",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.04,
-    shadowRadius: 9,
-    elevation: 2,
+    // shadowColor: "#1E293B",
+    // shadowOffset: { width: 0, height: 3 },
+    // shadowOpacity: 0.04,
+    // shadowRadius: 9,
+    // shadowColor: "#64748B",
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.08,
+    // shadowRadius: 5,
   },
   unreadCard: {
     backgroundColor: "#F9FBFF",

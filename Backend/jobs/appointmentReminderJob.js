@@ -40,7 +40,6 @@ async function processAppointmentReminders() {
       },
       "appointments.reminderSentAt": null,
     }).select("therapistId appointments");
-
     for (const schedule of schedules) {
       for (const appointment of schedule.appointments) {
         try {

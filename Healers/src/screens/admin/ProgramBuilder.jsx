@@ -526,7 +526,7 @@ export default function ProgramBuilderScreen({ navigation }) {
             </TouchableOpacity>
           )}
 
-          {selectedTherapist && (
+          {/* {selectedTherapist && (
             <TouchableOpacity
               style={[
                 styles.loginTherapistBtn,
@@ -539,7 +539,7 @@ export default function ProgramBuilderScreen({ navigation }) {
                 Login as Therapist
               </Text>
             </TouchableOpacity>
-          )}
+          )} */}
         </View>
 
         <View style={styles.selectorSection}>
@@ -599,7 +599,7 @@ export default function ProgramBuilderScreen({ navigation }) {
                 </TouchableOpacity>
               )}
 
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={[
                   styles.loginTherapistBtn,
                   (!selectedChildId || loginLoading) && styles.disabledButton,
@@ -610,7 +610,7 @@ export default function ProgramBuilderScreen({ navigation }) {
                 <Text style={styles.loginTherapistText}>
                   Login as Child
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </>
           )}
         </View>

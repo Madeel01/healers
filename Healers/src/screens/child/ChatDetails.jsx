@@ -10,8 +10,6 @@ import {
   FlatList,
   Image,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -27,6 +25,7 @@ import {
 } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
+import { getConversationId } from '../../api/admin/api';
 import {
   getConversationsLastSeen,
   getMessagesApi,
@@ -42,7 +41,6 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
-import { getConversationId } from '../../api/admin/api';
 
 export default function ChatDetailsScreen({ route, navigation }) {
   const {
@@ -295,7 +293,7 @@ export default function ChatDetailsScreen({ route, navigation }) {
       "keyboardDidHide",
       () => setKeyboardVisible(false),
     );
-
+    console.log(keyboardVisible,"keyboardVisible");
     return () => {
       showSubscription.remove();
       hideSubscription.remove();
@@ -387,11 +385,11 @@ export default function ChatDetailsScreen({ route, navigation }) {
       </View>
 
       {/* Keyboard Avoiding Container */}
-      <KeyboardAvoidingView
+      {/* <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-      >
+      > */}
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={{ flex: 1 }}>
             {loading ? <ActivityIndicator size="large" color="#00528A" style={{ flex: 1 }} /> : (
@@ -405,12 +403,12 @@ export default function ChatDetailsScreen({ route, navigation }) {
                 onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
               />
             )}
-
+{/* keyboardVisible */}
             <View
               style={[
                 styles.inputContainerSafeArea,
                 {
-                  paddingBottom: keyboardVisible ? insets.bottom : 0,
+                  paddingBottom: 0 ? insets.bottom : 0,
                 },
               ]}
             >
@@ -430,7 +428,7 @@ export default function ChatDetailsScreen({ route, navigation }) {
             </View>
           </View>
         </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+      {/* </KeyboardAvoidingView> */}
     </View>
   );
 }

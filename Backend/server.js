@@ -22,15 +22,16 @@ app.use((req, res, next) => {
   next();
 });
 const MONGO_URI = process.env.MONGO_URI;
-console.log(MONGO_URI,"uriiii");
 mongoose
-  .connect("mongodb://thehealerskpk_db_user:LtNEh6OflcIdLthE@ac-9jthydw-shard-00-00.h6wruvp.mongodb.net:27017,ac-9jthydw-shard-00-01.h6wruvp.mongodb.net:27017,ac-9jthydw-shard-00-02.h6wruvp.mongodb.net:27017/HEALERS?ssl=true&replicaSet=atlas-qvc2hf-shard-0&authSource=admin&appName=Healers")
+  .connect(MONGO_URI)
   .then(() => {
     console.log("MongoDB Connected Successfully");
     // require("./jobs/cleanupPendingUploads")();
     try {
+      // require("./jobs/monthlyInvoiceJob").test("mahnoor@gmail.com");
       require("./jobs/appointmentReminderJob").start();
       require("./jobs/scheduledBroadcasts").start();
+      // require("./jobs/monthlyInvoiceJob").start();
     } catch (err) {
       console.error("Scheduled broadcast startup error:", err);
     }

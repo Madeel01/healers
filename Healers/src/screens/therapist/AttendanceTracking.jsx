@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
@@ -936,111 +939,80 @@ export default function AttendanceTrackingScreen({ route }) {
             false,
           )}
       >
-        <View
-          style={styles.overlay}
-        >
-          <View
-            style={styles.modal}
+            
+        <SafeAreaView style={{ flex: 1 }}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
           >
             <View
-              style={styles.modalHeader}
+              style={styles.overlay}
             >
-              <Text
-                style={styles.modalTitle}
+              <View
+                style={styles.modal}
               >
-                Filter Children
-              </Text>
-
-              <TouchableOpacity
-                onPress={() =>
-                  setChildFilterVisible(
-                    false,
-                  )}
-              >
-                <Feather
-                  name="x"
-                  size={fontSize(22)}
-                  color={DARK}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View
-              style={styles.searchBox}
-            >
-              <Feather
-                name="search"
-                size={fontSize(18)}
-                color={MUTED}
-              />
-
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search child name..."
-                placeholderTextColor={MUTED}
-                value={childSearch}
-                onChangeText={setChildSearch}
-              />
-            </View>
-
-            <ScrollView
-              style={{
-                maxHeight: 350,
-              }}
-              keyboardShouldPersistTaps="handled"
-            >
-              <TouchableOpacity
-                style={styles.filterOption}
-                onPress={() => {
-                  setSelectedChildId(
-                    null,
-                  );
-
-                  setChildFilterVisible(
-                    false,
-                  );
-                }}
-              >
-                <Feather
-                  name="users"
-                  size={fontSize(20)}
-                  color={BLUE}
-                />
-
-                <Text
-                  style={styles.filterOptionText}
+                <View
+                  style={styles.modalHeader}
                 >
-                  All Children
-                </Text>
+                  <Text
+                    style={styles.modalTitle}
+                  >
+                    Filter Children
+                  </Text>
 
-                {!selectedChildId && (
-                  <Feather
-                    name="check-circle"
-                    size={fontSize(20)}
-                    color={BLUE}
-                  />
-                )}
-              </TouchableOpacity>
-
-              {filteredModalChildren.map(
-                (child) => (
                   <TouchableOpacity
-                    key={child.childId}
+                    onPress={() =>
+                      setChildFilterVisible(
+                        false,
+                      )}
+                  >
+                    <Feather
+                      name="x"
+                      size={fontSize(22)}
+                      color={DARK}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View
+                  style={styles.searchBox}
+                >
+                  <Feather
+                    name="search"
+                    size={fontSize(18)}
+                    color={MUTED}
+                  />
+
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search child name..."
+                    placeholderTextColor={MUTED}
+                    value={childSearch}
+                    onChangeText={setChildSearch}
+                  />
+                </View>
+
+                <ScrollView
+                  style={{
+                    maxHeight: 350,
+                  }}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <TouchableOpacity
                     style={styles.filterOption}
                     onPress={() => {
                       setSelectedChildId(
-                        child.childId,
+                        null,
                       );
 
                       setChildFilterVisible(
                         false,
                       );
-
-                      setFull(false);
                     }}
                   >
                     <Feather
-                      name="user"
+                      name="users"
                       size={fontSize(20)}
                       color={BLUE}
                     />
@@ -1048,11 +1020,10 @@ export default function AttendanceTrackingScreen({ route }) {
                     <Text
                       style={styles.filterOptionText}
                     >
-                      {child.childName}
+                      All Children
                     </Text>
 
-                    {selectedChildId
-                        === child.childId && (
+                    {!selectedChildId && (
                       <Feather
                         name="check-circle"
                         size={fontSize(20)}
@@ -1060,11 +1031,52 @@ export default function AttendanceTrackingScreen({ route }) {
                       />
                     )}
                   </TouchableOpacity>
-                ),
-              )}
-            </ScrollView>
-          </View>
-        </View>
+
+                  {filteredModalChildren.map(
+                    (child) => (
+                      <TouchableOpacity
+                        key={child.childId}
+                        style={styles.filterOption}
+                        onPress={() => {
+                          setSelectedChildId(
+                            child.childId,
+                          );
+
+                          setChildFilterVisible(
+                            false,
+                          );
+
+                          setFull(false);
+                        }}
+                      >
+                        <Feather
+                          name="user"
+                          size={fontSize(20)}
+                          color={BLUE}
+                        />
+
+                        <Text
+                          style={styles.filterOptionText}
+                        >
+                          {child.childName}
+                        </Text>
+
+                        {selectedChildId
+                            === child.childId && (
+                          <Feather
+                            name="check-circle"
+                            size={fontSize(20)}
+                            color={BLUE}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    ),
+                  )}
+                </ScrollView>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
 
       {/* MONTH PICKER */}
@@ -1251,19 +1263,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     height: hp(54),
     borderRadius: wp(13),
+    paddingVertical:hp(5),
   },
   dayActive: {
     backgroundColor: "#1D70EE",
   },
   dayName: {
-    fontSize: fontSize(11),
+    fontSize: fontSize(10),
     color: MUTED,
+    lineHeight:14
   },
   dayNumber: {
     fontSize: fontSize(15),
     fontFamily: fonts.bold,
     color: DARK,
-    marginTop: 4,
   },
   sectionHeader: {
     flexDirection: "row",

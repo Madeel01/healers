@@ -429,7 +429,6 @@ export default function ChildScheduleScreen({ navigation, route }) {
     ]);
 
   const cancelAppointment = (s) => {
-    const childId = s.children?.[0]?.childId;
     if (!childId) return;
     confirmAction({
       title: "Cancel appointment",
@@ -441,7 +440,6 @@ export default function ChildScheduleScreen({ navigation, route }) {
   };
 
   const deleteAppointment = (s) => {
-    const childId = s.children?.[0]?.childId;
     if (!childId) return;
     confirmAction({
       title: "Delete appointment",
@@ -863,7 +861,7 @@ export default function ChildScheduleScreen({ navigation, route }) {
       </TouchableOpacity>
       <PostponeCustomModal
         visible={!!postponeTarget}
-        childId={postponeTarget?.children?.[0]?.childId}
+        childId={childId}
         appointment={postponeTarget}
         onClose={() => setPostponeTarget(null)}
         onDone={() => {

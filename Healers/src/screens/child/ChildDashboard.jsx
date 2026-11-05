@@ -26,6 +26,7 @@ import { useIsFocused } from '@react-navigation/native';
 
 import { getServices } from '../../api/admin/api';
 import {
+  getChildSummeryApi,
   getUnreadNotificationCountApi,
   switchUserApi,
 } from '../../api/authApi';
@@ -48,14 +49,13 @@ import {
 } from '../../utils/responsive';
 
 export default function ChildDashboardScreen({ navigation }) {
-  const { user, logout, switchUser } = useContext(AuthContext);
+  const { user, logout, switchUser, isImpersonating } = useContext(AuthContext);
   const userName = user?.fullName || user?.name || "";
   const profileImage = user?.profileImage || "";
   const userId = user?.id || user?.id;
   const role = user?.role;
   const fatherCnic = user?.fatherCnic;
   const [services, setServices] = useState([]);
-  // console.log("user", user);
   const [unreadData, setUnreadData] = useState({
     hasUnread: false,
     totalUnreadCount: 0,
@@ -69,7 +69,28 @@ export default function ChildDashboardScreen({ navigation }) {
   const [upcomingSessions, setUpcomingSessions] = useState([]);
   const [totalUpcomingSessions, setTotalUpcomingSessions] = useState(0);
   const [upcomingLoading, setUpcomingLoading] = useState(true);
+  const [dashboardSummery, setDashboardSummery] = useState({
+    notificationCount: 0,
+    invoiceCount: 0,
+    unreadMessagesCount: 0,
+    feedbackCount: 0,
+  });
 
+  const dashboardSummeryAPI = async () => {
+    try {
+      const response = await getChildSummeryApi();
+      if (response?.success) {
+        setDashboardSummery({
+          notificationCount: response.notificationCount || 0,
+          invoiceCount: response.invoiceCount || 0,
+          unreadMessagesCount: response.unreadMessagesCount || 0,
+          feedbackCount: response.feedbackCount || 0,
+        });
+      }
+    } catch (error) {
+      console.log("dashboardSummeryAPI error:", error);
+    }
+  };
   const fetchNotificationUnreadCount = async () => {
     try {
       const response = await getUnreadNotificationCountApi();
@@ -204,10 +225,14 @@ export default function ChildDashboardScreen({ navigation }) {
 
     fetchUnreadSummary();
     fetchNotificationUnreadCount();
+    dashboardSummeryAPI();
     fetchUpcomingSessions();
 
     const interval = setInterval(() => {
       fetchUnreadSummary();
+    }, 5000);
+    const intervalDashBoard = setInterval(() => {
+      dashboardSummeryAPI();
     }, 5000);
 
     const intervalUnread = setInterval(() => {
@@ -217,6 +242,7 @@ export default function ChildDashboardScreen({ navigation }) {
     return () => {
       clearInterval(interval);
       clearInterval(intervalUnread);
+      clearInterval(intervalDashBoard);
     };
   }, [isFocused, userId]);
 
@@ -269,6 +295,17 @@ export default function ChildDashboardScreen({ navigation }) {
     bellShake.setValue(0);
   }, [notificationUnreadCount]);
 
+  const CounterBadge = ({ count }) => {
+    if (!count) return null;
+
+    return (
+      <View style={styles.counterPosition}>
+        <Text style={styles.counterText}>
+          {count > 99 ? "99+" : count}
+        </Text>
+      </View>
+    );
+  };
   return (
     <View style={[styles.mainContainer, commonStyles.container]}>
       <View style={styles.headerRow}>
@@ -368,6 +405,7 @@ export default function ChildDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("ChildFeedback")}
           >
             <View style={[styles.iconCircle, { backgroundColor: "#FDE6D2" }]}>
+              <CounterBadge count={dashboardSummery.feedbackCount} />
               <Feather name="star" size={fontSize(24)} color="#F97316" />
             </View>
             <Text style={styles.gridCardTitle}>Feedback</Text>
@@ -376,11 +414,14 @@ export default function ChildDashboardScreen({ navigation }) {
           <TouchableOpacity
             style={styles.gridCard}
             activeOpacity={0.8}
+            disabled={isImpersonating}
+
             onPress={() => navigation.navigate("ChildMessages")}
           >
             <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
+              <CounterBadge count={dashboardSummery.unreadMessagesCount} />
               <Feather name="message-square" size={fontSize(24)} color="#10B981" />
-              {unreadData.hasUnread && <View style={styles.cardBadgeDot} />}
+              {/* {unreadData.hasUnread && <View style={styles.cardBadgeDot} />} */}
             </View>
             <Text style={styles.gridCardTitle}>Messages</Text>
           </TouchableOpacity>
@@ -391,6 +432,7 @@ export default function ChildDashboardScreen({ navigation }) {
             onPress={() => navigation.navigate("Notifications")}
           >
             <View style={[styles.iconCircle, { backgroundColor: "#FEE2E2" }]}>
+              <CounterBadge count={dashboardSummery.notificationCount} />
               <Entypo name="modern-mic" size={fontSize(24)} color="#EF4444" />
             </View>
             <Text style={styles.gridCardTitle}>School Announcements</Text>
@@ -403,6 +445,7 @@ export default function ChildDashboardScreen({ navigation }) {
           >
             <View style={[styles.iconCircle, { backgroundColor: "#FEE2E2" }]}>
               {/* <MaterialCommunityIcons name="receipt" size={fontSize(24)} color="#EF4444" /> */}
+              <CounterBadge count={dashboardSummery.invoiceCount} />
               <FontAwesome6 name="file-invoice" size={fontSize(24)} color="#EF4444" />
             </View>
             <Text style={styles.gridCardTitle}>Billing & Invoices</Text>
@@ -412,6 +455,8 @@ export default function ChildDashboardScreen({ navigation }) {
         {unreadData.hasUnread && (
           <TouchableOpacity
             style={styles.messageBanner}
+            disabled={isImpersonating}
+
             activeOpacity={0.9}
             onPress={() => navigation.navigate("ChildMessages")}
           >
@@ -527,15 +572,35 @@ export default function ChildDashboardScreen({ navigation }) {
 
         <View style={styles.classesSection}>
           <View style={styles.classesHeaderRow}>
-            <Text style={styles.sectionHeaderTitle}>
-              Upcoming Sessions
-            </Text>
-
-            <View style={styles.counterBadge}>
-              <Text style={styles.counterBadgeText}>
-                {totalUpcomingSessions}
+            <View style={styles.sessionsTitleContainer}>
+              <Text style={styles.sectionHeaderTitle}>
+                Upcoming Sessions
               </Text>
+
+              <View style={styles.counterBadge}>
+                <Text style={styles.counterBadgeText}>
+                  {totalUpcomingSessions}
+                </Text>
+              </View>
             </View>
+
+            {totalUpcomingSessions > 0 && (
+              <TouchableOpacity
+                style={styles.viewAllButton}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate("ChildAttendance")}
+              >
+                <Text style={styles.viewAllText}>
+                  View All
+                </Text>
+
+                <Feather
+                  name="arrow-right"
+                  size={fontSize(15)}
+                  color={colors.primary}
+                />
+              </TouchableOpacity>
+            )}
           </View>
 
           {upcomingLoading
@@ -1006,26 +1071,49 @@ const styles = StyleSheet.create({
   classesSection: {
     marginBottom: 16,
   },
-  classesHeaderRow: {
+  sessionsTitleContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: wp(8),
-    marginBottom: 12,
-    justifyContent: "space-between",
   },
+
+  classesHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+
   counterBadge: {
-    width: wp(24),
-    height: hp(24),
+    minWidth: wp(25),
+    height: hp(25),
+    paddingHorizontal: wp(6),
     borderRadius: wp(999),
-    backgroundColor: "#0F172A",
+    backgroundColor: "#E0F2FE",
     alignItems: "center",
     justifyContent: "center",
   },
+
   counterBadgeText: {
     fontSize: fontSize(12),
-    color: "#FFFFFF",
-    fontFamily: fonts.regular,
-    lineHeight: 14,
+    color: "#0284C7",
+    fontFamily: fonts.semiBold,
+  },
+
+  viewAllButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: wp(5),
+    paddingVertical: hp(6),
+    paddingHorizontal: wp(10),
+    borderRadius: wp(10),
+    backgroundColor: "#EFF6FF",
+  },
+
+  viewAllText: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.semiBold,
+    color: colors.primary,
   },
   classCard: {
     backgroundColor: "#FFFFFF",
@@ -1065,7 +1153,7 @@ const styles = StyleSheet.create({
     color: colors.blackFont,
   },
   avatarFallback: {
-      width: wp(42),
+    width: wp(42),
     height: hp(42),
     borderRadius: wp(999),
     backgroundColor: colors.primary,
@@ -1077,7 +1165,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
-    lineHeight:24
+    lineHeight: 24,
   },
   modalOverlay: {
     flex: 1,
@@ -1193,7 +1281,7 @@ const styles = StyleSheet.create({
     color: "#64748B",
   },
   sessionAvatar: {
-     width: wp(52),
+    width: wp(52),
     height: hp(52),
     borderRadius: wp(26),
   },
@@ -1285,5 +1373,27 @@ const styles = StyleSheet.create({
     fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#64748B",
+  },
+  counterPosition: {
+    position: "absolute",
+    top: -6,
+    right: -7,
+    minWidth: wp(26),
+    minHeight: hp(26),
+    paddingHorizontal: wp(3),
+    borderRadius: wp(22),
+    backgroundColor: "#EF4444",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    zIndex: 10,
+  },
+
+  counterText: {
+    fontSize: fontSize(8),
+    fontFamily: fonts.semiBold,
+    color: "#FFFFFF",
+    textAlign: "center",
   },
 });

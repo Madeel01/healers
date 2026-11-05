@@ -11,6 +11,7 @@ import {
   Alert,
   FlatList,
   Image,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   RefreshControl,
@@ -740,53 +741,58 @@ export default function ScheduleScreen({ navigation }) {
 
       {/* ---------- pick a child for a custom appointment ---------- */}
       <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)} style={{ paddingBottom: insets.bottom }}>
-        <View style={styles.overlay}>
-          <View style={styles.sheet}>
-            <View style={styles.sheetHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sheetTitle}>New appointment</Text>
-                <Text style={styles.sheetSub}>Select the child first</Text>
-              </View>
-              <TouchableOpacity onPress={() => setPickerOpen(false)}>
-                <Feather name="x" size={22} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.searchBox, { marginTop: 8 }]}>
-              <Feather name="search" size={18} color="#94A3B8" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search child..."
-                placeholderTextColor="#94A3B8"
-                value={pickerSearch}
-                onChangeText={setPickerSearch}
-              />
-            </View>
-
-            {pickerLoading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 10 }} />}
-
-            <ScrollView style={{ maxHeight: 340, marginTop: 6 }} keyboardShouldPersistTaps="handled">
-              {!pickerLoading && pickerItems.length === 0 && <Text style={styles.muted}>No children found.</Text>}
-              {pickerItems.map((c) => (
-                <TouchableOpacity
-                  key={c._id || c.id}
-                  style={styles.pickRow}
-                  onPress={() => pickChild(c)}
-                >
-                  <Avatar
-                    uri={c.profileImage}
-                    name={c.fullName || c.name}
-                    color={getAvatarColor(c.fullName || c.name)}
-                    style={styles.avatar}
-                    textStyle={styles.avatarText}
-                  />
-                  <Text style={[styles.childName, { flex: 1 }]}>{c.fullName || c.name}</Text>
-                  <Feather name="chevron-right" size={18} color="#94A3B8" />
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
+          <View style={styles.overlay}>
+            <View style={styles.sheet}>
+              <View style={styles.sheetHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sheetTitle}>New appointment</Text>
+                  <Text style={styles.sheetSub}>Select the child first</Text>
+                </View>
+                <TouchableOpacity onPress={() => setPickerOpen(false)}>
+                  <Feather name="x" size={22} color="#64748B" />
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              </View>
+
+              <View style={[styles.searchBox, { marginTop: 8 }]}>
+                <Feather name="search" size={18} color="#94A3B8" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search child..."
+                  placeholderTextColor="#94A3B8"
+                  value={pickerSearch}
+                  onChangeText={setPickerSearch}
+                />
+              </View>
+
+              {pickerLoading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 10 }} />}
+
+              <ScrollView style={{ maxHeight: 340, marginTop: 6 }} keyboardShouldPersistTaps="handled">
+                {!pickerLoading && pickerItems.length === 0 && <Text style={styles.muted}>No children found.</Text>}
+                {pickerItems.map((c) => (
+                  <TouchableOpacity
+                    key={c._id || c.id}
+                    style={styles.pickRow}
+                    onPress={() => pickChild(c)}
+                  >
+                    <Avatar
+                      uri={c.profileImage}
+                      name={c.fullName || c.name}
+                      color={getAvatarColor(c.fullName || c.name)}
+                      style={styles.avatar}
+                      textStyle={styles.avatarText}
+                    />
+                    <Text style={[styles.childName, { flex: 1 }]}>{c.fullName || c.name}</Text>
+                    <Feather name="chevron-right" size={18} color="#94A3B8" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       <PostponeCustomModal
         visible={!!postponeTarget}

@@ -34,6 +34,10 @@ export const getUnreadNotificationCountApi  = async () => {
   const response = await apiClient.get("/auth/users/notifications/unread-count");
   return response.data;
 };
+export const getChildSummeryApi  = async () => {
+  const response = await apiClient.get("/auth/users/summery/unread-count");
+  return response.data;
+};
 
 export const getUnreadNotificationsApi = async () => {
   const response = await apiClient.get("/auth/users/notifications/unread");
