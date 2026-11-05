@@ -67,7 +67,7 @@ const getGreeting = () => {
 };
 
 export default function TherapistDashboardScreen({ navigation }) {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, isImpersonating } = useContext(AuthContext);
 
   const userName = user?.fullName || user?.name || "";
   const userId = user?.id || user?._id;
@@ -90,6 +90,9 @@ export default function TherapistDashboardScreen({ navigation }) {
     totalUnreadCount: 0,
     latestUnreadMessage: null,
   });
+  const noAssignedChildren = loading || Number(stats.assignedChildren ?? 0) <= 0;
+
+  const disableMessages = isImpersonating;
 
   const [therapistAttendance, setTherapistAttendance] = useState({
     latestAttendance: null,
@@ -351,9 +354,13 @@ export default function TherapistDashboardScreen({ navigation }) {
 
     if (Number.isNaN(date.getTime())) return null;
 
-    return date.toLocaleTimeString([], {
-      hour: "2-digit",
+    return date.toLocaleString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
       minute: "2-digit",
+      hour12: true,
     });
   };
 
@@ -421,6 +428,8 @@ export default function TherapistDashboardScreen({ navigation }) {
         <View style={styles.profileContainer}>
           <TouchableOpacity
             activeOpacity={0.8}
+            // disabled={noAssignedChildren}
+            // style={noAssignedChildren && styles.disabledAction}
             onPress={() => navigation.navigate("ChildProfile")}
           >
             {profileImage
@@ -448,7 +457,12 @@ export default function TherapistDashboardScreen({ navigation }) {
 
         <View style={styles.headerActions}>
           <TouchableOpacity
-            style={[styles.iconButton, { marginLeft: 12 }]}
+            style={[
+              styles.iconButton,
+              { marginLeft: 12 },
+              noAssignedChildren && styles.disabledAction,
+            ]}
+            // disabled={noAssignedChildren}
             activeOpacity={0.7}
             onPress={() => setShowNotificationModal(true)}
           >
@@ -506,7 +520,11 @@ export default function TherapistDashboardScreen({ navigation }) {
 
         <TouchableOpacity
           activeOpacity={0.85}
-          style={styles.checkAttendanceCard}
+          disabled={noAssignedChildren}
+          style={[
+            styles.checkAttendanceCard,
+            noAssignedChildren && styles.disabledAction,
+          ]}
           onPress={() => {
             const appointment = therapistAttendance.dueAppointment;
 
@@ -638,6 +656,7 @@ export default function TherapistDashboardScreen({ navigation }) {
           <TouchableOpacity
             style={styles.messageBanner}
             activeOpacity={0.9}
+            disabled={disableMessages}
             onPress={() => navigation.navigate("ChildMessages")}
           >
             <View style={styles.messageBannerHeader}>
@@ -696,6 +715,7 @@ export default function TherapistDashboardScreen({ navigation }) {
 
           <TouchableOpacity
             style={styles.actionItem}
+            disabled={disableMessages}
             onPress={() => navigation.navigate("ChildMessages")}
           >
             <View style={[styles.actionIconBox, { backgroundColor: "#DBEAFE" }]}>
@@ -726,6 +746,7 @@ export default function TherapistDashboardScreen({ navigation }) {
 
           <TouchableOpacity
             style={styles.actionItem}
+            disabled={noAssignedChildren}
             onPress={() => navigation.navigate("LeaveRequest")}
           >
             <View style={[styles.actionIconBox, { backgroundColor: "#DCFCE7" }]}>
@@ -969,12 +990,12 @@ const styles = StyleSheet.create({
   },
   avatar: {
     width: wp(38),
-    height: hp(38),
+    height: hp(40),
     borderRadius: wp(19),
   },
   avatarFallback: {
     width: wp(38),
-    height: hp(38),
+    height: hp(40),
     borderRadius: wp(999),
     backgroundColor: colors.primary,
     alignItems: "center",

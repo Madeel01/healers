@@ -133,6 +133,9 @@ export default function AttendanceTrackingScreen({ route }) {
       ? "Today"
       : "Week",
   );
+  const attendanceType = route?.params?.attendanceType === "therapist"
+    ? "therapist"
+    : "child";
 
   const [selectedDate, setSelectedDate] = useState(
     new Date(),
@@ -179,6 +182,7 @@ export default function AttendanceTrackingScreen({ route }) {
         month: selectedDate.getMonth() + 1,
         mode: mode.toLowerCase(),
         date: dateKey(selectedDate),
+        attendanceType,
       };
 
       const response = await getAttendanceApi(params);
@@ -207,7 +211,7 @@ export default function AttendanceTrackingScreen({ route }) {
     } finally {
       setLoading(false);
     }
-  }, [mode, selectedDate]);
+  }, [mode, selectedDate, attendanceType]);
 
   useFocusEffect(
     useCallback(() => {
@@ -366,14 +370,17 @@ export default function AttendanceTrackingScreen({ route }) {
   }, [childOptions, childSearch]);
 
   const filteredRecords = useMemo(() => {
-    if (!selectedChildId) {
+    if (
+      attendanceType === "therapist"
+      || !selectedChildId
+    ) {
       return records;
     }
 
     return records.filter(
       (item) => item.childId === selectedChildId,
     );
-  }, [records, selectedChildId]);
+  }, [records, selectedChildId, attendanceType]);
 
   const shown = full
     ? filteredRecords
@@ -672,19 +679,18 @@ export default function AttendanceTrackingScreen({ route }) {
             {filteredRecords.length} Appointments
           </Text>
 
-          <TouchableOpacity
-            style={styles.refresh}
-            onPress={() =>
-              setChildFilterVisible(
-                true,
-              )}
-          >
-            <Feather
-              name="sliders"
-              size={fontSize(16)}
-              color="#60718A"
-            />
-          </TouchableOpacity>
+          {attendanceType === "child" && (
+            <TouchableOpacity
+              style={styles.refresh}
+              onPress={() => setChildFilterVisible(true)}
+            >
+              <Feather
+                name="sliders"
+                size={fontSize(16)}
+                color="#60718A"
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         {loading
@@ -711,22 +717,43 @@ export default function AttendanceTrackingScreen({ route }) {
           )
           : (
             shown.map((item) => {
-              const present = item.attendanceStatus
-                === "Present";
+              const therapistStatus = (
+                item.therapistAttendance || "pending"
+              ).toLowerCase();
 
-              const absent = item.attendanceStatus
-                === "Absent";
+              const therapistPresent = therapistStatus === "present";
+              const therapistAbsent = therapistStatus === "absent";
 
-              const future = getAppointmentDateTime(
-                item,
-              ) > new Date();
+              const therapistStatusLabel = {
+                present: "Present",
+                absent: "Absent",
+                pending: "Pending",
+                cancel: "Cancelled",
+                postpond: "Postponed",
+              }[therapistStatus] || "Pending";
 
-              const profileUri = typeof item.profileImage
-                  === "string"
+              const therapistStatusStyle = therapistPresent
+                ? styles.pillPresent
+                : therapistAbsent || therapistStatus === "cancel"
+                ? styles.pillAbsent
+                : styles.pillPending;
+
+              const therapistStatusColor = therapistPresent
+                ? "#009D73"
+                : therapistAbsent || therapistStatus === "cancel"
+                ? "#E23838"
+                : "#BD7400";
+
+              const present = item.attendanceStatus === "Present";
+              const absent = item.attendanceStatus === "Absent";
+
+              const future = getAppointmentDateTime(item) > new Date();
+
+              const profileUri = typeof item.profileImage === "string"
                 ? item.profileImage
                 : item.profileImage?.url;
 
-              const rowId = `${item.attendanceId}:${item.appointmentId}:${item.childId}`;
+              const rowId = `${item.attendanceId}:${item.appointmentId}:${item.childId || "therapist"}`;
 
               return (
                 <View
@@ -736,9 +763,7 @@ export default function AttendanceTrackingScreen({ route }) {
                   {profileUri
                     ? (
                       <Image
-                        source={{
-                          uri: profileUri,
-                        }}
+                        source={{ uri: profileUri }}
                         style={styles.avatar}
                       />
                     )
@@ -762,7 +787,9 @@ export default function AttendanceTrackingScreen({ route }) {
                       style={styles.childName}
                       numberOfLines={2}
                     >
-                      {item.childName}
+                      {attendanceType === "therapist"
+                        ? `Appointment: ${item.childName}`
+                        : item.childName}
                     </Text>
 
                     <View style={styles.childDateRow}>
@@ -777,7 +804,6 @@ export default function AttendanceTrackingScreen({ route }) {
                       </Text>
                     </View>
 
-                    {/* Appointment Time */}
                     <View style={styles.childTimeRow}>
                       <Feather
                         name="clock"
@@ -790,86 +816,88 @@ export default function AttendanceTrackingScreen({ route }) {
                       </Text>
                     </View>
                   </View>
-                  <View
-                    style={styles.controls}
-                  >
-                    <TouchableOpacity
-                      disabled={future
-                        || !!updating}
-                      onPress={() =>
-                        update(
-                          item,
-                          "Present",
-                        )}
-                      style={[
-                        styles.control,
-                        present
-                        && styles.presentControl,
-                      ]}
-                    >
-                      <Feather
-                        name="check"
-                        size={fontSize(15)}
-                        color={present
-                          ? "#FFFFFF"
-                          : "#B4C2D2"}
-                      />
-                    </TouchableOpacity>
 
-                    <TouchableOpacity
-                      disabled={future
-                        || !!updating}
-                      onPress={() =>
-                        update(
-                          item,
-                          "Absent",
-                        )}
-                      style={[
-                        styles.control,
-                        absent
-                        && styles.absentControl,
-                      ]}
-                    >
-                      <Feather
-                        name="x"
-                        size={fontSize(15)}
-                        color={absent
-                          ? "#FFFFFF"
-                          : "#B4C2D2"}
-                      />
-                    </TouchableOpacity>
-                  </View>
+                  {attendanceType === "child"
+                    ? (
+                      <>
+                        <View style={styles.controls}>
+                          <TouchableOpacity
+                            disabled={future || !!updating}
+                            onPress={() => update(item, "Present")}
+                            style={[
+                              styles.control,
+                              present && styles.presentControl,
+                            ]}
+                          >
+                            <Feather
+                              name="check"
+                              size={fontSize(15)}
+                              color={present ? "#FFFFFF" : "#B4C2D2"}
+                            />
+                          </TouchableOpacity>
 
-                  <View
-                    style={[
-                      styles.pill,
-                      present
-                        ? styles.pillPresent
-                        : absent
-                        ? styles.pillAbsent
-                        : styles.pillPending,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.pillText,
-                        {
-                          color: present
-                            ? "#009D73"
-                            : absent
-                            ? "#E23838"
-                            : "#BD7400",
-                        },
-                      ]}
-                    >
-                      {future
-                        ? "Not Yet"
-                        : item.attendanceStatus}
-                    </Text>
-                  </View>
+                          <TouchableOpacity
+                            disabled={future || !!updating}
+                            onPress={() => update(item, "Absent")}
+                            style={[
+                              styles.control,
+                              absent && styles.absentControl,
+                            ]}
+                          >
+                            <Feather
+                              name="x"
+                              size={fontSize(15)}
+                              color={absent ? "#FFFFFF" : "#B4C2D2"}
+                            />
+                          </TouchableOpacity>
+                        </View>
 
-                  {updating
-                      === rowId && (
+                        <View
+                          style={[
+                            styles.pill,
+                            present
+                              ? styles.pillPresent
+                              : absent
+                              ? styles.pillAbsent
+                              : styles.pillPending,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.pillText,
+                              {
+                                color: present
+                                  ? "#009D73"
+                                  : absent
+                                  ? "#E23838"
+                                  : "#BD7400",
+                              },
+                            ]}
+                          >
+                            {future ? "Not Yet" : item.attendanceStatus}
+                          </Text>
+                        </View>
+                      </>
+                    )
+                    : (
+                      <View
+                        style={[
+                          styles.pill,
+                          therapistStatusStyle,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.pillText,
+                            { color: therapistStatusColor },
+                          ]}
+                        >
+                          {therapistStatusLabel}
+                        </Text>
+                      </View>
+                    )}
+
+                  {updating === rowId && (
                     <ActivityIndicator
                       size="small"
                       color={BLUE}
@@ -1152,7 +1180,7 @@ const styles = StyleSheet.create({
     color: "#07508D",
     fontSize: fontSize(12),
     fontFamily: fonts.semiBold,
-    lineHeight:16
+    lineHeight: 16,
   },
   modeRow: {
     flexDirection: "row",
@@ -1291,7 +1319,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize(12),
     fontFamily: fonts.bold,
     color: DARK,
-    lineHeight:16
+    lineHeight: 16,
   },
   childTime: {
     fontSize: fontSize(10),
@@ -1306,7 +1334,7 @@ const styles = StyleSheet.create({
     gap: wp(3),
   },
   control: {
-   height: wp(28),
+    height: wp(28),
     width: hp(28),
     borderRadius: wp(8),
     alignItems: "center",
