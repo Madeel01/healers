@@ -132,35 +132,38 @@ const GoalsText = ({ goals }) => {
   return (
     <View style={styles.goalWrap}>
       {shown.map((g, i) => {
-        const hasProgress = typeof g.progress === "number"; // purani reports mein nahi hoga
+        const hasProgress = typeof g.progress === "number";
         const pct = hasProgress ? Math.min(100, Math.max(0, g.progress)) : 0;
-        const c = STATUS_COLORS[g.status] || STATUS_COLORS.pending;
+        const statusKey = getStatusKey(g);
+        const c = STATUS_COLORS[statusKey];
 
         return (
-          <View
+            <View
             key={`${g.goalId || g.goalName}-${i}`}
             style={[
-              styles.goalChip,
-              { backgroundColor: c.bg, borderColor: c.border },
+                styles.goalChip,
+                { backgroundColor: c.bg, borderColor: c.border },
             ]}
-          >
+            >
             {hasProgress && (
-              <View
+                <View
                 style={[
-                  styles.goalFill,
-                  { width: `${pct}%`, backgroundColor: c.fill },
+                    styles.goalFill,
+                    { width: `${pct}%`, backgroundColor: c.fill },
                 ]}
-              />
+                />
             )}
-            <Text style={[styles.goalChipText, { color: c.text }]}>
-              {g.goalName}
-            </Text>
-            {hasProgress && (
-              <Text style={[styles.goalPct, { color: c.text }]}>{pct}%</Text>
-            )}
-          </View>
+            <View style={styles.goalChipContent}>
+                <Text style={[styles.goalChipText, { color: c.text }]}>
+                {g.goalName}
+                </Text>
+                {hasProgress && (
+                <Text style={[styles.goalPct, { color: c.text }]}>{pct}%</Text>
+                )}
+            </View>
+            </View>
         );
-      })}
+        })}
 
       {hidden > 0 && (
         <TouchableOpacity
@@ -724,6 +727,7 @@ const styles = StyleSheet.create({
   metaPill: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent:"center",
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -818,16 +822,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   goalChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
     overflow: "hidden",
     borderWidth: 1,
     borderRadius: 999,
+  },
+  goalChipContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  goalFill: { position: "absolute", left: 0, top: 0, bottom: 0 },
+  goalFill: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+  },
   goalChipText: { fontSize: fontSize(11), fontFamily: fonts.medium },
   goalPct: { fontSize: fontSize(11), fontFamily: fonts.bold },
 

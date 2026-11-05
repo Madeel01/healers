@@ -119,15 +119,15 @@ export default function LeaveRequestsScreen({ navigation }) {
   useEffect(() => {
     if (!isFocused) return;
 
-    const markSeen = async () => {
-      try {
-        await markAllLeavesSeen();
-      } catch (error) {
-        console.log("Failed to mark leave requests as seen:", error);
-      }
-    };
+    // const markSeen = async () => {
+    //   try {
+    //     await markAllLeavesSeen();
+    //   } catch (error) {
+    //     console.log("Failed to mark leave requests as seen:", error);
+    //   }
+    // };
 
-    markSeen();
+    // markSeen();
   }, [isFocused]);
 
   const formatDate = (d) =>

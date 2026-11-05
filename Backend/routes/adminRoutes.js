@@ -76,7 +76,7 @@ const {
   getProgramTherapists,
   getProgramTherapistChildren,
   sendFeedbackReminderNotification,
-  markAllLeavesSeen,
+  // markAllLeavesSeen,
   uploadChildDocument,
   getAllUsers,
   createAdmin,
@@ -137,12 +137,12 @@ router.get("/leave-requests", protect, getLeaveRequests);
 router.put("/leave-requests/:id/approve", protect, approveLeaveRequest);
 router.put("/leave-requests/:id/reject", protect, rejectLeaveRequest);
 router.get("/leave-requests/on-leave-today", protect, getStaffOnLeaveToday);
-router.patch("/leave-requests/mark-all-seen", markAllLeavesSeen);
-router.get("/feedback/:status", getAdminFeedbackManagement);
+// router.patch("/leave-requests/mark-all-seen", markAllLeavesSeen);
+router.get("/feedback/:status", protect, getAdminFeedbackManagement);
 router.get("/feedback/:feedbackId/replies", protect, getFeedbackReplies);
 router.post("/feedback/:feedbackId/replies", protect, addFeedbackReply);
 router.post("/feedback/send-reminder", protect, sendFeedbackReminderNotification);
-router.delete("/feedback/:feedbackId", deleteFeedback);
+router.delete("/feedback/:feedbackId", protect, deleteFeedback);
 
 router.get("/batches", protect, getBatches);
 router.post("/batches", protect, createBatch);

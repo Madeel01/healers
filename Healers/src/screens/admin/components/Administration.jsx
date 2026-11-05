@@ -1,5 +1,4 @@
 import React from 'react';
-
 import {
   StyleSheet,
   Text,
@@ -50,7 +49,7 @@ const administrationItems = [
     iconBackground: "#E8B79E",
     icon: "event-note",
     iconType: "MaterialIcons",
-    showBadge: true,
+    badgeKey: "leave",
   },
   {
     title: "Therapist Management",
@@ -70,6 +69,7 @@ const administrationItems = [
     icon: "message",
     iconType: "MaterialIcons",
     iconColor: "#D85243",
+    badgeKey: "feedback",
   },
   {
     title: "Broadcast Management",
@@ -79,6 +79,7 @@ const administrationItems = [
     iconBackground: "#006B58",
     icon: "broadcast",
     iconType: "MaterialCommunityIcons",
+    badgeKey: "broadcast",
   },
 ];
 
@@ -91,8 +92,17 @@ const iconComponents = {
 export default function Administration({
   customstyles,
   leaveCount = 0,
+  feedbackCount = 0,
+  broadcastCount = 0,
 }) {
   const navigation = useNavigation();
+
+  const getBadgeCount = (key) => {
+    if (key === "leave") return Number(leaveCount);
+    if (key === "feedback") return Number(feedbackCount);
+    if (key === "broadcast") return Number(broadcastCount);
+    return 0;
+  };
 
   return (
     <View style={styles.container}>
@@ -107,6 +117,7 @@ export default function Administration({
 
       {administrationItems.map((item) => {
         const IconComponent = iconComponents[item.iconType];
+        const count = getBadgeCount(item.badgeKey);
 
         return (
           <TouchableOpacity
@@ -118,6 +129,7 @@ export default function Administration({
             ]}
             onPress={() => navigation.navigate(item.route)}
           >
+            {/* Icon Box with Floating Message-Style Badge */}
             <View
               style={[
                 styles.adminIconBox,
@@ -129,32 +141,29 @@ export default function Administration({
                 size={fontSize(22)}
                 color={item.iconColor || "#FFFFFF"}
               />
+
+              {count > 0 && (
+                <View style={styles.messageCountBadge}>
+                  <Text style={styles.messageCountBadgeText}>
+                    {count > 99 ? "99+" : count}
+                  </Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.adminTextContainer}>
               <Text style={styles.adminBannerTitle}>
                 {item.title}
               </Text>
-
               <Text style={styles.adminBannerSub}>
                 {item.subtitle}
               </Text>
             </View>
 
             <View style={styles.rightContainer}>
-              {item.showBadge && Number(leaveCount) > 0 && (
-                <View style={styles.leaveBadge}>
-                  <Text style={styles.leaveBadgeText}>
-                    {Number(leaveCount) > 99
-                      ? "99+"
-                      : leaveCount}
-                  </Text>
-                </View>
-              )}
-
               <AntDesign
-                name="file-text"
-                size={fontSize(22)}
+                name="right"
+                size={fontSize(20)}
                 color="#717781"
               />
             </View>
@@ -189,13 +198,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+    position: "relative", // Needed for floating badge
   },
   adminTextContainer: {
     flex: 1,
     minWidth: 0,
     marginLeft: wp(12),
     marginRight: wp(8),
-    paddingRight: wp(35),
+    paddingRight: wp(15),
     justifyContent: "center",
   },
   adminBannerTitle: {
@@ -212,29 +222,33 @@ const styles = StyleSheet.create({
     color: "#414750",
     lineHeight: fontSize(20),
     flexShrink: 1,
-    paddingBottom:0,
-
+    paddingBottom: 0,
   },
   rightContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: wp(6),
     flexShrink: 0,
   },
-  leaveBadge: {
+  // Exact same style as your Messages badge
+  messageCountBadge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    minWidth: wp(22),
+    minHeight: hp(22),
+    paddingHorizontal: 4,
+    borderRadius: 999,
     backgroundColor: "#EF4444",
-    minWidth: wp(24),
-    height: wp(24),
-    borderRadius: wp(12),
-    paddingHorizontal: wp(6),
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
-  leaveBadgeText: {
-    fontSize: fontSize(12),
-    fontFamily: fonts.semiBold,
+  messageCountBadgeText: {
     color: "#FFFFFF",
+    fontSize: fontSize(8),
+    fontFamily: fonts.semiBold,
     textAlign: "center",
   },
 });

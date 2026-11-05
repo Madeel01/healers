@@ -51,6 +51,9 @@ export default function AdminDashboard() {
     totalUsers: 0,
     sessionCount: 0,
     leaveCount: 0,
+    unseenFeedbackCount: 0,
+    unreadNotificationCount: 0,
+    unreadComplaintCount: 0,
   });
   const [unreadData, setUnreadData] = useState({
     hasUnread: false,
@@ -96,6 +99,9 @@ export default function AdminDashboard() {
         totalUsers: rawData?.totalUsers || 0,
         sessionCount: rawData?.sessionCount || 0,
         leaveCount: rawData?.leaveCount || 0,
+        unseenFeedbackCount: rawData?.unseenFeedbackCount || 0,
+        unreadNotificationCount: rawData?.unreadNotificationCount || 0,
+        unreadComplaintCount: rawData?.unreadComplaintCount || 0,
       });
     } catch (error) {
       console.log("Failed to fetch dashboard overview:", error);
@@ -346,19 +352,29 @@ export default function AdminDashboard() {
           </TouchableOpacity>
         )}
 
-        <Administration customstyles={styles} leaveCount={stats.leaveCount} />
+        <Administration customstyles={styles} leaveCount={stats.leaveCount} feedbackCount={stats.unseenFeedbackCount} broadcastCount={stats.unreadNotificationCount} />
 
         <Text style={styles.sectionHeadTitle}>Quick Actions</Text>
 
-        <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate("ComplainManagement")}>
-          <View style={[styles.quickIconBox, { backgroundColor: "#FEE2E2" }]}>
+        <TouchableOpacity 
+          style={styles.quickActionCard} 
+          onPress={() => navigation.navigate("ComplainManagement")}
+        >
+          <View style={[styles.quickIconBox, { backgroundColor: "#FEE2E2", position: "relative" }]}>
             <Feather name="message-square" size={22} color="#DC2626" />
+            {Number(stats.unreadComplaintCount) > 0 && (
+              <View style={styles.messageCountBadge}>
+                <Text style={styles.messageCountBadgeText}>
+                  {Number(stats.unreadComplaintCount) > 99 ? "99+" : stats.unreadComplaintCount}
+                </Text>
+              </View>
+            )}
           </View>
           <View style={styles.quickActionText}>
             <Text style={styles.quickActionTitle}>Manage Complaints</Text>
             <Text style={styles.quickActionSub}>View and respond to complaints</Text>
           </View>
-          <AntDesign name="file-text" size={24} color="#717781" />
+          <AntDesign name="right" size={20} color="#717781" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate("FeeManagement")}>
@@ -369,7 +385,7 @@ export default function AdminDashboard() {
             <Text style={styles.quickActionTitle}>Fee Management</Text>
             <Text style={styles.quickActionSub}>Manage fees and payments</Text>
           </View>
-          <AntDesign name="file-text" size={24} color="#717781" />
+          <AntDesign name="right" size={20} color="#717781" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate("ServiceManagement")}>
@@ -380,7 +396,7 @@ export default function AdminDashboard() {
             <Text style={styles.quickActionTitle}>Service Management</Text>
             <Text style={styles.quickActionSub}>Create and manage services</Text>
           </View>
-          <AntDesign name="file-text" size={24} color="#717781" />
+          <AntDesign name="right" size={20} color="#717781" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate("InvoiceManagement")}>
@@ -391,7 +407,7 @@ export default function AdminDashboard() {
             <Text style={styles.quickActionTitle}>Invoice Management</Text>
             <Text style={styles.quickActionSub}>Generate and manage invoices</Text>
           </View>
-          <AntDesign name="file-text" size={24} color="#717781" />
+          <AntDesign name="right" size={20} color="#717781" />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.quickActionCard}
@@ -402,7 +418,7 @@ export default function AdminDashboard() {
           </View>
           <View style={styles.quickActionText}>
             <Text style={styles.quickActionTitle}>Quarterly Reports</Text>
-            <Text style={styles.quickActionSub}>Review therapist progress reports by child</Text>
+            <Text style={styles.quickActionSub}>Review child progress reports by therapist</Text>
           </View>
           <AntDesign name="right" size={20} color="#717781" />
         </TouchableOpacity>

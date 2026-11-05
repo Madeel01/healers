@@ -53,7 +53,7 @@ const notificationSchema = new mongoose.Schema(
 
     audience: {
       type: String,
-      enum: ["all", "role", "users","batch"],
+      enum: ["all", "role", "users", "batch"],
       required: true,
     },
     batchIds: [
@@ -102,7 +102,7 @@ const notificationSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["draft", "scheduled", "sending", "sent", "cancelled","failed"],
+      enum: ["draft", "scheduled", "sending", "sent", "cancelled", "failed"],
       default: "draft",
     },
 
@@ -120,6 +120,19 @@ const notificationSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    adminSeen: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        seenAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,
