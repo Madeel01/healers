@@ -66,6 +66,15 @@
           "defaultChannel": "default"
         }
       ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ],
       "expo-video",
       "expo-asset"
     ],
