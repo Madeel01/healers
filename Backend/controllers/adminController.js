@@ -3567,20 +3567,20 @@ exports.getLeaveRequests = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum);
-    if (requests.length > 0) {
-      const requestIds = requests.map((r) => r._id);
-      await LeaveRequest.updateMany(
-        {
-          _id: { $in: requestIds },
-          "isSeen.userId": { $ne: userId },
-        },
-        {
-          $addToSet: {
-            isSeen: { userId, seenAt: new Date() },
-          },
-        }
-      );
-    }
+    // if (requests.length > 0) {
+    //   const requestIds = requests.map((r) => r._id);
+    //   await LeaveRequest.updateMany(
+    //     {
+    //       _id: { $in: requestIds },
+    //       "isSeen.userId": { $ne: userId },
+    //     },
+    //     {
+    //       $addToSet: {
+    //         isSeen: { userId, seenAt: new Date() },
+    //       },
+    //     }
+    //   );
+    // }
 
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
@@ -3592,7 +3592,16 @@ exports.getLeaveRequests = async (req, res) => {
       }),
       getOnLeaveToday(),
     ]);
-
+    await LeaveRequest.updateMany(
+      {
+        "isSeen.userId": { $ne: userId },
+      },
+      {
+        $addToSet: {
+          isSeen: { userId, seenAt: new Date() },
+        },
+      }
+    );
     return res.status(200).json({
       success: true,
       data: requests,
@@ -3919,20 +3928,6 @@ exports.getAdminFeedbackManagement = async (req, res) => {
       .populate("therapistId", "fullName email role")
       .lean()
       .sort({ createdAt: -1 });
-    if (feedbacks.length > 0) {
-      const feedbackIds = feedbacks.map((f) => f._id);
-      await Feedback.updateMany(
-        {
-          _id: { $in: feedbackIds },
-          "isSeen.userId": { $ne: userId },
-        },
-        {
-          $addToSet: {
-            isSeen: { userId, seenAt: new Date() },
-          },
-        },
-      );
-    }
 
     // =========================================================
     // 3. CREATE FEEDBACK MAP
@@ -4137,7 +4132,17 @@ exports.getAdminFeedbackManagement = async (req, res) => {
     // =========================================================
     // RESPONSE
     // =========================================================
-
+    await Feedback.updateMany(
+      {
+        notes: { $nin: [null, ""] },
+        "isSeen.userId": { $ne: userId },
+      },
+      {
+        $addToSet: {
+          isSeen: { userId, seenAt: new Date() },
+        },
+      }
+    );
     return res.status(200).json({
       success: true,
 
@@ -4727,7 +4732,16 @@ exports.getAllBroadcasts = async (req, res) => {
       recipientCount: b.recipients?.length || 0,
       readCount: b.recipients?.filter((r) => r.readAt).length || 0,
     }));
-
+    await Notification.updateMany(
+      {
+        "adminSeen.userId": { $ne: userId },
+      },
+      {
+        $addToSet: {
+          adminSeen: { userId, seenAt: new Date() },
+        },
+      }
+    );
     return res.status(200).json({
       success: true,
       data,
@@ -5069,20 +5083,7 @@ exports.getComplaints = async (req, res) => {
         createdAt: { $gte: weekStart },
       }),
     ]);
-    if (list.length > 0) {
-      const complaintIds = list.map((c) => c._id);
-      await Complaint.updateMany(
-        {
-          _id: { $in: complaintIds },
-          "isSeen.userId": { $ne: userId },
-        },
-        {
-          $addToSet: {
-            isSeen: { userId, seenAt: new Date() },
-          },
-        },
-      );
-    }
+
     const unread = await Complaint.aggregate([
       { $match: { _id: { $in: list.map((c) => c._id) } } },
       {
@@ -5105,7 +5106,16 @@ exports.getComplaints = async (req, res) => {
       },
     ]);
     const unreadMap = new Map(unread.map((u) => [String(u._id), u.count]));
-
+    await Complaint.updateMany(
+      {
+        "isSeen.userId": { $ne: userId },
+      },
+      {
+        $addToSet: {
+          isSeen: { userId, seenAt: new Date() },
+        },
+      }
+    );
     return res.status(200).json({
       success: true,
       data: list.map((c) => ({
