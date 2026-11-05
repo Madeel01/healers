@@ -962,20 +962,34 @@ exports.getAdminOverview = async (req, res) => {
       therapistCount,
       totalUsers,
       leaveCount,
-      unreadMessageCount
+      unseenFeedbackCount,
+      unreadNotificationCount,
+      unreadMessageCount,
+      unreadComplaintCount,
     ] = await Promise.all([
       User.countDocuments({ role: "Child" }),
       User.countDocuments({ role: "Therapist" }),
       User.countDocuments({}),
+      
       LeaveRequest.countDocuments({
-        $or: [
-          { isSeen: false },
-          { isSeen: { $exists: false } },
-        ],
+        "isSeen.userId": { $ne: userId },
       }),
+
+      Feedback.countDocuments({
+        "isSeen.userId": { $ne: userId },
+      }),
+
+      Notification.countDocuments({
+        createdBy: { $ne: userId },
+        "adminSeen.userId": { $ne: userId },
+      }),
+
       Message.countDocuments({
         receiver: userId,
         isSeen: false,
+      }),
+      Complaint.countDocuments({
+        "isSeen.userId": { $ne: userId },
       }),
     ]);
 
@@ -989,12 +1003,14 @@ exports.getAdminOverview = async (req, res) => {
         totalUsers,
         sessionCount,
         leaveCount,
+        unseenFeedbackCount,
+        unreadNotificationCount,
         unreadMessageCount,
+        unreadComplaintCount,
       },
     });
   } catch (error) {
     console.error("Error fetching admin overview stats:", error);
-
     return res.status(500).json({
       success: false,
       message: "Failed to fetch dashboard metrics.",
@@ -3531,6 +3547,7 @@ const getOnLeaveToday = async () => {
 };
 exports.getLeaveRequests = async (req, res) => {
   try {
+    const userId = req.user.id || req.user._id;
     const { status = "pending", page = 1, limit = 10 } = req.query;
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
@@ -3550,6 +3567,20 @@ exports.getLeaveRequests = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum);
+    if (requests.length > 0) {
+      const requestIds = requests.map((r) => r._id);
+      await LeaveRequest.updateMany(
+        {
+          _id: { $in: requestIds },
+          "isSeen.userId": { $ne: userId },
+        },
+        {
+          $addToSet: {
+            isSeen: { userId, seenAt: new Date() },
+          },
+        }
+      );
+    }
 
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
@@ -3760,34 +3791,34 @@ exports.rejectLeaveRequest = async (req, res) => {
     });
   }
 };
-exports.markAllLeavesSeen = async (req, res) => {
-  try {
-    const result = await LeaveRequest.updateMany(
-      {
-        $or: [
-          { isSeen: false },
-          { isSeen: { $exists: false } },
-        ],
-      },
-      {
-        $set: { isSeen: true },
-      },
-    );
+// exports.markAllLeavesSeen = async (req, res) => {
+//   try {
+//     const result = await LeaveRequest.updateMany(
+//       {
+//         $or: [
+//           { isSeen: false },
+//           { isSeen: { $exists: false } },
+//         ],
+//       },
+//       {
+//         $set: { isSeen: true },
+//       },
+//     );
 
-    return res.status(200).json({
-      success: true,
-      message: "All leave requests marked as seen.",
-      modifiedCount: result.modifiedCount,
-    });
-  } catch (error) {
-    console.error("Error marking leaves as seen:", error);
+//     return res.status(200).json({
+//       success: true,
+//       message: "All leave requests marked as seen.",
+//       modifiedCount: result.modifiedCount,
+//     });
+//   } catch (error) {
+//     console.error("Error marking leaves as seen:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to mark leave requests as seen.",
-    });
-  }
-};
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to mark leave requests as seen.",
+//     });
+//   }
+// };
 exports.getStaffOnLeaveToday = async (req, res) => {
   try {
     const pageNum = Math.max(parseInt(req.query.page, 10) || 1, 1);
@@ -3816,7 +3847,7 @@ exports.getStaffOnLeaveToday = async (req, res) => {
 exports.getAdminFeedbackManagement = async (req, res) => {
   try {
     const { status } = req.params;
-
+    const userId = req.user.id || req.user._id;
     if (!["all", "pending", "new"].includes(status)) {
       return res.status(400).json({
         success: false,
@@ -3888,6 +3919,20 @@ exports.getAdminFeedbackManagement = async (req, res) => {
       .populate("therapistId", "fullName email role")
       .lean()
       .sort({ createdAt: -1 });
+    if (feedbacks.length > 0) {
+      const feedbackIds = feedbacks.map((f) => f._id);
+      await Feedback.updateMany(
+        {
+          _id: { $in: feedbackIds },
+          "isSeen.userId": { $ne: userId },
+        },
+        {
+          $addToSet: {
+            isSeen: { userId, seenAt: new Date() },
+          },
+        },
+      );
+    }
 
     // =========================================================
     // 3. CREATE FEEDBACK MAP
@@ -4560,6 +4605,7 @@ exports.createBroadcast = async (req, res) => {
       attachment,
       status,
       sendAt: finalSendAt,
+      adminSeen: [{ userId: req.user.id, seenAt: new Date() }],
     });
     let recipientUsers = [];
     if (status === "sending") {
@@ -4640,7 +4686,7 @@ exports.getAllBroadcasts = async (req, res) => {
       type = "",
     } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
-
+    const userId = req.user.id || req.user._id;
     const filter = {};
     if (search.trim()) {
       filter.$or = [
@@ -4662,7 +4708,20 @@ exports.getAllBroadcasts = async (req, res) => {
         .lean(),
       Notification.countDocuments(filter),
     ]);
-
+    if (broadcasts.length > 0) {
+      const broadcastIds = broadcasts.map((b) => b._id);
+      await Notification.updateMany(
+        {
+          _id: { $in: broadcastIds },
+          "adminSeen.userId": { $ne: userId },
+        },
+        {
+          $addToSet: {
+            adminSeen: { userId, seenAt: new Date() },
+          },
+        },
+      );
+    }
     const data = broadcasts.map((b) => ({
       ...b,
       recipientCount: b.recipients?.length || 0,
@@ -4966,11 +5025,12 @@ exports.deleteBroadcast = async (req, res) => {
 
 exports.getComplaints = async (req, res) => {
   try {
+    const userId = req.user.id || req.user._id;
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit, 10) || 5, 10);
     const { status, priority, role } = req.query;
     const search = (req.query.search || "").trim();
-
+    
     const filter = {};
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
@@ -5009,7 +5069,20 @@ exports.getComplaints = async (req, res) => {
         createdAt: { $gte: weekStart },
       }),
     ]);
-
+    if (list.length > 0) {
+      const complaintIds = list.map((c) => c._id);
+      await Complaint.updateMany(
+        {
+          _id: { $in: complaintIds },
+          "isSeen.userId": { $ne: userId },
+        },
+        {
+          $addToSet: {
+            isSeen: { userId, seenAt: new Date() },
+          },
+        },
+      );
+    }
     const unread = await Complaint.aggregate([
       { $match: { _id: { $in: list.map((c) => c._id) } } },
       {

@@ -90,8 +90,21 @@ const complaintSchema = new mongoose.Schema(
         },
       },
     ],
+    isSeen: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        seenAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 complaintSchema.index({ status: 1, priority: 1, createdAt: -1 });
