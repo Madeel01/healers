@@ -49,7 +49,7 @@ import {
 } from '../../utils/responsive';
 
 export default function ChildDashboardScreen({ navigation }) {
-  const { user, logout, switchUser } = useContext(AuthContext);
+  const { user, logout, switchUser, isImpersonating } = useContext(AuthContext);
   const userName = user?.fullName || user?.name || "";
   const profileImage = user?.profileImage || "";
   const userId = user?.id || user?.id;
@@ -414,6 +414,8 @@ export default function ChildDashboardScreen({ navigation }) {
           <TouchableOpacity
             style={styles.gridCard}
             activeOpacity={0.8}
+            disabled={isImpersonating}
+
             onPress={() => navigation.navigate("ChildMessages")}
           >
             <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
@@ -453,6 +455,8 @@ export default function ChildDashboardScreen({ navigation }) {
         {unreadData.hasUnread && (
           <TouchableOpacity
             style={styles.messageBanner}
+            disabled={isImpersonating}
+
             activeOpacity={0.9}
             onPress={() => navigation.navigate("ChildMessages")}
           >
@@ -1149,7 +1153,7 @@ const styles = StyleSheet.create({
     color: colors.blackFont,
   },
   avatarFallback: {
-      width: wp(42),
+    width: wp(42),
     height: hp(42),
     borderRadius: wp(999),
     backgroundColor: colors.primary,
@@ -1161,7 +1165,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
-    lineHeight:24
+    lineHeight: 24,
   },
   modalOverlay: {
     flex: 1,
@@ -1277,7 +1281,7 @@ const styles = StyleSheet.create({
     color: "#64748B",
   },
   sessionAvatar: {
-     width: wp(52),
+    width: wp(52),
     height: hp(52),
     borderRadius: wp(26),
   },

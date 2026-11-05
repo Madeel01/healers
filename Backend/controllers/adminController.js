@@ -8688,3 +8688,409 @@ exports.adminGetQuarterlyReport = async (req, res) => {
   }
 };
 
+const formatAppDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+};
+
+const validDateKey = (value) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+
+  return !Number.isNaN(date.getTime())
+    && date.toISOString().slice(0, 10) === value;
+};
+
+const appointmentDateKey = (value) => {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toISOString().slice(0, 10);
+};
+
+const addCalendarDays = (dateKey, count) => {
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + count);
+
+  return date.toISOString().slice(0, 10);
+};
+
+const normalizeStatus = (value) => {
+  if (value === "Complete" || value === "Present") {
+    return "Present";
+  }
+
+  if (value === "Absent") return "Absent";
+
+  return "Pending";
+};
+
+
+exports.getAdminAttendance = async (req, res) => {
+  try {
+    const {
+      year,
+      month,
+      mode = "today",
+      date,
+      attendanceType = "child",
+      page = 1,
+      limit = 5,
+    } = req.query;
+
+    // Admin authorization
+    const role = String(req.user?.role || "").toLowerCase();
+
+    if (!["admin", "superadmin"].includes(role)) {
+      return res.status(403).json({
+        success: false,
+        message: "Admin access required.",
+      });
+    }
+
+    const selectedType = String(attendanceType).toLowerCase();
+
+    if (!["child", "therapist"].includes(selectedType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid attendance type.",
+      });
+    }
+
+    const selectedMode = String(mode).toLowerCase();
+
+    if (!["today", "tomorrow", "week", "month"].includes(selectedMode)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid attendance mode.",
+      });
+    }
+
+    const currentDate = formatAppDate(new Date());
+
+    let selectedDate = date
+      ? String(date)
+      : selectedMode === "tomorrow"
+      ? addCalendarDays(currentDate, 1)
+      : currentDate;
+
+    if (!validDateKey(selectedDate)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid date.",
+      });
+    }
+
+    const selectedYear = Number(selectedDate.slice(0, 4));
+    const selectedMonth = Number(selectedDate.slice(5, 7));
+
+    const currentPage = Math.max(1, Number(page) || 1);
+    const pageLimit = Math.min(50, Math.max(1, Number(limit) || 5));
+
+    if (
+      (year !== undefined && Number(year) !== selectedYear) ||
+      (month !== undefined && Number(month) !== selectedMonth)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Year and month must match the selected date.",
+      });
+    }
+
+    // ==========================================
+    // 1. FETCH ALL SCHEDULES
+    // ==========================================
+
+    const schedules = await Scheduling.find({
+      year: selectedYear,
+      month: selectedMonth,
+    })
+      .select("_id therapistId year month appointments")
+      .lean();
+
+    if (!schedules.length) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        count: 0,
+        pagination: {
+          page: currentPage,
+          limit: pageLimit,
+          total: 0,
+          totalPages: 0,
+          hasMore: false,
+        },
+        summary: {},
+      });
+    }
+
+    // ==========================================
+    // 2. GET CHILD IDs AND THERAPIST IDs
+    // ==========================================
+
+    const childIds = new Set();
+    const therapistIds = new Set();
+
+    schedules.forEach((schedule) => {
+      if (schedule.therapistId) {
+        therapistIds.add(String(schedule.therapistId));
+      }
+
+      (schedule.appointments || []).forEach((appointment) => {
+        if (appointmentDateKey(appointment.date) !== selectedDate) {
+          return;
+        }
+
+        (appointment.children || []).forEach((entry) => {
+          const id = entry.childId?._id || entry.childId;
+
+          if (id) childIds.add(String(id));
+        });
+      });
+    });
+
+    // ==========================================
+    // 3. FETCH USERS
+    // ==========================================
+
+    const [children, therapists] = await Promise.all([
+      User.find({
+        _id: { $in: [...childIds] },
+        isActive: true,
+      })
+        .select("_id fullName name profileImage fatherName parentName")
+        .lean(),
+
+      User.find({
+        _id: { $in: [...therapistIds] },
+      })
+        .select("_id fullName name profileImage")
+        .lean(),
+    ]);
+
+    const childMap = new Map(
+      children.map((child) => [String(child._id), child])
+    );
+
+    const therapistMap = new Map(
+      therapists.map((therapist) => [
+        String(therapist._id),
+        therapist,
+      ])
+    );
+
+    // ==========================================
+    // 4. BUILD ATTENDANCE RECORDS
+    // ==========================================
+
+    const data = [];
+
+    for (const schedule of schedules) {
+      const therapist = therapistMap.get(
+        String(schedule.therapistId)
+      );
+
+      for (const appointment of schedule.appointments || []) {
+        const appointmentDate = appointmentDateKey(
+          appointment.date
+        );
+
+        if (appointmentDate !== selectedDate) continue;
+
+        const validChildren = [];
+
+        for (const childEntry of appointment.children || []) {
+          const childId = String(
+            childEntry.childId?._id ||
+            childEntry.childId ||
+            ""
+          );
+
+          const child = childMap.get(childId);
+
+          if (!child) continue;
+
+          validChildren.push({ childEntry, child });
+        }
+
+        if (!validChildren.length) continue;
+
+        // ======================================
+        // THERAPIST ATTENDANCE
+        // ======================================
+
+        if (selectedType === "therapist") {
+          const status = String(
+            appointment.therapist_attendance || "pending"
+          ).toLowerCase();
+
+          data.push({
+            attendanceId: String(schedule._id),
+            appointmentId: String(appointment._id),
+
+            therapistId: String(schedule.therapistId),
+
+            therapistName:
+              therapist?.fullName ||
+              therapist?.name ||
+              "Unknown Therapist",
+
+            profileImage: therapist?.profileImage || "",
+
+            childName: validChildren
+              .map(({ child }) => child.fullName || child.name)
+              .join(", "),
+
+            date: appointmentDate,
+            startTime: appointment.startTime || "",
+            endTime: appointment.endTime || "",
+
+            therapistAttendance: status,
+
+            therapistAttendanceMarkedAt:
+              appointment.therapist_attendance_marked_at || null,
+          });
+
+          continue;
+        }
+
+        // ======================================
+        // CHILD ATTENDANCE
+        // ======================================
+
+        for (const { childEntry, child } of validChildren) {
+          data.push({
+            attendanceId: String(schedule._id),
+            appointmentId: String(appointment._id),
+
+            childAttendanceId: childEntry._id
+              ? String(childEntry._id)
+              : null,
+
+            childId: String(child._id),
+
+            childName:
+              child.fullName ||
+              child.name ||
+              "Unknown Child",
+
+            profileImage: child.profileImage || "",
+
+            therapistId: String(schedule.therapistId),
+
+            therapistName:
+              therapist?.fullName ||
+              therapist?.name ||
+              "Unknown Therapist",
+
+            date: appointmentDate,
+            startTime: appointment.startTime || "",
+            endTime: appointment.endTime || "",
+
+            attendanceStatus: normalizeStatus(
+              childEntry.attendance_status
+            ),
+          });
+        }
+      }
+    }
+
+    // ==========================================
+    // 5. SORT RECORDS
+    // ==========================================
+
+    data.sort((a, b) => {
+      const timeCompare = String(a.startTime).localeCompare(
+        String(b.startTime)
+      );
+
+      if (timeCompare !== 0) return timeCompare;
+
+      return String(a.childName || a.therapistName).localeCompare(
+        String(b.childName || b.therapistName)
+      );
+    });
+
+    // ==========================================
+    // 6. SUMMARY
+    // ==========================================
+
+    const summary = selectedType === "therapist"
+      ? {
+          total: data.length,
+          present: data.filter(
+            (item) => item.therapistAttendance === "present"
+          ).length,
+          absent: data.filter(
+            (item) => item.therapistAttendance === "absent"
+          ).length,
+          pending: data.filter(
+            (item) => item.therapistAttendance === "pending"
+          ).length,
+          cancelled: data.filter(
+            (item) => item.therapistAttendance === "cancel"
+          ).length,
+          postponed: data.filter(
+            (item) => item.therapistAttendance === "postpond"
+          ).length,
+        }
+      : {
+          total: data.length,
+          present: data.filter(
+            (item) => item.attendanceStatus === "Present"
+          ).length,
+          absent: data.filter(
+            (item) => item.attendanceStatus === "Absent"
+          ).length,
+          pending: data.filter(
+            (item) => item.attendanceStatus === "Pending"
+          ).length,
+        };
+
+    // ==========================================
+    // 7. PAGINATION
+    // ==========================================
+
+    const total = data.length;
+    const totalPages = Math.ceil(total / pageLimit);
+    const startIndex = (currentPage - 1) * pageLimit;
+
+    const paginatedData = data.slice(
+      startIndex,
+      startIndex + pageLimit
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin attendance fetched successfully.",
+      attendanceType: selectedType,
+      selectedDate,
+      data: paginatedData,
+      count: paginatedData.length,
+      summary,
+      pagination: {
+        page: currentPage,
+        limit: pageLimit,
+        total,
+        totalPages,
+        hasMore: currentPage < totalPages,
+      },
+    });
+
+  } catch (error) {
+    console.error("getAdminAttendance error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch admin attendance.",
+      error: error.message,
+    });
+  }
+};

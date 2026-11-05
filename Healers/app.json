@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "Healers",
@@ -20,7 +19,7 @@
       }
     },
     "android": {
-      "softwareKeyboardLayoutMode":"resize",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/ic_launcher_foreground.png",

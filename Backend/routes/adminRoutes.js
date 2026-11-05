@@ -88,6 +88,7 @@ const {
   postponeChildCustomAppointment,
   adminListQuarterlyReports,
   adminGetQuarterlyReport,
+  getAdminAttendance,
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
@@ -99,7 +100,7 @@ router.post("/children/:childId/custom-slot-options", protect, getChildCustomSlo
 router.post("/children/:childId/custom-appointments", protect, createChildCustomAppointment);
 router.delete("/children/:childId/custom-appointments/:appointmentId", protect, deleteChildCustomAppointment);
 router.post("/children/:childId/custom-week-options", protect, getChildCustomWeekOptions);
-router.post("/children/:childId/custom-schedule/preview", protect ,previewChildCustomSchedule);
+router.post("/children/:childId/custom-schedule/preview", protect, previewChildCustomSchedule);
 router.post("/children/:childId/custom-schedule", protect, saveChildCustomSchedule);
 router.delete(
   "/batches/:batchId/assignments/:assignmentId/sessions/:sessionId",
@@ -109,9 +110,6 @@ router.delete(
 router.post("/children/documents", protect, uploadChildDocument);
 router.post("/children/:childId/custom/:appointmentId/cancel", protect, cancelChildCustomAppointment);
 router.post("/children/:childId/custom/:appointmentId/postpone", protect, postponeChildCustomAppointment);
-
-
-
 
 router.get("/schedule", protect, getSessions);
 router.get("/overview", protect, getAdminOverview);
@@ -202,4 +200,5 @@ router.get("/invoices/fee-details", protect, getFeeDetails);
 router.get("/quarterly-reports", protect, adminListQuarterlyReports);
 router.get("/quarterly-reports/:id", protect, adminGetQuarterlyReport);
 
+router.get("/attendance-report", protect, getAdminAttendance);
 module.exports = router;

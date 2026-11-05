@@ -28,6 +28,8 @@ const {
   getFeedbackReplies,
   updateFeedbackVisibility,
   getChildProgramsSpeciality,
+  getTherapistAttendance,
+  markTherapistAttendance,
 } = require("../controllers/therapistController");
 
 router.get("/dashboard-stats", protect, getDashboardStats);
@@ -55,5 +57,7 @@ router.get("/quarterly-reports/all", protect, getQuarterlyReportsByChild);
 router.get("/feedback/:feedbackId/replies", protect, getFeedbackReplies);
 router.post("/feedback/:feedbackId/reply", protect, addTherapistFeedbackReply);
 router.patch("/feedback/:feedbackId/visibility", protect, updateFeedbackVisibility);
+router.get("/therapist-attendance", protect, getTherapistAttendance);
+router.patch("/therapist-attendance/:appointmentId", protect, markTherapistAttendance);
 
 module.exports = router;

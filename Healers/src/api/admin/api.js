@@ -510,3 +510,9 @@ export const getAdminQuarterlyReports = async (params) => {
   const res = await apiClient.get("/admin/quarterly-reports", { params });
   return res.data;
 };
+
+export const getAdminAttendanceApi = (params) => {
+  return apiClient.get("/admin/attendance-report", {
+    params,
+  });
+};

@@ -1396,6 +1396,318 @@ const emptySummary = () => ({
   pending: 0,
 });
 
+// exports.getAttendance = async (req, res) => {
+//   try {
+//     const therapistId = req.user?._id || req.user?.id;
+
+//     const {
+//       year,
+//       month,
+//       mode = "today",
+//       date,
+//       childId,
+//     } = req.query;
+
+//     if (!mongoose.isValidObjectId(therapistId)) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Unauthorized therapist.",
+//       });
+//     }
+
+//     const selectedMode = String(mode).toLowerCase();
+
+//     if (
+//       !["today", "tomorrow", "week", "month"].includes(
+//         selectedMode
+//       )
+//     ) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid attendance mode.",
+//       });
+//     }
+
+//     if (childId && !mongoose.isValidObjectId(childId)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid child ID.",
+//       });
+//     }
+
+//     // ==========================================
+//     // 1. SELECT DATE
+//     // ==========================================
+
+//     const today = formatAppDate(new Date());
+
+//     let selectedDate;
+
+//     if (date !== undefined) {
+//       selectedDate = String(date);
+
+//       if (!validDateKey(selectedDate)) {
+//         return res.status(400).json({
+//           success: false,
+//           message: "Invalid date. Use YYYY-MM-DD.",
+//         });
+//       }
+//     } else if (selectedMode === "tomorrow") {
+//       selectedDate = addCalendarDays(today, 1);
+//     } else {
+//       selectedDate = today;
+//     }
+
+//     const selectedYear = Number(
+//       selectedDate.slice(0, 4)
+//     );
+
+//     const selectedMonth = Number(
+//       selectedDate.slice(5, 7)
+//     );
+
+//     // Optional validation for supplied year/month.
+//     if (
+//       (year !== undefined &&
+//         (!Number.isInteger(Number(year)) ||
+//           Number(year) < 1)) ||
+//       (month !== undefined &&
+//         (!Number.isInteger(Number(month)) ||
+//           Number(month) < 1 ||
+//           Number(month) > 12))
+//     ) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid year or month.",
+//       });
+//     }
+
+//     // ==========================================
+//     // 2. GET THERAPIST ASSIGNMENT
+//     // ==========================================
+
+//     const assignment = await TherapistAssignment.findOne({
+//       therapistId: new mongoose.Types.ObjectId(
+//         therapistId
+//       ),
+//     }).lean();
+
+//     const assignedChildIds = assignment?.childIds || [];
+
+//     const assignedSet = new Set(
+//       assignedChildIds.map(String)
+//     );
+
+//     if (childId && !assignedSet.has(String(childId))) {
+//       return res.status(403).json({
+//         success: false,
+//         message: "Child is not assigned to this therapist.",
+//       });
+//     }
+
+//     if (assignedChildIds.length === 0) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "No assigned children found.",
+//         mode: selectedMode,
+//         selectedDate,
+//         count: 0,
+//         summary: emptySummary(),
+//         data: [],
+//       });
+//     }
+
+//     // ==========================================
+//     // 3. FETCH ASSIGNED CHILDREN
+//     // ==========================================
+
+//     const childQuery = {
+//       _id: {
+//         $in: assignedChildIds,
+//       },
+//       isActive: true,
+//     };
+
+//     if (childId) {
+//       childQuery._id = new mongoose.Types.ObjectId(
+//         childId
+//       );
+//     }
+
+//     const children = await User.find(childQuery)
+//       .select(
+//         "_id fullName name profileImage fatherName parentName"
+//       )
+//       .lean();
+
+//     if (children.length === 0) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "No active assigned children found.",
+//         mode: selectedMode,
+//         selectedDate,
+//         count: 0,
+//         summary: emptySummary(),
+//         data: [],
+//       });
+//     }
+
+//     const childMap = new Map(
+//       children.map((child) => [
+//         String(child._id),
+//         child,
+//       ])
+//     );
+
+//     // ==========================================
+//     // 4. GET SELECTED DATE SCHEDULES
+//     // ==========================================
+
+//     const schedules = await Scheduling.find({
+//       therapistId: new mongoose.Types.ObjectId(
+//         therapistId
+//       ),
+//       year: selectedYear,
+//       month: selectedMonth,
+//     })
+//       .select(
+//         "_id therapistId year month appointments"
+//       )
+//       .lean();
+
+//     // ==========================================
+//     // 5. RETURN ONLY SCHEDULED CHILDREN
+//     // ==========================================
+
+//     const data = [];
+
+//     for (const schedule of schedules) {
+//       for (const appointment of (
+//         schedule.appointments || []
+//       )) {
+//         const currentDate = appointmentDateKey(
+//           appointment.date
+//         );
+
+//         // Skip appointments on other dates.
+//         if (currentDate !== selectedDate) {
+//           continue;
+//         }
+
+//         for (const childEntry of (
+//           appointment.children || []
+//         )) {
+//           const currentChildId = String(
+//             childEntry.childId?._id ||
+//             childEntry.childId ||
+//             ""
+//           );
+
+//           // Only assigned and active children.
+//           const child = childMap.get(currentChildId);
+
+//           if (!child) continue;
+
+//           data.push({
+//             attendanceId: String(schedule._id),
+
+//             appointmentId: String(
+//               appointment._id
+//             ),
+
+//             childAttendanceId: childEntry._id
+//               ? String(childEntry._id)
+//               : null,
+
+//             childId: String(child._id),
+
+//             childName:
+//               child.fullName ||
+//               child.name ||
+//               "Unknown Child",
+
+//             fatherName: child.fatherName || "",
+//             parentName: child.parentName || "",
+//             profileImage: child.profileImage || "",
+
+//             date: selectedDate,
+
+//             startTime:
+//               appointment.startTime || "",
+
+//             endTime:
+//               appointment.endTime || "",
+
+//             isScheduled: true,
+
+//             attendanceStatus: normalizeStatus(
+//               childEntry.attendance_status
+//             ),
+//           });
+//         }
+//       }
+//     }
+
+//     // ==========================================
+//     // 6. SORT BY TIME
+//     // ==========================================
+
+//     data.sort((a, b) => {
+//       const timeCompare = String(
+//         a.startTime
+//       ).localeCompare(String(b.startTime));
+
+//       if (timeCompare !== 0) return timeCompare;
+
+//       return a.childName.localeCompare(
+//         b.childName
+//       );
+//     });
+
+//     // ==========================================
+//     // 7. SUMMARY
+//     // ==========================================
+
+//     const summary = {
+//       total: data.length,
+
+//       present: data.filter(
+//         (item) =>
+//           item.attendanceStatus === "Present"
+//       ).length,
+
+//       absent: data.filter(
+//         (item) =>
+//           item.attendanceStatus === "Absent"
+//       ).length,
+
+//       pending: data.filter(
+//         (item) =>
+//           item.attendanceStatus === "Pending"
+//       ).length,
+//     };
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Attendance fetched successfully.",
+//       mode: selectedMode,
+//       selectedDate,
+//       count: data.length,
+//       summary,
+//       data,
+//     });
+//   } catch (error) {
+//     console.error("getAttendance error:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to fetch attendance.",
+//       error: error.message,
+//     });
+//   }
+// };
+
+
 exports.getAttendance = async (req, res) => {
   try {
     const therapistId = req.user?._id || req.user?.id;
@@ -1406,6 +1718,7 @@ exports.getAttendance = async (req, res) => {
       mode = "today",
       date,
       childId,
+      attendanceType = "child",
     } = req.query;
 
     if (!mongoose.isValidObjectId(therapistId)) {
@@ -1415,16 +1728,37 @@ exports.getAttendance = async (req, res) => {
       });
     }
 
+    // ==========================================
+    // 1. VALIDATE ATTENDANCE TYPE
+    // ==========================================
+
+    const selectedAttendanceType = String(
+      attendanceType
+    ).toLowerCase();
+
+    if (!["child", "therapist"].includes(selectedAttendanceType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid attendance type. Use child or therapist.",
+      });
+    }
+
     const selectedMode = String(mode).toLowerCase();
 
-    if (
-      !["today", "tomorrow", "week", "month"].includes(
-        selectedMode
-      )
-    ) {
+    if (!["today", "tomorrow", "week", "month"].includes(selectedMode)) {
       return res.status(400).json({
         success: false,
         message: "Invalid attendance mode.",
+      });
+    }
+
+    if (
+      selectedAttendanceType === "therapist" &&
+      childId
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Child filter is not supported for therapist attendance.",
       });
     }
 
@@ -1436,7 +1770,7 @@ exports.getAttendance = async (req, res) => {
     }
 
     // ==========================================
-    // 1. SELECT DATE
+    // 2. SELECT DATE
     // ==========================================
 
     const today = formatAppDate(new Date());
@@ -1458,15 +1792,9 @@ exports.getAttendance = async (req, res) => {
       selectedDate = today;
     }
 
-    const selectedYear = Number(
-      selectedDate.slice(0, 4)
-    );
+    const selectedYear = Number(selectedDate.slice(0, 4));
+    const selectedMonth = Number(selectedDate.slice(5, 7));
 
-    const selectedMonth = Number(
-      selectedDate.slice(5, 7)
-    );
-
-    // Optional validation for supplied year/month.
     if (
       (year !== undefined &&
         (!Number.isInteger(Number(year)) ||
@@ -1483,13 +1811,11 @@ exports.getAttendance = async (req, res) => {
     }
 
     // ==========================================
-    // 2. GET THERAPIST ASSIGNMENT
+    // 3. GET THERAPIST ASSIGNMENT
     // ==========================================
 
     const assignment = await TherapistAssignment.findOne({
-      therapistId: new mongoose.Types.ObjectId(
-        therapistId
-      ),
+      therapistId: new mongoose.Types.ObjectId(therapistId),
     }).lean();
 
     const assignedChildIds = assignment?.childIds || [];
@@ -1510,6 +1836,7 @@ exports.getAttendance = async (req, res) => {
         success: true,
         message: "No assigned children found.",
         mode: selectedMode,
+        attendanceType: selectedAttendanceType,
         selectedDate,
         count: 0,
         summary: emptySummary(),
@@ -1518,7 +1845,7 @@ exports.getAttendance = async (req, res) => {
     }
 
     // ==========================================
-    // 3. FETCH ASSIGNED CHILDREN
+    // 4. FETCH ASSIGNED CHILDREN
     // ==========================================
 
     const childQuery = {
@@ -1529,9 +1856,7 @@ exports.getAttendance = async (req, res) => {
     };
 
     if (childId) {
-      childQuery._id = new mongoose.Types.ObjectId(
-        childId
-      );
+      childQuery._id = new mongoose.Types.ObjectId(childId);
     }
 
     const children = await User.find(childQuery)
@@ -1545,6 +1870,7 @@ exports.getAttendance = async (req, res) => {
         success: true,
         message: "No active assigned children found.",
         mode: selectedMode,
+        attendanceType: selectedAttendanceType,
         selectedDate,
         count: 0,
         summary: emptySummary(),
@@ -1560,60 +1886,118 @@ exports.getAttendance = async (req, res) => {
     );
 
     // ==========================================
-    // 4. GET SELECTED DATE SCHEDULES
+    // 5. GET SCHEDULES
     // ==========================================
 
     const schedules = await Scheduling.find({
-      therapistId: new mongoose.Types.ObjectId(
-        therapistId
-      ),
+      therapistId: new mongoose.Types.ObjectId(therapistId),
       year: selectedYear,
       month: selectedMonth,
     })
-      .select(
-        "_id therapistId year month appointments"
-      )
+      .select("_id therapistId year month appointments")
       .lean();
 
     // ==========================================
-    // 5. RETURN ONLY SCHEDULED CHILDREN
+    // 6. BUILD ATTENDANCE RESPONSE
     // ==========================================
 
     const data = [];
 
     for (const schedule of schedules) {
-      for (const appointment of (
-        schedule.appointments || []
-      )) {
+      for (const appointment of schedule.appointments || []) {
         const currentDate = appointmentDateKey(
           appointment.date
         );
 
-        // Skip appointments on other dates.
         if (currentDate !== selectedDate) {
           continue;
         }
 
-        for (const childEntry of (
-          appointment.children || []
-        )) {
+        const validChildren = [];
+
+        for (const childEntry of appointment.children || []) {
           const currentChildId = String(
             childEntry.childId?._id ||
             childEntry.childId ||
             ""
           );
 
-          // Only assigned and active children.
           const child = childMap.get(currentChildId);
 
           if (!child) continue;
 
+          validChildren.push({
+            childEntry,
+            child,
+          });
+        }
+
+        // Skip appointments without assigned active children.
+        if (validChildren.length === 0) {
+          continue;
+        }
+
+        // ==========================================
+        // THERAPIST ATTENDANCE
+        // One record per appointment.
+        // ==========================================
+
+        if (selectedAttendanceType === "therapist") {
+          const therapistStatus = String(
+            appointment.therapist_attendance || "pending"
+          ).toLowerCase();
+
+          const childNames = validChildren.map(
+            ({ child }) =>
+              child.fullName ||
+              child.name ||
+              "Unknown Child"
+          );
+
           data.push({
             attendanceId: String(schedule._id),
 
-            appointmentId: String(
-              appointment._id
+            appointmentId: String(appointment._id),
+
+            date: selectedDate,
+
+            startTime: appointment.startTime || "",
+            endTime: appointment.endTime || "",
+
+            isScheduled: true,
+
+            // Appointment-level attendance
+            therapistAttendance: therapistStatus,
+
+            therapistAttendanceMarkedAt:
+              appointment.therapist_attendance_marked_at ||
+              null,
+
+            // Children belonging to this appointment
+            childIds: validChildren.map(({ child }) =>
+              String(child._id)
             ),
+
+            childName: childNames.join(", "),
+
+            // Not used for therapist attendance updates
+            childId: null,
+            profileImage: "",
+          });
+
+          continue;
+        }
+
+        // ==========================================
+        // CHILD ATTENDANCE
+        // One record per child.
+        // ==========================================
+
+        for (const { childEntry, child } of validChildren) {
+          data.push({
+            attendanceId: String(schedule._id),
+
+            appointmentId: String(appointment._id),
 
             childAttendanceId: childEntry._id
               ? String(childEntry._id)
@@ -1632,70 +2016,107 @@ exports.getAttendance = async (req, res) => {
 
             date: selectedDate,
 
-            startTime:
-              appointment.startTime || "",
-
-            endTime:
-              appointment.endTime || "",
+            startTime: appointment.startTime || "",
+            endTime: appointment.endTime || "",
 
             isScheduled: true,
 
             attendanceStatus: normalizeStatus(
               childEntry.attendance_status
             ),
+
+            // Also return therapist attendance information.
+            therapistAttendance: String(
+              appointment.therapist_attendance || "pending"
+            ).toLowerCase(),
+
+            therapistAttendanceMarkedAt:
+              appointment.therapist_attendance_marked_at ||
+              null,
           });
         }
       }
     }
 
     // ==========================================
-    // 6. SORT BY TIME
+    // 7. SORT BY TIME
     // ==========================================
 
     data.sort((a, b) => {
-      const timeCompare = String(
-        a.startTime
-      ).localeCompare(String(b.startTime));
+      const timeCompare = String(a.startTime).localeCompare(
+        String(b.startTime)
+      );
 
       if (timeCompare !== 0) return timeCompare;
 
-      return a.childName.localeCompare(
-        b.childName
+      return String(a.childName).localeCompare(
+        String(b.childName)
       );
     });
 
     // ==========================================
-    // 7. SUMMARY
+    // 8. SUMMARY
     // ==========================================
 
-    const summary = {
-      total: data.length,
+    let summary;
 
-      present: data.filter(
-        (item) =>
-          item.attendanceStatus === "Present"
-      ).length,
+    if (selectedAttendanceType === "therapist") {
+      summary = {
+        total: data.length,
 
-      absent: data.filter(
-        (item) =>
-          item.attendanceStatus === "Absent"
-      ).length,
+        present: data.filter(
+          (item) => item.therapistAttendance === "present"
+        ).length,
 
-      pending: data.filter(
-        (item) =>
-          item.attendanceStatus === "Pending"
-      ).length,
-    };
+        absent: data.filter(
+          (item) => item.therapistAttendance === "absent"
+        ).length,
+
+        pending: data.filter(
+          (item) => item.therapistAttendance === "pending"
+        ).length,
+
+        cancelled: data.filter(
+          (item) => item.therapistAttendance === "cancel"
+        ).length,
+
+        postponed: data.filter(
+          (item) => item.therapistAttendance === "postpond"
+        ).length,
+      };
+    } else {
+      summary = {
+        total: data.length,
+
+        present: data.filter(
+          (item) => item.attendanceStatus === "Present"
+        ).length,
+
+        absent: data.filter(
+          (item) => item.attendanceStatus === "Absent"
+        ).length,
+
+        pending: data.filter(
+          (item) => item.attendanceStatus === "Pending"
+        ).length,
+      };
+    }
+
+    // ==========================================
+    // 9. RESPONSE
+    // ==========================================
 
     return res.status(200).json({
       success: true,
       message: "Attendance fetched successfully.",
       mode: selectedMode,
+      attendanceType: selectedAttendanceType,
       selectedDate,
       count: data.length,
       summary,
       data,
     });
+
   } catch (error) {
     console.error("getAttendance error:", error);
 
@@ -1706,7 +2127,6 @@ exports.getAttendance = async (req, res) => {
     });
   }
 };
-
 
 // exports.getAttendance = async (req, res) => {
 //   try {
@@ -2809,6 +3229,209 @@ exports.updateFeedbackVisibility = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+exports.getTherapistAttendance = async (req, res) => {
+  try {
+    const therapistId = req.user?._id || req.user?.id;
+
+    if (!mongoose.isValidObjectId(therapistId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid therapist ID is required.",
+      });
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    const schedule = await Scheduling.findOne({
+      therapistId: new mongoose.Types.ObjectId(therapistId),
+      year,
+      month,
+    }).lean();
+
+    const appointments = (schedule?.appointments || [])
+      .filter((appointment) => {
+        return !["cancel", "postponed"].includes(
+          appointment.sessionType,
+        );
+      })
+      .map((appointment) => {
+        const date = new Date(appointment.date);
+        const dateString = [
+          date.getFullYear(),
+          String(date.getMonth() + 1).padStart(2, "0"),
+          String(date.getDate()).padStart(2, "0"),
+        ].join("-");
+
+        return {
+          appointmentId: String(appointment._id),
+          date: dateString,
+          startTime: appointment.startTime,
+          endTime: appointment.endTime,
+          sessionStatus: appointment.session_status,
+          therapistAttendance:
+            appointment.therapist_attendance || "pending",
+          markedAt:
+            appointment.therapist_attendance_marked_at || null,
+        };
+      })
+      .sort((a, b) => {
+        const aTime = new Date(`${a.date}T${a.startTime}:00`);
+        const bTime = new Date(`${b.date}T${b.startTime}:00`);
+        return bTime - aTime;
+      });
+
+    const latestMarked = appointments.find(
+      (appointment) => appointment.markedAt,
+    );
+
+    const upcoming = appointments
+      .filter((appointment) => {
+        const start = new Date(
+          `${appointment.date}T${appointment.startTime}:00`,
+        );
+        const end = new Date(
+          `${appointment.date}T${appointment.endTime}:00`,
+        );
+
+        return end >= now && start.getTime() <= now.getTime() + 5 * 60 * 1000;
+      })
+      .sort((a, b) => {
+        return new Date(`${a.date}T${a.startTime}:00`)
+          - new Date(`${b.date}T${b.startTime}:00`);
+      })[0] || null;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        latestAttendance: latestMarked || {
+          therapistAttendance: "pending",
+          markedAt: null,
+          appointmentId: null,
+          date: null,
+          startTime: null,
+          endTime: null,
+        },
+        dueAppointment: upcoming,
+      },
+    });
+  } catch (error) {
+    console.error("getTherapistAttendance error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch therapist attendance.",
+    });
+  }
+};
+
+exports.markTherapistAttendance = async (req, res) => {
+  try {
+    const therapistId = req.user?._id || req.user?.id;
+    const { appointmentId } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = [
+      "present",
+      "absent",
+      "cancel",
+      "postpond",
+    ];
+
+    if (
+      !mongoose.isValidObjectId(therapistId) ||
+      !mongoose.isValidObjectId(appointmentId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid therapist or appointment ID.",
+      });
+    }
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid therapist attendance status.",
+      });
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    // Find the schedule belonging to this authenticated therapist.
+    const schedule = await Scheduling.findOne({
+      therapistId: new mongoose.Types.ObjectId(therapistId),
+      year,
+      month,
+      "appointments._id": new mongoose.Types.ObjectId(appointmentId),
+    });
+
+    if (!schedule) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found for this therapist.",
+      });
+    }
+
+    const appointment = schedule.appointments.id(appointmentId);
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found.",
+      });
+    }
+
+    // Do not permit attendance to be marked more than 5 minutes
+    // before the appointment starts.
+    const date = new Date(appointment.date);
+    const dateString = [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    const [hours, minutes] = appointment.startTime.split(":").map(Number);
+    const startTime = new Date(
+      `${dateString}T${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`,
+    );
+
+    if (now.getTime() < startTime.getTime() - 5 * 60 * 1000) {
+      return res.status(400).json({
+        success: false,
+        message: "You can mark attendance within 5 minutes of the session start.",
+      });
+    }
+
+    appointment.therapist_attendance = status;
+    appointment.therapist_attendance_marked_at = now;
+
+    await schedule.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Therapist attendance marked successfully.",
+      data: {
+        appointmentId: String(appointment._id),
+        therapistAttendance: appointment.therapist_attendance,
+        markedAt: appointment.therapist_attendance_marked_at,
+        date: dateString,
+        startTime: appointment.startTime,
+        endTime: appointment.endTime,
+      },
+    });
+  } catch (error) {
+    console.error("markTherapistAttendance error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to mark therapist attendance.",
     });
   }
 };
