@@ -13,6 +13,7 @@ import {
   Modal,
   Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -39,6 +40,7 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PAGE_LIMIT = 5;
 
@@ -746,165 +748,167 @@ export default function ComplaintsScreen({
         animationType="fade"
         onRequestClose={closeModal}
       >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "padding"}
-        >
-          <TouchableWithoutFeedback
-            onPress={closeModal}
+        <SafeAreaView style={{ flex: 1 }}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
           >
-            <View
-              style={styles.overlay}
-            >
-              <TouchableWithoutFeedback>
-                <View
-                  style={styles.modal}
-                >
+            {/* <TouchableWithoutFeedback
+              onPress={closeModal}
+            > */}
+              <View
+                style={styles.overlay}
+              >
+                <TouchableWithoutFeedback>
                   <View
-                    style={styles.modalHeader}
+                    style={styles.modal}
                   >
-                    <Text
-                      style={styles.modalTitle}
+                    <View
+                      style={styles.modalHeader}
                     >
-                      Add Complaint
+                      <Text
+                        style={styles.modalTitle}
+                      >
+                        Add Complaint
+                      </Text>
+
+                      <TouchableOpacity
+                        onPress={closeModal}
+                      >
+                        <Feather
+                          name="x"
+                          size={fontSize(22)}
+                          color="#64748B"
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    <Text
+                      style={styles.label}
+                    >
+                      Title
                     </Text>
 
-                    <TouchableOpacity
-                      onPress={closeModal}
+                    <TextInput
+                      style={styles.input}
+                      value={title}
+                      onChangeText={setTitle}
+                      placeholder="Complaint title"
+                      placeholderTextColor="#94A3B8"
+                      maxLength={120}
+                    />
+
+                    <Text
+                      style={styles.label}
                     >
-                      <Feather
-                        name="x"
-                        size={fontSize(22)}
-                        color="#64748B"
-                      />
-                    </TouchableOpacity>
-                  </View>
+                      Priority
+                    </Text>
 
-                  <Text
-                    style={styles.label}
-                  >
-                    Title
-                  </Text>
-
-                  <TextInput
-                    style={styles.input}
-                    value={title}
-                    onChangeText={setTitle}
-                    placeholder="Complaint title"
-                    placeholderTextColor="#94A3B8"
-                    maxLength={120}
-                  />
-
-                  <Text
-                    style={styles.label}
-                  >
-                    Priority
-                  </Text>
-
-                  <View
-                    style={styles.priorityRow}
-                  >
-                    {PRIORITIES.map(
-                      (item) => (
-                        <TouchableOpacity
-                          key={item.value}
-                          style={[
-                            styles.priorityButton,
-
-                            priority
-                              === item.value
-                            && styles.priorityActive,
-                          ]}
-                          onPress={() =>
-                            setPriority(
-                              item.value,
-                            )}
-                        >
-                          <Text
+                    <View
+                      style={styles.priorityRow}
+                    >
+                      {PRIORITIES.map(
+                        (item) => (
+                          <TouchableOpacity
+                            key={item.value}
                             style={[
-                              styles.priorityText,
+                              styles.priorityButton,
 
                               priority
                                 === item.value
-                              && styles.priorityActiveText,
+                              && styles.priorityActive,
                             ]}
+                            onPress={() =>
+                              setPriority(
+                                item.value,
+                              )}
                           >
-                            {item.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ),
-                    )}
-                  </View>
+                            <Text
+                              style={[
+                                styles.priorityText,
 
-                  <Text
-                    style={styles.label}
-                  >
-                    Description
-                  </Text>
+                                priority
+                                  === item.value
+                                && styles.priorityActiveText,
+                              ]}
+                            >
+                              {item.label}
+                            </Text>
+                          </TouchableOpacity>
+                        ),
+                      )}
+                    </View>
 
-                  <TextInput
-                    style={[
-                      styles.input,
-                      styles.textArea,
-                    ]}
-                    value={description}
-                    onChangeText={setDescription}
-                    placeholder="Describe your complaint..."
-                    placeholderTextColor="#94A3B8"
-                    multiline
-                    textAlignVertical="top"
-                    maxLength={2000}
-                  />
-
-                  <View
-                    style={styles.modalButtons}
-                  >
-                    <TouchableOpacity
-                      style={styles.cancel}
-                      disabled={submitting}
-                      onPress={closeModal}
+                    <Text
+                      style={styles.label}
                     >
-                      <Text
-                        style={styles.cancelText}
+                      Description
+                    </Text>
+
+                    <TextInput
+                      style={[
+                        styles.input,
+                        styles.textArea,
+                      ]}
+                      value={description}
+                      onChangeText={setDescription}
+                      placeholder="Describe your complaint..."
+                      placeholderTextColor="#94A3B8"
+                      multiline
+                      textAlignVertical="top"
+                      maxLength={2000}
+                    />
+
+                    <View
+                      style={styles.modalButtons}
+                    >
+                      <TouchableOpacity
+                        style={styles.cancel}
+                        disabled={submitting}
+                        onPress={closeModal}
                       >
-                        Cancel
-                      </Text>
-                    </TouchableOpacity>
+                        <Text
+                          style={styles.cancelText}
+                        >
+                          Cancel
+                        </Text>
+                      </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={styles.submit}
-                      disabled={submitting}
-                      onPress={handleCreate}
-                    >
-                      {submitting
-                        ? (
-                          <ActivityIndicator
-                            size="small"
-                            color="#FFFFFF"
-                          />
-                        )
-                        : (
-                          <>
-                            <Feather
-                              name="send"
-                              size={fontSize(16)}
+                      <TouchableOpacity
+                        style={styles.submit}
+                        disabled={submitting}
+                        onPress={handleCreate}
+                      >
+                        {submitting
+                          ? (
+                            <ActivityIndicator
+                              size="small"
                               color="#FFFFFF"
                             />
+                          )
+                          : (
+                            <>
+                              <Feather
+                                name="send"
+                                size={fontSize(16)}
+                                color="#FFFFFF"
+                              />
 
-                            <Text
-                              style={styles.submitText}
-                            >
-                              Submit
-                            </Text>
-                          </>
-                        )}
-                    </TouchableOpacity>
+                              <Text
+                                style={styles.submitText}
+                              >
+                                Submit
+                              </Text>
+                            </>
+                          )}
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+                </TouchableWithoutFeedback>
+              </View>
+            {/* </TouchableWithoutFeedback> */}
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
         
     </View>

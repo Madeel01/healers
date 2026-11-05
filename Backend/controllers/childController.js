@@ -5,6 +5,7 @@ const TherapistAssignment = require("../models/TherapistAssignment");
 const WeeklyVideo = require("../models/Video");
 const User = require("../models/User");
 const Complaint = require("../models/Complaint");
+const { sendNotifications } = require("../utils/notificationService");
 
 exports.getChildFeedbackManagement = async (req, res) => {
   try {
@@ -17,6 +18,20 @@ exports.getChildFeedbackManagement = async (req, res) => {
         message: "Unauthorized",
       });
     }
+    await Feedback.updateMany(
+      {
+        childId,
+        "isSeen.userId": { $ne: childId },
+      },
+      {
+        $push: {
+          isSeen: {
+            userId: childId,
+            seenAt: new Date(),
+          },
+        },
+      },
+    );
 
     if (!["all", "pending", "new"].includes(status)) {
       return res.status(400).json({
@@ -1295,10 +1310,251 @@ exports.getChildFeedbackReplies = async (req, res) => {
   }
 };
 
+// exports.getAttendance = async (req, res) => {
+//   try {
+//     const childId = req.user?._id || req.user?.id;
+//     const { fromDate, toDate, filter, page = 1, limit = 5 } = req.query;
+
+//     if (!childId) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Child not authenticated",
+//       });
+//     }
+
+//     const childObjectId = new mongoose.Types.ObjectId(
+//       String(childId),
+//     );
+
+//     const currentPage = Math.max(
+//       parseInt(page, 10) || 1,
+//       1,
+//     );
+
+//     const pageLimit = Math.min(
+//       Math.max(parseInt(limit, 10) || 5, 1),
+//       20,
+//     );
+
+//     let startDate = null;
+//     let endDate = null;
+
+//     if (filter === "today") {
+//       const today = new Date();
+
+//       const year = today.getUTCFullYear();
+//       const month = today.getUTCMonth();
+//       const day = today.getUTCDate();
+
+//       startDate = new Date(
+//         Date.UTC(year, month, day, 0, 0, 0, 0),
+//       );
+
+//       endDate = new Date(
+//         Date.UTC(year, month, day, 23, 59, 59, 999),
+//       );
+//     } else {
+//       if (fromDate) {
+//         const parsedFromDate = new Date(
+//           `${fromDate}T00:00:00.000Z`,
+//         );
+
+//         if (!Number.isNaN(parsedFromDate.getTime())) {
+//           startDate = parsedFromDate;
+//         }
+//       }
+
+//       if (toDate) {
+//         const parsedToDate = new Date(
+//           `${toDate}T23:59:59.999Z`,
+//         );
+
+//         if (!Number.isNaN(parsedToDate.getTime())) {
+//           endDate = parsedToDate;
+//         }
+//       }
+//     }
+
+//     const records = await Scheduling.find({
+//       "appointments.children.childId": childObjectId,
+//     })
+//       .populate({
+//         path: "therapistId",
+//         model: "User",
+//         select: "fullName",
+//       })
+//       .lean();
+
+//     const attendance = [];
+
+//     records.forEach((record) => {
+//       if (!Array.isArray(record.appointments)) {
+//         return;
+//       }
+
+//       const therapist = record.therapistId || null;
+
+//       const therapistId = therapist?._id
+//         ? String(therapist._id)
+//         : null;
+
+//       const therapistName = therapist?.fullName || "";
+
+//       record.appointments.forEach((appointment) => {
+//         if (!appointment.date) {
+//           return;
+//         }
+
+//         const appointmentDate = new Date(
+//           appointment.date,
+//         );
+
+//         if (Number.isNaN(appointmentDate.getTime())) {
+//           return;
+//         }
+
+//         if (
+//           startDate
+//           && appointmentDate < startDate
+//         ) {
+//           return;
+//         }
+
+//         if (
+//           endDate
+//           && appointmentDate > endDate
+//         ) {
+//           return;
+//         }
+
+//         if (!Array.isArray(appointment.children)) {
+//           return;
+//         }
+
+//         const childAttendance = appointment.children.find(
+//           (child) =>
+//             child?.childId
+//             && String(child.childId)
+//               === String(childObjectId),
+//         );
+
+//         if (!childAttendance) {
+//           return;
+//         }
+
+//         attendance.push({
+//           id: String(appointment._id),
+
+//           childAttendanceId: childAttendance._id
+//             ? String(childAttendance._id)
+//             : null,
+
+//           childId: String(childObjectId),
+
+//           date: appointmentDate
+//             .toISOString()
+//             .split("T")[0],
+
+//           startTime: appointment.startTime || "",
+
+//           endTime: appointment.endTime || "",
+
+//           attendance_status: childAttendance.attendance_status
+//             || "Pending",
+
+//           therapistId,
+
+//           therapistName,
+
+//           type: appointment.type || null,
+
+//           sessionType: appointment.sessionType
+//             || "regular",
+
+//           batchSessionId: appointment.batchSessionId
+//             ? String(appointment.batchSessionId)
+//             : null,
+
+//           batchId: appointment.batchId
+//             ? String(appointment.batchId)
+//             : null,
+
+//           batchAssignmentId: appointment.batchAssignmentId
+//             ? String(
+//               appointment.batchAssignmentId,
+//             )
+//             : null,
+
+//           originalAppointmentId: appointment.originalAppointmentId
+//             ? String(
+//               appointment.originalAppointmentId,
+//             )
+//             : null,
+//         });
+//       });
+//     });
+
+//     attendance.sort((a, b) => {
+//       const dateA = new Date(
+//         `${a.date}T${a.startTime || "00:00"}:00`,
+//       );
+
+//       const dateB = new Date(
+//         `${b.date}T${b.startTime || "00:00"}:00`,
+//       );
+
+//       return dateA - dateB;
+//     });
+
+//     const total = attendance.length;
+
+//     const totalPages = Math.ceil(
+//       total / pageLimit,
+//     );
+
+//     const skip = (currentPage - 1) * pageLimit;
+
+//     const paginatedData = attendance.slice(
+//       skip,
+//       skip + pageLimit,
+//     );
+
+//     return res.status(200).json({
+//       success: true,
+
+//       filter: filter || "history",
+
+//       data: paginatedData,
+
+//       total,
+
+//       count: paginatedData.length,
+
+//       page: currentPage,
+
+//       limit: pageLimit,
+
+//       totalPages,
+
+//       hasMore: currentPage < totalPages,
+//     });
+//   } catch (error) {
+//     console.error(
+//       "getAttendance error:",
+//       error,
+//     );
+
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
 exports.getAttendance = async (req, res) => {
   try {
     const childId = req.user?._id || req.user?.id;
-    const { fromDate, toDate, filter, page = 1, limit = 5 } = req.query;
+    const { fromDate, toDate, filter, mode, date, page = 1, limit = 5 } = req.query;
+    
 
     if (!childId) {
       return res.status(401).json({
@@ -1324,7 +1580,16 @@ exports.getAttendance = async (req, res) => {
     let startDate = null;
     let endDate = null;
 
-    if (filter === "today") {
+    const isModeQuery = Boolean(mode);
+
+    if (isModeQuery) {
+      const key = /^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))
+        ? String(date)
+        : new Date().toISOString().slice(0, 10);
+
+      startDate = new Date(`${key}T00:00:00.000Z`);
+      endDate = new Date(`${key}T23:59:59.999Z`);
+    } else if (filter === "today") {
       const today = new Date();
 
       const year = today.getUTCFullYear();
@@ -1475,6 +1740,9 @@ exports.getAttendance = async (req, res) => {
               appointment.originalAppointmentId,
             )
             : null,
+          sessionType: appointment.sessionType || "regular",
+          therapist_attendance: appointment.therapist_attendance || "pending",
+          session_status: appointment.session_status || "Upcoming",
         });
       });
     });
@@ -1492,6 +1760,17 @@ exports.getAttendance = async (req, res) => {
     });
 
     const total = attendance.length;
+    if (isModeQuery) {
+      return res.status(200).json({
+        success: true,
+        mode,
+        selectedDate: date,
+        total,
+        count: total,
+        data: attendance,
+        hasMore: false,
+      });
+    }
 
     const totalPages = Math.ceil(
       total / pageLimit,
@@ -2148,7 +2427,7 @@ exports.getChildUpcomingSessions = async (req, res) => {
     const totalUpcoming = upcomingSessions.length;
 
     const nextSessions = upcomingSessions
-      .slice(0, 2)
+      .slice(0, 4)
       .map((session) => {
         const {
           sessionDateTime,
@@ -2259,7 +2538,24 @@ exports.createComplaint = async (req, res) => {
       status: "Pending",
       messages: [],
     });
+    const adminUsers = await User.find({
+      role: "Admin",
+    }).select("_id");
 
+    const adminIds = adminUsers.map((admin) =>
+      String(admin._id)
+    );
+    if (adminIds.length > 0) {
+      await sendNotifications({
+        title: "New Complaint Received",
+        message: `A new ${priority} priority complaint has been submitted by a ${userRole}. \nComplaint: ${title.trim()}`,
+        type: "Alert",
+        audience: "users",
+        users: adminIds,
+        createdBy: userId,
+        sendPush: true,
+      });
+    }
     return res.status(201).json({
       success: true,
       message: "Complaint submitted successfully.",

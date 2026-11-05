@@ -295,7 +295,7 @@ export default function ChatDetailsScreen({ route, navigation }) {
       "keyboardDidHide",
       () => setKeyboardVisible(false),
     );
-
+    console.log(keyboardVisible,"keyboardVisible");
     return () => {
       showSubscription.remove();
       hideSubscription.remove();
@@ -387,11 +387,11 @@ export default function ChatDetailsScreen({ route, navigation }) {
       </View>
 
       {/* Keyboard Avoiding Container */}
-      <KeyboardAvoidingView
+      {/* <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-      >
+      > */}
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={{ flex: 1 }}>
             {loading ? <ActivityIndicator size="large" color="#00528A" style={{ flex: 1 }} /> : (
@@ -430,7 +430,7 @@ export default function ChatDetailsScreen({ route, navigation }) {
             </View>
           </View>
         </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+      {/* </KeyboardAvoidingView> */}
     </View>
   );
 }

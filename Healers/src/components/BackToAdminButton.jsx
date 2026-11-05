@@ -63,7 +63,7 @@ export default function BackToAdminButton({ currentScreen }) {
       ],
     );
   };
-
+  const extraWidthScreens = ["ComplaintDetails","AddFeedback","ChildProfile"];
   return (
     <View
       style={[
@@ -71,7 +71,7 @@ export default function BackToAdminButton({ currentScreen }) {
         {
           bottom:
             insets.bottom +
-            hp(currentScreen === "ComplaintDetails" ? 150 : 80),
+            hp(extraWidthScreens.includes(currentScreen) ? 140 : 80),
         },
       ]}
       pointerEvents="box-none"

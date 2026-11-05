@@ -91,6 +91,7 @@ import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
 import { commonStyles } from '../styles/theme';
 import FeeDetailScreen from '../screens/admin/FeeDetailScreen';
+import AdminQuarterlyReportsScreen from '../screens/admin/AdminQuarterlyReportsScreen';
 
 const Stack = createNativeStackNavigator();
 const navigationRef = createNavigationContainerRef();
@@ -140,6 +141,7 @@ const SCREEN_LAYOUTS = {
     SendPushNotification: { headerTitle: "Send Notification" },
     AllUsers: { headerTitle: "All Users" },
     FeeDetail: { headerTitle: "Fee Details" },
+    AdminQuarterlyReports: { headerTitle: "Quarterly Reports" },
   },
   Therapist: {
     TherapistDashboard: { showHeader: false, showFooter: true },
@@ -212,6 +214,7 @@ const ACTIVE_TAB_ROUTES = {
     SendPushNotification: "AdminDashboard",
     AllUsers: "AdminDashboard",
     FeeDetail: "AdminDashboard",
+    AdminQuarterlyReports: "AdminDashboard",
   },
   Therapist: {
     TherapistDashboard: "TherapistDashboard",
@@ -289,6 +292,7 @@ const ADMIN_SCREENS = [
   ["ChildDetails", ChildDetailsScreen],
   ["SendPushNotification", SendPushNotificationScreen],
   ["AllUsers", AllUsersScreen],
+  ["AdminQuarterlyReports", AdminQuarterlyReportsScreen],
 ];
 
 const THERAPIST_SCREENS = [

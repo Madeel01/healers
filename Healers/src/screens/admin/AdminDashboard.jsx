@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  RefreshControl,
   View,
 } from 'react-native';
 
@@ -42,6 +43,7 @@ import Fee from './components/Fee';
 
 export default function AdminDashboard() {
   const { user, logout } = useContext(AuthContext);
+  const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
   const [stats, setStats] = useState({
     totalChild: 0,
@@ -61,32 +63,33 @@ export default function AdminDashboard() {
   const role = user?.role;
   const isFocused = useIsFocused();
 
-  useEffect(() => {
-    if (!isFocused) return;
+  // useEffect(() => {
+  //   if (!isFocused) return;
 
-    const OverviewData = async () => {
-      try {
-        await fetchOverviewData();
-      } catch (error) {
-        console.log("Failed to fetch overview data:", error);
-      }
-    };
+  //   const OverviewData = async () => {
+  //     try {
+  //       await fetchOverviewData();
+  //     } catch (error) {
+  //       console.log("Failed to fetch overview data:", error);
+  //     }
+  //   };
 
-    OverviewData();
+  //   OverviewData();
 
-    const interval = setInterval(() => {
-      OverviewData();
-    }, 60000);
+  //   const interval = setInterval(() => {
+  //     OverviewData();
+  //   }, 60000);
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, [isFocused]);
+  //   return () => {
+  //     clearInterval(interval);
+  //   };
+  // }, [isFocused]);
 
   const fetchOverviewData = async () => {
     try {
       const response = await Overview();
       const rawData = response?.data || response;
+
       setStats({
         totalChild: rawData?.totalChild || 0,
         therapistCount: rawData?.therapistCount || 0,
@@ -115,31 +118,68 @@ export default function AdminDashboard() {
     }
   };
 
-  useEffect(() => {
-    if (!isFocused || !userId) {
-      return;
-    }
-    fetchUnreadSummary();
-    const interval = setInterval(() => {
-      fetchUnreadSummary();
-    }, 5000);
+  // useEffect(() => {
+  //   if (!isFocused || !userId) {
+  //     return;
+  //   }
+  //   fetchUnreadSummary();
+  //   const interval = setInterval(() => {
+  //     fetchUnreadSummary();
+  //   }, 5000);
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, [isFocused, userId]);
+  //   return () => {
+  //     clearInterval(interval);
+  //   };
+  // }, [isFocused, userId]);
   const latestMsg = unreadData.latestUnreadMessage;
   const senderImage = latestMsg?.sender?.profileImage;
   const senderName = latestMsg?.sender?.fullName || "New Message";
   const senderInitials = senderName
     ? senderName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
     : "MSG";
+  const refreshDashboard = async () => {
+    try {
+      await Promise.all([
+        fetchOverviewData(),
+        fetchUnreadSummary(),
+      ]);
+    } catch (error) {
+      console.log("Dashboard refresh error:", error);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+
+    await refreshDashboard();
+
+    setRefreshing(false);
+  };
+  useEffect(() => {
+    if (!isFocused || !userId) return;
+
+    refreshDashboard();
+
+    const interval = setInterval(() => {
+      refreshDashboard();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isFocused, userId]);
   return (
     <View style={[commonStyles.container]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
         <View style={styles.headerRow}>
           <View style={styles.profileContainer}>
@@ -220,7 +260,7 @@ export default function AdminDashboard() {
             onPress={() => navigation.navigate("Therapist")}
           >
             <View style={[styles.cardIconContainer, { backgroundColor: colors.primary }]}>
-              <MaterialIcons name="man" size={22} color="#49A7E6" />
+              <FontAwesome5 name="user-md" size={22} color="#49A7E6" />
             </View>
             <Text style={styles.statLabelLight}>Therapist</Text>
             <Text style={styles.statValueLight}>
@@ -244,7 +284,16 @@ export default function AdminDashboard() {
           >
             <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
               <Feather name="message-square" size={24} color="#10B981" />
-              {unreadData.hasUnread && <View style={styles.cardBadgeDot} />}
+              {/* {unreadData.hasUnread && <View style={styles.cardBadgeDot} />} */}
+              {unreadData.totalUnreadCount > 0 && (
+                <View style={styles.messageCountBadge}>
+                  <Text style={styles.messageCountBadgeText}>
+                    {unreadData.totalUnreadCount > 99
+                      ? "99+"
+                      : unreadData.totalUnreadCount}
+                  </Text>
+                </View>
+              )}
             </View>
             <Text style={styles.gridCardTitle}>Messages</Text>
           </TouchableOpacity>
@@ -325,7 +374,7 @@ export default function AdminDashboard() {
 
         <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate("ServiceManagement")}>
           <View style={[styles.quickIconBox, { backgroundColor: "#dbfef9" }]}>
-            <MaterialIcons name="description" size={22} color="#25ebb0" />
+            <MaterialIcons name="medical-services" size={22} color="#25ebb0" />
           </View>
           <View style={styles.quickActionText}>
             <Text style={styles.quickActionTitle}>Service Management</Text>
@@ -336,13 +385,26 @@ export default function AdminDashboard() {
 
         <TouchableOpacity style={styles.quickActionCard} onPress={() => navigation.navigate("InvoiceManagement")}>
           <View style={[styles.quickIconBox, { backgroundColor: "#DBEAFE" }]}>
-            <MaterialIcons name="description" size={22} color="#2563EB" />
+            <MaterialIcons name="receipt-long" size={22} color="#2563EB" />
           </View>
           <View style={styles.quickActionText}>
             <Text style={styles.quickActionTitle}>Invoice Management</Text>
             <Text style={styles.quickActionSub}>Generate and manage invoices</Text>
           </View>
           <AntDesign name="file-text" size={24} color="#717781" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickActionCard}
+          onPress={() => navigation.navigate("AdminQuarterlyReports")}
+        >
+          <View style={[styles.quickIconBox, { backgroundColor: "#E3F8F2" }]}>
+            <MaterialIcons name="assessment" size={22} color="#00725E" />
+          </View>
+          <View style={styles.quickActionText}>
+            <Text style={styles.quickActionTitle}>Quarterly Reports</Text>
+            <Text style={styles.quickActionSub}>Review therapist progress reports by child</Text>
+          </View>
+          <AntDesign name="right" size={20} color="#717781" />
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -636,5 +698,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+  },
+  messageCountBadge: {
+    position: "absolute",
+    top: -7,
+    right: -7,
+    minWidth: wp(24),
+    minHeight: hp(24),
+    paddingHorizontal: 3,
+    borderRadius: 88,
+    backgroundColor: "#EF4444",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+
+  messageCountBadgeText: {
+    color: "#FFFFFF",
+    fontSize: fontSize(8),
+    fontFamily: fonts.semiBold,
+    textAlign: "center",
   },
 });

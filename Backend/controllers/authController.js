@@ -7,6 +7,9 @@ const Notification = require("../models/Notification");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail");
 const { Expo } = require("expo-server-sdk");
+const Message = require("../models/Message");
+const Feedback = require("../models/Feedback");
+const invoice = require("../models/invoice");
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -556,6 +559,68 @@ exports.getUnreadNotificationCount = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to get unread notification count",
+    });
+  }
+};
+const ALLOWED_STATUSES = [
+  "Pending",
+  "Partially Paid",
+  "Paid",
+  "Overdue",
+];
+exports.getChildSummery = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const [notificationCount, invoiceCount, unreadMessagesCount, feedbackCount] = await Promise.all([
+      Notification.countDocuments({
+        status: "sent",
+        recipients: {
+          $elemMatch: {
+            user: userId,
+            readAt: null,
+            isDelete: false,
+          },
+        },
+      }),
+
+      invoice.countDocuments({
+        childId: userId,
+        isSeen: false,
+        status: {
+          $in: ALLOWED_STATUSES,
+        },
+      }),
+      Message.countDocuments({
+        receiver: userId,
+        isSeen: false,
+      }),
+      Feedback.countDocuments({
+        childId: userId,
+        "isSeen.userId": { $ne: userId },
+      }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      notificationCount,
+      invoiceCount,
+      unreadMessagesCount,
+      feedbackCount,
+    });
+  } catch (error) {
+    console.error("getChildSummery:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get child summary",
     });
   }
 };

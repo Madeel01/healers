@@ -74,7 +74,10 @@ exports.sendNotifications = async ({
     const payload = {
       title,
       body: message,
-      data: {},
+      data: {
+        sound: "audio1",
+        channelId: "default",
+      },
     };
     console.log("sending request");
     const test = sendBulkPushToUsers(recipientIds, payload).catch((err) =>

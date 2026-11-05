@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -996,160 +998,165 @@ export default function AttendanceTrackingScreen({ route }) {
           )
         }
       >
-        <View
-          style={styles.overlay}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
         >
           <View
-            style={styles.modal}
+            style={styles.overlay}
           >
             <View
-              style={
-                styles.modalHeader
-              }
+              style={styles.modal}
             >
-              <Text
+              <View
                 style={
-                  styles.modalTitle
+                  styles.modalHeader
                 }
               >
-                Filter Children
-              </Text>
-
-              <TouchableOpacity
-                onPress={() =>
-                  setChildFilterVisible(
-                    false
-                  )
-                }
-              >
-                <Feather
-                  name="x"
-                  size={22}
-                  color={DARK}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View
-              style={
-                styles.searchBox
-              }
-            >
-              <Feather
-                name="search"
-                size={18}
-                color={MUTED}
-              />
-
-              <TextInput
-                style={
-                  styles.searchInput
-                }
-                placeholder="Search child name..."
-                placeholderTextColor={
-                  MUTED
-                }
-                value={
-                  childSearch
-                }
-                onChangeText={
-                  setChildSearch
-                }
-              />
-            </View>
-
-            <ScrollView
-              style={{
-                maxHeight: 350,
-              }}
-              keyboardShouldPersistTaps="handled"
-            >
-              <TouchableOpacity
-                style={
-                  styles.filterOption
-                }
-                onPress={() => {
-                  setSelectedChildId(
-                    null
-                  );
-
-                  setChildFilterVisible(
-                    false
-                  );
-                }}
-              >
-                <Feather
-                  name="users"
-                  size={20}
-                  color={BLUE}
-                />
-
                 <Text
                   style={
-                    styles.filterOptionText
+                    styles.modalTitle
                   }
                 >
-                  All Children
+                  Filter Children
                 </Text>
 
-                {!selectedChildId && (
+                <TouchableOpacity
+                  onPress={() =>
+                    setChildFilterVisible(
+                      false
+                    )
+                  }
+                >
                   <Feather
-                    name="check-circle"
+                    name="x"
+                    size={22}
+                    color={DARK}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View
+                style={
+                  styles.searchBox
+                }
+              >
+                <Feather
+                  name="search"
+                  size={18}
+                  color={MUTED}
+                />
+
+                <TextInput
+                  style={
+                    styles.searchInput
+                  }
+                  placeholder="Search child name..."
+                  placeholderTextColor={
+                    MUTED
+                  }
+                  value={
+                    childSearch
+                  }
+                  onChangeText={
+                    setChildSearch
+                  }
+                />
+              </View>
+
+              <ScrollView
+                style={{
+                  maxHeight: 350,
+                }}
+                keyboardShouldPersistTaps="handled"
+              >
+                <TouchableOpacity
+                  style={
+                    styles.filterOption
+                  }
+                  onPress={() => {
+                    setSelectedChildId(
+                      null
+                    );
+
+                    setChildFilterVisible(
+                      false
+                    );
+                  }}
+                >
+                  <Feather
+                    name="users"
                     size={20}
                     color={BLUE}
                   />
-                )}
-              </TouchableOpacity>
 
-              {filteredModalChildren.map(
-                (child) => (
-                  <TouchableOpacity
-                    key={
-                      child.childId
-                    }
+                  <Text
                     style={
-                      styles.filterOption
+                      styles.filterOptionText
                     }
-                    onPress={() => {
-                      setSelectedChildId(
-                        child.childId
-                      );
-
-                      setChildFilterVisible(
-                        false
-                      );
-
-                      setFull(false);
-                    }}
                   >
+                    All Children
+                  </Text>
+
+                  {!selectedChildId && (
                     <Feather
-                      name="user"
+                      name="check-circle"
                       size={20}
                       color={BLUE}
                     />
+                  )}
+                </TouchableOpacity>
 
-                    <Text
-                      style={
-                        styles.filterOptionText
+                {filteredModalChildren.map(
+                  (child) => (
+                    <TouchableOpacity
+                      key={
+                        child.childId
                       }
-                    >
-                      {child.childName}
-                    </Text>
+                      style={
+                        styles.filterOption
+                      }
+                      onPress={() => {
+                        setSelectedChildId(
+                          child.childId
+                        );
 
-                    {selectedChildId ===
-                      child.childId && (
+                        setChildFilterVisible(
+                          false
+                        );
+
+                        setFull(false);
+                      }}
+                    >
                       <Feather
-                        name="check-circle"
+                        name="user"
                         size={20}
                         color={BLUE}
                       />
-                    )}
-                  </TouchableOpacity>
-                )
-              )}
-            </ScrollView>
+
+                      <Text
+                        style={
+                          styles.filterOptionText
+                        }
+                      >
+                        {child.childName}
+                      </Text>
+
+                      {selectedChildId ===
+                        child.childId && (
+                        <Feather
+                          name="check-circle"
+                          size={20}
+                          color={BLUE}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  )
+                )}
+              </ScrollView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* MONTH PICKER */}

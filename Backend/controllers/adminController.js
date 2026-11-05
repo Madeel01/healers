@@ -31,6 +31,9 @@ const {
 } = require("../utils/childDocuments");
 const { sendBulkPushToUsers, sendPushToUser } = require("./pushNotificationController");
 const sendEmail = require("../utils/sendEmail");
+const Message = require("../models/Message");
+const QuarterlyReport = require("../models/QuarterlyReport");
+const Program = require("../models/Program");
 const PAST_DAYS = 365;
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
@@ -59,6 +62,26 @@ const to12 = (t) => {
   const [h, m = 0] = String(t).split(":").map(Number);
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
 };
+const loadTherapistLeaves = async (therapistId, from, to) => {
+  const docs = await LeaveRequest.find({
+    applicantId: therapistId,
+    status: "approved",
+    startDate: { $lt: utcMidnight(addDays(to, 1)) },
+    endDate: { $gte: utcMidnight(from) },
+  })
+    .select("startDate endDate")
+    .lean();
+
+  return docs.map((d) => ({
+    from: dateKeyOf(d.startDate),
+    to: dateKeyOf(d.endDate),
+  }));
+};
+
+const onLeave = (leaves, date) =>
+  leaves.some((l) => l.from <= date && date <= l.to);
+
+const LEAVE_MSG = "Therapist is on leave on this day.";
 
 const isValidDate = (s) =>
   typeof s === "string"
@@ -685,6 +708,10 @@ const computeFreeSlots = async ({
   if (!st.workingDays.includes(day)) {
     return { slots: [], reason: `${day} is not a clinic working day.` };
   }
+  const leaves = await loadTherapistLeaves(therapistId, date, date);
+  if (onLeave(leaves, date)) {
+    return { slots: [], onLeave: true, reason: LEAVE_MSG };
+  }
 
   const children = childIds.map(String);
   const childObjIds = children.map((id) => new mongoose.Types.ObjectId(id));
@@ -928,12 +955,14 @@ const upload = multer({
 
 
 exports.getAdminOverview = async (req, res) => {
+  const userId = req.user.id || req.user._id;
   try {
     const [
       totalChild,
       therapistCount,
       totalUsers,
       leaveCount,
+      unreadMessageCount
     ] = await Promise.all([
       User.countDocuments({ role: "Child" }),
       User.countDocuments({ role: "Therapist" }),
@@ -943,6 +972,10 @@ exports.getAdminOverview = async (req, res) => {
           { isSeen: false },
           { isSeen: { $exists: false } },
         ],
+      }),
+      Message.countDocuments({
+        receiver: userId,
+        isSeen: false,
       }),
     ]);
 
@@ -956,6 +989,7 @@ exports.getAdminOverview = async (req, res) => {
         totalUsers,
         sessionCount,
         leaveCount,
+        unreadMessageCount,
       },
     });
   } catch (error) {
@@ -3549,6 +3583,45 @@ exports.getLeaveRequests = async (req, res) => {
     });
   }
 };
+const cancelSessionsForLeave = async (therapistId, startDate, endDate) => {
+  const st = await loadScheduleSettings();
+  const today = todayKey(st.tz);
+  const nowMin = clockMinutes(st.tz);
+
+  const startKey = dateKeyOf(startDate);
+  const from = startKey < today ? today : startKey;
+  const to = dateKeyOf(endDate);
+  if (to < from) return { count: 0, childIds: [] };
+
+  const schedules = await Scheduling.find({
+    therapistId,
+    appointments: {
+      $elemMatch: { date: { $gte: utcMidnight(from), $lte: utcMidnight(to) } },
+    },
+  });
+
+  let count = 0;
+  const childIds = new Set();
+
+  for (const sc of schedules) {
+    let changed = false;
+    for (const ap of sc.appointments) {
+      if (INACTIVE_TYPES.includes(ap.sessionType)) continue;
+      
+      const date = dateKeyOf(ap.date);
+      if (date < from || date > to) continue;
+      if (date === today && toMin(ap.endTime) <= nowMin) continue;
+      ap.sessionType = "cancel";
+      ap.therapist_attendance = "cancel";
+      (ap.children || []).forEach((c) => childIds.add(String(c.childId)));
+      count++;
+      changed = true;
+    }
+    if (changed) await sc.save();
+  }
+
+  return { count, childIds: [...childIds] };
+};
 exports.approveLeaveRequest = async (req, res) => {
   try {
     const { id } = req.params;
@@ -3576,10 +3649,36 @@ exports.approveLeaveRequest = async (req, res) => {
     leaveRequest.rejectionReason = "";
 
     await leaveRequest.save();
+    let cancelled = { count: 0, childIds: [] };
+    if (leaveRequest.role === "Therapist") {
+      cancelled = await cancelSessionsForLeave(
+        leaveRequest.applicantId,
+        leaveRequest.startDate,
+        leaveRequest.endDate,
+      );
+      const childMessage = cancelled.count > 0
+      ? `Your ${cancelled.count} upcoming session(s) have been cancelled because the therapist is on leave.`
+      : "";
+      if (cancelled.childIds.length && childMessage) {
+        await sendNotifications({
+          title: "Session Cancelled",
+          message: childMessage,
+          type: "Alert",
+          audience: "users",
+          users: cancelled.childIds,
+          createdBy: adminId,
+          sendPush: true,
+        });
+      }
+    }
+    const message = cancelled.count > 0
+      ? `Your leave request has been approved. ${cancelled.count} upcoming session(s) have been cancelled during your leave period.`
+      : "Your leave request has been approved.";
+
     if (leaveRequest?.applicantId) {
       await sendNotifications({
         title: "Leave Request Approved",
-        message: "Your leave request has been approved.",
+        message: message,
         type: "Alert",
         audience: "users",
         users: [String(leaveRequest?.applicantId)],
@@ -4483,6 +4582,10 @@ exports.createBroadcast = async (req, res) => {
 
     await notification.save();
     if (status === "sending" && recipientUsers.length > 0) {
+      const recipientIds = recipientUsers.map((user) =>
+        String(user._id || user)
+      );
+
       const payload = {
         title: title.trim(),
         body: message.trim(),
@@ -4490,29 +4593,23 @@ exports.createBroadcast = async (req, res) => {
           screen: "Notifications",
           notificationId: String(notification._id),
           type: notifType,
+          sound: "audio1",
+          channelId: "default",
         },
       };
 
-      const results = await Promise.allSettled(
-        recipientUsers.map((user) =>
-          sendPushToUser(
-            String(user._id || user),
-            payload
-          )
-        )
-      );
+      try {
+        const result = await sendBulkPushToUsers(
+          recipientIds,
+          payload
+        );
 
-      console.log("Push notification results:", {
-        total: results.length,
-        successful: results.filter(
-          (r) => r.status === "fulfilled"
-        ).length,
-        failed: results.filter(
-          (r) => r.status === "rejected"
-        ).length,
-      });
+        console.log("Broadcast push results:", result);
+      } catch (error) {
+        console.error("Broadcast push failed:", error);
+      }
     }
-    console.log(notification,"notifciation")
+
     return res.status(201).json({
       success: true,
       message: status === "draft"
@@ -4956,6 +5053,7 @@ exports.getComplaints = async (req, res) => {
       .json({ success: false, message: "Failed to fetch complaints." });
   }
 };
+
 exports.resolveComplaint = async (req, res) => {
   try {
     const complaint = await Complaint.findOneAndUpdate(
@@ -4966,7 +5064,7 @@ exports.resolveComplaint = async (req, res) => {
         resolvedAt: new Date(),
         resolutionNote: (req.body?.resolutionNote || "").trim().slice(0, 500),
       },
-      { new: true, projection: { messages: 0 } },
+      { returnDocument: "after", projection: { messages: 0 } },
     ).populate(POPULATE);
 
     if (!complaint) {
@@ -4975,6 +5073,23 @@ exports.resolveComplaint = async (req, res) => {
         message: "Complaint not found or already resolved.",
       });
     }
+
+    await sendNotifications({
+      title: "Complaint Resolved",
+      message: `Your complaint has been reviewed and resolved successfully.${
+        complaint.resolutionNote
+          ? ` Resolution: ${complaint.resolutionNote}`
+          : ""
+      }`,
+      type: "Reminder",
+      audience: "users",
+      users: [
+        String(complaint.complainantId?._id || complaint.complainantId)
+      ],
+      createdBy: req.user.id,
+      sendPush: true,
+    });
+
     return res.status(200).json({ success: true, data: complaint });
   } catch (error) {
     console.error("Resolve Complaint Error:", error);
@@ -5094,26 +5209,30 @@ exports.getMyNotifications = async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit, 10) || 15, 50);
     const { typeFilter = "All" } = req.query;
 
+    const isUnreadFilter = typeFilter === "Unread";
+
+    const recipientFilter = {
+      user: userId,
+      ...(isUnreadFilter ? { readAt: null } : {}),
+      $or: [
+        { isDelete: false },
+        { isDelete: { $exists: false } },
+      ],
+    };
+
     const filter = {
       status: "sent",
       recipients: {
-        $elemMatch: {
-          user: userId,
-          $or: [
-            { isDelete: false },
-            { isDelete: { $exists: false } },
-          ],
-        },
+        $elemMatch: recipientFilter,
       },
     };
 
-    if (typeFilter && typeFilter !== "All") {
+    if (typeFilter !== "All" && !isUnreadFilter) {
       filter.type = typeFilter;
     }
 
     const unreadFilter = {
       status: "sent",
-      type: filter.type,
       recipients: {
         $elemMatch: {
           user: userId,
@@ -5141,8 +5260,9 @@ exports.getMyNotifications = async (req, res) => {
 
     const data = notifications.map((n) => {
       const mine = (n.recipients || []).find(
-        (r) => String(r.user) === String(userId),
+        (r) => String(r.user) === String(userId)
       );
+
       const { recipients, ...rest } = n;
 
       return {
@@ -5160,6 +5280,7 @@ exports.getMyNotifications = async (req, res) => {
       totalCount: total,
       unreadCount,
     });
+
   } catch (error) {
     console.error("Get My Notifications Error:", error);
 
@@ -7170,7 +7291,7 @@ exports.getChildCustomSlotOptions = async (req, res) => {
     if (!child) return res.status(404).json({ success: false, message: "Child not found." });
     if (r.error) return res.status(400).json({ success: false, message: r.error });
 
-    return res.json({ success: true, data: { slots: r.slots, reason: r.reason } });
+    return res.json({ success: true, data: { slots: r.slots, reason: r.reason, onLeave: !!r.onLeave }});
   } catch (error) {
     console.error("getChildCustomSlotOptions:", error);
     return res.status(500).json({ success: false, message: "Failed to load available times." });
@@ -7207,6 +7328,9 @@ exports.createChildCustomAppointment = async (req, res) => {
     if (!child) return res.status(404).json({ success: false, message: "Child not found." });
     if (!therapist) return res.status(404).json({ success: false, message: "Therapist not found." });
     if (r.error) return res.status(400).json({ success: false, message: r.error });
+    if (r.onLeave) {
+      return res.status(409).json({ success: false, message: LEAVE_MSG });
+    }
     if (!r.slots.some((s) => s.startTime === startTime && s.endTime === endTime)) {
       return res.status(409).json({
         success: false,
@@ -7242,6 +7366,15 @@ exports.createChildCustomAppointment = async (req, res) => {
         },
       }
     );
+    await sendNotifications({
+      title: "New Session Scheduled",
+      message: `A new session has been scheduled for ${date} from ${startTime} to ${endTime}.`,
+      type: "Alert",
+      audience: "users",
+      users: [String(childId), String(therapistId)],
+      createdBy: req.user?.id,
+      sendPush: true,
+    });
 
     return res.status(201).json({
       success: true,
@@ -7790,7 +7923,6 @@ exports.updateSettings = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to save settings." });
   }
 };
-
 exports.sendFeedbackReminderNotification = async (req, res) => {
   try {
     const { appointmentId } = req.body;
@@ -8028,11 +8160,12 @@ const analyzeCustomPlan = async (childId, body) => {
   const from = dates[0];
   const to = dates[dates.length - 1];
 
-  const [child, therapist, rules, busy] = await Promise.all([
+  const [child, therapist, rules, busy, leaves] = await Promise.all([
     loadChild(childId),
     User.findOne({ _id: therapistId, role: "Therapist" }, "fullName").lean(),
     TherapistAvailability.find({ therapistId, isActive: true }).lean(),
     loadCustomBusy({ therapistId, childId, from, to }),
+    loadTherapistLeaves(therapistId, from, to),
   ]);
   if (!child) return { status: 404, error: "Child not found." };
   if (!therapist) return { status: 404, error: "Therapist not found." };
@@ -8046,6 +8179,8 @@ const analyzeCustomPlan = async (childId, body) => {
 
     if (!st.workingDays.includes(day)) {
       reasons.push(`${day} is not a clinic working day.`);
+    } else if (onLeave(leaves, s.date)) {
+      reasons.push(`${therapist.fullName} is on leave on this day.`);
     } else if (!insideClinic(a, b, st)) {
       reasons.push("This time is outside clinic hours.");
     } else if (s.date === today && a <= nowMin) {
@@ -8094,11 +8229,12 @@ exports.getChildCustomWeekOptions = async (req, res) => {
     const rangeError = checkCustomRange(startDate, endDate, today);
     if (rangeError) return res.status(400).json({ success: false, message: rangeError });
 
-    const [child, therapist, rules, busy] = await Promise.all([
+    const [child, therapist, rules, busy, leaves] = await Promise.all([
       loadChild(childId),
       User.exists({ _id: therapistId, role: "Therapist" }),
       TherapistAvailability.find({ therapistId, isActive: true }).lean(),
       loadCustomBusy({ therapistId, childId, from: startDate, to: endDate }),
+      loadTherapistLeaves(therapistId, startDate, endDate),
     ]);
     if (!child) return res.status(404).json({ success: false, message: "Child not found." });
     if (!therapist) return res.status(404).json({ success: false, message: "Therapist not found." });
@@ -8119,7 +8255,8 @@ exports.getChildCustomWeekOptions = async (req, res) => {
         let bad = 0;
 
         for (const date of dates[day]) {
-          if (date === today && a <= nowMin) bad++;
+          if (onLeave(leaves, date)) bad++;
+          else if (date === today && a <= nowMin) bad++;
           else if (!availableOnDate(rules, date, a, b)) bad++;
           else if (findHit(busy.therapist, date, a, b) || findHit(busy.child, date, a, b)) bad++;
         }
@@ -8201,6 +8338,16 @@ exports.saveChildCustomSchedule = async (req, res) => {
       { therapistId: new mongoose.Types.ObjectId(therapistId) },
       { $addToSet: { childIds: new mongoose.Types.ObjectId(childId) } },
     );
+    await sendNotifications({
+      title: "New Sessions Scheduled",
+      message: `${created} new therapy session(s) have been scheduled for you.`,
+      type: "Alert",
+      audience: "users",
+      users: [String(childId), String(therapistId)],
+      createdBy: req.user?.id,
+      sendPush: true,
+    });
+
 
     return res.status(201).json({
       success: true,
@@ -8231,6 +8378,16 @@ exports.cancelChildCustomAppointment = async (req, res) => {
     }
  
     await doc.save();
+    await sendNotifications({
+      title: "Session Cancelled",
+      message: "A therapy session scheduled for you has been cancelled.",
+      type: "Alert",
+      audience: "users",
+      users: [String(childId), String(doc.therapistId)],
+      createdBy: req.user?.id,
+      sendPush: true,
+    });
+
     return res.json({ success: true, message: "Appointment cancelled." });
   } catch (error) {
     console.error("cancelChildCustomAppointment:", error);
@@ -8273,6 +8430,9 @@ exports.postponeChildCustomAppointment = async (req, res) => {
       includeBooked: true,
     });
     if (free.error) return res.status(400).json({ success: false, message: free.error });
+    if (free.onLeave) {
+      return res.status(409).json({ success: false, message: LEAVE_MSG });
+    }
  
     const ok = free.slots.some(
       (s) => s.startTime === startTime && s.endTime === endTime && !s.booked,
@@ -8313,6 +8473,16 @@ exports.postponeChildCustomAppointment = async (req, res) => {
  
     await target.save();
     if (!sameDoc) await doc.save();
+    await sendNotifications({
+      title: "Session Rescheduled",
+      message: `Your therapy session has been rescheduled to ${date} from ${startTime} to ${endTime}.`,
+      type: "Alert",
+      audience: "users",
+      users: [String(childId), String(doc.therapistId)],
+      createdBy: req.user?.id,
+      sendPush: true,
+    });
+
  
     const created = target.appointments[target.appointments.length - 1];
     return res.json({
@@ -8333,6 +8503,105 @@ exports.postponeChildCustomAppointment = async (req, res) => {
       message: "Failed to postpone appointment.",
       error: error.message,
     });
+  }
+};
+const statusFromProgress = (progress) => {
+  if (progress >= 100) return "completed";
+  if (progress > 0) return "in_progress";
+  return "pending";
+};
+const attachLiveProgress = async (reports) => {
+  const programIds = [
+    ...new Set(
+      reports.flatMap((r) =>
+        (r.programs || []).map((p) => String(p.programId)).filter(Boolean),
+      ),
+    ),
+  ];
+  if (!programIds.length) return reports;
+
+  const dbPrograms = await Program.find({ _id: { $in: programIds } })
+    .select("programGoals")
+    .lean();
+
+  const goalMap = new Map();
+  dbPrograms.forEach((p) =>
+    (p.programGoals || []).forEach((g) => goalMap.set(String(g._id), g)),
+  );
+
+  return reports.map((r) => ({
+    ...r,
+    programs: (r.programs || []).map((p) => ({
+      ...p,
+      goals: (p.goals || []).map((g) => {
+        const live = goalMap.get(String(g.goalId));
+        if (!live) return g;
+        const progress = typeof live.progress === "number" ? live.progress : 0;
+        return {
+          ...g,
+          progress,
+          status: statusFromProgress(progress),
+        };
+      }),
+    })),
+  }));
+};
+
+exports.adminListQuarterlyReports = async (req, res) => {
+  try {
+    const { year, quarter, therapistId, search, page = 1, limit = 15 } = req.query;
+
+    const q = {};
+    if (year) q.year = Number(year);
+    if (quarter) q.quarter = quarter;
+    if (therapistId) q.therapistId = therapistId;
+
+    if (search?.trim()) {
+      const rx = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      const people = await User.find({ $or: [{ fullName: rx }, { name: rx }] })
+        .select("_id")
+        .lean();
+      const ids = people.map((p) => p._id);
+      q.$or = [{ userId: { $in: ids } }, { therapistId: { $in: ids } }];
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [items, total, childIds, therapistIds] = await Promise.all([
+      QuarterlyReport.find(q)
+        .populate("userId", "fullName name profileImage")
+        .populate("therapistId", "fullName name")
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      QuarterlyReport.countDocuments(q),
+      QuarterlyReport.distinct("userId", q),
+      QuarterlyReport.distinct("therapistId", q),
+    ]);
+    const dataWithProgress = await attachLiveProgress(items);
+    return res.status(200).json({
+      success: true,
+      data: dataWithProgress,
+      stats: { total, children: childIds.length, therapists: therapistIds.length },
+      pagination: { page: Number(page), hasMore: skip + items.length < total },
+    });
+  } catch (error) {
+    console.error("Admin list quarterly reports error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch quarterly reports." });
+  }
+};
+exports.adminGetQuarterlyReport = async (req, res) => {
+  try {
+    const report = await QuarterlyReport.findById(req.params.id)
+      .populate("userId", "fullName name profileImage")
+      .populate("therapistId", "fullName name")
+      .lean();
+    if (!report) return res.status(404).json({ success: false, message: "Report not found." });
+    const [withProgress] = await attachLiveProgress([report]);
+    return res.status(200).json({ success: true, data: withProgress });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to fetch report." });
   }
 };
 

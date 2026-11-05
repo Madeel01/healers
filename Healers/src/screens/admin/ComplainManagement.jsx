@@ -413,7 +413,7 @@ export default function ComplainManagementScreen({ navigation }) {
 
             {readOnly
               ? (
-                <View style={[styles.readOnlyBanner, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+                <View style={[styles.readOnlyBanner, { paddingBottom: Math.max(insets.bottom + 10, 12) }]}>
                   <Feather name="lock" size={fontSize(14)} color="#64748B" />
                   <Text style={styles.readOnlyText}>
                     This complaint is resolved. The conversation is read-only.
@@ -421,7 +421,7 @@ export default function ComplainManagementScreen({ navigation }) {
                 </View>
               )
               : (
-                <View style={[styles.chatInputRow, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+                <View style={[styles.chatInputRow, { paddingBottom: Math.max(insets.bottom + 10, 12) }]}>
                   <TextInput
                     style={styles.chatInput}
                     placeholder="Type a message..."
@@ -458,7 +458,7 @@ export default function ComplainManagementScreen({ navigation }) {
           style={styles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : "padding"}
         >
-          <View style={[styles.detailSheet, { paddingBottom: insets.bottom }]}>
+          <View style={[styles.detailSheet, { paddingBottom: insets.bottom + 5 }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Complaint details</Text>
               <TouchableOpacity onPress={closeDetails} hitSlop={8}>

@@ -325,135 +325,140 @@ function PackagePickerModal({ visible, selectedId, onClose, onSelect }) {
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={isCreate ? () => setMode("list") : onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.pickerContent}>
-          <View style={styles.modalHeader}>
-            {isCreate && (
-              <TouchableOpacity onPress={() => setMode("list")} style={{ marginRight: 10 }}>
-                <Feather name="arrow-left" size={22} color="#64748B" />
-              </TouchableOpacity>
-            )}
-            <Text style={[styles.modalTitle, { flex: 1 }]}>
-              {isCreate ? "New Package" : "Select Package"}
-            </Text>
-            <TouchableOpacity onPress={onClose}>
-              <Feather name="x" size={22} color="#64748B" />
-            </TouchableOpacity>
-          </View>
-
-          {isCreate ? (
-            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <Text style={styles.fieldLabelFirst}>Package Name</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g., Behavioral Therapy Basic"
-                placeholderTextColor="#94A3B8"
-                value={newName}
-                onChangeText={setNewName}
-              />
-
-              <Text style={styles.fieldLabel}>Monthly Rate (PKR)</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g., 15000"
-                placeholderTextColor="#94A3B8"
-                keyboardType="numeric"
-                value={newRate}
-                onChangeText={(t) => setNewRate(t.replace(/[^0-9.]/g, ""))}
-              />
-
-              <TouchableOpacity
-                style={[styles.primaryBtn, { flex: 0, marginTop: 20 }, creating && { opacity: 0.6 }]}
-                onPress={handleCreate}
-                disabled={creating}
-                activeOpacity={0.85}
-              >
-                {creating ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.primaryBtnText}>Create & Select</Text>
+      <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.pickerContent}>
+              <View style={styles.modalHeader}>
+                {isCreate && (
+                  <TouchableOpacity onPress={() => setMode("list")} style={{ marginRight: 10 }}>
+                    <Feather name="arrow-left" size={22} color="#64748B" />
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
-            </ScrollView>
-          ) : (
-            <>
-              <View style={styles.pickerSearchBox}>
-                <Feather name="search" size={18} color="#94A3B8" />
-                <TextInput
-                  style={styles.pickerSearchInput}
-                  placeholder="Search packages..."
-                  placeholderTextColor="#94A3B8"
-                  value={search}
-                  onChangeText={setSearch}
-                />
+                <Text style={[styles.modalTitle, { flex: 1 }]}>
+                  {isCreate ? "New Package" : "Select Package"}
+                </Text>
+                <TouchableOpacity onPress={onClose}>
+                  <Feather name="x" size={22} color="#64748B" />
+                </TouchableOpacity>
               </View>
 
-              <TouchableOpacity
-                style={styles.createPackageRow}
-                activeOpacity={0.8}
-                onPress={() => {
-                  setNewName(search.trim());
-                  setMode("create");
-                }}
-              >
-                <Feather name="plus-circle" size={18} color={colors.primary} />
-                <Text style={styles.createPackageText}>Create new package</Text>
-              </TouchableOpacity>
+              {isCreate ? (
+                <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                  <Text style={styles.fieldLabelFirst}>Package Name</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g., Behavioral Therapy Basic"
+                    placeholderTextColor="#94A3B8"
+                    value={newName}
+                    onChangeText={setNewName}
+                  />
 
-              {loading ? (
-                <ActivityIndicator
-                  size="small"
-                  color={colors.primary}
-                  style={{ marginVertical: 30 }}
-                />
+                  <Text style={styles.fieldLabel}>Monthly Rate (PKR)</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g., 15000"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="numeric"
+                    value={newRate}
+                    onChangeText={(t) => setNewRate(t.replace(/[^0-9.]/g, ""))}
+                  />
+
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { flex: 0, marginTop: 20 }, creating && { opacity: 0.6 }]}
+                    onPress={handleCreate}
+                    disabled={creating}
+                    activeOpacity={0.85}
+                  >
+                    {creating ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.primaryBtnText}>Create & Select</Text>
+                    )}
+                  </TouchableOpacity>
+                </ScrollView>
               ) : (
-                <FlatList
-                  data={results}
-                  keyExtractor={(item) => String(item._id)}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
-                  onEndReached={onEndReached}
-                  onEndReachedThreshold={0.3}
-                  ListEmptyComponent={
-                    <Text style={styles.pickerEmpty}>
-                      {search ? "No packages match your search." : "No packages created yet."}
-                    </Text>
-                  }
-                  ListFooterComponent={
-                    loadingMore ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={colors.primary}
-                        style={{ marginVertical: 12 }}
-                      />
-                    ) : null
-                  }
-                  renderItem={({ item }) => {
-                    const on = selectedId === item._id;
-                    return (
-                      <TouchableOpacity
-                        style={[styles.packageOption, on && styles.packageOptionOn]}
-                        activeOpacity={0.8}
-                        onPress={() => onSelect(item)}
-                      >
-                        <View style={[styles.radio, on && styles.radioOn]}>
-                          {on && <View style={styles.radioDot} />}
-                        </View>
-                        <Text style={styles.packageOptionName} numberOfLines={1}>
-                          {item.name}
+                <>
+                  <View style={styles.pickerSearchBox}>
+                    <Feather name="search" size={18} color="#94A3B8" />
+                    <TextInput
+                      style={styles.pickerSearchInput}
+                      placeholder="Search packages..."
+                      placeholderTextColor="#94A3B8"
+                      value={search}
+                      onChangeText={setSearch}
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.createPackageRow}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setNewName(search.trim());
+                      setMode("create");
+                    }}
+                  >
+                    <Feather name="plus-circle" size={18} color={colors.primary} />
+                    <Text style={styles.createPackageText}>Create new package</Text>
+                  </TouchableOpacity>
+
+                  {loading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.primary}
+                      style={{ marginVertical: 30 }}
+                    />
+                  ) : (
+                    <FlatList
+                      data={results}
+                      keyExtractor={(item) => String(item._id)}
+                      keyboardShouldPersistTaps="handled"
+                      showsVerticalScrollIndicator={false}
+                      onEndReached={onEndReached}
+                      onEndReachedThreshold={0.3}
+                      ListEmptyComponent={
+                        <Text style={styles.pickerEmpty}>
+                          {search ? "No packages match your search." : "No packages created yet."}
                         </Text>
-                        <Text style={styles.packageOptionPrice}>
-                          PKR {Number(item.price || 0).toLocaleString()}/mo
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
+                      }
+                      ListFooterComponent={
+                        loadingMore ? (
+                          <ActivityIndicator
+                            size="small"
+                            color={colors.primary}
+                            style={{ marginVertical: 12 }}
+                          />
+                        ) : null
+                      }
+                      renderItem={({ item }) => {
+                        const on = selectedId === item._id;
+                        return (
+                          <TouchableOpacity
+                            style={[styles.packageOption, on && styles.packageOptionOn]}
+                            activeOpacity={0.8}
+                            onPress={() => onSelect(item)}
+                          >
+                            <View style={[styles.radio, on && styles.radioOn]}>
+                              {on && <View style={styles.radioDot} />}
+                            </View>
+                            <Text style={styles.packageOptionName} numberOfLines={1}>
+                              {item.name}
+                            </Text>
+                            <Text style={styles.packageOptionPrice}>
+                              PKR {Number(item.price || 0).toLocaleString()}/mo
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      }}
+                    />
+                  )}
+                </>
               )}
-            </>
-          )}
-        </View>
-      </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
     </Modal>
   );
 }

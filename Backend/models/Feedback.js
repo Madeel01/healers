@@ -62,6 +62,19 @@ const feedbackSchema = new mongoose.Schema(
       type: Number,
       default: 5,
     },
+    isSeen: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        seenAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     replies: [replySchema],
   },
   { timestamps: true },

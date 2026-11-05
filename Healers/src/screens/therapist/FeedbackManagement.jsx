@@ -17,6 +17,8 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -1116,285 +1118,290 @@ export default function FeedbackManagementScreen({ navigation }) {
         onRequestClose={() => setReplyModalVisible(false)}
         style={{paddingBottom:insets.bottom}}
       >
-        <View style={styles.modalOverlay2}>
-          <View style={styles.replyModal}>
-            <View
-              style={styles.modalHeader}
-            >
-              <Text
-                style={styles.modalTitle}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
+          <View style={styles.modalOverlay2}>
+            <View style={styles.replyModal}>
+              <View
+                style={styles.modalHeader}
               >
-                Feedback Replies
-              </Text>
-
-              <TouchableOpacity
-                onPress={() =>
-                  setReplyModalVisible(
-                    false,
-                  )}
-              >
-                <Feather
-                  name="x"
-                  size={fontSize(22)}
-                  color="#334155"
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.visibilityRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.visibilityTitle}>
-                  Visible to Parent & Child
+                <Text
+                  style={styles.modalTitle}
+                >
+                  Feedback Replies
                 </Text>
 
-                <Text style={styles.visibilitySubtitle}>
-                  {selectedFeedback?.feedbackDetails
-                      ?.isVisibleToParent !== false
-                    ? "Feedback is visible"
-                    : "Feedback is hidden"}
-                </Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    setReplyModalVisible(
+                      false,
+                    )}
+                >
+                  <Feather
+                    name="x"
+                    size={fontSize(22)}
+                    color="#334155"
+                  />
+                </TouchableOpacity>
               </View>
 
-              <Switch
-                value={selectedFeedback?.feedbackDetails
-                  ?.isVisibleToParent !== false}
-                onValueChange={handleVisibilityChange}
-                trackColor={{
-                  false: "#CBD5E1",
-                  true: "#86EFAC",
-                }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
+              <View style={styles.visibilityRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.visibilityTitle}>
+                    Visible to Parent & Child
+                  </Text>
 
-            {selectedFeedback && (
-              <View style={styles.originalFeedback}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginBottom: wp(8),
-                  }}
-                >
-                  {selectedFeedback?.feedbackDetails
-                      ?.therapist?.profileImage
-                    ? (
-                      <Image
-                        source={{
-                          uri: selectedFeedback
-                            .feedbackDetails
-                            .therapist
-                            .profileImage,
-                        }}
-                        style={{
-                          width: wp(36),
-                          height: hp(36),
-                          borderRadius: wp(18),
-                          marginRight: 10,
-                        }}
-                      />
-                    )
-                    : (
-                      <View
-                        style={{
-                          width: wp(36),
-                          height: hp(36),
-                          borderRadius: wp(18),
-                          marginRight: 10,
-                          backgroundColor: "#E2E8F0",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Text>
-                          {selectedFeedback?.feedbackDetails
-                            ?.therapist?.fullName
-                            ?.charAt(0)
-                            ?.toUpperCase() || "T"}
-                        </Text>
-                      </View>
-                    )}
-
-                  <View>
-                    <Text style={styles.originalFeedbackName}>
-                      {selectedFeedback?.feedbackDetails
-                        ?.therapist?.fullName
-                        || "Therapist"}
-                    </Text>
-
-                    <Text
-                      style={{
-                        fontSize: fontSize(11),
-                        color: "#64748B",
-                      }}
-                    >
-                      Therapist Feedback
-                    </Text>
-                  </View>
+                  <Text style={styles.visibilitySubtitle}>
+                    {selectedFeedback?.feedbackDetails
+                        ?.isVisibleToParent !== false
+                      ? "Feedback is visible"
+                      : "Feedback is hidden"}
+                  </Text>
                 </View>
 
-                <Text style={styles.originalFeedbackText}>
-                  {selectedFeedback?.feedbackDetails?.notes
-                    || "No feedback notes"}
-                </Text>
-
-                <Text style={styles.originalFeedbackText}>
-                  Appt: {formatFeedbackDate(
-                    selectedFeedback.rawDate,
-                  )}
-
-                  {selectedFeedback.startTime
-                    ? `, ${
-                      formatTo12Hour(
-                        selectedFeedback.startTime,
-                      )
-                    }`
-                    : ""}
-                </Text>
+                <Switch
+                  value={selectedFeedback?.feedbackDetails
+                    ?.isVisibleToParent !== false}
+                  onValueChange={handleVisibilityChange}
+                  trackColor={{
+                    false: "#CBD5E1",
+                    true: "#86EFAC",
+                  }}
+                  thumbColor="#FFFFFF"
+                />
               </View>
-            )}
 
-            <ScrollView
-              style={styles.repliesList}
-              contentContainerStyle={{
-                paddingVertical: hp(10),
-              }}
-            >
-              {loadingReplies
-                ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={colors.primary}
-                  />
-                )
-                : replies.length === 0
-                ? (
-                  <Text
-                    style={styles.noRepliesText}
+              {selectedFeedback && (
+                <View style={styles.originalFeedback}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginBottom: wp(8),
+                    }}
                   >
-                    No replies yet.
-                  </Text>
-                )
-                : (
-                  replies.map((reply) => {
-                    const replyUserId = reply.repliedBy?._id
-                      || reply.repliedBy?.id
-                      || reply.repliedBy;
-
-                    const currentUserId = user?._id || user?.id;
-
-                    const isMyReply = String(
-                      replyUserId,
-                    )
-                      === String(currentUserId);
-
-                    return (
-                      <View
-                        key={reply._id}
-                        style={[
-                          styles.replyRow,
-                          isMyReply
-                            ? styles.myReplyRow
-                            : styles.otherReplyRow,
-                        ]}
-                      >
+                    {selectedFeedback?.feedbackDetails
+                        ?.therapist?.profileImage
+                      ? (
+                        <Image
+                          source={{
+                            uri: selectedFeedback
+                              .feedbackDetails
+                              .therapist
+                              .profileImage,
+                          }}
+                          style={{
+                            width: wp(36),
+                            height: hp(36),
+                            borderRadius: wp(18),
+                            marginRight: 10,
+                          }}
+                        />
+                      )
+                      : (
                         <View
-                          style={[
-                            styles.replyBubble,
-                            isMyReply
-                              ? styles.myReplyBubble
-                              : styles.otherReplyBubble,
-                          ]}
+                          style={{
+                            width: wp(36),
+                            height: hp(36),
+                            borderRadius: wp(18),
+                            marginRight: 10,
+                            backgroundColor: "#E2E8F0",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
                         >
-                          <Text
-                            style={[
-                              styles.replySender,
-                              isMyReply
-                              && styles.myReplySenderText,
-                            ]}
-                          >
-                            {isMyReply
-                              ? "You"
-                              : reply.repliedBy
-                                ?.fullName
-                                || reply.repliedByRole}
-                          </Text>
-
-                          <Text
-                            style={[
-                              styles.replyMessage,
-                              isMyReply
-                              && styles.myReplyMessageText,
-                            ]}
-                          >
-                            {reply.message}
-                          </Text>
-
-                          <Text
-                            style={[
-                              styles.replyTime,
-                              isMyReply
-                              && styles.myReplyTimeText,
-                            ]}
-                          >
-                            {new Date(
-                              reply.createdAt,
-                            ).toLocaleTimeString(
-                              [],
-                              {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              },
-                            )}
+                          <Text>
+                            {selectedFeedback?.feedbackDetails
+                              ?.therapist?.fullName
+                              ?.charAt(0)
+                              ?.toUpperCase() || "T"}
                           </Text>
                         </View>
-                      </View>
-                    );
-                  })
-                )}
-            </ScrollView>
+                      )}
 
-            <View
-              style={styles.replyInputRow}
-            >
-              <TextInput
-                value={replyText}
-                onChangeText={setReplyText}
-                placeholder="Write a reply..."
-                placeholderTextColor="#94A3B8"
-                multiline
-                style={styles.replyInput}
-              />
+                    <View>
+                      <Text style={styles.originalFeedbackName}>
+                        {selectedFeedback?.feedbackDetails
+                          ?.therapist?.fullName
+                          || "Therapist"}
+                      </Text>
 
-              <TouchableOpacity
-                disabled={sendingReply
-                  || !replyText.trim()}
-                onPress={handleSendReply}
-                style={[
-                  styles.sendReplyBtn,
-                  (sendingReply
-                    || !replyText.trim())
-                  && styles.sendReplyBtnDisabled,
-                ]}
+                      <Text
+                        style={{
+                          fontSize: fontSize(11),
+                          color: "#64748B",
+                        }}
+                      >
+                        Therapist Feedback
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.originalFeedbackText}>
+                    {selectedFeedback?.feedbackDetails?.notes
+                      || "No feedback notes"}
+                  </Text>
+
+                  <Text style={styles.originalFeedbackText}>
+                    Appt: {formatFeedbackDate(
+                      selectedFeedback.rawDate,
+                    )}
+
+                    {selectedFeedback.startTime
+                      ? `, ${
+                        formatTo12Hour(
+                          selectedFeedback.startTime,
+                        )
+                      }`
+                      : ""}
+                  </Text>
+                </View>
+              )}
+
+              <ScrollView
+                style={styles.repliesList}
+                contentContainerStyle={{
+                  paddingVertical: hp(10),
+                }}
               >
-                {sendingReply
+                {loadingReplies
                   ? (
                     <ActivityIndicator
                       size="small"
-                      color="#FFFFFF"
+                      color={colors.primary}
                     />
                   )
+                  : replies.length === 0
+                  ? (
+                    <Text
+                      style={styles.noRepliesText}
+                    >
+                      No replies yet.
+                    </Text>
+                  )
                   : (
-                    <Feather
-                      name="send"
-                      size={fontSize(18)}
-                      color="#FFFFFF"
-                    />
+                    replies.map((reply) => {
+                      const replyUserId = reply.repliedBy?._id
+                        || reply.repliedBy?.id
+                        || reply.repliedBy;
+
+                      const currentUserId = user?._id || user?.id;
+
+                      const isMyReply = String(
+                        replyUserId,
+                      )
+                        === String(currentUserId);
+
+                      return (
+                        <View
+                          key={reply._id}
+                          style={[
+                            styles.replyRow,
+                            isMyReply
+                              ? styles.myReplyRow
+                              : styles.otherReplyRow,
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.replyBubble,
+                              isMyReply
+                                ? styles.myReplyBubble
+                                : styles.otherReplyBubble,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.replySender,
+                                isMyReply
+                                && styles.myReplySenderText,
+                              ]}
+                            >
+                              {isMyReply
+                                ? "You"
+                                : reply.repliedBy
+                                  ?.fullName
+                                  || reply.repliedByRole}
+                            </Text>
+
+                            <Text
+                              style={[
+                                styles.replyMessage,
+                                isMyReply
+                                && styles.myReplyMessageText,
+                              ]}
+                            >
+                              {reply.message}
+                            </Text>
+
+                            <Text
+                              style={[
+                                styles.replyTime,
+                                isMyReply
+                                && styles.myReplyTimeText,
+                              ]}
+                            >
+                              {new Date(
+                                reply.createdAt,
+                              ).toLocaleTimeString(
+                                [],
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    })
                   )}
-              </TouchableOpacity>
+              </ScrollView>
+
+              <View
+                style={styles.replyInputRow}
+              >
+                <TextInput
+                  value={replyText}
+                  onChangeText={setReplyText}
+                  placeholder="Write a reply..."
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                  style={styles.replyInput}
+                />
+
+                <TouchableOpacity
+                  disabled={sendingReply
+                    || !replyText.trim()}
+                  onPress={handleSendReply}
+                  style={[
+                    styles.sendReplyBtn,
+                    (sendingReply
+                      || !replyText.trim())
+                    && styles.sendReplyBtnDisabled,
+                  ]}
+                >
+                  {sendingReply
+                    ? (
+                      <ActivityIndicator
+                        size="small"
+                        color="#FFFFFF"
+                      />
+                    )
+                    : (
+                      <Feather
+                        name="send"
+                        size={fontSize(18)}
+                        color="#FFFFFF"
+                      />
+                    )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

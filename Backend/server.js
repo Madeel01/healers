@@ -28,8 +28,10 @@ mongoose
     console.log("MongoDB Connected Successfully");
     // require("./jobs/cleanupPendingUploads")();
     try {
+      // require("./jobs/monthlyInvoiceJob").test("mahnoor@gmail.com");
       require("./jobs/appointmentReminderJob").start();
       require("./jobs/scheduledBroadcasts").start();
+      // require("./jobs/monthlyInvoiceJob").start();
     } catch (err) {
       console.error("Scheduled broadcast startup error:", err);
     }

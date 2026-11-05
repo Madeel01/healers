@@ -87,7 +87,7 @@ export default function StaffOnLeaveScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.mainContainer, commonStyles.container]}>
+    <View style={[styles.mainContainer, commonStyles.container]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -123,7 +123,7 @@ export default function StaffOnLeaveScreen({ navigation }) {
           <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

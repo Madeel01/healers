@@ -1,4 +1,9 @@
-import React, { useContext } from 'react';
+import React, {
+  useContext,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
 import {
   StyleSheet,
@@ -17,11 +22,35 @@ import {
   hp,
   wp,
 } from '../utils/responsive';
+import { getUnreadNotificationCountApi } from '../api/authApi';
+import { fonts } from '../styles/theme';
 
 export default function BottomBar({ activeTab = "AdminDashboard" }) {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, token } = useContext(AuthContext);
   const navigation = useNavigation();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const response = await getUnreadNotificationCountApi();
 
+      if (response.success) {
+        setUnreadCount(response.count || 0);
+      }
+    } catch (error) {
+      console.log(
+        "Unread notification error:",
+        error.response?.data || error.message
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUnreadCount();
+
+    const interval = setInterval(fetchUnreadCount, 5000);
+
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount, user]);
   const tabs = [
     ...(user?.role === "Admin"
       ? [
@@ -79,7 +108,23 @@ export default function BottomBar({ activeTab = "AdminDashboard" }) {
             onPress={() => navigation.navigate(tab.id)}
             activeOpacity={0.7}
           >
-            <IconComponent name={tab.iconName} size={fontSize(tab.iconSize)} color={iconColor} />
+
+            <View style={styles.iconContainer}>
+              <IconComponent
+                name={tab.iconName}
+                size={fontSize(tab.iconSize)}
+                color={iconColor}
+              />
+
+              {tab.id === "Notifications" && unreadCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text style={isActive ? styles.navTextActive : styles.navText}>
               {tab.label}
             </Text>
@@ -124,5 +169,31 @@ const styles = StyleSheet.create({
     fontSize: fontSize(9),
     color: "#94A3B8",
     marginTop: 4,
+  },
+  iconContainer: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  notificationBadge: {
+    position: "absolute",
+    top: -12,
+    right: -18,
+    minWidth: wp(22),
+    minHeight: hp(22),
+    borderRadius: 99,
+    backgroundColor: "#EF4444",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 2,
+    borderWidth: 1,
+    borderColor: "#FFFFFF",
+  },
+
+  notificationBadgeText: {
+    color: "#FFFFFF",
+    fontSize: fontSize(8),
+    fontFamily: fonts.medium,
   },
 });

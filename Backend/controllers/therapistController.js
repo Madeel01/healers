@@ -8,6 +8,7 @@ const LeaveRequest = require("../models/LeaveRequest");
 const WeeklyVideo = require("../models/Video");
 const cloudinary = require("../config/cloudinary");
 const QuarterlyReport = require("../models/QuarterlyReport");
+const { sendNotifications } = require("../utils/notificationService");
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -2024,7 +2025,19 @@ exports.createLeaveRequest = async (req, res) => {
       endDate: end,
       reason,
     });
-
+    const adminUsers = await User.find({ role: "Admin" }).select("_id");
+    const adminIds = adminUsers.map((admin) => String(admin._id));
+    if (adminIds.length > 0) {
+      await sendNotifications({
+        title: "New Leave Request",
+        message: `A new leave request has been submitted by a ${userRole}.\nLeave Type: ${leaveType}`,
+        type: "Alert",
+        audience: "users",
+        users: adminIds,
+        createdBy: applicantId,
+        sendPush: true,
+      });
+    }
     return res.status(201).json({
       success: true,
       message: "Leave request submitted successfully",
@@ -2214,7 +2227,15 @@ exports.createWeeklyVideo = async (req, res) => {
       "childId",
       "name fullName",
     );
-
+    await sendNotifications({
+      title: "New Weekly Video Available",
+      message: `Your therapist has uploaded a new video for you.\nVideo Title: ${title || "Live Session"}}`,
+      type: "Reminder",
+      audience: "users",
+      users: [String(childId)],
+      createdBy: therapistId,
+      sendPush: true,
+    });
     return res.status(201).json({
       success: true,
       message: "Weekly video saved successfully.",
@@ -2329,7 +2350,7 @@ exports.deleteWeeklyVideo = async (req, res) => {
 exports.createQuarterlyReport = async (req, res) => {
   try {
     const therapistId = req.user?._id || req.user?.id;
-
+    
     if (!therapistId) {
       return res.status(401).json({
         success: false,
@@ -2392,7 +2413,9 @@ exports.createQuarterlyReport = async (req, res) => {
         : [],
       report: program.report || "",
     }));
-
+    const existing = await QuarterlyReport.exists({
+      therapistId, userId, year: Number(year), quarter,
+    });
     const quarterlyReport = await QuarterlyReport.findOneAndUpdate(
       {
         therapistId,
@@ -2416,7 +2439,30 @@ exports.createQuarterlyReport = async (req, res) => {
         setDefaultsOnInsert: true,
       },
     );
+    try {
+      const [therapist, child, admins] = await Promise.all([
+        User.findById(therapistId).select("fullName name").lean(),
+        User.findById(userId).select("fullName name").lean(),
+        User.find({ role: "Admin", isActive: { $ne: false } }).select("_id").lean(),
+      ]);
 
+      const therapistName = therapist?.fullName || therapist?.name || "A therapist";
+      const childName = child?.fullName || child?.name || "a child";
+
+      if (admins.length) {
+        await sendNotifications({
+          title: existing ? "Quarterly report updated" : "New quarterly report",
+          message: `${therapistName} ${existing ? "updated" : "submitted"} the ${quarter} ${year} report for ${childName}.`,
+          type: "Alert",
+          audience: "users",
+          users: admins.map((a) => a._id),
+          createdBy: therapistId,
+          sendPush: true,
+        });
+      }
+    } catch (notifyErr) {
+      console.error("Quarterly report notification failed:", notifyErr);
+    }
     return res.status(200).json({
       success: true,
       message: "Quarterly report saved successfully.",

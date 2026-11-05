@@ -17,6 +17,7 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -48,7 +49,6 @@ const LEAVE_TYPES = [
   "Maternity / Paternity Leave",
   "Unpaid Leave",
   "Emergency Leave",
-  "Short Leave",
 ];
 
 export default function LeaveRequestScreen({ navigation }) {
@@ -352,199 +352,204 @@ export default function LeaveRequestScreen({ navigation }) {
         onRequestClose={() => setIsApplyModalVisible(false)}
         style={{ paddingBottom: insets.bottom }}
       >
-        <View style={styles.modalOverlay2}>
-          <View style={styles.leaveModal}>
-            <View style={styles.modalHeaderBar}>
-              <Text style={styles.modalHeaderTitle}>Apply Leave</Text>
-              <TouchableOpacity onPress={() => setIsApplyModalVisible(false)}>
-                <Feather name="x" size={fontSize(24)} color="#181C1E" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              style={styles.scrollArea}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.formContainer}>
-                <Text style={styles.sectionTitle}>Submit The Request</Text>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Enter Type</Text>
-                  <TouchableOpacity
-                    style={styles.dropdownInput}
-                    activeOpacity={0.8}
-                    onPress={() => setTypeModalVisible(true)}
-                  >
-                    <Text
-                      style={[
-                        styles.dropdownText,
-                        !leaveType && styles.placeholderText,
-                      ]}
-                    >
-                      {leaveType || "Select Category"}
-                    </Text>
-                    <Feather name="chevron-down" size={fontSize(20)} color="#64748B" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Start Date</Text>
-                  <TouchableOpacity
-                    style={styles.dropdownInput}
-                    activeOpacity={0.8}
-                    onPress={() => handleOpenDatePicker("start")}
-                  >
-                    <Text
-                      style={[
-                        styles.dropdownText,
-                        !startDateSelected && styles.placeholderText,
-                      ]}
-                    >
-                      {startDateSelected ? formatDate(startDate) : "Enter Date"}
-                    </Text>
-                    <Feather name="calendar" size={fontSize(18)} color="#64748B" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>End Date</Text>
-                  <TouchableOpacity
-                    style={styles.dropdownInput}
-                    activeOpacity={0.8}
-                    onPress={() => handleOpenDatePicker("end")}
-                  >
-                    <Text
-                      style={[
-                        styles.dropdownText,
-                        !endDateSelected && styles.placeholderText,
-                      ]}
-                    >
-                      {endDateSelected ? formatDate(endDate) : "Enter Date"}
-                    </Text>
-                    <Feather name="calendar" size={fontSize(18)} color="#64748B" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Reason*</Text>
-                  <View style={styles.textAreaWrapper}>
-                    <TextInput
-                      style={styles.textAreaInput}
-                      placeholder="Describe your reason..."
-                      placeholderTextColor="#94A3B8"
-                      multiline={true}
-                      textAlignVertical="top"
-                      value={reason}
-                      onChangeText={setReason}
-                    />
-                  </View>
-                </View>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
+          <View style={styles.modalOverlay2}>
+            <View style={styles.leaveModal}>
+              <View style={styles.modalHeaderBar}>
+                <Text style={styles.modalHeaderTitle}>Apply Leave</Text>
+                <TouchableOpacity onPress={() => setIsApplyModalVisible(false)}>
+                  <Feather name="x" size={fontSize(24)} color="#181C1E" />
+                </TouchableOpacity>
               </View>
-            </ScrollView>
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                activeOpacity={0.8}
-                onPress={() => setIsApplyModalVisible(false)}
-                disabled={loading}
+
+              <ScrollView
+                style={styles.scrollArea}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
               >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
+                <View style={styles.formContainer}>
+                  <Text style={styles.sectionTitle}>Submit The Request</Text>
 
-              <TouchableOpacity
-                style={styles.submitBtn}
-                activeOpacity={0.85}
-                onPress={handleSubmit}
-                disabled={loading}
-              >
-                {loading
-                  ? <ActivityIndicator color="#FFFFFF" size="small" />
-                  : <Text style={styles.submitBtnText}>Submit Request</Text>}
-              </TouchableOpacity>
-            </View>
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>Enter Type</Text>
+                    <TouchableOpacity
+                      style={styles.dropdownInput}
+                      activeOpacity={0.8}
+                      onPress={() => setTypeModalVisible(true)}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownText,
+                          !leaveType && styles.placeholderText,
+                        ]}
+                      >
+                        {leaveType || "Select Category"}
+                      </Text>
+                      <Feather name="chevron-down" size={fontSize(20)} color="#64748B" />
+                    </TouchableOpacity>
+                  </View>
 
-            {showPicker && (
-              <DateTimePicker
-                value={pickerMode === "start" ? startDate : endDate}
-                mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onValueChange={handleDateChange}
-              />
-            )}
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>Start Date</Text>
+                    <TouchableOpacity
+                      style={styles.dropdownInput}
+                      activeOpacity={0.8}
+                      onPress={() => handleOpenDatePicker("start")}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownText,
+                          !startDateSelected && styles.placeholderText,
+                        ]}
+                      >
+                        {startDateSelected ? formatDate(startDate) : "Enter Date"}
+                      </Text>
+                      <Feather name="calendar" size={fontSize(18)} color="#64748B" />
+                    </TouchableOpacity>
+                  </View>
 
-            {showPicker && Platform.OS === "ios" && (
-              <Modal transparent={true} animationType="slide">
-                <View style={styles.iosPickerOverlay}>
-                  <View style={styles.iosPickerContainer}>
-                    <View style={styles.iosPickerHeader}>
-                      <TouchableOpacity onPress={() => setShowPicker(false)}>
-                        <Text style={styles.iosDoneText}>Done</Text>
-                      </TouchableOpacity>
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>End Date</Text>
+                    <TouchableOpacity
+                      style={styles.dropdownInput}
+                      activeOpacity={0.8}
+                      onPress={() => handleOpenDatePicker("end")}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownText,
+                          !endDateSelected && styles.placeholderText,
+                        ]}
+                      >
+                        {endDateSelected ? formatDate(endDate) : "Enter Date"}
+                      </Text>
+                      <Feather name="calendar" size={fontSize(18)} color="#64748B" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>Reason*</Text>
+                    <View style={styles.textAreaWrapper}>
+                      <TextInput
+                        style={styles.textAreaInput}
+                        placeholder="Describe your reason..."
+                        placeholderTextColor="#94A3B8"
+                        multiline={true}
+                        textAlignVertical="top"
+                        value={reason}
+                        onChangeText={setReason}
+                      />
                     </View>
-                    <DateTimePicker
-                      value={pickerMode === "start" ? startDate : endDate}
-                      mode="date"
-                      display="spinner"
-                      onValueChange={handleDateChange}
-                    />
                   </View>
                 </View>
-              </Modal>
-            )}
+              </ScrollView>
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  activeOpacity={0.8}
+                  onPress={() => setIsApplyModalVisible(false)}
+                  disabled={loading}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
 
-            <Modal
-              visible={typeModalVisible}
-              transparent={true}
-              animationType="fade"
-              onRequestClose={() => setTypeModalVisible(false)}
-            >
-              <TouchableWithoutFeedback onPress={() => setTypeModalVisible(false)}>
-                <View style={styles.modalOverlay}>
-                  <TouchableWithoutFeedback>
-                    <View style={styles.modalContent}>
-                      <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Select Leave Type</Text>
-                        <TouchableOpacity onPress={() => setTypeModalVisible(false)}>
-                          <Feather name="x" size={fontSize(20)} color="#64748B" />
+                <TouchableOpacity
+                  style={styles.submitBtn}
+                  activeOpacity={0.85}
+                  onPress={handleSubmit}
+                  disabled={loading}
+                >
+                  {loading
+                    ? <ActivityIndicator color="#FFFFFF" size="small" />
+                    : <Text style={styles.submitBtnText}>Submit Request</Text>}
+                </TouchableOpacity>
+              </View>
+
+              {showPicker && (
+                <DateTimePicker
+                  value={pickerMode === "start" ? startDate : endDate}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
+                  onValueChange={handleDateChange}
+                />
+              )}
+
+              {showPicker && Platform.OS === "ios" && (
+                <Modal transparent={true} animationType="slide">
+                  <View style={styles.iosPickerOverlay}>
+                    <View style={styles.iosPickerContainer}>
+                      <View style={styles.iosPickerHeader}>
+                        <TouchableOpacity onPress={() => setShowPicker(false)}>
+                          <Text style={styles.iosDoneText}>Done</Text>
                         </TouchableOpacity>
                       </View>
-
-                      <ScrollView style={{ maxHeight: 280 }}>
-                        {LEAVE_TYPES.map((type, index) => {
-                          const isSelected = leaveType === type;
-                          return (
-                            <TouchableOpacity
-                              key={index}
-                              style={[
-                                styles.modalOption,
-                                isSelected && styles.modalOptionSelected,
-                              ]}
-                              onPress={() => {
-                                setLeaveType(type);
-                                setTypeModalVisible(false);
-                              }}
-                            >
-                              <Text
-                                style={[
-                                  styles.modalOptionText,
-                                  isSelected && styles.modalOptionTextSelected,
-                                ]}
-                              >
-                                {type}
-                              </Text>
-                              {isSelected && <Feather name="check" size={fontSize(18)} color="#005B41" />}
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </ScrollView>
+                      <DateTimePicker
+                        value={pickerMode === "start" ? startDate : endDate}
+                        mode="date"
+                        display="spinner"
+                        onValueChange={handleDateChange}
+                      />
                     </View>
-                  </TouchableWithoutFeedback>
-                </View>
-              </TouchableWithoutFeedback>
-            </Modal>
+                  </View>
+                </Modal>
+              )}
+
+              <Modal
+                visible={typeModalVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setTypeModalVisible(false)}
+              >
+                <TouchableWithoutFeedback onPress={() => setTypeModalVisible(false)}>
+                  <View style={styles.modalOverlay}>
+                    <TouchableWithoutFeedback>
+                      <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                          <Text style={styles.modalTitle}>Select Leave Type</Text>
+                          <TouchableOpacity onPress={() => setTypeModalVisible(false)}>
+                            <Feather name="x" size={fontSize(20)} color="#64748B" />
+                          </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={{ maxHeight: 280 }}>
+                          {LEAVE_TYPES.map((type, index) => {
+                            const isSelected = leaveType === type;
+                            return (
+                              <TouchableOpacity
+                                key={index}
+                                style={[
+                                  styles.modalOption,
+                                  isSelected && styles.modalOptionSelected,
+                                ]}
+                                onPress={() => {
+                                  setLeaveType(type);
+                                  setTypeModalVisible(false);
+                                }}
+                              >
+                                <Text
+                                  style={[
+                                    styles.modalOptionText,
+                                    isSelected && styles.modalOptionTextSelected,
+                                  ]}
+                                >
+                                  {type}
+                                </Text>
+                                {isSelected && <Feather name="check" size={fontSize(18)} color="#005B41" />}
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    </TouchableWithoutFeedback>
+                  </View>
+                </TouchableWithoutFeedback>
+              </Modal>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

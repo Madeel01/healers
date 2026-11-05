@@ -15,6 +15,8 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
   View,
 } from 'react-native';
 
@@ -259,13 +261,16 @@ export default function QuarterlyReportsScreen({
             ?? true,
         );
       } else {
-        /*
-         * No existing report.
-         *
-         * Keep programs fetched from
-         * child programs.
-         */
-
+        setReportPrograms(
+          programs.map((p) => ({
+            programId: p._id,
+            programName: p.programName || "",
+            goals: (p.programGoals || []).flat()
+              .map((g) => ({ goalId: g?._id || null, goalName: g?.goalName || g?.name || g?.title || "" }))
+              .filter((g) => g.goalName),
+            report: "",
+          })),
+        );
         setSentToParents(true);
       }
     } catch (error) {
@@ -794,6 +799,10 @@ export default function QuarterlyReportsScreen({
               false,
             )}
         >
+          <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
           <View
             style={styles.modalOverlay}
           >
@@ -927,6 +936,7 @@ export default function QuarterlyReportsScreen({
               </View>
             </TouchableWithoutFeedback>
           </View>
+        </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
       </Modal>
 

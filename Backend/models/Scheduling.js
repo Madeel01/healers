@@ -145,19 +145,28 @@ schedulingSchema.index(
   },
 );
 
-schedulingSchema.pre("validate", function() {
+schedulingSchema.pre("validate", function () {
   const byDate = {};
 
   for (const ap of this.appointments) {
-    const key = new Date(ap.date).toISOString().slice(0, 10);
+    const dateObj = new Date(ap.date);
+    const key = dateObj.toISOString().slice(0, 10);
+
+    const formattedDate = [
+      String(dateObj.getUTCDate()).padStart(2, "0"),
+      String(dateObj.getUTCMonth() + 1).padStart(2, "0"),
+      dateObj.getUTCFullYear(),
+    ].join("-");
 
     const start = toMin(ap.startTime);
     const end = toMin(ap.endTime);
+
     if (["cancel", "postponed"].includes(ap.sessionType)) continue;
+
     if (end <= start) {
       this.invalidate(
         "appointments",
-        `End time must be after start time for appointment on ${key}.`,
+        `End time must be after start time. Date: ${formattedDate}, Start Time: ${ap.startTime}, End Time: ${ap.endTime}.`
       );
       return;
     }
@@ -167,15 +176,12 @@ schedulingSchema.pre("validate", function() {
     if (list.some((x) => start < x.end && x.start < end)) {
       this.invalidate(
         "appointments",
-        `This therapist already has an appointment at that time on ${key}.`,
+        `Appointment conflict on ${formattedDate}. Start Time: ${ap.startTime}, End Time: ${ap.endTime}.`
       );
       return;
     }
 
-    list.push({
-      start,
-      end,
-    });
+    list.push({ start, end });
   }
 });
 schedulingSchema.index({ "appointments.batchId": 1 });

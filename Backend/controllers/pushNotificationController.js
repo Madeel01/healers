@@ -132,7 +132,19 @@ exports.sendPushToUser = async (userId, payload) => {
       android: {
         priority: "high",
         notification: {
-          channelId: "default",
+          channelId: payload.data?.channelId || "default",
+          sound: payload.data?.sound || "default",
+          defaultSound: true,
+          defaultVibrateTimings: true,
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: payload.data?.sound
+              ? `${payload.data.sound}.mp3`
+              : "default",
+          },
         },
       },
     });
@@ -265,7 +277,17 @@ exports.sendBulkPushToUsers = async (userIds, payload) => {
       android: {
         priority: "high",
         notification: {
-          channelId: "default",
+          channelId: payload.data?.channelId || "default",
+          sound: payload.data?.sound || "default",
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: payload.data?.sound
+              ? `${payload.data.sound}.mp3`
+              : "default",
+          },
         },
       },
     });

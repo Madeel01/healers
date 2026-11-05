@@ -7,7 +7,9 @@ import React, {
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -449,7 +451,11 @@ export default function AssignedChildrenScreen({ navigation }) {
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+        {/* <TouchableWithoutFeedback onPress={() => setModalVisible(false)}> */}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        >
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
@@ -503,7 +509,8 @@ export default function AssignedChildrenScreen({ navigation }) {
               </View>
             </TouchableWithoutFeedback>
           </View>
-        </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+        {/* </TouchableWithoutFeedback> */}
       </Modal>
     </View>
   );

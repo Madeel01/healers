@@ -21,6 +21,7 @@ export async function registerForPushNotifications() {
     await Notifications.setNotificationChannelAsync("default", {
       name: "Default Notifications",
       importance: Notifications.AndroidImportance.MAX,
+      // sound: "audio1.wav",
       enableVibrate: true,
       vibrationPattern: [0, 250, 250, 250],
     });

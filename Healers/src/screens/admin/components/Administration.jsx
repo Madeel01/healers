@@ -58,8 +58,8 @@ const administrationItems = [
     route: "Therapist",
     backgroundColor: "#D6EAF8",
     iconBackground: colors.primary,
-    icon: "message",
-    iconType: "MaterialIcons",
+    icon: "account-heart",
+    iconType: "MaterialCommunityIcons",
   },
   {
     title: "Feedback Management",

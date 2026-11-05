@@ -566,8 +566,8 @@ export default function ComplaintDetailsScreen({ navigation, route }) {
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        // keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
       >
         <FlatList
           ref={listRef}
