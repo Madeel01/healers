@@ -7,11 +7,11 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  RefreshControl,
   View,
 } from 'react-native';
 
@@ -60,6 +60,7 @@ export default function AdminDashboard() {
     totalUnreadCount: 0,
     latestUnreadMessage: null,
   });
+  const [reportsExpanded, setReportsExpanded] = useState(false);
   const userName = user?.fullName || user?.name || "";
   const profileImage = user?.profileImage || "";
   const userId = user?.id || user?._id;
@@ -137,6 +138,7 @@ export default function AdminDashboard() {
   //     clearInterval(interval);
   //   };
   // }, [isFocused, userId]);
+
   const latestMsg = unreadData.latestUnreadMessage;
   const senderImage = latestMsg?.sender?.profileImage;
   const senderName = latestMsg?.sender?.fullName || "New Message";
@@ -248,7 +250,8 @@ export default function AdminDashboard() {
           end={{ x: 0.5, y: 1 }}
           style={styles.statsGrid}
         >
-          <TouchableOpacity style={[styles.statCard, { backgroundColor: "#0061A5" }]}
+          <TouchableOpacity
+            style={[styles.statCard, { backgroundColor: "#0061A5" }]}
             activeOpacity={0.9}
             onPress={() => navigation.navigate("Children")}
           >
@@ -261,7 +264,8 @@ export default function AdminDashboard() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.statCard, { backgroundColor: "#2892D9" }]}
+          <TouchableOpacity
+            style={[styles.statCard, { backgroundColor: "#2892D9" }]}
             activeOpacity={0.9}
             onPress={() => navigation.navigate("Therapist")}
           >
@@ -274,7 +278,10 @@ export default function AdminDashboard() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.statCard, { backgroundColor: "#f39c12" }]} onPress={() => navigation.navigate("AllUsers")}>
+          <TouchableOpacity
+            style={[styles.statCard, { backgroundColor: "#f39c12" }]}
+            onPress={() => navigation.navigate("AllUsers")}
+          >
             <View style={[styles.cardIconContainer, { backgroundColor: colors.white }]}>
               <MaterialCommunityIcons name="account-group" size={22} color="#F58B2A" />
             </View>
@@ -352,12 +359,17 @@ export default function AdminDashboard() {
           </TouchableOpacity>
         )}
 
-        <Administration customstyles={styles} leaveCount={stats.leaveCount} feedbackCount={stats.unseenFeedbackCount} broadcastCount={stats.unreadNotificationCount} />
+        <Administration
+          customstyles={styles}
+          leaveCount={stats.leaveCount}
+          feedbackCount={stats.unseenFeedbackCount}
+          broadcastCount={stats.unreadNotificationCount}
+        />
 
         <Text style={styles.sectionHeadTitle}>Quick Actions</Text>
 
-        <TouchableOpacity 
-          style={styles.quickActionCard} 
+        <TouchableOpacity
+          style={styles.quickActionCard}
           onPress={() => navigation.navigate("ComplainManagement")}
         >
           <View style={[styles.quickIconBox, { backgroundColor: "#FEE2E2", position: "relative" }]}>
@@ -409,6 +421,107 @@ export default function AdminDashboard() {
           </View>
           <AntDesign name="right" size={20} color="#717781" />
         </TouchableOpacity>
+
+        {/* Reports Dropdown */}
+        <View style={styles.quickActionWrapper}>
+          <TouchableOpacity
+            style={styles.quickActionCard}
+            activeOpacity={0.8}
+            onPress={() => setReportsExpanded(!reportsExpanded)}
+          >
+            <View
+              style={[
+                styles.quickIconBox,
+                { backgroundColor: "#E3F8F2" },
+              ]}
+            >
+              <MaterialIcons
+                name="assessment"
+                size={22}
+                color="#00725E"
+              />
+            </View>
+
+            <View style={styles.quickActionText}>
+              <Text style={styles.quickActionTitle}>
+                Reports
+              </Text>
+              <Text style={styles.quickActionSub}>
+                View and manage reports
+              </Text>
+            </View>
+
+            <AntDesign
+              name={reportsExpanded ? "up" : "down"}
+              size={18}
+              color="#717781"
+            />
+          </TouchableOpacity>
+
+          {reportsExpanded && (
+            <View style={styles.dropdownContainer}>
+              {/* Quarterly Report */}
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setReportsExpanded(false);
+                  navigation.navigate("AdminQuarterlyReports");
+                }}
+              >
+                <View style={styles.dropdownIcon}>
+                  <MaterialIcons
+                    name="insert-chart"
+                    size={21}
+                    color="#00725E"
+                  />
+                </View>
+
+                <View style={styles.quickActionText}>
+                  <Text style={styles.dropdownTitle}>
+                    Quarterly Report
+                  </Text>
+                  <Text style={styles.quickActionSub}>
+                    Review child progress reports by therapist
+                  </Text>
+                </View>
+
+                <AntDesign name="right" size={16} color="#717781" />
+              </TouchableOpacity>
+
+              {/* Attendance Report */}
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setReportsExpanded(false);
+                  navigation.navigate("AdminAttendanceReport");
+                }}
+              >
+                <View style={styles.dropdownIcon}>
+                  <MaterialIcons
+                    name="event-available"
+                    size={21}
+                    color="#2563EB"
+                  />
+                </View>
+
+                <View style={styles.quickActionText}>
+                  <Text style={styles.dropdownTitle}>
+                    Attendance Report
+                  </Text>
+                  <Text style={styles.quickActionSub}>
+                    View attendance reports
+                  </Text>
+                </View>
+
+                <AntDesign name="right" size={16} color="#717781" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+        {
+          /*
         <TouchableOpacity
           style={styles.quickActionCard}
           onPress={() => navigation.navigate("AdminQuarterlyReports")}
@@ -421,7 +534,8 @@ export default function AdminDashboard() {
             <Text style={styles.quickActionSub}>Review child progress reports by therapist</Text>
           </View>
           <AntDesign name="right" size={20} color="#717781" />
-        </TouchableOpacity>
+        </TouchableOpacity> */
+        }
       </ScrollView>
     </View>
   );
@@ -569,7 +683,7 @@ const styles = StyleSheet.create({
   quickActionText: {
     flex: 1,
     marginLeft: 12,
-    paddingRight:hp(10)
+    paddingRight: hp(10),
   },
   quickActionTitle: {
     fontSize: fontSize(16),
@@ -735,5 +849,42 @@ const styles = StyleSheet.create({
     fontSize: fontSize(8),
     fontFamily: fonts.semiBold,
     textAlign: "center",
+  },
+  quickActionWrapper: {
+    marginBottom: 10,
+  },
+
+  dropdownContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    marginTop: -4,
+    marginHorizontal: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+
+  dropdownIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#F0FDF4",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  dropdownTitle: {
+    fontSize: fontSize(15),
+    fontFamily: fonts.semiBold,
+    color: "#181C1E",
   },
 });

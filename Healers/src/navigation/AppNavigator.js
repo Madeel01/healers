@@ -25,6 +25,8 @@ import BottomBar from '../components/BottomBar';
 import TopBar from '../components/TopBar';
 import { AuthContext } from '../context/AuthContext';
 import AddNewPackageScreen from '../screens/admin/AddNewPackage';
+import AdminAttendanceReportScreen
+  from '../screens/admin/AdminAttendanceReportScreen';
 import AdminDashboard from '../screens/admin/AdminDashboard';
 import AdminQuarterlyReportsScreen
   from '../screens/admin/AdminQuarterlyReportsScreen';
@@ -143,6 +145,7 @@ const SCREEN_LAYOUTS = {
     AllUsers: { headerTitle: "All Users" },
     FeeDetail: { headerTitle: "Fee Details" },
     AdminQuarterlyReports: { headerTitle: "Quarterly Reports" },
+    AdminAttendanceReport: { headerTitle: "Attendance Report" },
   },
   Therapist: {
     TherapistDashboard: { showHeader: false, showFooter: true },
@@ -216,6 +219,7 @@ const ACTIVE_TAB_ROUTES = {
     AllUsers: "AdminDashboard",
     FeeDetail: "AdminDashboard",
     AdminQuarterlyReports: "AdminDashboard",
+    AdminAttendanceReport: "AdminDashboard",
   },
   Therapist: {
     TherapistDashboard: "TherapistDashboard",
@@ -294,6 +298,7 @@ const ADMIN_SCREENS = [
   ["SendPushNotification", SendPushNotificationScreen],
   ["AllUsers", AllUsersScreen],
   ["AdminQuarterlyReports", AdminQuarterlyReportsScreen],
+  ["AdminAttendanceReport", AdminAttendanceReportScreen],
 ];
 
 const THERAPIST_SCREENS = [

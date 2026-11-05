@@ -2128,8 +2128,6 @@ exports.getAttendance = async (req, res) => {
   }
 };
 
-
-
 // exports.getAttendance = async (req, res) => {
 //   try {
 //     const therapistId = req.user?._id || req.user?.id;
