@@ -4713,20 +4713,6 @@ exports.getAllBroadcasts = async (req, res) => {
         .lean(),
       Notification.countDocuments(filter),
     ]);
-    if (broadcasts.length > 0) {
-      const broadcastIds = broadcasts.map((b) => b._id);
-      await Notification.updateMany(
-        {
-          _id: { $in: broadcastIds },
-          "adminSeen.userId": { $ne: userId },
-        },
-        {
-          $addToSet: {
-            adminSeen: { userId, seenAt: new Date() },
-          },
-        },
-      );
-    }
     const data = broadcasts.map((b) => ({
       ...b,
       recipientCount: b.recipients?.length || 0,
