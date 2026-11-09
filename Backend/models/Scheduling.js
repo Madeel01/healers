@@ -88,7 +88,7 @@ const appointmentSchema = new mongoose.Schema(
         "present",
         "absent",
         "cancel",
-        "postpond"
+        "postponed"
       ],
       default: "pending"
     },
@@ -107,7 +107,7 @@ const appointmentSchema = new mongoose.Schema(
         "present",
         "absent",
         "cancel",
-        "postpond",
+        "postponed",
       ],
       default: "pending",
     },

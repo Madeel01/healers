@@ -30,6 +30,7 @@ const {
   getChildProgramsSpeciality,
   getTherapistAttendance,
   markTherapistAttendance,
+  updateTherapistAttendance,
 } = require("../controllers/therapistController");
 
 router.get("/dashboard-stats", protect, getDashboardStats);
@@ -46,6 +47,7 @@ router.get("/feedback_management/:childId", protect, getFeedbackManagementData);
 router.post("/feedback/create", protect, createFeedback);
 router.get("/get_attendance", protect, getAttendance);
 router.patch("/update_attendance_status", protect, updateAttendanceStatus);
+router.put("/attendance/therapist-status",protect,updateTherapistAttendance);
 router.post("/leave-request/create", protect, createLeaveRequest);
 router.get("/leave-requests/get", protect, getLeaveRequests);
 router.get("/video/child/:childId", protect, getVideosByChild);

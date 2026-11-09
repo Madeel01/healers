@@ -63,7 +63,10 @@
         "expo-notifications",
         {
           "icon": "./assets/ic_launcher_foreground.png",
-          "defaultChannel": "default"
+          "defaultChannel": "default",
+          "sounds": [
+            "./assets/audio6.wav"
+          ]
         }
       ],
       [
@@ -75,8 +78,18 @@
           }
         }
       ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/hd.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#101C36"
+        }
+      ],
       "expo-video",
-      "expo-asset"
+      "expo-asset",
+      "expo-splash-screen"
     ],
     "extra": {
       "eas": {

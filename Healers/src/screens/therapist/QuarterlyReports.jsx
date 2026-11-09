@@ -69,6 +69,19 @@ const QUARTERS_LIST = [
     year: currentYear,
   },
 ];
+const hasReportText = (data) => {
+  const programs = data?.programs || [];
+
+  return programs.some((program) => {
+    const programText = (program?.report || "").trim();
+
+    const goalText = (program?.goals || []).some(
+      (goal) => (goal?.description || "").trim().length > 0,
+    );
+
+    return programText.length > 0 || goalText;
+  });
+};
 
 export default function QuarterlyReportsScreen({
   navigation,
@@ -93,6 +106,7 @@ export default function QuarterlyReportsScreen({
   const [loadingReport, setLoadingReport] = useState(false);
   const [sentToParents, setSentToParents] = useState(true);
   const [savingReport, setSavingReport] = useState(false);
+  const [submittedQuarters, setSubmittedQuarters] = useState({});
 
   useEffect(() => {
     fetchChildren();
@@ -390,6 +404,10 @@ export default function QuarterlyReportsScreen({
       );
 
       if (response?.success) {
+        setSubmittedQuarters((prev) => ({
+          ...prev,
+          [selectedQuarter]: hasReportText({ programs: reportPrograms }),
+        }));
         Alert.alert(
           "Success",
           "Quarterly report submitted successfully.",
@@ -460,7 +478,44 @@ export default function QuarterlyReportsScreen({
         || child?.id)
         === selectedChildId,
   );
+  useEffect(() => {
+    if (!selectedChildId) {
+      setSubmittedQuarters({});
+      return;
+    }
 
+    let cancelled = false;
+
+    const checkSubmittedQuarters = async () => {
+      const results = await Promise.allSettled(
+        QUARTERS_LIST.map((q) =>
+          getQuarterlyReport({
+            userId: selectedChildId,
+            year: q.year,
+            quarter: q.quarter,
+          })
+        ),
+      );
+
+      if (cancelled) return;
+
+      const map = {};
+      results.forEach((res, index) => {
+        map[QUARTERS_LIST[index].id] =
+          res.status === "fulfilled"
+          && !!res.value?.success
+          && hasReportText(res.value?.data);
+      });
+
+      setSubmittedQuarters(map);
+    };
+
+    checkSubmittedQuarters();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedChildId]);
  
   return (
     <View
@@ -595,42 +650,47 @@ export default function QuarterlyReportsScreen({
           <View
             style={styles.quarterGrid}
           >
-            {QUARTERS_LIST.map(
-              (item) => {
-                const isSelected = selectedQuarter
-                  === item.id;
+            {QUARTERS_LIST.map((item) => {
+              const isSelected = selectedQuarter === item.id;
+              const hasReport = !!submittedQuarters[item.id];
 
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[
-                      styles.quarterChip,
-
-                      isSelected
-                        ? styles.quarterChipActive
-                        : styles.quarterChipInactive,
-                    ]}
-                    activeOpacity={0.8}
-                    onPress={() =>
-                      setSelectedQuarter(
-                        item.id,
-                      )}
-                  >
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.quarterChip,
+                    isSelected
+                      ? styles.quarterChipActive
+                      : styles.quarterChipInactive,
+                    hasReport && !isSelected && styles.quarterChipSubmitted,
+                    hasReport && isSelected && styles.quarterChipSubmittedActive,
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedQuarter(item.id)}
+                >
+                  <View style={styles.quarterChipInner}>
+                    {hasReport && (
+                      <Feather
+                        name="check-circle"
+                        size={fontSize(13)}
+                        color={isSelected ? "#FFFFFF" : "#00725E"}
+                      />
+                    )}
                     <Text
                       style={[
                         styles.quarterChipText,
-
                         isSelected
                           ? styles.quarterChipTextActive
                           : styles.quarterChipTextInactive,
+                        hasReport && !isSelected && styles.quarterChipTextSubmitted,
                       ]}
                     >
                       {item.label}
                     </Text>
-                  </TouchableOpacity>
-                );
-              },
-            )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -1351,5 +1411,24 @@ const styles = StyleSheet.create({
     fontSize:fontSize(14),
     fontFamily: fonts.regular,
     color: "#64748B",
+  },
+  quarterChipInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+
+  quarterChipSubmitted: {
+    backgroundColor: "#E3FBF4",
+    borderColor: "#00725E",
+  },
+
+  quarterChipSubmittedActive: {
+    backgroundColor: "#00725E",
+    borderColor: "#00725E",
+  },
+
+  quarterChipTextSubmitted: {
+    color: "#00725E",
   },
 });

@@ -372,7 +372,7 @@ export default function TherapistDashboardScreen({ navigation }) {
         return "Absent";
       case "cancel":
         return "Cancelled";
-      case "postpond":
+      case "postponed":
         return "Postponed";
       default:
         return "Pending";
@@ -396,7 +396,7 @@ export default function TherapistDashboardScreen({ navigation }) {
           backgroundColor: "#FFF0F0",
           color: "#DC2626",
         };
-      case "postpond":
+      case "postponed":
         return {
           backgroundColor: "#EEF5FF",
           color: "#2563EB",
@@ -909,7 +909,7 @@ export default function TherapistDashboardScreen({ navigation }) {
                 },
                 {
                   label: "Postpone",
-                  status: "postpond",
+                  status: "postponed",
                   icon: "clock",
                   background: "#F2F7FF",
                   border: "#D6E6FF",

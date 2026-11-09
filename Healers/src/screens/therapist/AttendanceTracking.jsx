@@ -27,6 +27,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   getAttendanceApi,
   updateAttendanceStatusApi,
+  updateTherapistAttendanceApi,
 } from '../../api/therapist/api';
 import { fonts } from '../../styles/theme';
 import {
@@ -50,7 +51,7 @@ const dateKey = (date) => {
     pad(d.getDate()),
   ].join("-");
 };
-
+const THERAPIST_LOCKED_STATUSES = ["cancel", "postpond", "postponed"];
 const addDays = (date, count) =>
   new Date(
     date.getFullYear(),
@@ -481,7 +482,72 @@ export default function AttendanceTrackingScreen({ route }) {
       year: "numeric",
     },
   );
+  const updateTherapist = async (item, targetStatus) => {
+    if (updating) return;
 
+    if (!item.attendanceId || !item.appointmentId) return;
+
+    const current = (item.therapistAttendance || "pending").toLowerCase();
+
+    if (THERAPIST_LOCKED_STATUSES.includes(current)) {
+      Alert.alert(
+        "Not Allowed",
+        "Attendance cannot be changed for a cancelled or postponed appointment.",
+      );
+      return;
+    }
+
+    if (getAppointmentDateTime(item) > new Date()) {
+      Alert.alert("Not Allowed", "You cannot mark future attendance.");
+      return;
+    }
+    if (String(item.date).slice(0, 10) !== dateKey(new Date())) {
+      Alert.alert(
+        "Not Allowed",
+        "Attendance can only be marked for today's sessions.",
+      );
+      return;
+    }
+
+    // Tapping the active button again resets to pending.
+    const nextStatus = current === targetStatus ? "pending" : targetStatus;
+
+    const updateId = `${item.attendanceId}:${item.appointmentId}:therapist`;
+
+    setUpdating(updateId);
+
+    try {
+      const response = await updateTherapistAttendanceApi({
+        attendanceId: item.attendanceId,
+        appointmentId: item.appointmentId,
+        status: nextStatus,
+      });
+
+      const result = response?.data?.success ? response.data : response;
+
+      if (!result?.success) {
+        throw new Error(result?.message || "Update failed");
+      }
+
+      setRecords((previous) =>
+        previous.map((record) =>
+          record.attendanceId === item.attendanceId
+            && record.appointmentId === item.appointmentId
+            ? { ...record, therapistAttendance: nextStatus }
+            : record
+        )
+      );
+    } catch (error) {
+      Alert.alert(
+        "Update Failed",
+        error?.response?.data?.message
+          || error.message
+          || "Unable to update attendance.",
+      );
+    } finally {
+      setUpdating(null);
+    }
+  };
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -723,16 +789,18 @@ export default function AttendanceTrackingScreen({ route }) {
               const therapistStatus = (
                 item.therapistAttendance || "pending"
               ).toLowerCase();
-
+              const isToday = String(item.date).slice(0, 10) === dateKey(new Date());
+              const therapistLocked = THERAPIST_LOCKED_STATUSES.includes(therapistStatus);
               const therapistPresent = therapistStatus === "present";
               const therapistAbsent = therapistStatus === "absent";
+              const therapistCanEdit = isToday && !therapistLocked;
 
               const therapistStatusLabel = {
                 present: "Present",
                 absent: "Absent",
                 pending: "Pending",
                 cancel: "Cancelled",
-                postpond: "Postponed",
+                postponed: "Postponed",
               }[therapistStatus] || "Pending";
 
               const therapistStatusStyle = therapistPresent
@@ -883,21 +951,49 @@ export default function AttendanceTrackingScreen({ route }) {
                       </>
                     )
                     : (
-                      <View
-                        style={[
-                          styles.pill,
-                          therapistStatusStyle,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.pillText,
-                            { color: therapistStatusColor },
-                          ]}
-                        >
-                          {therapistStatusLabel}
-                        </Text>
-                      </View>
+                      <>
+                        {therapistCanEdit && (
+                          <View style={styles.controls}>
+                            <TouchableOpacity
+                              disabled={future || !!updating}
+                              onPress={() => updateTherapist(item, "present")}
+                              style={[
+                                styles.control,
+                                therapistPresent && styles.presentControl,
+                              ]}
+                            >
+                              <Feather
+                                name="check"
+                                size={fontSize(15)}
+                                color={therapistPresent ? "#FFFFFF" : "#B4C2D2"}
+                              />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              disabled={future || !!updating}
+                              onPress={() => updateTherapist(item, "absent")}
+                              style={[
+                                styles.control,
+                                therapistAbsent && styles.absentControl,
+                              ]}
+                            >
+                              <Feather
+                                name="x"
+                                size={fontSize(15)}
+                                color={therapistAbsent ? "#FFFFFF" : "#B4C2D2"}
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        )}
+
+                        <View style={[styles.pill, therapistStatusStyle]}>
+                          <Text style={[styles.pillText, { color: therapistStatusColor }]}>
+                            {future && therapistStatus === "pending"
+                              ? "Not Yet"
+                              : therapistStatusLabel}
+                          </Text>
+                        </View>
+                      </>
                     )}
 
                   {updating === rowId && (

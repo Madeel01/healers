@@ -89,6 +89,11 @@ export const getAttendanceApi = async (params = {}) => {
   return response.data;
 };
 
+export const updateTherapistAttendanceApi = async (payload) => {
+  const response = await apiClient.put("therapist/attendance/therapist-status", payload);
+  return response.data;
+};
+
 export const updateAttendanceStatusApi = async (payload) => {
   const response = await apiClient.patch("/therapist/update_attendance_status", payload);
   return response.data;

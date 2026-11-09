@@ -966,6 +966,7 @@ exports.getAdminOverview = async (req, res) => {
       unreadNotificationCount,
       unreadMessageCount,
       unreadComplaintCount,
+      totalMessageCount,
     ] = await Promise.all([
       User.countDocuments({ role: "Child" }),
       User.countDocuments({ role: "Therapist" }),
@@ -991,6 +992,10 @@ exports.getAdminOverview = async (req, res) => {
       Complaint.countDocuments({
         "isSeen.userId": { $ne: userId },
       }),
+      Conversation.countDocuments({
+        participants: userId,
+        deletedFor: { $ne: userId },
+      }),
     ]);
 
     const sessionCount = 5;
@@ -1007,6 +1012,7 @@ exports.getAdminOverview = async (req, res) => {
         unreadNotificationCount,
         unreadMessageCount,
         unreadComplaintCount,
+        totalMessageCount,
       },
     });
   } catch (error) {
@@ -9024,7 +9030,7 @@ exports.getAdminAttendance = async (req, res) => {
             (item) => item.therapistAttendance === "cancel"
           ).length,
           postponed: data.filter(
-            (item) => item.therapistAttendance === "postpond"
+            (item) => item.therapistAttendance === "postpond" || item.therapistAttendance === "postponed"
           ).length,
         }
       : {
