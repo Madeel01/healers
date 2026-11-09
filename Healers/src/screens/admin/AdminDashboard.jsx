@@ -3,7 +3,7 @@ import {
   useEffect,
   useState,
 } from 'react';
-
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Image,
@@ -54,6 +54,7 @@ export default function AdminDashboard() {
     unseenFeedbackCount: 0,
     unreadNotificationCount: 0,
     unreadComplaintCount: 0,
+    totalMessageCount: 0,
   });
   const [unreadData, setUnreadData] = useState({
     hasUnread: false,
@@ -103,6 +104,7 @@ export default function AdminDashboard() {
         unseenFeedbackCount: rawData?.unseenFeedbackCount || 0,
         unreadNotificationCount: rawData?.unreadNotificationCount || 0,
         unreadComplaintCount: rawData?.unreadComplaintCount || 0,
+        totalMessageCount: rawData?.totalMessageCount || 0,
       });
     } catch (error) {
       console.log("Failed to fetch dashboard overview:", error);
@@ -291,14 +293,74 @@ export default function AdminDashboard() {
             </Text>
           </TouchableOpacity>
 
+          {/* <TouchableOpacity
+            style={[styles.statCard, styles.messageCard]}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate("ChildMessages")}
+          >
+            <View style={styles.messageTopRow}>
+              <View style={styles.messageIconBox}>
+                <Ionicons
+                  name="chatbubble-ellipses"
+                  size={fontSize(24)}
+                  color="#F43F5E"
+                />
+              </View>
+
+              {unreadData.totalUnreadCount > 0 && (
+                <View style={styles.newPill}>
+                  <Text style={styles.newPillText}>
+                    {unreadData.totalUnreadCount > 99
+                      ? "99+"
+                      : unreadData.totalUnreadCount} New
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <Text style={styles.messageLabel}>Messages</Text>
+            <Text style={styles.messageValue}>
+              {stats.totalMessageCount.toLocaleString()}
+            </Text>
+          </TouchableOpacity> */}
           <TouchableOpacity
+            style={[styles.statCard, styles.messageCard]}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate("ChildMessages")}
+          >
+            <View style={styles.messageIconWrapper}>
+              <View style={styles.messageIconBox}>
+                <Ionicons
+                  name="chatbubble-ellipses"
+                  size={fontSize(20)}
+                  color="#F58B2A"
+                />
+              </View>
+
+              {unreadData.totalUnreadCount > 0 && (
+                <View style={styles.messageBadge}>
+                  <Text style={styles.messageBadgeText}>
+                    {unreadData.totalUnreadCount > 99
+                      ? "99+"
+                      : unreadData.totalUnreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <Text style={styles.messageLabel}>Messages</Text>
+            <Text style={styles.messageValue}>
+              {stats.totalMessageCount.toLocaleString()}
+            </Text>
+          </TouchableOpacity>
+          {/* <TouchableOpacity
             style={[styles.statCard, { backgroundColor: "#fff" }]}
             onPress={() => navigation.navigate("ChildMessages")}
           >
             <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
-              <Feather name="message-square" size={24} color="#10B981" />
+              <Feather name="message-square" size={24} color="#10B981" /> */}
               {/* {unreadData.hasUnread && <View style={styles.cardBadgeDot} />} */}
-              {unreadData.totalUnreadCount > 0 && (
+              {/* {unreadData.totalUnreadCount > 0 && (
                 <View style={styles.messageCountBadge}>
                   <Text style={styles.messageCountBadgeText}>
                     {unreadData.totalUnreadCount > 99
@@ -309,7 +371,7 @@ export default function AdminDashboard() {
               )}
             </View>
             <Text style={styles.gridCardTitle}>Messages</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </LinearGradient>
 
         <Fee customstyles={styles} />
@@ -452,8 +514,8 @@ export default function AdminDashboard() {
             </View>
 
             <AntDesign
-              name={reportsExpanded ? "up" : "down"}
-              size={18}
+              name={reportsExpanded ? "down" : "right"}
+              size={20}
               color="#717781"
             />
           </TouchableOpacity>
@@ -588,6 +650,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
+    gap:6,
   },
   sectionTextContainer: {
     alignItems: "flex-start",
@@ -828,6 +891,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000000",
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+
+    // Shadow (Android)
+    elevation: 4,
   },
   messageCountBadge: {
     position: "absolute",
@@ -887,4 +960,112 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     color: "#181C1E",
   },
+  // messageCard: {
+  //   backgroundColor: "#FFFFFF",
+  //   alignItems: "flex-start",
+  //   justifyContent: "center",
+  //   padding: wp(16),
+  //   height: hp(100),
+  // },
+  // messageTopRow: {
+  //   width: "100%",
+  //   flexDirection: "row",
+  //   justifyContent: "space-between",
+  //   alignItems: "flex-start",
+  // },
+  // messageIconBox: {
+  //   width: wp(38),
+  //   height: wp(38),
+  //   borderRadius: wp(12),
+  //   backgroundColor: "#FFECEF",
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  // },
+  // newPill: {
+  //   backgroundColor: "#F43F5E",
+  //   paddingHorizontal: wp(6),
+  //   paddingVertical: hp(3),
+  //   borderRadius: 999,
+  // },
+  // newPillText: {
+  //   color: "#FFFFFF",
+  //   fontSize: fontSize(9),
+  //   fontFamily: fonts.bold,
+  // },
+  // messageLabel: {
+  //   marginTop: hp(2),
+  //   fontSize: fontSize(14),
+  //   fontFamily: fonts.medium,
+  //   color: "#64748B",
+  //   lineHeight: 21,
+  // },
+  // messageValue: {
+  //   marginTop:2,
+  //   fontSize: fontSize(16),
+  //   fontFamily: fonts.bold,
+  //   color: "#0F172A",
+  //   lineHeight: 22,
+  // },
+messageCard: {
+  backgroundColor: "#eed098",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+messageIconWrapper: {
+  position: "relative",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+messageIconBox: {
+  width: 40,
+  height: 40,
+  borderRadius: 12,
+  backgroundColor: "#FFECEF",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+messageBadge: {
+  position: "absolute",
+  top: -6,
+  right: -7,
+  minWidth: 20,
+  minHeight: 20,
+  borderRadius: 10,
+  backgroundColor: "#F43F5E",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingHorizontal: 4,
+  borderWidth: 1.5,
+  borderColor: "#FFFFFF",
+},
+
+messageBadgeText: {
+  color: "#FFFFFF",
+  fontSize: fontSize(9),
+  fontFamily: fonts.bold,
+  textAlign: "center",
+},
+
+messageLabel: {
+  fontSize: fontSize(14),
+  fontFamily: fonts.medium,
+  color: "#64748B",
+  textAlign: "center",
+  lineHeight: 20,
+  marginTop: 5,
+  includeFontPadding: false,
+},
+
+messageValue: {
+  fontSize: fontSize(16),
+  fontFamily: fonts.bold,
+  color: "#0F172A",
+  textAlign: "center",
+  lineHeight: 20,
+  marginTop: 3,
+  includeFontPadding: false,
+},
 });

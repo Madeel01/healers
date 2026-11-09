@@ -288,7 +288,18 @@ export default function ChildProfileScreen({ navigation }) {
 
     await uploadToCloudinary(result.assets[0].uri);
   };
+  const handlePhoneChange = (text) => {
+    let value = text.replace(/[^\d+]/g, "");
 
+    if (value.startsWith("+")) {
+      value = "+" + value.slice(1).replace(/\+/g, "");
+      value = value.slice(0, 13);
+    } else {
+      value = value.replace(/\+/g, "").slice(0, 11);
+    }
+
+    setPhone(value);
+  };
   const handleUpdateProfile = async () => {
     if (!fullName.trim()) {
       Alert.alert("Error", "Full name is required");
@@ -309,7 +320,7 @@ export default function ChildProfileScreen({ navigation }) {
 
     const trimmedPhone = phone.trim();
 
-    const phoneRegex = /^(030\d{8}|\+923\d{9})$/;
+    const phoneRegex = /^(03\d{9}|\+923\d{9})$/;
 
     if (!phoneRegex.test(trimmedPhone)) {
       Alert.alert(
@@ -573,10 +584,11 @@ export default function ChildProfileScreen({ navigation }) {
 
                 <TextInput
                   value={phone}
-                  onChangeText={setPhone}
+                  onChangeText={handlePhoneChange}
                   placeholder="Enter phone"
                   placeholderTextColor="#94A3B8"
                   keyboardType="phone-pad"
+                  maxLength={phone.startsWith("+92") ? 13 : 11}
                   style={styles.input}
                   onFocus={handleInputFocus}
                   returnKeyType="next"

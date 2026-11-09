@@ -4,14 +4,16 @@ const mongoose = require("mongoose");
 const { messaging } = require("../config/firebase");
 
 // Register FCM token
+
 exports.registerPushToken = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
     const { pushToken, platform } = req.body;
+
     if (
-      typeof pushToken !== "string"
-      || !pushToken.trim()
-      || platform !== "android"
+      typeof pushToken !== "string" ||
+      !pushToken.trim() ||
+      platform !== "android"
     ) {
       return res.status(400).json({
         success: false,
@@ -20,7 +22,7 @@ exports.registerPushToken = async (req, res) => {
     }
 
     const device = await PushToken.findOneAndUpdate(
-      { pushToken },
+      { pushToken: pushToken.trim() },
       {
         $set: {
           userId,
@@ -30,9 +32,9 @@ exports.registerPushToken = async (req, res) => {
       },
       {
         upsert: true,
-        new: true,
+        returnDocument: "after",
         runValidators: true,
-      },
+      }
     );
 
     return res.status(200).json({
@@ -40,6 +42,7 @@ exports.registerPushToken = async (req, res) => {
       message: "Push token registered successfully",
       data: device,
     });
+
   } catch (error) {
     console.error("Register push token:", error);
 

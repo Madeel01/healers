@@ -86,7 +86,8 @@
         }
       ],
       "expo-video",
-      "expo-asset"
+      "expo-asset",
+      "expo-splash-screen"
     ],
     "extra": {
       "eas": {
