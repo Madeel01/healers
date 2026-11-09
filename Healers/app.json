@@ -63,7 +63,8 @@
         "expo-notifications",
         {
           "icon": "./assets/ic_launcher_foreground.png",
-          "defaultChannel": "default"
+          "defaultChannel": "default",
+          "sounds": ["./assets/sounds/audio6.wav"]
         }
       ],
       [
@@ -73,6 +74,15 @@
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true
           }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/hd.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#101C36"
         }
       ],
       "expo-video",
