@@ -20,11 +20,9 @@
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/ic_launcher_foreground.png",
-        "backgroundImage": "./assets/ic_launcher_foreground.png",
-        "monochromeImage": "./assets/ic_launcher_foreground.png"
+       "adaptiveIcon": {
+        "foregroundImage": "./assets/hd.png",
+        "backgroundColor": "#101C36"
       },
       "permissions": [
         "android.permission.CAMERA",

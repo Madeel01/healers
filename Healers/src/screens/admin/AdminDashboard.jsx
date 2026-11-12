@@ -3,7 +3,7 @@ import {
   useEffect,
   useState,
 } from 'react';
-import Ionicons from '@expo/vector-icons/Ionicons';
+
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Image,
@@ -18,6 +18,7 @@ import {
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Feather from '@expo/vector-icons/Feather';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import {
