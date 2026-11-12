@@ -405,11 +405,11 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: wp(16),
     paddingTop: hp(12),
-    paddingBottom: hp(4),
+    paddingBottom: hp(0),
   },
 
   headerSub: {
-    fontSize: fontSize(20),
+    fontSize: fontSize(18),
     fontFamily: fonts.bold,
     color: "#0F172A",
     lineHeight: fontSize(27),

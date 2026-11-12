@@ -23,13 +23,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 import {
   getAttendanceApi,
   updateAttendanceStatusApi,
   updateTherapistAttendanceApi,
 } from '../../api/therapist/api';
-import { fonts } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 import {
   fontSize,
   hp,
@@ -845,11 +846,12 @@ export default function AttendanceTrackingScreen({ route }) {
                           styles.avatarFallback,
                         ]}
                       >
-                        <Feather
+                        <FontAwesome5 name="child" size={fontSize(25)} color="white"/>
+                        {/* <Feather
                           name="user"
                           size={fontSize(23)}
                           color="#7489A2"
-                        />
+                        /> */}
                       </View>
                     )}
 
@@ -1416,7 +1418,7 @@ const styles = StyleSheet.create({
     borderRadius: wp(22),
   },
   avatarFallback: {
-    backgroundColor: "#EAF0F7",
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },

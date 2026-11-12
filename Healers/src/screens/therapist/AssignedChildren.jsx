@@ -23,6 +23,7 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Slider from '@react-native-community/slider';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 import {
   getChildPrograms,
@@ -46,8 +47,8 @@ export default function AssignedChildrenScreen({ navigation }) {
   const { user } = useContext(AuthContext);
   const { width } = useWindowDimensions();
 
-  const containerWidth = width - wp(42);
-  const gap = wp(12);
+  const containerWidth = width - wp(65);
+  const gap = wp(43);
   const chipWidth = (containerWidth - gap) / 2;
   const [searchQuery, setSearchQuery] = useState("");
   const [children, setChildren] = useState([]);
@@ -282,10 +283,11 @@ export default function AssignedChildrenScreen({ navigation }) {
               : (
                 <View style={styles.avatarFallback}>
                   <Text style={styles.avatarFallbackText}>
-                    {(activeChild?.fullName || activeChild?.name || "C")
+                  <FontAwesome5 name="child" size={fontSize(45)} color="white"  />
+                    {/* {(activeChild?.fullName || activeChild?.name || "C")
                       .trim()
                       .charAt(0)
-                      .toUpperCase()}
+                      .toUpperCase()} */}
                   </Text>
                 </View>
               )}
@@ -383,7 +385,8 @@ export default function AssignedChildrenScreen({ navigation }) {
                             styles.progressBarFill,
                             {
                               width: `${displayedProgress}%`,
-                              backgroundColor: displayedProgress > 50 ? "#8BF6D9" : "#0284C7",
+                              // backgroundColor: displayedProgress > 50 ? "#8BF6D9" : "#0284C7",
+                              backgroundColor: "#0284C7",
                             },
                           ]}
                         />
@@ -394,7 +397,7 @@ export default function AssignedChildrenScreen({ navigation }) {
                             style={styles.inlineSlider}
                             minimumValue={0}
                             maximumValue={100}
-                            step={1}
+                            step={0}
                             value={displayedProgress}
                             minimumTrackTintColor="transparent"
                             maximumTrackTintColor="transparent"
@@ -534,7 +537,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F4FA",
     borderRadius: wp(999),
     paddingHorizontal: wp(16),
-    paddingVertical: hp(8),
+    paddingVertical: hp(1),
     marginBottom: hp(20),
   },
   searchInput: {
@@ -568,13 +571,13 @@ const styles = StyleSheet.create({
   chipsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    rowGap: wp(12),
+    rowGap: wp(20),
     columnGap: wp(12),
-    marginBottom: hp(20),
+    marginBottom: hp(16),
   },
   childChip: {
     borderRadius: wp(32),
-    paddingVertical: hp(14),
+    paddingVertical: hp(13),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -614,8 +617,8 @@ const styles = StyleSheet.create({
   },
   childAvatarWrapper: {
     backgroundColor: "#FFFFFF",
-    width: wp(128),
-    height: hp(128),
+    width: wp(88),
+    height: hp(88),
     borderRadius: wp(24),
     alignItems: "center",
     justifyContent: "center",
@@ -627,14 +630,14 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   childAvatar: {
-    width: wp(120),
-    height: hp(120),
+    width: wp(80),
+    height: hp(80),
     borderRadius: wp(24),
   },
   avatarFallback: {
-    width: wp(120),
-    height: hp(120),
-    borderRadius: wp(24),
+    width: wp(80),
+    height: hp(80),
+    borderRadius: wp(20),
     backgroundColor: "#004E9F",
     alignItems: "center",
     justifyContent: "center",
@@ -814,10 +817,10 @@ const styles = StyleSheet.create({
     top: 0,
   },
   inlineSlider: {
-    width: "100%",
-    height: hp(40),
     position: "absolute",
-    alignSelf: "center",
+    width: "112%",
+    height: hp(40),
+    left: "-6%",
   },
   addProgressBtn: {
     backgroundColor: "#E5E8EB",

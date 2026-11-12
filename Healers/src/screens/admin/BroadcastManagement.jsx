@@ -1121,6 +1121,8 @@ export default function BroadcastManagementScreen({ navigation }) {
                       <DateTimePicker
                         value={sendAt}
                         mode={pickerMode}
+                        is24Hour={true}
+                        display={Platform.OS === "ios" ? "spinner" : "default"}
                         minimumDate={new Date()}
                         onValueChange={onPickerValueChange}
                         onDismiss={onPickerDismiss}

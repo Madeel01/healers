@@ -44,6 +44,7 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 const TAB_TO_STATUS = {
   "All Feedback": "all",
@@ -758,12 +759,7 @@ export default function ChildFeedback({ navigation }) {
                 )
                 : (
                   <View style={styles.avatarFallback}>
-                    <Text style={styles.avatarFallbackText}>
-                      {(item.name || "User")
-                        .trim()
-                        .charAt(0)
-                        .toUpperCase()}
-                    </Text>
+                    <FontAwesome5 name="user-md" size={fontSize(25)} color="white"  />
                   </View>
                 )}
 
@@ -1116,7 +1112,7 @@ export default function ChildFeedback({ navigation }) {
                   </Text>
 
                   <Text
-                    style={styles.originalFeedbackText}
+                    style={styles.originalFeedbackTextAPP}
                   >
                     Appt: {formatFeedbackDate(
                       selectedFeedback.date,
@@ -1310,15 +1306,15 @@ const styles = StyleSheet.create({
   },
 
   metricLabel: {
-    fontSize: fontSize(16),
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: colors.blackFont,
     lineHeight: 20,
   },
 
   metricValue: {
-    fontSize: fontSize(32),
-    fontFamily: fonts.bold,
+    fontSize: fontSize(28),
+    fontFamily: fonts.semiBold,
     color: colors.primary,
     lineHeight: 36,
   },
@@ -1628,6 +1624,12 @@ const styles = StyleSheet.create({
     color: "#475569",
     lineHeight: 20,
   },
+  originalFeedbackTextAPP: {
+    fontSize: fontSize(11),
+    fontFamily: fonts.regular,
+    color: "#97a3b4",
+    lineHeight: 20,
+  },
 
   repliesList: {
     flex: 1,
@@ -1666,7 +1668,7 @@ const styles = StyleSheet.create({
   replySender: {
     fontSize: fontSize(11),
     fontFamily: fonts.semiBold,
-    color: "#64748B",
+    color: colors.primary,
     marginBottom: 2,
   },
 

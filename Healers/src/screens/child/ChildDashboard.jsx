@@ -18,12 +18,12 @@ import {
   View,
 } from 'react-native';
 
-import { FontAwesome6 } from '@expo/vector-icons';
+import { FontAwesome6, MaterialCommunityIcons } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useIsFocused } from '@react-navigation/native';
-
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { getServices } from '../../api/admin/api';
 import {
   getChildSummeryApi,
@@ -47,7 +47,7 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
-
+import Ionicons from 'react-native-vector-icons/Ionicons';
 export default function ChildDashboardScreen({ navigation }) {
   const { user, logout, switchUser, isImpersonating } = useContext(AuthContext);
   const userName = user?.fullName || user?.name || "";
@@ -519,7 +519,7 @@ export default function ChildDashboardScreen({ navigation }) {
               onPress={() => navigation.navigate("ChildReport")}
             >
               <View style={[styles.actionIconCircle, { backgroundColor: "#FDE2D6" }]}>
-                <Feather name="calendar" size={fontSize(20)} color="#EA580C" />
+                <MaterialCommunityIcons name="file-chart-outline" size={fontSize(20)} color="#EA580C" />
               </View>
               <Text style={styles.actionLabel}>Reports</Text>
             </TouchableOpacity>
@@ -530,7 +530,7 @@ export default function ChildDashboardScreen({ navigation }) {
               onPress={() => navigation.navigate("ChildAttendance")}
             >
               <View style={[styles.actionIconCircle, { backgroundColor: "rgba(255,220,196,.6)" }]}>
-                <Feather name="user" size={fontSize(20)} color="#EA580C" />
+                <MaterialIcons name="date-range" size={fontSize(20)} color="#EA580C" />
               </View>
               <Text style={styles.actionLabel}>Attendance</Text>
             </TouchableOpacity>
@@ -631,75 +631,66 @@ export default function ChildDashboardScreen({ navigation }) {
                 const speciality = getSpeciality(session.specialty);
 
                 return (
-                  <View
-                    key={session.appointmentId}
-                    style={styles.classCard}
-                  >
-                    {session.therapistImage
-                      ? (
-                        <Image
-                          source={{ uri: session.therapistImage }}
-                          style={styles.sessionAvatar}
-                        />
-                      )
-                      : (
-                        <View style={styles.classIconCircle}>
-                          <Text style={styles.sessionInitial}>
-                            {(session.therapistName || "T")
-                              .charAt(0)
-                              .toUpperCase()}
-                          </Text>
-                        </View>
-                      )}
+                  <View key={session.appointmentId} style={styles.fsCard}>
+                    {/* Header: avatar + name/badge */}
+                    <View style={styles.fsHeaderRow}>
+                      <View style={styles.fsAvatarWrap}>
+                        {session.therapistImage ? (
+                          <Image
+                            source={{ uri: session.therapistImage }}
+                            style={styles.fsAvatarImage}
+                          />
+                        ) : (
+                          <View style={styles.fsAvatarFallback}>
+                            <FontAwesome5 name="user-md" size={fontSize(22)} color="white" />
+                          </View>
+                        )}
+                        {/* <View style={styles.fsOnlineDot} /> */}
+                      </View>
 
-                    <View style={styles.classInfoContainer}>
-                      <Text style={styles.className}>
-                        {session.therapistName}
-                      </Text>
+                      <View style={styles.fsNameCol}>
+                        <Text style={styles.fsName} numberOfLines={1}>
+                          {session.therapistName || "Therapist"}
+                        </Text>
 
-                      {speciality && (
-                        <View
-                          style={[
-                            styles.specialityBadge,
-                            { backgroundColor: speciality.bg },
-                          ]}
-                        >
-                          <Text
+                        {speciality && (
+                          <View
                             style={[
-                              styles.specialityBadgeText,
-                              { color: speciality.color },
+                              styles.fsBadge,
+                              { backgroundColor: speciality.bg },
                             ]}
                           >
-                            {speciality.label}
-                          </Text>
-                        </View>
-                      )}
+                            <Text
+                              style={[
+                                styles.fsBadgeText,
+                                { color: speciality.color },
+                              ]}
+                            >
+                              {speciality.label}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
 
-                      <View style={styles.sessionDetailsRow}>
-                        <Feather
-                          name="calendar"
-                          size={fontSize(13)}
-                          color="#64748B"
-                        />
-                        <Text style={styles.sessionDetailText}>
-                          {new Date(session.date).toLocaleDateString(
-                            "en-US",
-                            {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            },
-                          )}
+                    {/* Date & time box */}
+                    <View style={styles.fsInfoBox}>
+                      <View style={styles.fsInfoItem}>
+                        <Feather name="calendar" size={fontSize(15)} color="#64748B" />
+                        <Text style={styles.fsInfoText}>
+                          {new Date(session.date).toLocaleDateString("en-US", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
                         </Text>
                       </View>
 
-                      <View style={styles.sessionDetailsRow}>
-                        <Feather
-                          name="clock"
-                          size={fontSize(13)}
-                          color="#64748B"
-                        />
-                        <Text style={styles.sessionDetailText}>
+                      <View style={styles.fsInfoDivider} />
+
+                      <View style={styles.fsInfoItem}>
+                        <Feather name="clock" size={fontSize(15)} color="#64748B" />
+                        <Text style={styles.fsInfoText}>
                           {session.startTime} - {session.endTime}
                         </Text>
                       </View>
@@ -1037,7 +1028,7 @@ const styles = StyleSheet.create({
   },
   sectionHeaderTitle: {
     fontSize: fontSize(16),
-    fontFamily: fonts.regular,
+    fontFamily: fonts.semiBold,
     color: "#191C20",
     lineHeight: 24,
   },
@@ -1089,14 +1080,14 @@ const styles = StyleSheet.create({
     height: hp(25),
     paddingHorizontal: wp(6),
     borderRadius: wp(999),
-    backgroundColor: "#E0F2FE",
+    backgroundColor: "#EFF6FF",
     alignItems: "center",
     justifyContent: "center",
   },
 
   counterBadgeText: {
     fontSize: fontSize(12),
-    color: "#0284C7",
+    color: colors.primary,
     fontFamily: fonts.semiBold,
   },
 
@@ -1396,4 +1387,97 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     textAlign: "center",
   },
+  fsCard: {
+  backgroundColor: "#F8FAFC",
+  borderRadius: wp(18),
+  borderWidth: 1,
+  borderColor: "#E2E8F0",
+  padding: wp(14),
+  marginBottom: 10,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.05,
+  shadowRadius: 6,
+  elevation: 1,
+},
+fsHeaderRow: {
+  flexDirection: "row",
+  alignItems: "center",
+},
+fsAvatarWrap: {
+  width: wp(48),
+  height: wp(48),
+  marginRight: wp(12),
+},
+fsAvatarImage: {
+  width: wp(48),
+  height: wp(48),
+  borderRadius: wp(24),
+},
+fsAvatarFallback: {
+  width: wp(48),
+  height: wp(48),
+  borderRadius: wp(24),
+  backgroundColor: colors.primary,
+  alignItems: "center",
+  justifyContent: "center",
+},
+fsOnlineDot: {
+  position: "absolute",
+  right: 0,
+  bottom: 0,
+  width: wp(12),
+  height: wp(12),
+  borderRadius: wp(6),
+  backgroundColor: "#10B981",
+  borderWidth: 2,
+  borderColor: "#F8FAFC",
+},
+fsNameCol: {
+  flex: 1,
+},
+fsName: {
+  fontSize: fontSize(15),
+  fontFamily: fonts.semiBold,
+  color: "#191C20",
+  marginBottom: 4,
+},
+fsBadge: {
+  alignSelf: "flex-start",
+  paddingHorizontal: wp(10),
+  paddingVertical: hp(3),
+  borderRadius: wp(999),
+},
+fsBadgeText: {
+  fontSize: fontSize(11),
+  fontFamily: fonts.semiBold,
+},
+fsInfoBox: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#FFFFFF",
+  borderRadius: wp(14),
+  borderWidth: 1,
+  borderColor: "#E2E8F0",
+  paddingHorizontal: wp(12),
+  paddingVertical: hp(10),
+  marginTop: hp(12),
+},
+fsInfoItem: {
+  flex: 1,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: wp(6),
+},
+fsInfoDivider: {
+  width: 1,
+  height: hp(18),
+  backgroundColor: "#E2E8F0",
+},
+fsInfoText: {
+  fontSize: fontSize(12),
+  fontFamily: fonts.regular,
+  color: "#475569",
+},
 });

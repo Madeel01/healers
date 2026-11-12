@@ -1,6 +1,6 @@
 import React, {
-  useContext,
   useCallback,
+  useContext,
   useEffect,
   useState,
 } from 'react';
@@ -16,41 +16,57 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
+import { getUnreadNotificationCountApi } from '../api/authApi';
 import { AuthContext } from '../context/AuthContext';
+import { fonts } from '../styles/theme';
 import {
   fontSize,
   hp,
   wp,
 } from '../utils/responsive';
-import { getUnreadNotificationCountApi } from '../api/authApi';
-import { fonts } from '../styles/theme';
 
 export default function BottomBar({ activeTab = "AdminDashboard" }) {
   const { user, logout, token } = useContext(AuthContext);
   const navigation = useNavigation();
   const [unreadCount, setUnreadCount] = useState(0);
+
   const fetchUnreadCount = useCallback(async () => {
+    if (!token) {
+      logout();
+      return;
+    }
+
     try {
       const response = await getUnreadNotificationCountApi();
+      console.log("response", response);
 
       if (response.success) {
         setUnreadCount(response.count || 0);
       }
     } catch (error) {
-      console.log(
-        "Unread notification error:",
-        error.response?.data || error.message
-      );
+      const errorData = error.response?.data;
+      console.log("Unread notification error:", errorData || error.message);
+
+      if (
+        errorData?.code === "TOKEN_MISSING"
+        || errorData?.code === "UNAUTHORIZED"
+        || error.response?.status === 401
+      ) {
+        logout();
+      }
     }
-  }, []);
+  }, [token, logout]);
 
   useEffect(() => {
+    if (!token) {
+      return;
+    }
+
     fetchUnreadCount();
-
     const interval = setInterval(fetchUnreadCount, 5000);
-
     return () => clearInterval(interval);
-  }, [fetchUnreadCount, user]);
+  }, [fetchUnreadCount, token]);
+
   const tabs = [
     ...(user?.role === "Admin"
       ? [
@@ -89,11 +105,6 @@ export default function BottomBar({ activeTab = "AdminDashboard" }) {
       : []),
   ];
 
-  // const handlePress = (tabId) => {
-  //   setCurrentTab(tabId);
-  //   if (onTabPress) onTabPress(tabId);
-  // };
-
   return (
     <View style={[styles.bottomBar]}>
       {tabs.map((tab) => {
@@ -108,7 +119,6 @@ export default function BottomBar({ activeTab = "AdminDashboard" }) {
             onPress={() => navigation.navigate(tab.id)}
             activeOpacity={0.7}
           >
-
             <View style={styles.iconContainer}>
               <IconComponent
                 name={tab.iconName}
@@ -119,7 +129,6 @@ export default function BottomBar({ activeTab = "AdminDashboard" }) {
               {tab.id === "Notifications" && unreadCount > 0 && (
                 <View style={styles.notificationBadge}>
                   <Text style={styles.notificationBadgeText}>
-
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </Text>
                 </View>
@@ -140,7 +149,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    // backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
     paddingTop: hp(10),
@@ -175,7 +183,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   notificationBadge: {
     position: "absolute",
     top: -12,
@@ -190,7 +197,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FFFFFF",
   },
-
   notificationBadgeText: {
     color: "#FFFFFF",
     fontSize: fontSize(8),

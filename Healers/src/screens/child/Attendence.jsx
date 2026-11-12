@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -7,15 +7,18 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  Image,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 
-import Feather from '@expo/vector-icons/Feather';
-import { useFocusEffect } from '@react-navigation/native';
+import Feather from "@expo/vector-icons/Feather";
+import { useFocusEffect } from "@react-navigation/native";
 
-import { getChildAttendance } from '../../api/child/api';
-import { fonts } from '../../styles/theme';
+import { getChildAttendance } from "../../api/child/api";
+import { colors, fonts } from "../../styles/theme";
+import { FontAwesome5 } from "@expo/vector-icons";
+import { fontSize, wp } from "../../utils/responsive";
 
 const BLUE = "#075BB8";
 const DARK = "#10243D";
@@ -43,7 +46,11 @@ const time12 = (time) => {
 };
 
 const getMonthWeeks = (month) => {
-  const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const lastDay = new Date(
+    month.getFullYear(),
+    month.getMonth() + 1,
+    0,
+  ).getDate();
   const result = [];
   for (let day = 1; day <= lastDay; day += 7) {
     result.push({
@@ -56,8 +63,13 @@ const getMonthWeeks = (month) => {
 };
 
 const getAppointmentDateTime = (item) => {
-  const [year, month, day] = String(item.date).slice(0, 10).split("-").map(Number);
-  const [hours, minutes] = String(item.startTime || "00:00").split(":").map(Number);
+  const [year, month, day] = String(item.date)
+    .slice(0, 10)
+    .split("-")
+    .map(Number);
+  const [hours, minutes] = String(item.startTime || "00:00")
+    .split(":")
+    .map(Number);
   return new Date(year, month - 1, day, hours || 0, minutes || 0);
 };
 
@@ -74,8 +86,18 @@ const formatAttendanceDate = (dateString) => {
 
 // Session type tags (alternate / additional)
 const SESSION_TAGS = {
-  alternate: { label: "Alternate", icon: "repeat", color: "#1D70EE", bg: "#E8F0FE" },
-  additional: { label: "Additional", icon: "plus-circle", color: "#0E8F8A", bg: "#E0F7F6" },
+  alternate: {
+    label: "Alternate",
+    icon: "repeat",
+    color: "#1D70EE",
+    bg: "#E8F0FE",
+  },
+  additional: {
+    label: "Additional",
+    icon: "plus-circle",
+    color: "#0E8F8A",
+    bg: "#E0F7F6",
+  },
 };
 
 // Pill (right side badge) resolver
@@ -97,17 +119,25 @@ const getPill = (item, future) => {
   if (status === "absent") {
     return { text: "Absent", color: "#E23838", bg: "#FDEDED" };
   }
-  return { text: future ? "Not Yet" : "Pending", color: "#BD7400", bg: "#FFF2D8" };
+  return {
+    text: future ? "Not Yet" : "Pending",
+    color: "#BD7400",
+    bg: "#FFF2D8",
+  };
 };
 
 export default function AttendanceScreen({ route }) {
-  const [mode, setMode] = useState(route?.params?.filterType === "today" ? "Today" : "Week");
+  const [mode, setMode] = useState(
+    route?.params?.filterType === "today" ? "Today" : "Week",
+  );
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [month, setMonth] = useState(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
-  const [weekIndex, setWeekIndex] = useState(Math.floor((new Date().getDate() - 1) / 7));
+  const [weekIndex, setWeekIndex] = useState(
+    Math.floor((new Date().getDate() - 1) / 7),
+  );
 
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -142,7 +172,9 @@ export default function AttendanceScreen({ route }) {
       setRecords([]);
       Alert.alert(
         "Attendance",
-        error?.response?.data?.message || error.message || "Unable to fetch attendance."
+        error?.response?.data?.message ||
+          error.message ||
+          "Unable to fetch attendance.",
       );
     } finally {
       setLoading(false);
@@ -152,7 +184,7 @@ export default function AttendanceScreen({ route }) {
   useFocusEffect(
     useCallback(() => {
       fetchData();
-    }, [fetchData])
+    }, [fetchData]),
   );
 
   useEffect(() => {
@@ -198,14 +230,17 @@ export default function AttendanceScreen({ route }) {
     if (mode === "Today" || mode === "Tomorrow") return [];
 
     if (mode === "Week") {
-      return Array.from({ length: 7 }, (_, i) => addDays(startWeek(selectedDate), i));
+      return Array.from({ length: 7 }, (_, i) =>
+        addDays(startWeek(selectedDate), i),
+      );
     }
 
     const week = weeks[Math.min(weekIndex, weeks.length - 1)];
     if (!week) return [];
 
-    return Array.from({ length: week.end - week.start + 1 }, (_, i) =>
-      new Date(month.getFullYear(), month.getMonth(), week.start + i)
+    return Array.from(
+      { length: week.end - week.start + 1 },
+      (_, i) => new Date(month.getFullYear(), month.getMonth(), week.start + i),
     );
   }, [mode, selectedDate, month, weekIndex, weeks]);
 
@@ -224,7 +259,7 @@ export default function AttendanceScreen({ route }) {
       }
     });
     return Array.from(map.values()).sort((a, b) =>
-      a.therapistName.localeCompare(b.therapistName)
+      a.therapistName.localeCompare(b.therapistName),
     );
   }, [records]);
 
@@ -248,13 +283,22 @@ export default function AttendanceScreen({ route }) {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* MONTH HEADER */}
         <View style={styles.banner}>
-          <TouchableOpacity onPress={() => setMonthPicker(true)} style={styles.bannerLeft}>
+          <TouchableOpacity
+            onPress={() => setMonthPicker(true)}
+            style={styles.bannerLeft}
+          >
             <Feather name="calendar" size={20} color="#FFFFFF" />
             <Text style={styles.bannerTitle}>
-              {month.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              {month.toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+              })}
             </Text>
             <Feather name="chevron-down" size={17} color="#FFFFFF" />
           </TouchableOpacity>
@@ -277,8 +321,17 @@ export default function AttendanceScreen({ route }) {
               onPress={() => changeMode(value)}
               style={[styles.modeBtn, mode === value && styles.modeActive]}
             >
-              <Feather name={icon} size={20} color={mode === value ? "#FFFFFF" : "#60718A"} />
-              <Text style={[styles.modeText, mode === value && { color: "#FFFFFF" }]}>
+              <Feather
+                name={icon}
+                size={20}
+                color={mode === value ? "#FFFFFF" : "#60718A"}
+              />
+              <Text
+                style={[
+                  styles.modeText,
+                  mode === value && { color: "#FFFFFF" },
+                ]}
+              >
                 {value}
               </Text>
             </TouchableOpacity>
@@ -293,14 +346,29 @@ export default function AttendanceScreen({ route }) {
                 key={index}
                 onPress={() => {
                   setWeekIndex(index);
-                  chooseDate(new Date(month.getFullYear(), month.getMonth(), week.start));
+                  chooseDate(
+                    new Date(month.getFullYear(), month.getMonth(), week.start),
+                  );
                 }}
-                style={[styles.weekBtn, weekIndex === index && styles.weekActive]}
+                style={[
+                  styles.weekBtn,
+                  weekIndex === index && styles.weekActive,
+                ]}
               >
-                <Text style={[styles.weekTitle, weekIndex === index && { color: "#FFFFFF" }]}>
+                <Text
+                  style={[
+                    styles.weekTitle,
+                    weekIndex === index && { color: "#FFFFFF" },
+                  ]}
+                >
                   {week.label}
                 </Text>
-                <Text style={[styles.weekRange, weekIndex === index && { color: "#DDEAFF" }]}>
+                <Text
+                  style={[
+                    styles.weekRange,
+                    weekIndex === index && { color: "#DDEAFF" },
+                  ]}
+                >
                   {pad(week.start)} - {pad(week.end)}
                 </Text>
               </TouchableOpacity>
@@ -319,10 +387,14 @@ export default function AttendanceScreen({ route }) {
                   onPress={() => chooseDate(day)}
                   style={[styles.dayBtn, selected && styles.dayActive]}
                 >
-                  <Text style={[styles.dayName, selected && { color: "#DBEAFE" }]}>
+                  <Text
+                    style={[styles.dayName, selected && { color: "#DBEAFE" }]}
+                  >
                     {day.toLocaleDateString("en-US", { weekday: "short" })}
                   </Text>
-                  <Text style={[styles.dayNumber, selected && { color: "#FFFFFF" }]}>
+                  <Text
+                    style={[styles.dayNumber, selected && { color: "#FFFFFF" }]}
+                  >
                     {day.getDate()}
                   </Text>
                 </TouchableOpacity>
@@ -334,18 +406,29 @@ export default function AttendanceScreen({ route }) {
         {/* SECTION HEADER */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{dayHeader}</Text>
-          <Text style={styles.count}>{filteredRecords.length} Appointments</Text>
-          <TouchableOpacity style={styles.refresh} onPress={() => setTherapistFilterVisible(true)}>
+          <Text style={styles.count}>
+            {filteredRecords.length} Appointments
+          </Text>
+          <TouchableOpacity
+            style={styles.refresh}
+            onPress={() => setTherapistFilterVisible(true)}
+          >
             <Feather name="sliders" size={16} color="#60718A" />
           </TouchableOpacity>
         </View>
 
         {/* LIST */}
         {loading ? (
-          <ActivityIndicator size="small" color={BLUE} style={{ marginTop: 35 }} />
+          <ActivityIndicator
+            size="small"
+            color={BLUE}
+            style={{ marginTop: 35 }}
+          />
         ) : shown.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No scheduled appointments for this date</Text>
+            <Text style={styles.emptyText}>
+              No scheduled appointments for this date
+            </Text>
           </View>
         ) : (
           shown.map((item, index) => {
@@ -360,8 +443,22 @@ export default function AttendanceScreen({ route }) {
                 key={`${item.id}:${item.childAttendanceId || index}`}
                 style={[styles.childCard, struck && { opacity: 0.85 }]}
               >
-                <View style={[styles.avatar, styles.avatarFallback]}>
-                  <Feather name="user" size={23} color="#7489A2" />
+                <View style={styles.fsAvatarWrap}>
+                  {item.therapistImageUrl ? (
+                    <Image
+                      source={{ uri: item.therapistImageUrl }}
+                      style={styles.fsAvatarImage}
+                    />
+                  ) : (
+                    <View style={[styles.avatar, styles.avatarFallback]}>
+                      <FontAwesome5
+                        name="user-md"
+                        size={fontSize(22)}
+                        color="white"
+                      />
+                    </View>
+                  )}
+                  {/* <View style={styles.fsOnlineDot} /> */}
                 </View>
 
                 <View style={styles.childInfo}>
@@ -371,7 +468,9 @@ export default function AttendanceScreen({ route }) {
 
                   <View style={styles.childDateRow}>
                     <Feather name="calendar" size={12} color={BLUE} />
-                    <Text style={styles.childDate}>{formatAttendanceDate(item.date)}</Text>
+                    <Text style={styles.childDate}>
+                      {formatAttendanceDate(item.date)}
+                    </Text>
                   </View>
 
                   <View style={styles.childTimeRow}>
@@ -389,14 +488,18 @@ export default function AttendanceScreen({ route }) {
                   {tag && (
                     <View style={[styles.tag, { backgroundColor: tag.bg }]}>
                       <Feather name={tag.icon} size={10} color={tag.color} />
-                      <Text style={[styles.tagText, { color: tag.color }]}>{tag.label}</Text>
+                      <Text style={[styles.tagText, { color: tag.color }]}>
+                        {tag.label}
+                      </Text>
                     </View>
                   )}
                 </View>
 
                 {/* READ ONLY BADGE */}
                 <View style={[styles.pill, { backgroundColor: pill.bg }]}>
-                  <Text style={[styles.pillText, { color: pill.color }]}>{pill.text}</Text>
+                  <Text style={[styles.pillText, { color: pill.color }]}>
+                    {pill.text}
+                  </Text>
                 </View>
               </View>
             );
@@ -404,7 +507,10 @@ export default function AttendanceScreen({ route }) {
         )}
 
         {!loading && filteredRecords.length > 5 && (
-          <TouchableOpacity onPress={() => setFull(!full)} style={styles.history}>
+          <TouchableOpacity
+            onPress={() => setFull(!full)}
+            style={styles.history}
+          >
             <Text style={styles.historyText}>
               {full ? "Hide Full History" : "View Full History ›"}
             </Text>
@@ -423,7 +529,9 @@ export default function AttendanceScreen({ route }) {
           <View style={styles.modal}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filter Therapists</Text>
-              <TouchableOpacity onPress={() => setTherapistFilterVisible(false)}>
+              <TouchableOpacity
+                onPress={() => setTherapistFilterVisible(false)}
+              >
                 <Feather name="x" size={22} color={DARK} />
               </TouchableOpacity>
             </View>
@@ -438,7 +546,9 @@ export default function AttendanceScreen({ route }) {
               >
                 <Feather name="users" size={20} color={BLUE} />
                 <Text style={styles.filterOptionText}>All Therapists</Text>
-                {!selectedTherapistId && <Feather name="check-circle" size={20} color={BLUE} />}
+                {!selectedTherapistId && (
+                  <Feather name="check-circle" size={20} color={BLUE} />
+                )}
               </TouchableOpacity>
 
               {therapistOptions.map((t) => (
@@ -480,7 +590,10 @@ export default function AttendanceScreen({ route }) {
               </TouchableOpacity>
 
               <Text style={styles.monthNavText}>
-                {month.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                {month.toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })}
               </Text>
 
               <TouchableOpacity onPress={() => moveMonth(1)}>
@@ -488,7 +601,10 @@ export default function AttendanceScreen({ route }) {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.done} onPress={() => setMonthPicker(false)}>
+            <TouchableOpacity
+              style={styles.done}
+              onPress={() => setMonthPicker(false)}
+            >
               <Text style={styles.doneText}>Done</Text>
             </TouchableOpacity>
           </View>
@@ -519,7 +635,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 9,
   },
-  statusHeaderText: { color: "#07508D", fontSize: 12, fontFamily: fonts.semiBold },
+  statusHeaderText: {
+    color: "#07508D",
+    fontSize: 12,
+    fontFamily: fonts.semiBold,
+  },
   modeRow: { flexDirection: "row", gap: 9, marginBottom: 18 },
   modeBtn: {
     flex: 1,
@@ -572,8 +692,18 @@ const styles = StyleSheet.create({
   },
   dayActive: { backgroundColor: "#1D70EE" },
   dayName: { fontSize: 11, color: MUTED },
-  dayNumber: { fontSize: 15, fontFamily: fonts.bold, color: DARK, marginTop: 4 },
-  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 14, gap: 10 },
+  dayNumber: {
+    fontSize: 15,
+    fontFamily: fonts.bold,
+    color: DARK,
+    marginTop: 4,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+    gap: 10,
+  },
   sectionTitle: { fontSize: 15, fontFamily: fonts.bold, color: DARK, flex: 1 },
   count: { fontSize: 11, color: MUTED, fontFamily: fonts.medium },
   refresh: {
@@ -597,15 +727,25 @@ const styles = StyleSheet.create({
   },
   avatar: { height: 44, width: 44, borderRadius: 22 },
   avatarFallback: {
-    backgroundColor: "#EAF0F7",
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
   childInfo: { flex: 1, minWidth: 0 },
   childName: { fontSize: 12, fontFamily: fonts.bold, color: DARK },
-  childDateRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 5 },
+  childDateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 5,
+  },
   childDate: { fontSize: 10, fontFamily: fonts.medium, color: BLUE },
-  childTimeRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
+  childTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 4,
+  },
   childTime: { fontSize: 10, fontFamily: fonts.regular, color: MUTED },
   tag: {
     flexDirection: "row",
@@ -636,7 +776,12 @@ const styles = StyleSheet.create({
   historyText: { fontSize: 13, color: "#166DF3", fontFamily: fonts.bold },
   empty: { padding: 28, alignItems: "center" },
   emptyText: { color: MUTED, fontSize: 13 },
-  overlay: { flex: 1, backgroundColor: "#0006", justifyContent: "center", padding: 24 },
+  overlay: {
+    flex: 1,
+    backgroundColor: "#0006",
+    justifyContent: "center",
+    padding: 24,
+  },
   modal: { backgroundColor: "#FFFFFF", padding: 20, borderRadius: 18 },
   modalHeader: {
     flexDirection: "row",
@@ -653,7 +798,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  filterOptionText: { flex: 1, fontSize: 14, fontFamily: fonts.medium, color: DARK },
+  filterOptionText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: DARK,
+  },
   monthNav: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -661,6 +811,21 @@ const styles = StyleSheet.create({
     marginVertical: 28,
   },
   monthNavText: { fontSize: 16, fontFamily: fonts.semiBold, color: DARK },
-  done: { backgroundColor: BLUE, borderRadius: 10, padding: 13, alignItems: "center" },
+  done: {
+    backgroundColor: BLUE,
+    borderRadius: 10,
+    padding: 13,
+    alignItems: "center",
+  },
   doneText: { color: "#FFFFFF", fontFamily: fonts.semiBold },
+  fsAvatarWrap: {
+    width: wp(48),
+    height: wp(48),
+    marginRight: wp(12),
+  },
+  fsAvatarImage: {
+    width: wp(48),
+    height: wp(48),
+    borderRadius: wp(24),
+  },
 });

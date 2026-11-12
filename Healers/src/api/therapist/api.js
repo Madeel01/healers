@@ -181,9 +181,9 @@ export const uploadToCloudinaryFileSystem = async (
   }
 };
 
-export const getChildVideosApi = async (childId, page = 1, limit = 2) => {
+export const getChildVideosApi = async (childId, page = 1, limit = 2, search = "") => {
   const response = await apiClient.get(
-    `/therapist/video/child/${childId}?page=${page}&limit=${limit}`,
+    `/therapist/video/child/${childId}?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`,
   );
 
   return response.data;
@@ -303,4 +303,21 @@ export const markTherapistAttendanceApi = (appointmentId, status) => {
     `/therapist/therapist-attendance/${appointmentId}`,
     { status },
   );
+};
+
+export const updateWeeklyVideoTitleApi = async (videoId, title) => {
+  const response = await apiClient.patch(`/therapist/weekly-videos/${videoId}/title`, { title });
+  return response.data;
+};
+
+export const getShareStatusApi = async (videoId, search = "") => {
+  const response = await apiClient.get(`/therapist/weekly-videos/${videoId}/share-status`, {
+    params: { search },
+  });
+  return response.data;
+};
+
+export const updateVideoSharingApi = async (videoId, payload) => {
+  const response = await apiClient.post(`/therapist/weekly-videos/${videoId}/share`, payload);
+  return response.data;
 };

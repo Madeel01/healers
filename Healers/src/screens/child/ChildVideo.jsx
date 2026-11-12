@@ -11,6 +11,7 @@ import {
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   RefreshControl,
   ScrollView,
@@ -54,6 +55,55 @@ const CloudinaryVideoPlayer = ({ uri }) => {
         }}
       />
     </View>
+  );
+};
+
+const THUMB_TRANSFORM = "so_1,w_600,h_320,c_fill,f_jpg,q_auto";
+
+const buildThumbnailUrls = (videoUrl) => {
+  if (
+    !videoUrl ||
+    typeof videoUrl !== "string" ||
+    !videoUrl.includes("/video/upload/")
+  ) {
+    return [];
+  }
+
+  const base = videoUrl.split("?")[0].replace(/\.[^/.]+$/, ".jpg");
+
+  return [
+    base.replace("/video/upload/", `/video/upload/${THUMB_TRANSFORM}/`),
+    base.replace("/video/upload/", "/video/upload/so_0/"), // fallback
+  ];
+};
+
+const VideoThumbnail = ({ videoUrl }) => {
+  const urls = React.useMemo(() => buildThumbnailUrls(videoUrl), [videoUrl]);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    setAttempt(0);
+  }, [videoUrl]);
+
+  if (attempt >= urls.length) {
+    return (
+      <View style={styles.thumbPlaceholder}>
+        <Ionicons name="videocam" size={fontSize(40)} color="rgba(255,255,255,0.35)" />
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      key={urls[attempt]}
+      source={{ uri: urls[attempt] }}
+      style={StyleSheet.absoluteFill}
+      resizeMode="cover"
+      onError={(e) => {
+        console.log("Thumbnail failed:", urls[attempt], e.nativeEvent?.error);
+        setAttempt((prev) => prev + 1);
+      }}
+    />
   );
 };
 
@@ -129,12 +179,7 @@ export default function ChildVideoScreen({ navigation }) {
   const onRefresh = async () => {
     try {
       setRefreshing(true);
-
       if (selectedChildId) {
-        setVideos([]);
-        setVideoPage(1);
-        setHasMoreVideos(true);
-
         await fetchVideos(selectedChildId, 1, false);
       }
     } finally {
@@ -147,10 +192,9 @@ export default function ChildVideoScreen({ navigation }) {
 
     const paddingToBottom = 100;
 
-    const isNearBottom = layoutMeasurement.height
-        + contentOffset.y
-      >= contentSize.height
-        - paddingToBottom;
+    const isNearBottom =
+      layoutMeasurement.height + contentOffset.y >=
+      contentSize.height - paddingToBottom;
 
     if (isNearBottom && !loadingMoreVideos && hasMoreVideos && selectedChildId) {
       fetchVideos(selectedChildId, videoPage + 1, true);
@@ -158,8 +202,7 @@ export default function ChildVideoScreen({ navigation }) {
   };
 
   const handleOpenDemoVideo = (video = null) => {
-    const targetVideo = video
-      || videos?.[0];
+    const targetVideo = video || videos?.[0];
 
     if (!targetVideo?.videoUrl) {
       Alert.alert(
@@ -182,7 +225,10 @@ export default function ChildVideoScreen({ navigation }) {
       fetchVideos(selectedChildId, 1, false);
     }
   }, [selectedChildId]);
-
+  const handleCloseVideo = () => {
+    setDemoVideoModal(false);
+    setActiveVideo(null);
+  };
   return (
     <View
       style={[
@@ -190,7 +236,6 @@ export default function ChildVideoScreen({ navigation }) {
         commonStyles.container,
       ]}
     >
-    
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -202,6 +247,7 @@ export default function ChildVideoScreen({ navigation }) {
           />
         }
         onScroll={handleVideoScroll}
+        scrollEventThrottle={200}
       >
         <View style={styles.headerBanner}>
           <Text style={styles.bannerTitle}>
@@ -209,7 +255,7 @@ export default function ChildVideoScreen({ navigation }) {
           </Text>
         </View>
 
-        <ScrollView
+        {/* <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.childChipsRow}
@@ -229,147 +275,133 @@ export default function ChildVideoScreen({ navigation }) {
               {user?.fullName || "Child"}
             </Text>
           </TouchableOpacity>
-        </ScrollView>
+        </ScrollView> */}
 
-        {videoLoading
-          ? (
-            <View
+        {videoLoading ? (
+          <View
+            style={{
+              paddingVertical: hp(40),
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <ActivityIndicator
+              size="large"
+              color={colors.primary}
+            />
+
+            <Text
               style={{
-                paddingVertical:hp(40),
-                alignItems: "center",
-                justifyContent: "center",
+                marginTop: 10,
+                color: "#64748B",
+                fontFamily: fonts.regular,
               }}
             >
-              <ActivityIndicator
-                size="large"
-                color={colors.primary}
-              />
-
-              <Text
+              Loading videos...
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.videoList}>
+            {videos.length === 0 ? (
+              <View
                 style={{
-                  marginTop: 10,
-                  color: "#64748B",
-                  fontFamily: fonts.regular,
+                  padding: 30,
+                  alignItems: "center",
                 }}
               >
-                Loading videos...
-              </Text>
-            </View>
-          )
-          : (
-            <View style={styles.videoList}>
-              {videos.length === 0
-                ? (
-                  <View
-                    style={{
-                      padding: 30,
-                      alignItems: "center",
-                    }}
-                  >
-                    <Ionicons
-                      name="videocam-outline"
-                      size={fontSize(45)}
-                      color="#94A3B8"
-                    />
+                <Ionicons
+                  name="videocam-outline"
+                  size={fontSize(45)}
+                  color="#94A3B8"
+                />
 
-                    <Text
-                      style={{
-                        marginTop: 10,
-                        color: "#64748B",
-                        fontFamily: fonts.regular,
-                      }}
-                    >
-                      No videos found
-                    </Text>
-                  </View>
-                )
-                : (
-                  videos.map((video) => (
-                    <View
-                      key={video._id || video.id}
-                      style={styles.videoCard}
-                    >
-                      <TouchableOpacity
-                        style={styles.videoThumbnail}
-                        activeOpacity={0.9}
-                        onPress={() => handleOpenDemoVideo(video)}
-                      >
-                        <View style={styles.centerPlayBtn}>
-                          <Ionicons
-                            name="play"
-                            size={fontSize(28)}
-                            color="#035388"
-                          />
-                        </View>
-
-                        <View style={styles.durationBadge}>
-                          <Text style={styles.durationText}>
-                            {video.duration || "00:00"}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-
-                      <View style={styles.videoFooter}>
-                        <View style={styles.videoMetaColumn}>
-                          <Text style={styles.videoChildName}>
-                            {video.childId?.name
-                              || video.childId?.fullName
-                              || "Child Session"}
-                          </Text>
-
-                          <Text style={styles.videoSubDetails}>
-                            {video.createdAt
-                              ? new Date(
-                                video.createdAt,
-                              ).toLocaleDateString()
-                              : ""}
-
-                            <Text
-                              style={styles.bulletSeparator}
-                            >
-                              {" "}•{" "}
-                            </Text>
-
-                            {video.tag || "Video"}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  ))
-                )}
-
-              {loadingMoreVideos && (
-                <View
+                <Text
                   style={{
-                    paddingVertical:hp(20),
-                    alignItems: "center",
-                    justifyContent: "center",
+                    marginTop: 10,
+                    color: "#64748B",
+                    fontFamily: fonts.regular,
                   }}
                 >
-                  <ActivityIndicator
-                    size="small"
-                    color={colors.primary}
-                  />
-
-                  <Text
-                    style={{
-                      marginTop: 8,
-                      color: "#64748B",
-                      fontFamily: fonts.regular,
-                    }}
+                  No videos found
+                </Text>
+              </View>
+            ) : (
+              videos.map((video) => (
+                <View
+                  key={video._id || video.id}
+                  style={styles.videoCard}
+                >
+                  <TouchableOpacity
+                    style={styles.videoThumbnail}
+                    activeOpacity={0.9}
+                    onPress={() => handleOpenDemoVideo(video)}
                   >
-                    Loading more videos...
-                  </Text>
-                </View>
-              )}
+                    <VideoThumbnail videoUrl={video.videoUrl} />
 
-              {!loadingMoreVideos
-                && videos.length > 0
-                && !hasMoreVideos && (
+                    <View style={styles.centerPlayBtn}>
+                      <Ionicons
+                        name="play"
+                        size={fontSize(28)}
+                        color="#035388"
+                      />
+                    </View>
+
+                    <View style={styles.durationBadge}>
+                      <Text style={styles.durationText}>
+                        {video.duration || "00:00"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <View style={styles.videoFooter}>
+                    <View style={styles.videoMetaColumn}>
+                      <Text style={styles.videoChildName} numberOfLines={1}>
+                        {video.title || "Untitled Video"}
+                      </Text>
+
+                      <Text style={styles.videoSubDetails}>
+                        {video.createdAt ? new Date(video.createdAt).toLocaleDateString() : ""}
+                        {" • "}
+                        {video.tag || "Video"}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))
+            )}
+
+            {loadingMoreVideos && (
+              <View
+                style={{
+                  paddingVertical: hp(20),
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <ActivityIndicator
+                  size="small"
+                  color={colors.primary}
+                />
+
+                <Text
+                  style={{
+                    marginTop: 8,
+                    color: "#64748B",
+                    fontFamily: fonts.regular,
+                  }}
+                >
+                  Loading more videos...
+                </Text>
+              </View>
+            )}
+
+            {!loadingMoreVideos &&
+              videos.length > 0 &&
+              !hasMoreVideos && (
                 <Text
                   style={{
                     textAlign: "center",
-                    paddingVertical:hp(15),
+                    paddingVertical: hp(15),
                     color: "#94A3B8",
                     fontFamily: fonts.regular,
                   }}
@@ -377,8 +409,8 @@ export default function ChildVideoScreen({ navigation }) {
                   No more videos
                 </Text>
               )}
-            </View>
-          )}
+          </View>
+        )}
       </ScrollView>
 
       <Modal
@@ -391,15 +423,11 @@ export default function ChildVideoScreen({ navigation }) {
           <View style={styles.demoPlayerContainer}>
             <View style={styles.modalHeaderRow}>
               <Text style={styles.demoModalTitle}>
-                {activeVideo?.childId?.name || activeVideo?.childId?.fullName
-                  || "Video Session"} - {activeVideo?.tag || "Video"}
+                {activeVideo?.title || activeVideo?.tag || "Video Session"}
               </Text>
 
               <TouchableOpacity
-                onPress={() =>
-                  setDemoVideoModal(
-                    false,
-                  )}
+                onPress={() => {setDemoVideoModal(false); handleCloseVideo();}}
               >
                 <Feather
                   name="x"
@@ -410,42 +438,35 @@ export default function ChildVideoScreen({ navigation }) {
             </View>
 
             <View style={styles.youtubeWrapper}>
-              {activeVideo?.videoUrl
-                ? (
-                  <CloudinaryVideoPlayer
-                    uri={activeVideo.videoUrl}
-                  />
-                )
-                : (
-                  <View
+              {activeVideo?.videoUrl ? (
+                <CloudinaryVideoPlayer
+                  uri={activeVideo.videoUrl}
+                />
+              ) : (
+                <View
+                  style={{
+                    height: 300,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundColor: "#000",
+                  }}
+                >
+                  <Text
                     style={{
-                      height: 300,
-                      justifyContent: "center",
-                      alignItems: "center",
-                      backgroundColor: "#000",
+                      color: "#fff",
                     }}
                   >
-                    <Text
-                      style={{
-                        color: "#fff",
-                      }}
-                    >
-                      Video URL not found
-                    </Text>
-                  </View>
-                )}
+                    Video URL not found
+                  </Text>
+                </View>
+              )}
             </View>
 
             <TouchableOpacity
               style={styles.closeDemoBtn}
-              onPress={() =>
-                setDemoVideoModal(
-                  false,
-                )}
+              onPress={() => {setDemoVideoModal(false); handleCloseVideo();}}
             >
-              <Text
-                style={styles.closeDemoText}
-              >
+              <Text style={styles.closeDemoText}>
                 Close Player
               </Text>
             </TouchableOpacity>
@@ -455,6 +476,7 @@ export default function ChildVideoScreen({ navigation }) {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
@@ -463,27 +485,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom:hp(28),
+    paddingBottom: hp(28),
   },
   headerBanner: {
     backgroundColor: colors.primary,
-    paddingHorizontal:wp(20),
-    paddingVertical:hp(16),
+    paddingHorizontal: wp(20),
+    paddingVertical: hp(16),
     marginBottom: hp(20),
   },
   bannerTitle: {
-    fontSize:fontSize(18),
+    fontSize: fontSize(18),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 24,
   },
   childChipsRow: {
-    paddingHorizontal:wp(20),
+    paddingHorizontal: wp(20),
     gap: wp(10),
     marginBottom: hp(20),
   },
   childChip: {
-    paddingHorizontal:wp(20),
+    paddingHorizontal: wp(20),
     height: hp(44),
     borderRadius: wp(32),
     alignItems: "center",
@@ -492,15 +514,14 @@ const styles = StyleSheet.create({
   childChipSelected: {
     backgroundColor: "#8BF6D9",
   },
-
   childChipText: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.medium,
     lineHeight: 24,
     color: "#004E9F",
   },
   videoList: {
-    paddingHorizontal:wp(20),
+    paddingHorizontal: wp(20),
     gap: wp(20),
   },
   videoCard: {
@@ -516,6 +537,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+    overflow: "hidden",
   },
   centerPlayBtn: {
     width: wp(52),
@@ -531,12 +553,12 @@ const styles = StyleSheet.create({
     bottom: 12,
     right: 12,
     backgroundColor: "rgba(0, 0, 0, 0.65)",
-    paddingHorizontal:wp(8),
-    paddingVertical:hp(4),
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(4),
     borderRadius: wp(6),
   },
   durationText: {
-    fontSize:fontSize(11),
+    fontSize: fontSize(11),
     fontFamily: fonts.medium,
     color: "#FFFFFF",
     lineHeight: 14,
@@ -545,33 +567,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal:wp(16),
-    paddingVertical:hp(14),
+    paddingHorizontal: wp(16),
+    paddingVertical: hp(14),
     backgroundColor: "#FFFFFF",
   },
   videoMetaColumn: {
     flex: 1,
   },
   videoChildName: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 20,
     marginBottom: hp(2),
   },
   videoSubDetails: {
-    fontSize:fontSize(13),
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 19,
-  },
-  bulletSeparator: {
-    color: "#94A3B8",
-  },
-  videoActionGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: wp(12),
   },
   fullModalOverlay: {
     flex: 1,
@@ -582,7 +596,7 @@ const styles = StyleSheet.create({
   demoPlayerContainer: {
     flex: 1,
     justifyContent: "space-between",
-    paddingVertical:hp(40),
+    paddingVertical: hp(40),
   },
   modalHeaderRow: {
     flexDirection: "row",
@@ -590,7 +604,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   demoModalTitle: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 22,
@@ -609,9 +623,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   closeDemoText: {
-    fontSize:fontSize(15),
+    fontSize: fontSize(15),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
     lineHeight: 20,
+  },
+  thumbPlaceholder: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

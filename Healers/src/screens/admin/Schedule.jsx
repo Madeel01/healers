@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 import {
   ActivityIndicator,
@@ -144,10 +145,11 @@ const Avatar = ({ uri, name, color, style, textStyle }) => {
   }
 
   return (
-    <View style={[style, { backgroundColor: color }]}>
-      <Text style={textStyle}>
+    <View style={[style, uri && !failed? {}:{borderWidth:1,borderColor:colors.primary,backgroundColor:colors.primary}]}>
+        <FontAwesome5 name="child" size={fontSize(16)} color="white"  />
+      {/* <Text style={textStyle}>
         {name?.trim()?.charAt(0)?.toUpperCase() || "?"}
-      </Text>
+      </Text> */}
     </View>
   );
 };

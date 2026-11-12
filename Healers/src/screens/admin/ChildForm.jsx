@@ -633,7 +633,6 @@ export default function ChildFormScreen({ navigation, route }) {
 
   const validateChild = () => {
     if (!form.name.trim()) return fail("Please enter the child's full name.");
-
     if (!/^\d{13}$/.test(form.fatherCnic)) {
       return fail("Parent CNIC must be exactly 13 digits.");
     }
@@ -659,11 +658,11 @@ export default function ChildFormScreen({ navigation, route }) {
     if (form.packageId && form.discountedPrice !== "") {
       const dp = Number(form.discountedPrice);
       if (!Number.isFinite(dp) || dp <= 0) {
-        return fail("Please enter a valid discounted price.");
+        return fail("Please enter a valid discount price.");
       }
       if (selectedPackage?.price != null && dp >= selectedPackage.price) {
         return fail(
-          `Discounted price must be less than the monthly rate (PKR ${Number(
+          `Discount price must be less than the monthly rate (PKR ${Number(
             selectedPackage.price,
           ).toLocaleString()}).`,
         );
@@ -1252,7 +1251,7 @@ export default function ChildFormScreen({ navigation, route }) {
 
                 {!!selectedPackage && (
                   <>
-                    <Text style={styles.fieldLabel}>Discounted Price (PKR / month)</Text>
+                    <Text style={styles.fieldLabel}>Discount</Text>
                     <TextInput
                       style={styles.formInput}
                       placeholder="Optional, leave blank for full rate"

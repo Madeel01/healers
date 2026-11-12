@@ -511,7 +511,7 @@ export default function CustomSlotPicker({ childId, therapistId, minutes, onChan
                             <Text style={styles.mutedText}>No slot available on {currentDay}</Text>
                           ) : (
                             <>
-                              <Text style={[styles.hint, { marginTop: 6 }]}>
+                              <Text style={[styles.hint, { marginTop: 6, color:"orange", }]}>
                                 Crossed-out: booked every week. Orange border: clashes in some weeks.
                               </Text>
                               <SlotGrid
@@ -629,7 +629,7 @@ export default function CustomSlotPicker({ childId, therapistId, minutes, onChan
             <DateTimePicker
               value={fromKey(pickerConfig.value)}
               mode="date"
-              display={Platform.OS === "ios" ? "inline" : "default"}
+              display={Platform.OS === "ios" ? "spinner" : "default"}
               minimumDate={pickerConfig.min ? fromKey(pickerConfig.min) : undefined}
               maximumDate={pickerConfig.max ? fromKey(pickerConfig.max) : undefined}
               onValueChange={handleDate}

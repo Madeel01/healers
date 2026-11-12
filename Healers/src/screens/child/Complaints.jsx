@@ -525,7 +525,7 @@ export default function ComplaintsScreen({
               size={fontSize(12)}
               color={high
                 ? "#DC2626"
-                : "#64748B"}
+                : colors.primary}
             />
 
             <Text
@@ -534,7 +534,7 @@ export default function ComplaintsScreen({
                 {
                   color: high
                     ? "#DC2626"
-                    : "#64748B",
+                    : colors.primary,
                 },
               ]}
             >
@@ -618,7 +618,7 @@ export default function ComplaintsScreen({
         </View>
       </View>
 
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={styles.addButton}
         onPress={() => setShowCreateModal(true)}
       >
@@ -633,7 +633,7 @@ export default function ComplaintsScreen({
         >
           Add Complaint
         </Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </>
   );
 
@@ -741,7 +741,9 @@ export default function ComplaintsScreen({
             }
           />
         )}
-
+      <TouchableOpacity style={[styles.fab]} onPress={() => setShowCreateModal(true)} activeOpacity={0.8}>
+        <Feather name="plus" size={fontSize(30)} color="#fff" />
+      </TouchableOpacity>
       <Modal
         visible={showCreateModal}
         transparent
@@ -1248,5 +1250,21 @@ const styles = StyleSheet.create({
     fontSize:fontSize(14),
     fontFamily: fonts.semiBold,
     color: "#FFFFFF",
+  },
+  fab: {
+    position: "absolute",
+    right: 18,
+    bottom:20,
+    width: wp(56),
+    height: hp(56),
+    borderRadius: wp(16),
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 6,
+    shadowColor: "#0d162b",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
   },
 });

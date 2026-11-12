@@ -69,11 +69,12 @@ export default function LeaveRequestsScreen({ navigation }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const requestIdRef = useRef(0);
 
-  const fetchRequests = async (tab = selectedTab, pageNum = 1) => {
+  const fetchRequests = async (tab = selectedTab, pageNum = 1,isPendingClick = false) => {
     const isFirst = pageNum === 1;
     const requestId = ++requestIdRef.current;
 
     if (isFirst) setLoading(true);
+    else if (isPendingClick) setLoading(true);
     else setLoadingMore(true);
 
     try {
@@ -246,7 +247,7 @@ export default function LeaveRequestsScreen({ navigation }) {
         scrollEventThrottle={200}
       >
         <View style={styles.metricCard}>
-          <View style={styles.metricTextContainer}>
+          <TouchableOpacity style={styles.metricTextContainer} onPress={()=>{fetchRequests(setSelectedTab("Pending"), 1,true)}}>
             <Text style={styles.metricTitle}>Pending Requests</Text>
 
             <Text style={styles.metricValue}>{stats.pendingCount}</Text>
@@ -269,7 +270,7 @@ export default function LeaveRequestsScreen({ navigation }) {
                 {stats.pendingSinceYesterday} since yesterday
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <View
             style={[
@@ -595,7 +596,7 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: fontSize(32),
 
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semiBold,
 
     color: colors.primary,
 

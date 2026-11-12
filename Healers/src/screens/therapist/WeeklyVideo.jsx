@@ -1,21 +1,13 @@
-import React, {
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useContext, useEffect, useRef, useState } from "react";
 
 import {
   CameraView,
   useCameraPermissions,
   useMicrophonePermissions,
-} from 'expo-camera';
-import { File } from 'expo-file-system';
-import * as ImagePicker from 'expo-image-picker';
-import {
-  useVideoPlayer,
-  VideoView,
-} from 'expo-video';
+} from "expo-camera";
+import { File } from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import { useVideoPlayer, VideoView } from "expo-video";
 import {
   ActivityIndicator,
   Alert,
@@ -28,12 +20,15 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import AntDesign from '@expo/vector-icons/AntDesign';
-import Feather from '@expo/vector-icons/Feather';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import AntDesign from "@expo/vector-icons/AntDesign";
+import Feather from "@expo/vector-icons/Feather";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
   createWeeklyVideoApi,
@@ -41,18 +36,13 @@ import {
   getChildVideosApi,
   therapistUsers,
   uploadToCloudinaryFileSystem,
-} from '../../api/therapist/api';
-import { AuthContext } from '../../context/AuthContext';
-import {
-  colors,
-  commonStyles,
-  fonts,
-} from '../../styles/theme';
-import {
-  fontSize,
-  hp,
-  wp,
-} from '../../utils/responsive';
+  updateWeeklyVideoTitleApi,
+  getShareStatusApi,
+  updateVideoSharingApi,
+} from "../../api/therapist/api";
+import { AuthContext } from "../../context/AuthContext";
+import { colors, commonStyles, fonts } from "../../styles/theme";
+import { fontSize, hp, wp } from "../../utils/responsive";
 
 const CloudinaryVideoPlayer = ({ uri }) => {
   const player = useVideoPlayer(uri, (playerInstance) => {
@@ -74,10 +64,48 @@ const CloudinaryVideoPlayer = ({ uri }) => {
     </View>
   );
 };
+const getThumbnailUrl = (videoUrl) => {
+  if (!videoUrl || !videoUrl.includes("/video/upload/")) {
+    return null;
+  }
 
-export default function WeeklyVideoScreen({
-  navigation,
-}) {
+  return videoUrl
+    .replace(
+      "/video/upload/",
+      "/video/upload/so_1,w_600,h_320,c_fill,f_jpg,q_auto/",
+    )
+    .replace(/\.[a-zA-Z0-9]+(\?.*)?$/, ".jpg");
+};
+const VideoThumbnail = ({ videoUrl }) => {
+    const [failed, setFailed] = useState(false);
+    const thumbnailUrl = getThumbnailUrl(videoUrl);
+    if (!thumbnailUrl || failed) {
+      return null; 
+    }
+
+    return (
+      <Image
+        source={{ uri: thumbnailUrl }}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100%',
+          height: '100%',
+        }}
+        resizeMode="cover"
+        onError={(error) => {
+          console.log("Image load error details:", error.nativeEvent);
+          setFailed(true);
+        }}
+      />
+    );
+  };
+
+
+export default function WeeklyVideoScreen({ navigation }) {
   const { user } = useContext(AuthContext);
   const insets = useSafeAreaInsets();
 
@@ -109,14 +137,27 @@ export default function WeeklyVideoScreen({
   const [loadingUploadVideos, setLoadingUploadVideos] = useState(false);
   const [deletingVideoId, setDeletingVideoId] = useState(null);
   const [hasMoreVideos, setHasMoreVideos] = useState(true);
-  const [
-    cameraPermission,
-    requestCameraPermission,
-  ] = useCameraPermissions();
-  const [
-    audioPermission,
-    requestAudioPermission,
-  ] = useMicrophonePermissions();
+  const [searchText, setSearchText] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [titleModalVisible, setTitleModalVisible] = useState(false);
+  const [videoTitle, setVideoTitle] = useState("");
+  const [titleError, setTitleError] = useState("");
+  const [pendingVideo, setPendingVideo] = useState(null);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [audioPermission, requestAudioPermission] = useMicrophonePermissions();
+
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [shareVideoItem, setShareVideoItem] = useState(null);
+  const [shareSearch, setShareSearch] = useState("");
+  const [shareChildren, setShareChildren] = useState([]);
+  const [shareListLoading, setShareListLoading] = useState(false);
+  const [shareChanges, setShareChanges] = useState({}); 
+  const [sharing, setSharing] = useState(false);
+
+  const [titleMode, setTitleMode] = useState("create"); 
+  const [renamingVideo, setRenamingVideo] = useState(null);
+  const [savingTitle, setSavingTitle] = useState(false);
+  const [shareHolderCount, setShareHolderCount] = useState(0);
 
   const MAX_VIDEO_SIZE = 80 * 1024 * 1024;
 
@@ -125,18 +166,22 @@ export default function WeeklyVideoScreen({
   }, []);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchText.trim());
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  useEffect(() => {
     if (selectedChildId) {
       setVideos([]);
       setVideoPage(1);
       setHasMoreVideos(true);
 
-      fetchVideos(
-        selectedChildId,
-        1,
-        false,
-      );
+      fetchVideos(selectedChildId, 1, false, debouncedSearch);
     }
-  }, [selectedChildId]);
+  }, [selectedChildId, debouncedSearch]);
 
   useEffect(() => {
     return () => {
@@ -158,27 +203,15 @@ export default function WeeklyVideoScreen({
 
       setChildren(fetchedUsers);
 
-      if (
-        fetchedUsers.length > 0
-        && !selectedChildId
-      ) {
-        const initialChildId = fetchedUsers[0]?._id
-          || fetchedUsers[0]?.id;
+      if (fetchedUsers.length > 0 && !selectedChildId) {
+        const initialChildId = fetchedUsers[0]?._id || fetchedUsers[0]?.id;
 
-        setSelectedChildId(
-          initialChildId,
-        );
+        setSelectedChildId(initialChildId);
       }
     } catch (error) {
-      console.error(
-        "Error fetching children:",
-        error,
-      );
+      console.error("Error fetching children:", error);
 
-      Alert.alert(
-        "Error",
-        "Could not load children.",
-      );
+      Alert.alert("Error", "Could not load children.");
     } finally {
       setLoadingChildren(false);
     }
@@ -194,6 +227,7 @@ export default function WeeklyVideoScreen({
     childId,
     page = 1,
     append = false,
+    search = "",
   ) => {
     if (!childId) {
       return;
@@ -206,30 +240,20 @@ export default function WeeklyVideoScreen({
         setVideoLoading(true);
       }
 
-      const response = await getChildVideosApi(
-        childId,
-        page,
-        5,
-      );
-
+      const response = await getChildVideosApi(childId, page, 5, search);
 
       if (response?.success) {
         const newVideos = response?.data || [];
 
         if (append) {
-          setVideos((previousVideos) => [
-            ...previousVideos,
-            ...newVideos,
-          ]);
+          setVideos((previousVideos) => [...previousVideos, ...newVideos]);
         } else {
           setVideos(newVideos);
         }
 
         setVideoPage(page);
 
-        setHasMoreVideos(
-          response?.pagination?.hasMore === true,
-        );
+        setHasMoreVideos(response?.pagination?.hasMore === true);
       } else {
         if (!append) {
           setVideos([]);
@@ -238,19 +262,13 @@ export default function WeeklyVideoScreen({
         setHasMoreVideos(false);
       }
     } catch (error) {
-      console.error(
-        "Fetch videos error:",
-        error,
-      );
+      console.error("Fetch videos error:", error);
 
       if (!append) {
         setVideos([]);
       }
 
-      Alert.alert(
-        "Error",
-        "Could not load videos for selected child.",
-      );
+      Alert.alert("Error", "Could not load videos for selected child.");
     } finally {
       setVideoLoading(false);
       setLoadingMoreVideos(false);
@@ -262,66 +280,47 @@ export default function WeeklyVideoScreen({
       return;
     }
 
-    Alert.alert(
-      "Delete Video",
-      "Are you sure you want to delete this video?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
+    Alert.alert("Delete Video", "Are you sure you want to delete this video?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        style: "destructive",
 
-          onPress: async () => {
-            try {
-              // Start loader only after user confirms
-              setDeletingVideoId(videoId);
+        onPress: async () => {
+          try {
+            // Start loader only after user confirms
+            setDeletingVideoId(videoId);
 
-              const response = await deleteWeeklyVideoApi(
-                videoId,
+            const response = await deleteWeeklyVideoApi(videoId);
+
+            if (response?.success) {
+              setVideos((previousVideos) =>
+                previousVideos.filter(
+                  (item) => item?._id !== videoId && item?.id !== videoId,
+                ),
               );
 
-              if (response?.success) {
-                setVideos((previousVideos) =>
-                  previousVideos.filter(
-                    (item) =>
-                      item?._id !== videoId
-                      && item?.id !== videoId,
-                  )
-                );
-
-                Alert.alert(
-                  "Success",
-                  "Video deleted successfully.",
-                );
-              } else {
-                Alert.alert(
-                  "Error",
-                  response?.message
-                    || "Failed to delete video.",
-                );
-              }
-            } catch (error) {
-              console.error(
-                "Delete video error:",
-                error,
-              );
-
+              Alert.alert("Success", "Video deleted successfully.");
+            } else {
               Alert.alert(
                 "Error",
-                error?.message
-                  || "Failed to delete video.",
+                response?.message || "Failed to delete video.",
               );
-            } finally {
-              // Stop loader
-              setDeletingVideoId(null);
             }
-          },
+          } catch (error) {
+            console.error("Delete video error:", error);
+
+            Alert.alert("Error", error?.message || "Failed to delete video.");
+          } finally {
+            // Stop loader
+            setDeletingVideoId(null);
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const handleOpenRecordModal = async () => {
@@ -367,10 +366,7 @@ export default function WeeklyVideoScreen({
       }, 200);
       setRecordModalVisible(true);
     } catch (error) {
-      console.error(
-        "Permission error:",
-        error,
-      );
+      console.error("Permission error:", error);
 
       Alert.alert(
         "Permission Error",
@@ -385,54 +381,32 @@ export default function WeeklyVideoScreen({
     stopRecordingTimer();
 
     recordingTimerRef.current = setInterval(() => {
-      setRecordingSeconds(
-        (previous) => previous + 1,
-      );
+      setRecordingSeconds((previous) => previous + 1);
     }, 1000);
   };
 
   const stopRecordingTimer = () => {
-    if (
-      recordingTimerRef.current
-    ) {
-      clearInterval(
-        recordingTimerRef.current,
-      );
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
 
       recordingTimerRef.current = null;
     }
   };
 
-  const formatRecordingTime = (
-    seconds,
-  ) => {
-    const minutes = Math.floor(
-      seconds / 60,
-    );
+  const formatRecordingTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
 
     const remainingSeconds = seconds % 60;
 
     return (
-      `${
-        String(minutes).padStart(
-          2,
-          "0",
-        )
-      }:`
-      + `${
-        String(
-          remainingSeconds,
-        ).padStart(2, "0")
-      }`
+      `${String(minutes).padStart(2, "0")}:` +
+      `${String(remainingSeconds).padStart(2, "0")}`
     );
   };
 
   const handleStartRecording = async () => {
     if (!cameraRef.current) {
-      Alert.alert(
-        "Camera Error",
-        "Camera is not ready.",
-      );
+      Alert.alert("Camera Error", "Camera is not ready.");
       return;
     }
 
@@ -457,27 +431,20 @@ export default function WeeklyVideoScreen({
         maxFileSize: 80 * 1024 * 1024, // 80 MB
       });
 
-      console.log(
-        "Recording finished:",
-        recordedVideo,
-      );
+      console.log("Recording finished:", recordedVideo);
 
       stopRecordingTimer();
 
       setIsRecording(false);
 
       if (discardRecordingRef.current) {
-        console.log(
-          "Recording discarded - NOT uploading.",
-        );
+        console.log("Recording discarded - NOT uploading.");
 
         if (flipAfterStopRef.current) {
           flipAfterStopRef.current = false;
 
           setCameraFacing((previous) =>
-            previous === "back"
-              ? "front"
-              : "back"
+            previous === "back" ? "front" : "back",
           );
 
           setTimeout(() => {
@@ -493,47 +460,32 @@ export default function WeeklyVideoScreen({
       }
 
       if (!recordedVideo?.uri) {
-        Alert.alert(
-          "Recording Error",
-          "No video file was returned.",
-        );
+        Alert.alert("Recording Error", "No video file was returned.");
 
         return;
       }
 
-      const validSize = await checkVideoSize(
-        recordedVideo.uri,
-      );
+      const validSize = await checkVideoSize(recordedVideo.uri);
 
       if (!validSize) {
-        console.log(
-          "Recording rejected because it is larger than 30 MB.",
-        );
+        console.log("Recording rejected because it is larger than 30 MB.");
 
         return;
       }
 
-      await handleUploadAndSave(
-        recordedVideo.uri,
-        "Live Session",
-      );
+      setRecordModalVisible(false);
+      openTitleModal(recordedVideo.uri, "Live Session");
     } catch (error) {
-      console.error(
-        "Recording Error:",
-        error,
-      );
+      console.error("Recording Error:", error);
 
       stopRecordingTimer();
 
       setIsRecording(false);
 
-      if (
-        !discardRecordingRef.current
-      ) {
+      if (!discardRecordingRef.current) {
         Alert.alert(
           "Recording Error",
-          error?.message
-            || "Failed to record video.",
+          error?.message || "Failed to record video.",
         );
       }
     } finally {
@@ -542,11 +494,7 @@ export default function WeeklyVideoScreen({
   };
 
   const handleStopRecording = () => {
-    if (
-      !cameraRef.current
-      || !isRecording
-      || recordingActionRef.current
-    ) {
+    if (!cameraRef.current || !isRecording || recordingActionRef.current) {
       return;
     }
 
@@ -566,9 +514,7 @@ export default function WeeklyVideoScreen({
     }
 
     if (isRecording) {
-      console.log(
-        "Cancelling recording - video will NOT be saved.",
-      );
+      console.log("Cancelling recording - video will NOT be saved.");
 
       discardRecordingRef.current = true;
       flipAfterStopRef.current = false;
@@ -598,33 +544,21 @@ export default function WeeklyVideoScreen({
       const file = new File(fileUri);
 
       if (!file.exists) {
-        throw new Error(
-          "Video file does not exist.",
-        );
+        throw new Error("Video file does not exist.");
       }
 
       const size = file.size || 0;
 
-      const sizeMB = size
-        / (1024 * 1024);
+      const sizeMB = size / (1024 * 1024);
 
-      console.log(
-        "Video size:",
-        sizeMB.toFixed(2),
-        "MB",
-      );
+      console.log("Video size:", sizeMB.toFixed(2), "MB");
 
-      if (
-        size
-          > MAX_VIDEO_SIZE
-      ) {
+      if (size > MAX_VIDEO_SIZE) {
         Alert.alert(
           "Video Too Large",
-          `This video is ${
-            sizeMB.toFixed(
-              2,
-            )
-          } MB.\n\nMaximum allowed size is 30 MB.`,
+          `This video is ${sizeMB.toFixed(
+            2,
+          )} MB.\n\nMaximum allowed size is 30 MB.`,
         );
 
         return false;
@@ -632,102 +566,62 @@ export default function WeeklyVideoScreen({
 
       return true;
     } catch (error) {
-      console.error(
-        "Video size check error:",
-        error,
-      );
+      console.error("Video size check error:", error);
 
-      Alert.alert(
-        "Error",
-        "Unable to check the video size.",
-      );
+      Alert.alert("Error", "Unable to check the video size.");
 
       return false;
     }
   };
 
-  const formatDuration = (
-    seconds,
-  ) => {
-    if (
-      seconds === undefined
-      || seconds === null
-      || isNaN(seconds)
-    ) {
+  const formatDuration = (seconds) => {
+    if (seconds === undefined || seconds === null || isNaN(seconds)) {
       return "00:00";
     }
 
-    const totalSeconds = Math.floor(
-      Number(seconds),
-    );
+    const totalSeconds = Math.floor(Number(seconds));
 
-    const minutes = Math.floor(
-      totalSeconds / 60,
-    );
+    const minutes = Math.floor(totalSeconds / 60);
 
     const remainingSeconds = totalSeconds % 60;
 
     return (
-      `${
-        String(minutes).padStart(
-          2,
-          "0",
-        )
-      }:`
-      + `${
-        String(
-          remainingSeconds,
-        ).padStart(2, "0")
-      }`
+      `${String(minutes).padStart(2, "0")}:` +
+      `${String(remainingSeconds).padStart(2, "0")}`
     );
   };
 
   const handleUploadAndSave = async (
     videoUri,
     tag = "Live Session",
+    title = "",
   ) => {
     try {
       if (!videoUri) {
-        Alert.alert(
-          "Error",
-          "Video file not found.",
-        );
+        Alert.alert("Error", "Video file not found.");
 
         return false;
       }
 
       if (!selectedChildId) {
-        Alert.alert(
-          "Select Child",
-          "Please select a child first.",
-        );
+        Alert.alert("Select Child", "Please select a child first.");
 
         return false;
       }
 
-      const isValidSize = await checkVideoSize(
-        videoUri,
-      );
+      const isValidSize = await checkVideoSize(videoUri);
 
       if (!isValidSize) {
-        console.log(
-          "Video rejected because it is larger than 30 MB.",
-        );
+        console.log("Video rejected because it is larger than 30 MB.");
 
         return false;
       }
 
       setUploading(true);
 
-      console.log(
-        "Uploading video:",
-        videoUri,
-      );
+      console.log("Uploading video:", videoUri);
 
-      const result = await uploadToCloudinaryFileSystem(
-        videoUri,
-        "video",
-      );
+      const result = await uploadToCloudinaryFileSystem(videoUri, "video");
 
       // console.log(
       //   "Cloudinary result:",
@@ -735,9 +629,7 @@ export default function WeeklyVideoScreen({
       // );
 
       if (!result?.secure_url) {
-        throw new Error(
-          "Cloudinary did not return a video URL.",
-        );
+        throw new Error("Cloudinary did not return a video URL.");
       }
       //  Alert.alert(
       //   "Success",
@@ -747,14 +639,11 @@ export default function WeeklyVideoScreen({
 
       const payload = {
         childId: selectedChildId,
+        title,
         tag: tag,
         duration: result?.duration
-          ? formatDuration(
-            result.duration,
-          )
-          : formatDuration(
-            recordingSeconds,
-          ),
+          ? formatDuration(result.duration)
+          : formatDuration(recordingSeconds),
 
         videoUrl: result.secure_url,
         cloudinaryPublicId: result.public_id,
@@ -763,57 +652,32 @@ export default function WeeklyVideoScreen({
         width: result.width,
         height: result.height,
         fileSize: result.bytes,
-        durationSeconds: result.duration
-          || recordingSeconds,
+        durationSeconds: result.duration || recordingSeconds,
       };
 
-      console.log(
-        "Video payload:",
-        payload,
-      );
+      console.log("Video payload:", payload);
 
-      const response = await createWeeklyVideoApi(
-        payload,
-      );
+      const response = await createWeeklyVideoApi(payload);
 
-      console.log(
-        "Create video response:",
-        response,
-      );
+      console.log("Create video response:", response);
 
       if (!response?.success) {
-        throw new Error(
-          response?.message
-            || "Failed to save video.",
-        );
+        throw new Error(response?.message || "Failed to save video.");
       }
 
       // Close recorder
-      setRecordModalVisible(
-        false,
-      );
+      setRecordModalVisible(false);
 
-      await fetchVideos(
-        selectedChildId,
-      );
+      setSearchText("");
+      setDebouncedSearch("");
+      await fetchVideos(selectedChildId, 1, false, "");
 
-      Alert.alert(
-        "Success",
-        "Video uploaded successfully.",
-      );
-
+      Alert.alert("Success", "Video uploaded successfully.");
       return true;
     } catch (error) {
-      console.error(
-        "Upload/save error:",
-        error,
-      );
+      console.error("Upload/save error:", error);
 
-      Alert.alert(
-        "Upload Failed",
-        error?.message
-          || "Unable to upload video.",
-      );
+      Alert.alert("Upload Failed", error?.message || "Unable to upload video.");
 
       return false;
     } finally {
@@ -826,15 +690,13 @@ export default function WeeklyVideoScreen({
   const handlePickVideo = async () => {
     try {
       if (!selectedChildId) {
-        Alert.alert(
-          "Select Child",
-          "Please select a child first.",
-        );
+        Alert.alert("Select Child", "Please select a child first.");
 
         return;
       }
 
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
         Alert.alert(
@@ -845,17 +707,13 @@ export default function WeeklyVideoScreen({
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync(
-        {
-          mediaTypes: [
-            "videos",
-          ],
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["videos"],
 
-          allowsEditing: false,
+        allowsEditing: false,
 
-          quality: 1,
-        },
-      );
+        quality: 1,
+      });
 
       if (result.canceled) {
         return;
@@ -864,61 +722,39 @@ export default function WeeklyVideoScreen({
       const selectedVideo = result.assets?.[0];
 
       if (!selectedVideo?.uri) {
-        Alert.alert(
-          "Error",
-          "Could not get selected video.",
-        );
+        Alert.alert("Error", "Could not get selected video.");
 
         return;
       }
-      setLoadingUploadVideos(true);
-      console.log(
-        "Selected video:",
-        selectedVideo,
-      );
+      // setLoadingUploadVideos(true);
+      console.log("Selected video:", selectedVideo);
 
-      await handleUploadAndSave(
-        selectedVideo.uri,
-        "Uploaded Video",
-      );
+      const isValidSize = await checkVideoSize(selectedVideo.uri);
+      if (!isValidSize) return;
+
+      openTitleModal(selectedVideo.uri, "Uploaded Video");
     } catch (error) {
-      console.error(
-        "Pick video error:",
-        error,
-      );
+      console.error("Pick video error:", error);
 
-      Alert.alert(
-        "Error",
-        error?.message
-          || "Could not select video.",
-      );
-    } finally {
-      setLoadingUploadVideos(false);
+      Alert.alert("Error", error?.message || "Could not select video.");
     }
+    // finally {
+    //   setLoadingUploadVideos(false);
+    // }
   };
 
   const handleOpenDemoVideo = (video = null) => {
-    const targetVideo = video
-      || videos?.[0];
+    const targetVideo = video || videos?.[0];
 
-    if (
-      !targetVideo?.videoUrl
-    ) {
-      Alert.alert(
-        "No Video",
-        "There is no uploaded video available.",
-      );
+    if (!targetVideo?.videoUrl) {
+      Alert.alert("No Video", "There is no uploaded video available.");
 
       return;
     }
 
-    setActiveVideo(
-      targetVideo,
-    );
+    setActiveVideo(targetVideo);
 
-    setDemoVideoModal(
-      true,
-    );
+    setDemoVideoModal(true);
   };
   const handleFlipCamera = () => {
     if (uploading) {
@@ -934,29 +770,15 @@ export default function WeeklyVideoScreen({
       return null;
     }
 
-    setCameraFacing((previous) =>
-      previous === "back"
-        ? "front"
-        : "back"
-    );
+    setCameraFacing((previous) => (previous === "back" ? "front" : "back"));
 
     return null;
   };
-  const filteredModalChildren = children?.filter(
-    (child) => {
-      const childName = child?.fullName
-        ?? child?.name
-        ?? "";
+  const filteredModalChildren = children?.filter((child) => {
+    const childName = child?.fullName ?? child?.name ?? "";
 
-      return childName
-        .toLowerCase()
-        .includes(
-          modalSearch
-            .toLowerCase()
-            .trim(),
-        );
-    },
-  );
+    return childName.toLowerCase().includes(modalSearch.toLowerCase().trim());
+  });
 
   const onRefresh = async () => {
     try {
@@ -969,507 +791,568 @@ export default function WeeklyVideoScreen({
         setVideoPage(1);
         setHasMoreVideos(true);
 
-        await fetchVideos(
-          selectedChildId,
-          1,
-          false,
-        );
+        await fetchVideos(selectedChildId, 1, false);
       }
     } finally {
       setRefreshing(false);
     }
   };
 
-  const zoomPercentage = Math.round(
-    cameraZoom * 100,
-  );
-  const handleVideoScroll = ({
-    nativeEvent,
-  }) => {
-    const {
-      layoutMeasurement,
-      contentOffset,
-      contentSize,
-    } = nativeEvent;
+  const zoomPercentage = Math.round(cameraZoom * 100);
+  const handleVideoScroll = ({ nativeEvent }) => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
 
     const paddingToBottom = 100;
 
-    const isNearBottom = layoutMeasurement.height
-        + contentOffset.y
-      >= contentSize.height
-        - paddingToBottom;
+    const isNearBottom =
+      layoutMeasurement.height + contentOffset.y >=
+      contentSize.height - paddingToBottom;
 
     if (
-      isNearBottom
-      && !loadingMoreVideos
-      && hasMoreVideos
-      && selectedChildId
+      isNearBottom &&
+      !loadingMoreVideos &&
+      hasMoreVideos &&
+      selectedChildId
     ) {
-      fetchVideos(
-        selectedChildId,
-        videoPage + 1,
-        true,
+      fetchVideos(selectedChildId, videoPage + 1, true, debouncedSearch);
+    }
+  };
+  const openTitleModal = (uri, tag) => {
+    setTitleMode("create");
+    setPendingVideo({ uri, tag });
+    setVideoTitle("");
+    setTitleError("");
+    setTimeout(() => setTitleModalVisible(true), 300);
+  };
+
+  const closeTitleModal = () => {
+    setTitleModalVisible(false);
+    setPendingVideo(null);
+    setRenamingVideo(null);
+    setTitleMode("create");
+    setVideoTitle("");
+    setTitleError("");
+  };
+
+  const handleCancelTitle = () => {
+    if (uploading || savingTitle) return;
+    closeTitleModal();
+  };
+
+  const handleConfirmTitle = async () => {
+    const trimmed = videoTitle.trim();
+
+    if (!trimmed) {
+      setTitleError("Title is required.");
+      return;
+    }
+    setTitleError("");
+
+    // ----- RENAME -----
+    if (titleMode === "rename") {
+      const videoId = renamingVideo?._id || renamingVideo?.id;
+      if (!videoId) return;
+
+      try {
+        setSavingTitle(true);
+        const response = await updateWeeklyVideoTitleApi(videoId, trimmed);
+
+        if (!response?.success) {
+          setTitleError(response?.message || "Failed to rename video.");
+          return;
+        }
+
+        setVideos((prev) =>
+          prev.map((v) => ((v._id || v.id) === videoId ? { ...v, title: trimmed } : v)),
+        );
+        closeTitleModal();
+      } catch (error) {
+        setTitleError(error?.response?.data?.message || "Failed to rename video.");
+      } finally {
+        setSavingTitle(false);
+      }
+      return;
+    }
+
+    if (!pendingVideo?.uri) return;
+
+    const success = await handleUploadAndSave(pendingVideo.uri, pendingVideo.tag, trimmed);
+    if (success) closeTitleModal();
+  };
+  useEffect(() => {
+    if (!shareModalVisible || !shareVideoItem) return;
+
+    const videoId = shareVideoItem?._id || shareVideoItem?.id;
+
+    const timer = setTimeout(async () => {
+      try {
+        setShareListLoading(true);
+        const res = await getShareStatusApi(videoId, shareSearch.trim());
+        setShareChildren(res?.success ? res.data || [] : []);
+        if (res?.success) setShareHolderCount(res.holderCount || 0);
+      } catch (error) {
+        console.error("Share status fetch error:", error);
+        setShareChildren([]);
+      } finally {
+        setShareListLoading(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [shareSearch, shareModalVisible, shareVideoItem]);
+
+  const openShareModal = (video) => {
+    setShareVideoItem(video);
+    setShareSearch("");
+    setShareChildren([]);
+    setShareChanges({});
+    setShareHolderCount(0);
+    setShareModalVisible(true);
+  };
+
+  const closeShareModal = () => {
+    if (sharing) return;
+    setShareModalVisible(false);
+    setShareVideoItem(null);
+    setShareChanges({});
+  };
+
+  const isChildChecked = (child) => {
+    const id = child._id || child.id;
+    return id in shareChanges ? shareChanges[id] : child.isShared;
+  };
+
+  const shareChangeCount = Object.keys(shareChanges).length;
+
+  const projectedCount =
+    shareHolderCount +
+    Object.values(shareChanges).reduce((n, v) => n + (v ? 1 : -1), 0);
+
+  const toggleShareChild = (child) => {
+    const id = child._id || child.id;
+    const checked = isChildChecked(child);
+
+    if (checked && projectedCount <= 1) {
+      Alert.alert(
+        "Not allowed",
+        "At least one child must keep this video. To remove it completely, use the delete button.",
       );
+      return;
+    }
+
+    const next = !checked;
+
+    setShareChanges((prev) => {
+      const updated = { ...prev };
+      if (next === child.isShared) {
+        delete updated[id]; 
+      } else {
+        updated[id] = next;
+      }
+      return updated;
+    });
+  };
+
+  const handleSaveSharing = async () => {
+    const videoId = shareVideoItem?._id || shareVideoItem?.id;
+    if (!videoId) return;
+
+    const shareIds = Object.keys(shareChanges).filter((id) => shareChanges[id] === true);
+    const unshareIds = Object.keys(shareChanges).filter((id) => shareChanges[id] === false);
+
+    if (!shareIds.length && !unshareIds.length) return;
+
+    try {
+      setSharing(true);
+
+      const response = await updateVideoSharingApi(videoId, { shareIds, unshareIds });
+
+      if (!response?.success) {
+        Alert.alert("Error", response?.message || "Failed to update sharing.");
+        return;
+      }
+
+      setShareModalVisible(false);
+      setShareVideoItem(null);
+      setShareChanges({});
+
+      const parts = [];
+      if (response.sharedCount) parts.push(`Shared with ${response.sharedCount} child(ren).`);
+      if (response.removedCount) parts.push(`Removed from ${response.removedCount} child(ren).`);
+      Alert.alert("Done", parts.join("\n") || "No changes made.");
+      await fetchVideos(selectedChildId, 1, false, debouncedSearch);
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message || error?.message || "Failed to update sharing.",
+      );
+    } finally {
+      setSharing(false);
     }
   };
 
+  const openRenameModal = (video) => {
+    setTitleMode("rename");
+    setRenamingVideo(video);
+    setVideoTitle(video?.title || "");
+    setTitleError("");
+    setTitleModalVisible(true);
+  };
   return (
-    <View
-      style={[
-        styles.mainContainer,
-        commonStyles.container,
-      ]}
-    >
-     
-      {loadingUploadVideos
-        ? <ActivityIndicator size="small" color="#004E9F" style={[styles.scrollArea, { marginBottom: hp(20) }]} />
-        : (
-          <ScrollView
-            style={styles.scrollArea}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-              />
-            }
-            onScroll={handleVideoScroll}
+    <View style={[styles.mainContainer, commonStyles.container]}>
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        onScroll={handleVideoScroll}
+      >
+        <View style={styles.headerBanner}>
+          <Text style={styles.bannerTitle}>Weekly Video Updates</Text>
+        </View>
+
+        <View style={styles.childHeaderRow}>
+          <Text style={styles.sectionHeaderTitle}>Select Child</Text>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setModalVisible(true)}
           >
-            <View
-              style={styles.headerBanner}
+            <Text style={styles.viewAllText}>View All</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View>
+          {loadingChildren ? (
+            <ActivityIndicator
+              size="small"
+              color="#004E9F"
+              style={{
+                marginBottom: hp(20),
+              }}
+            />
+          ) : children.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.childChipsRow}
             >
-              <Text
-                style={styles.bannerTitle}
-              >
-                Weekly Video Updates
-              </Text>
-            </View>
+              {children.map((child) => {
+                const id = child._id || child.id;
 
-            <View
-              style={styles.childHeaderRow}
-            >
-              <Text
-                style={styles.sectionHeaderTitle}
-              >
-                Select Child
-              </Text>
+                const isSelected = id === selectedChildId;
 
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => setModalVisible(true)}
-              >
-                <Text
-                  style={styles.viewAllText}
-                >
-                  View All
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View>
-              {loadingChildren
-                ? (
-                  <ActivityIndicator
-                    size="small"
-                    color="#004E9F"
-                    style={{
-                      marginBottom: hp(20),
-                    }}
-                  />
-                )
-                : children.length > 0
-                ? (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.childChipsRow}
-                  >
-                    {children.map(
-                      (child) => {
-                        const id = child._id
-                          || child.id;
-
-                        const isSelected = id
-                          === selectedChildId;
-
-                        return (
-                          <TouchableOpacity
-                            key={id}
-                            style={[
-                              styles.childChip,
-                              isSelected
-                                ? styles.childChipSelected
-                                : styles.childChipUnselected,
-                            ]}
-                            activeOpacity={0.8}
-                            onPress={() =>
-                              setSelectedChildId(
-                                id,
-                              )}
-                          >
-                            <Text
-                              style={[
-                                styles.childChipText,
-                                isSelected
-                                  ? styles.childChipTextSelected
-                                  : styles.childChipTextUnselected,
-                              ]}
-                            >
-                              {child.fullName
-                                || child.name
-                                || "Child"}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      },
-                    )}
-                  </ScrollView>
-                )
-                : (
-                  <View
-                    style={styles.childChipsRow}
+                return (
+                  <TouchableOpacity
+                    key={id}
+                    style={[
+                      styles.childChip,
+                      isSelected
+                        ? styles.childChipSelected
+                        : styles.childChipUnselected,
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={() => setSelectedChildId(id)}
                   >
                     <Text
-                      style={{
-                        marginTop: 10,
-                        color: "#64748B",
-                        fontFamily: fonts.regular,
-                      }}
+                      style={[
+                        styles.childChipText,
+                        isSelected
+                          ? styles.childChipTextSelected
+                          : styles.childChipTextUnselected,
+                      ]}
                     >
-                      No user found
+                      {child.fullName || child.name || "Child"}
                     </Text>
-                  </View>
-                )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          ) : (
+            <View style={styles.childChipsRow}>
+              <Text
+                style={{
+                  marginTop: 10,
+                  color: "#64748B",
+                  fontFamily: fonts.regular,
+                }}
+              >
+                No user found
+              </Text>
             </View>
+          )}
+        </View>
+        <View style={styles.searchBar}>
+          <Feather name="search" size={fontSize(16)} color="#94A3B8" style={{ marginRight: 8 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search videos by title..."
+            placeholderTextColor="#94A3B8"
+            value={searchText}
+            onChangeText={setSearchText}
+            returnKeyType="search"
+          />
+          {searchText.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchText("")}>
+              <Feather name="x-circle" size={fontSize(16)} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={styles.mediaActionCard}>
+          <TouchableOpacity
+            style={styles.playPreviewCircle}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="play" size={fontSize(24)} color="#fff" />
+          </TouchableOpacity>
 
-            <View
-              style={styles.mediaActionCard}
+          <View style={styles.actionButtonsRow}>
+            <TouchableOpacity
+              style={styles.uploadBtn}
+              activeOpacity={0.85}
+              onPress={handlePickVideo}
+              disabled={uploading}
             >
-              <TouchableOpacity
-                style={styles.playPreviewCircle}
-                activeOpacity={0.8}
+              <View style={styles.btnIconBadge}>
+                <AntDesign
+                  name="cloud-upload"
+                  size={fontSize(18)}
+                  color={colors.primary}
+                />
+              </View>
+
+              <View>
+                <Text style={styles.btnTitle}>Upload</Text>
+
+                <Text style={styles.btnSubtitle}>Existing media</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.recordBtn}
+              activeOpacity={0.85}
+              onPress={handleOpenRecordModal}
+              disabled={uploading}
+            >
+              <View style={styles.recordIconBadge}>
+                <Ionicons
+                  name="disc-outline"
+                  size={fontSize(20)}
+                  color="#BA1A1A"
+                />
+              </View>
+
+              <View>
+                <Text style={styles.btnTitle}>Live Record</Text>
+
+                <Text style={styles.btnSubtitle}>New session</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {videoLoading ? (
+          <View
+            style={{
+              paddingVertical: hp(40),
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <ActivityIndicator size="large" color={colors.primary} />
+
+            <Text
+              style={{
+                marginTop: 10,
+                color: "#64748B",
+                fontFamily: fonts.regular,
+              }}
+            >
+              Loading videos...
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.videoList}>
+            {videos.length === 0 ? (
+              <View
+                style={{
+                  padding: wp(30),
+                  alignItems: "center",
+                }}
               >
                 <Ionicons
-                  name="play"
-                  size={fontSize(24)}
-                  color="#fff"
+                  name="videocam-outline"
+                  size={fontSize(45)}
+                  color="#94A3B8"
                 />
-              </TouchableOpacity>
 
-              <View
-                style={styles.actionButtonsRow}
-              >
-                <TouchableOpacity
-                  style={styles.uploadBtn}
-                  activeOpacity={0.85}
-                  onPress={handlePickVideo}
-                  disabled={uploading}
-                >
-                  <View
-                    style={styles.btnIconBadge}
-                  >
-                    <AntDesign
-                      name="cloud-upload"
-                      size={fontSize(18)}
-                      color={colors.primary}
-                    />
-                  </View>
-
-                  <View>
-                    <Text
-                      style={styles.btnTitle}
-                    >
-                      Upload
-                    </Text>
-
-                    <Text
-                      style={styles.btnSubtitle}
-                    >
-                      Existing media
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.recordBtn}
-                  activeOpacity={0.85}
-                  onPress={handleOpenRecordModal}
-                  disabled={uploading}
-                >
-                  <View
-                    style={styles.recordIconBadge}
-                  >
-                    <Ionicons
-                      name="disc-outline"
-                      size={fontSize(20)}
-                      color="#BA1A1A"
-                    />
-                  </View>
-
-                  <View>
-                    <Text
-                      style={styles.btnTitle}
-                    >
-                      Live Record
-                    </Text>
-
-                    <Text
-                      style={styles.btnSubtitle}
-                    >
-                      New session
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {videoLoading
-              ? (
-                <View
+                <Text
                   style={{
-                    paddingVertical:hp(40),
-                    alignItems: "center",
-                    justifyContent: "center",
+                    marginTop: 10,
+                    color: "#64748B",
+                    fontFamily: fonts.regular,
                   }}
                 >
-                  <ActivityIndicator
-                    size="large"
-                    color={colors.primary}
-                  />
-
-                  <Text
-                    style={{
-                      marginTop: 10,
-                      color: "#64748B",
-                      fontFamily: fonts.regular,
-                    }}
+                  {debouncedSearch ? "No videos match your search" : "No videos found"}
+                </Text>
+              </View>
+            ) : (
+              videos.map((video) => (
+                <View key={video._id || video.id} style={styles.videoCard}>
+                  <TouchableOpacity
+                    style={styles.videoThumbnail}
+                    activeOpacity={0.9}
+                    onPress={() => handleOpenDemoVideo(video)}
                   >
-                    Loading videos...
-                  </Text>
-                </View>
-              )
-              : (
-                <View style={styles.videoList}>
-                  {videos.length === 0
-                    ? (
-                      <View
-                        style={{
-                          padding: wp(30),
-                          alignItems: "center",
-                        }}
-                      >
-                        <Ionicons
-                          name="videocam-outline"
-                          size={fontSize(45)}
-                          color="#94A3B8"
-                        />
+                    <VideoThumbnail videoUrl={video.videoUrl} />
 
-                        <Text
-                          style={{
-                            marginTop: 10,
-                            color: "#64748B",
-                            fontFamily: fonts.regular,
-                          }}
-                        >
-                          No videos found
-                        </Text>
-                      </View>
-                    )
-                    : (
-                      videos.map((video) => (
-                        <View
-                          key={video._id || video.id}
-                          style={styles.videoCard}
-                        >
-                          <TouchableOpacity
-                            style={styles.videoThumbnail}
-                            activeOpacity={0.9}
-                            onPress={() => handleOpenDemoVideo(video)}
-                          >
-                            <View style={styles.centerPlayBtn}>
-                              <Ionicons
-                                name="play"
-                                size={fontSize(28)}
-                                color="#035388"
-                              />
-                            </View>
+                    <View style={styles.centerPlayBtn}>
+                      <Ionicons name="play" size={fontSize(28)} color="#035388" />
+                    </View>
 
-                            <View style={styles.durationBadge}>
-                              <Text style={styles.durationText}>
-                                {video.duration || "00:00"}
-                              </Text>
-                            </View>
-                          </TouchableOpacity>
-
-                          <View style={styles.videoFooter}>
-                            <View style={styles.videoMetaColumn}>
-                              <Text style={styles.videoChildName}>
-                                {video.childId?.name
-                                  || video.childId?.fullName
-                                  || "Child Session"}
-                              </Text>
-
-                              <Text style={styles.videoSubDetails}>
-                                {video.createdAt
-                                  ? new Date(
-                                    video.createdAt,
-                                  ).toLocaleDateString()
-                                  : ""}
-
-                                <Text
-                                  style={styles.bulletSeparator}
-                                >
-                                  {" "}•{" "}
-                                </Text>
-
-                                {video.tag || "Video"}
-                              </Text>
-                            </View>
-
-                            <View style={styles.videoActionGroup}>
-                              <TouchableOpacity
-                                style={styles.iconActionBtn}
-                                activeOpacity={0.7}
-                                disabled={deletingVideoId === (video._id || video.id)}
-                                onPress={() => handleDeleteVideo(video._id || video.id)}
-                              >
-                                {deletingVideoId === (video._id || video.id)
-                                  ? <ActivityIndicator size="small" color="#475569" />
-                                  : <Feather name="trash-2" size={fontSize(18)} color="#475569" />}
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        </View>
-                      ))
-                    )}
-
-                  {loadingMoreVideos && (
-                    <View
-                      style={{
-                        paddingVertical:hp(20),
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <ActivityIndicator
-                        size="small"
-                        color={colors.primary}
-                      />
-
-                      <Text
-                        style={{
-                          marginTop: 8,
-                          color: "#64748B",
-                          fontFamily: fonts.regular,
-                        }}
-                      >
-                        Loading more videos...
+                    <View style={styles.durationBadge}>
+                      <Text style={styles.durationText}>
+                        {video.duration || "00:00"}
                       </Text>
                     </View>
-                  )}
+                  </TouchableOpacity>
 
-                  {!loadingMoreVideos
-                    && videos.length > 0
-                    && !hasMoreVideos && (
-                    <Text
-                      style={{
-                        textAlign: "center",
-                        paddingVertical:hp(15),
-                        color: "#94A3B8",
-                        fontFamily: fonts.regular,
-                      }}
-                    >
-                      No more videos
-                    </Text>
-                  )}
+                  <View style={styles.videoFooter}>
+                    <View style={styles.videoMetaColumn}>
+                      <Text style={styles.videoChildName} numberOfLines={1}>
+                        {video.title || "Untitled Video"}
+                      </Text>
+
+                      <Text style={styles.videoSubDetails}>
+                        {(video.childId?.name || video.childId?.fullName || "Child")}
+                        {" • "}
+                        {video.createdAt ? new Date(video.createdAt).toLocaleDateString() : ""}
+                        {" • "}
+                        {video.tag || "Video"}
+                      </Text>
+                    </View>
+
+                    <View style={styles.videoActionGroup}>
+                      <TouchableOpacity
+                        style={styles.iconActionBtn}
+                        activeOpacity={0.7}
+                        onPress={() => openRenameModal(video)}
+                      >
+                        <Feather name="edit-2" size={fontSize(18)} color="#475569" />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.iconActionBtn}
+                        activeOpacity={0.7}
+                        onPress={() => openShareModal(video)}
+                      >
+                        <Feather name="share-2" size={fontSize(18)} color={colors.primary} />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.iconActionBtn}
+                        activeOpacity={0.7}
+                        disabled={deletingVideoId === (video._id || video.id)}
+                        onPress={() => handleDeleteVideo(video._id || video.id)}
+                      >
+                        {deletingVideoId === (video._id || video.id) ? (
+                          <ActivityIndicator size="small" color="#475569" />
+                        ) : (
+                          <Feather name="trash-2" size={fontSize(18)} color="#dd2007" />
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
-              )}
-          </ScrollView>
+              ))
+            )}
+
+            {loadingMoreVideos && (
+              <View
+                style={{
+                  paddingVertical: hp(20),
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <ActivityIndicator size="small" color={colors.primary} />
+
+                <Text
+                  style={{
+                    marginTop: 8,
+                    color: "#64748B",
+                    fontFamily: fonts.regular,
+                  }}
+                >
+                  Loading more videos...
+                </Text>
+              </View>
+            )}
+
+            {!loadingMoreVideos && videos.length > 0 && !hasMoreVideos && (
+              <Text
+                style={{
+                  textAlign: "center",
+                  paddingVertical: hp(15),
+                  color: "#94A3B8",
+                  fontFamily: fonts.regular,
+                }}
+              >
+                No more videos
+              </Text>
+            )}
+          </View>
         )}
+      </ScrollView>
+
       <Modal
         visible={demoVideoModal}
         transparent={true}
         animationType="slide"
         onRequestClose={() => setDemoVideoModal(false)}
       >
-        <View
-          style={styles.fullModalOverlay}
-        >
-          <View
-            style={styles.demoPlayerContainer}
-          >
-            <View
-              style={styles.modalHeaderRow}
-            >
-              <Text
-                style={styles.demoModalTitle}
-              >
-                {activeVideo
-                  ?.childId
-                  ?.name
-                  || activeVideo
-                    ?.childId
-                    ?.fullName
-                  || "Video Session"} - {activeVideo?.tag
-                  || "Video"}
+        <View style={styles.fullModalOverlay}>
+          <View style={styles.demoPlayerContainer}>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.demoModalTitle}>
+                {activeVideo?.title || "Video Session"}
               </Text>
 
-              <TouchableOpacity
-                onPress={() =>
-                  setDemoVideoModal(
-                    false,
-                  )}
-              >
-                <Feather
-                  name="x"
-                  size={fontSize(24)}
-                  color="#FFFFFF"
-                />
+              <TouchableOpacity onPress={() => setDemoVideoModal(false)}>
+                <Feather name="x" size={fontSize(24)} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
 
-            <View
-              style={styles.youtubeWrapper}
-            >
-              {activeVideo?.videoUrl
-                ? (
-                  <CloudinaryVideoPlayer
-                    uri={activeVideo.videoUrl}
-                  />
-                )
-                : (
-                  <View
+            <View style={styles.youtubeWrapper}>
+              {activeVideo?.videoUrl ? (
+                <CloudinaryVideoPlayer uri={activeVideo.videoUrl} />
+              ) : (
+                <View
+                  style={{
+                    height: 300,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundColor: "#000",
+                  }}
+                >
+                  <Text
                     style={{
-                      height: 300,
-                      justifyContent: "center",
-                      alignItems: "center",
-                      backgroundColor: "#000",
+                      color: "#fff",
                     }}
                   >
-                    <Text
-                      style={{
-                        color: "#fff",
-                      }}
-                    >
-                      Video URL not found
-                    </Text>
-                  </View>
-                )}
+                    Video URL not found
+                  </Text>
+                </View>
+              )}
             </View>
 
             <TouchableOpacity
               style={styles.closeDemoBtn}
-              onPress={() =>
-                setDemoVideoModal(
-                  false,
-                )}
+              onPress={() => setDemoVideoModal(false)}
             >
-              <Text
-                style={styles.closeDemoText}
-              >
-                Close Player
-              </Text>
+              <Text style={styles.closeDemoText}>Close Player</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1487,9 +1370,7 @@ export default function WeeklyVideoScreen({
 
             stopRecordingTimer();
 
-            setRecordModalVisible(
-              false,
-            );
+            setRecordModalVisible(false);
           }
         }}
       >
@@ -1498,18 +1379,14 @@ export default function WeeklyVideoScreen({
             <View style={styles.modalHeaderRow}>
               <View style={[commonStyles.flexClass, { gap: wp(5) }]}>
                 <View
-                  style={[
-                    styles.redDot,
-                    isRecording
-                    && styles.redDotActive,
-                  ]}
+                  style={[styles.redDot, isRecording && styles.redDotActive]}
                 />
                 <Text style={styles.recordingStatusText}>
                   {uploading
                     ? "UPLOADING..."
                     : isRecording
-                    ? "RECORDING..."
-                    : "READY TO RECORD"}
+                      ? "RECORDING..."
+                      : "READY TO RECORD"}
                 </Text>
               </View>
 
@@ -1520,15 +1397,15 @@ export default function WeeklyVideoScreen({
                     top: 20,
                     alignSelf: "center",
                     backgroundColor: "rgba(0,0,0,0.7)",
-                    paddingHorizontal:wp(20),
-                    paddingVertical:hp(10),
+                    paddingHorizontal: wp(20),
+                    paddingVertical: hp(10),
                     borderRadius: wp(20),
                   }}
                 >
                   <Text
                     style={{
                       color: "#fff",
-                      fontSize:fontSize(20),
+                      fontSize: fontSize(20),
                       fontWeight: "bold",
                     }}
                   >
@@ -1541,129 +1418,115 @@ export default function WeeklyVideoScreen({
                 disabled={uploading}
                 onPress={handleCancelRecording}
               >
-                <Feather
-                  name="x"
-                  size={fontSize(24)}
-                  color="#FFFFFF"
-                />
+                <Feather name="x" size={fontSize(24)} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.viewfinderContainer}>
-              {uploading
-                ? (
-                  <View>
-                    <ActivityIndicator size="large" color="#FFFFFF" />
+              {uploading ? (
+                <View>
+                  <ActivityIndicator size="large" color="#FFFFFF" />
 
-                    <Text style={styles.uploadingText}>
-                      Uploading video ...
-                    </Text>
-                  </View>
-                )
-                : cameraPermission?.granted
-                ? (
+                  <Text style={styles.uploadingText}>Uploading video ...</Text>
+                </View>
+              ) : cameraPermission?.granted ? (
+                <View
+                  style={{
+                    flex: 1,
+                    overflow: "hidden",
+                  }}
+                >
                   <View
                     style={{
-                      flex: 1,
-                      overflow: "hidden",
+                      position: "absolute",
+                      right: 15,
+                      bottom: 30,
+                      zIndex: 10,
+                      gap: wp(10),
                     }}
                   >
-                    <View
+                    <TouchableOpacity
+                      onPress={handleZoomIn}
                       style={{
-                        position: "absolute",
-                        right: 15,
-                        bottom: 30,
-                        zIndex: 10,
-                        gap: wp(10),
+                        width: 45,
+                        height: 45,
+                        borderRadius: wp(25),
+                        backgroundColor: "rgba(0,0,0,0.65)",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      <TouchableOpacity
-                        onPress={handleZoomIn}
-                        style={{
-                          width: 45,
-                          height: 45,
-                          borderRadius: wp(25),
-                          backgroundColor: "rgba(0,0,0,0.65)",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Ionicons
-                          name="add"
-                          size={fontSize(28)}
-                          color="#FFFFFF"
-                        />
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={handleZoomOut}
-                        style={{
-                          width: 45,
-                          height: 45,
-                          borderRadius: wp(25),
-                          backgroundColor: "rgba(0,0,0,0.65)",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Ionicons
-                          name="remove"
-                          size={fontSize(28)}
-                          color="#FFFFFF"
-                        />
-                      </TouchableOpacity>
-                      <Text
-                        style={{
-                          color: "#FFFFFF",
-                          fontSize:fontSize(16),
-                          fontWeight: "bold",
-                          textAlign: "center",
-                        }}
-                      >
-                        {zoomPercentage}%
-                      </Text>
-                    </View>
-                    <CameraView
-                      ref={cameraRef}
-                      facing={cameraFacing}
-                      mode="video"
-                      zoom={cameraZoom}
-                      videoQuality="480p"
-                      style={{
-                        flex: 1,
-                      }}
-                      videoBitrate={200_000}
-                    />
-                  </View>
-                )
-                : (
-                  <View style={styles.cameraFallbackBox}>
-                    <Ionicons
-                      name="camera-outline"
-                      size={fontSize(64)}
-                      color="#94A3B8"
-                    />
-
-                    <Text style={styles.fallbackTitle}>
-                      Camera Access Required
-                    </Text>
+                      <Ionicons
+                        name="add"
+                        size={fontSize(28)}
+                        color="#FFFFFF"
+                      />
+                    </TouchableOpacity>
 
                     <TouchableOpacity
-                      onPress={handleOpenRecordModal}
-                      style={styles.grantPermissionBtn}
+                      onPress={handleZoomOut}
+                      style={{
+                        width: 45,
+                        height: 45,
+                        borderRadius: wp(25),
+                        backgroundColor: "rgba(0,0,0,0.65)",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
                     >
-                      <Text style={styles.grantPermissionText}>
-                        Grant Access
-                      </Text>
+                      <Ionicons
+                        name="remove"
+                        size={fontSize(28)}
+                        color="#FFFFFF"
+                      />
                     </TouchableOpacity>
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        fontSize: fontSize(16),
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
+                    >
+                      {zoomPercentage}%
+                    </Text>
                   </View>
-                )}
+                  <CameraView
+                    ref={cameraRef}
+                    facing={cameraFacing}
+                    mode="video"
+                    zoom={cameraZoom}
+                    videoQuality="480p"
+                    style={{
+                      flex: 1,
+                    }}
+                    videoBitrate={200_000}
+                  />
+                </View>
+              ) : (
+                <View style={styles.cameraFallbackBox}>
+                  <Ionicons
+                    name="camera-outline"
+                    size={fontSize(64)}
+                    color="#94A3B8"
+                  />
+
+                  <Text style={styles.fallbackTitle}>
+                    Camera Access Required
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={handleOpenRecordModal}
+                    style={styles.grantPermissionBtn}
+                  >
+                    <Text style={styles.grantPermissionText}>Grant Access</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
             {!uploading && (
-              <View
-                style={styles.recorderControls}
-              >
+              <View style={styles.recorderControls}>
                 <View style={styles.controlButtonsRow}>
                   <TouchableOpacity
                     onPress={handleFlipCamera}
@@ -1677,33 +1540,26 @@ export default function WeeklyVideoScreen({
                       color="#FFFFFF"
                     />
 
-                    <Text style={styles.btnText}>
-                      Flip
-                    </Text>
+                    <Text style={styles.btnText}>Flip</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    onPress={isRecording
-                      ? handleStopRecording
-                      : handleStartRecording}
+                    onPress={
+                      isRecording ? handleStopRecording : handleStartRecording
+                    }
                     style={[
                       styles.recordToggleButton,
-                      isRecording
-                      && styles.recordingActiveBtn,
+                      isRecording && styles.recordingActiveBtn,
                     ]}
                   >
                     <Ionicons
-                      name={isRecording
-                        ? "stop"
-                        : "disc"}
+                      name={isRecording ? "stop" : "disc"}
                       size={fontSize(32)}
                       color="#FFFFFF"
                     />
 
                     <Text style={styles.btnText}>
-                      {isRecording
-                        ? "Stop"
-                        : "Record"}
+                      {isRecording ? "Stop" : "Record"}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -1719,42 +1575,19 @@ export default function WeeklyVideoScreen({
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <TouchableWithoutFeedback
-          onPress={() => setModalVisible(false)}
-        >
-          <View
-            style={styles.modalOverlay}
-          >
+        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+          <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View
-                style={styles.modalContent}
-              >
-                <View
-                  style={styles.modalHeader}
-                >
-                  <Text
-                    style={styles.modalTitle}
-                  >
-                    Select Child
-                  </Text>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select Child</Text>
 
-                  <TouchableOpacity
-                    onPress={() =>
-                      setModalVisible(
-                        false,
-                      )}
-                  >
-                    <Feather
-                      name="x"
-                      size={fontSize(20)}
-                      color="#64748B"
-                    />
+                  <TouchableOpacity onPress={() => setModalVisible(false)}>
+                    <Feather name="x" size={fontSize(20)} color="#64748B" />
                   </TouchableOpacity>
                 </View>
 
-                <View
-                  style={styles.modalSearchContainer}
-                >
+                <View style={styles.modalSearchContainer}>
                   <Feather
                     name="search"
                     size={fontSize(16)}
@@ -1778,62 +1611,220 @@ export default function WeeklyVideoScreen({
                     maxHeight: 260,
                   }}
                 >
-                  {filteredModalChildren.map(
-                    (child) => {
-                      const id = child._id
-                        || child.id;
+                  {filteredModalChildren.map((child) => {
+                    const id = child._id || child.id;
 
-                      const isSelected = id
-                        === selectedChildId;
+                    const isSelected = id === selectedChildId;
 
-                      return (
-                        <TouchableOpacity
-                          key={id}
+                    return (
+                      <TouchableOpacity
+                        key={id}
+                        style={[
+                          styles.modalOption,
+                          isSelected && styles.modalOptionSelected,
+                        ]}
+                        onPress={() => {
+                          setSelectedChildId(id);
+
+                          setModalVisible(false);
+                        }}
+                      >
+                        <Text
                           style={[
-                            styles.modalOption,
-                            isSelected
-                            && styles.modalOptionSelected,
+                            styles.modalOptionText,
+                            isSelected && styles.modalOptionTextSelected,
                           ]}
-                          onPress={() => {
-                            setSelectedChildId(
-                              id,
-                            );
-
-                            setModalVisible(
-                              false,
-                            );
-                          }}
                         >
-                          <Text
-                            style={[
-                              styles.modalOptionText,
-                              isSelected
-                              && styles.modalOptionTextSelected,
-                            ]}
-                          >
-                            {child.fullName
-                              || child.name
-                              || "Child"}
-                          </Text>
+                          {child.fullName || child.name || "Child"}
+                        </Text>
 
-                          {isSelected && (
-                            <Feather
-                              name="check"
-                              size={fontSize(18)}
-                              color="#0B598F"
-                            />
-                          )}
-                        </TouchableOpacity>
-                      );
-                    },
-                  )}
+                        {isSelected && (
+                          <Feather
+                            name="check"
+                            size={fontSize(18)}
+                            color="#0B598F"
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </ScrollView>
               </View>
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+      <Modal
+        visible={titleModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelTitle}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {titleMode === "rename" ? "Rename Video" : "Video Title"}
+              </Text>
+              <TouchableOpacity onPress={handleCancelTitle} disabled={uploading || savingTitle}>
+                <Feather name="x" size={fontSize(20)} color="#64748B" />
+              </TouchableOpacity>
+            </View>
 
+            <TextInput
+              style={[styles.titleInput, !!titleError && styles.titleInputError]}
+              placeholder="Enter a title for this video"
+              placeholderTextColor="#94A3B8"
+              value={videoTitle}
+              onChangeText={(text) => {
+                setVideoTitle(text);
+                if (titleError) setTitleError("");
+              }}
+              maxLength={100}
+              editable={!uploading && !savingTitle}
+              autoFocus
+            />
+
+            {!!titleError && <Text style={styles.titleErrorText}>{titleError}</Text>}
+
+            <TouchableOpacity
+              style={[styles.saveTitleBtn, (uploading || savingTitle) && { opacity: 0.7 }]}
+              onPress={handleConfirmTitle}
+              disabled={uploading || savingTitle}
+              activeOpacity={0.85}
+            >
+              {uploading || savingTitle ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={styles.saveTitleText}>{savingTitle ? "Saving..." : "Uploading..."}</Text>
+                </View>
+              ) : (
+                <Text style={styles.saveTitleText}>
+                  {titleMode === "rename" ? "Save Title" : "Save Video"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+      <Modal
+        visible={shareModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeShareModal}
+      >
+        <KeyboardAvoidingView
+          style={styles.shOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={styles.shSheet}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Share Video</Text>
+                <Text style={styles.shVideoName} numberOfLines={1}>
+                  {shareVideoItem?.title || "Untitled Video"}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={closeShareModal} disabled={sharing}>
+                <Feather name="x" size={fontSize(20)} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {/* <Text style={styles.shHint}>
+              Tick = shared, untick = removed. Only your assigned children are shown.
+            </Text> */}
+
+            <View style={styles.modalSearchContainer}>
+              <Feather
+                name="search"
+                size={fontSize(16)}
+                color="#94A3B8"
+                style={{ marginRight: 8 }}
+              />
+              <TextInput
+                style={styles.modalSearchInput}
+                placeholder="Search child..."
+                placeholderTextColor="#94A3B8"
+                value={shareSearch}
+                onChangeText={setShareSearch}
+              />
+            </View>
+
+            <ScrollView style={{ maxHeight: 280 }} keyboardShouldPersistTaps="handled">
+              {shareListLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={colors.primary}
+                  style={{ marginVertical: hp(20) }}
+                />
+              ) : shareChildren.length === 0 ? (
+                <Text style={styles.shEmptyText}>No assigned children found</Text>
+              ) : (
+                shareChildren.map((child) => {
+                  const id = child._id || child.id;
+                  const checked = isChildChecked(child);
+                  const lastOne = checked && projectedCount <= 1;
+
+                  return (
+                    <TouchableOpacity
+                      key={id}
+                      style={[
+                        styles.modalOption,
+                        checked && styles.modalOptionSelected,
+                        lastOne && { opacity: 0.6 },
+                        {marginBottom: wp(4),}
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => toggleShareChild(child)}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[
+                            styles.modalOptionText,
+                            checked && styles.modalOptionTextSelected,
+                          ]}
+                        >
+                          {child.fullName || child.name || "Child"}
+                        </Text>
+                        {lastOne && (
+                          <Text style={styles.shLockedText}>At least one child required</Text>
+                        )}
+                      </View>
+
+                      <Ionicons
+                        name={checked ? "checkbox" : "square-outline"}
+                        size={fontSize(22)}
+                        color={checked ? colors.primary : "#94A3B8"}
+                      />
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[
+                styles.saveTitleBtn,
+                (sharing || shareChangeCount === 0) && { opacity: 0.6 },
+              ]}
+              onPress={handleSaveSharing}
+              disabled={sharing || shareChangeCount === 0}
+              activeOpacity={0.85}
+            >
+              {sharing ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.saveTitleText}>
+                  {shareChangeCount > 0 ? `Save changes (${shareChangeCount})` : "No changes"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -1850,12 +1841,12 @@ const styles = StyleSheet.create({
   },
   headerBanner: {
     backgroundColor: colors.primary,
-    paddingHorizontal:wp(20),
-    paddingVertical:hp(16),
+    paddingHorizontal: wp(20),
+    paddingVertical: hp(16),
     marginBottom: hp(20),
   },
   bannerTitle: {
-    fontSize:fontSize(18),
+    fontSize: fontSize(18),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 24,
@@ -1864,28 +1855,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal:wp(20),
+    paddingHorizontal: wp(20),
     marginBottom: hp(12),
   },
   sectionHeaderTitle: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: colors.blackFont,
     lineHeight: 24,
   },
   viewAllText: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#004E9F",
     lineHeight: 24,
   },
   childChipsRow: {
-    paddingHorizontal:wp(20),
+    paddingHorizontal: wp(20),
     gap: wp(10),
     marginBottom: hp(20),
   },
   childChip: {
-    paddingHorizontal:wp(20),
+    paddingHorizontal: wp(20),
     height: hp(44),
     borderRadius: wp(32),
     alignItems: "center",
@@ -1900,7 +1891,7 @@ const styles = StyleSheet.create({
     borderColor: "#D7E3FF",
   },
   childChipText: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.medium,
     lineHeight: 24,
     color: "#004E9F",
@@ -1933,8 +1924,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.primary,
     borderRadius: wp(12),
-    paddingVertical:hp(8),
-    paddingHorizontal:wp(8),
+    paddingVertical: hp(8),
+    paddingHorizontal: wp(8),
     flexDirection: "row",
     alignItems: "center",
     gap: wp(10),
@@ -1943,8 +1934,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#C65647",
     borderRadius: wp(12),
-    paddingVertical:hp(8),
-    paddingHorizontal:wp(8),
+    paddingVertical: hp(8),
+    paddingHorizontal: wp(8),
     flexDirection: "row",
     alignItems: "center",
     gap: wp(8),
@@ -1966,19 +1957,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   btnTitle: {
-    fontSize:fontSize(12),
+    fontSize: fontSize(12),
     fontFamily: fonts.medium,
     color: "#FFFFFF",
     lineHeight: 16,
   },
   btnSubtitle: {
-    fontSize:fontSize(9),
+    fontSize: fontSize(9),
     fontFamily: fonts.regular,
     color: "rgba(255, 255, 255, 0.8)",
     lineHeight: 15,
   },
   videoList: {
-    paddingHorizontal:wp(20),
+    paddingHorizontal: wp(20),
     gap: wp(20),
   },
   videoCard: {
@@ -1994,6 +1985,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+    overflow: "hidden",
   },
   centerPlayBtn: {
     width: wp(52),
@@ -2009,12 +2001,12 @@ const styles = StyleSheet.create({
     bottom: hp(12),
     right: wp(12),
     backgroundColor: "rgba(0, 0, 0, 0.65)",
-    paddingHorizontal:wp(8),
-    paddingVertical:hp(4),
+    paddingHorizontal: wp(8),
+    paddingVertical: hp(4),
     borderRadius: wp(6),
   },
   durationText: {
-    fontSize:fontSize(11),
+    fontSize: fontSize(11),
     fontFamily: fonts.medium,
     color: "#FFFFFF",
     lineHeight: 14,
@@ -2023,22 +2015,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal:wp(16),
-    paddingVertical:hp(14),
+    paddingHorizontal: wp(16),
+    paddingVertical: hp(14),
     backgroundColor: "#FFFFFF",
   },
   videoMetaColumn: {
     flex: 1,
   },
   videoChildName: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.regular,
     color: "#181C1E",
     lineHeight: 20,
     marginBottom: hp(2),
   },
   videoSubDetails: {
-    fontSize:fontSize(13),
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 19,
@@ -2063,7 +2055,7 @@ const styles = StyleSheet.create({
   demoPlayerContainer: {
     flex: 1,
     justifyContent: "space-between",
-    paddingVertical:hp(40),
+    paddingVertical: hp(40),
   },
   modalHeaderRow: {
     flexDirection: "row",
@@ -2071,7 +2063,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   demoModalTitle: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 22,
@@ -2090,7 +2082,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   closeDemoText: {
-    fontSize:fontSize(15),
+    fontSize: fontSize(15),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 20,
@@ -2098,7 +2090,7 @@ const styles = StyleSheet.create({
   recorderContainer: {
     flex: 1,
     justifyContent: "space-between",
-    paddingVertical:hp(40),
+    paddingVertical: hp(40),
   },
   recordingStatusBadge: {
     flexDirection: "row",
@@ -2115,7 +2107,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#DC2626",
   },
   recordingStatusText: {
-    fontSize:fontSize(12),
+    fontSize: fontSize(12),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 16,
@@ -2131,17 +2123,17 @@ const styles = StyleSheet.create({
   },
   cameraFallbackBox: {
     alignItems: "center",
-    paddingHorizontal:wp(20),
+    paddingHorizontal: wp(20),
   },
   fallbackTitle: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 22,
     marginTop: 12,
   },
   fallbackSubText: {
-    fontSize:fontSize(12),
+    fontSize: fontSize(12),
     fontFamily: fonts.regular,
     color: "#94A3B8",
     textAlign: "center",
@@ -2151,12 +2143,12 @@ const styles = StyleSheet.create({
   },
   grantPermissionBtn: {
     backgroundColor: "#035388",
-    paddingHorizontal:wp(16),
-    paddingVertical:hp(8),
+    paddingHorizontal: wp(16),
+    paddingVertical: hp(8),
     borderRadius: wp(8),
   },
   grantPermissionText: {
-    fontSize:fontSize(13),
+    fontSize: fontSize(13),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
   },
@@ -2169,7 +2161,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
-    paddingHorizontal:wp(20),
+    paddingHorizontal: wp(20),
   },
   flipCameraBtn: {
     alignItems: "center",
@@ -2177,7 +2169,7 @@ const styles = StyleSheet.create({
     padding: wp(8),
   },
   flipCameraText: {
-    fontSize:fontSize(11),
+    fontSize: fontSize(11),
     fontFamily: fonts.medium,
     color: "#94A3B8",
     lineHeight: 14,
@@ -2199,14 +2191,14 @@ const styles = StyleSheet.create({
   },
   saveRecordBtn: {
     backgroundColor: "#046A58",
-    paddingHorizontal:wp(24),
+    paddingHorizontal: wp(24),
     height: 40,
     borderRadius: wp(20),
     alignItems: "center",
     justifyContent: "center",
   },
   saveRecordText: {
-    fontSize:fontSize(14),
+    fontSize: fontSize(14),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeight: 18,
@@ -2216,7 +2208,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal:wp(20),
+    paddingHorizontal: wp(20),
   },
   modalContent: {
     width: "100%",
@@ -2232,7 +2224,7 @@ const styles = StyleSheet.create({
     marginBottom: hp(12),
   },
   modalTitle: {
-    fontSize:fontSize(16),
+    fontSize: fontSize(16),
     fontFamily: fonts.bold,
     color: "#0F172A",
     lineHeight: 22,
@@ -2240,15 +2232,15 @@ const styles = StyleSheet.create({
   modalSearchContainer: {
     backgroundColor: "#F1F5F9",
     borderRadius: wp(8),
-    height: 38,
+    height: 44,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal:wp(10),
+    paddingHorizontal: wp(10),
     marginBottom: hp(12),
   },
   modalSearchInput: {
     flex: 1,
-    fontSize:fontSize(13),
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#0F172A",
   },
@@ -2256,15 +2248,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical:hp(10),
-    paddingHorizontal:wp(10),
+    paddingVertical: hp(10),
+    paddingHorizontal: wp(10),
     borderRadius: wp(8),
   },
   modalOptionSelected: {
     backgroundColor: "#F1F5F9",
   },
   modalOptionText: {
-    fontSize:fontSize(14),
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#334155",
     lineHeight: 20,
@@ -2277,12 +2269,97 @@ const styles = StyleSheet.create({
   btnText: {
     color: "#fff",
     fontFamily: fonts.regular,
-    fontSize:fontSize(12),
+    fontSize: fontSize(12),
   },
   uploadingText: {
     color: "#fff",
     fontFamily: fonts.regular,
-    fontSize:fontSize(14),
+    fontSize: fontSize(14),
     textAlign: "center",
+  },
+  searchBar: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: wp(12),
+    height: hp(44),
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: wp(12),
+    marginHorizontal: wp(20),
+    marginBottom: hp(16),
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: fontSize(14),
+    fontFamily: fonts.regular,
+    color: "#0F172A",
+  },
+  titleInput: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: wp(8),
+    height: 44,
+    paddingHorizontal: wp(12),
+    fontSize: fontSize(14),
+    fontFamily: fonts.regular,
+    color: "#0F172A",
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  titleInputError: {
+    borderColor: "#DC2626",
+  },
+  titleErrorText: {
+    color: "#DC2626",
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    marginTop: 6,
+  },
+  saveTitleBtn: {
+    backgroundColor: colors.primary,
+    height: 46,
+    borderRadius: wp(12),
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: hp(16),
+  },
+  saveTitleText: {
+    color: "#FFFFFF",
+    fontSize: fontSize(14),
+    fontFamily: fonts.bold,
+  },
+  shOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  shSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: wp(20),
+    borderTopRightRadius: wp(20),
+    padding: wp(18),
+    paddingBottom: hp(28),
+  },
+  shVideoName: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  shHint: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.regular,
+    color: "#64748B",
+    marginBottom: hp(10),
+  },
+  shLockedText: {
+    fontSize: fontSize(10),
+    fontFamily: fonts.regular,
+    color: "#94A3B8",
+    marginTop: 2,
+  },
+  shEmptyText: {
+    textAlign: "center",
+    color: "#64748B",
+    fontFamily: fonts.regular,
+    paddingVertical: hp(20),
   },
 });
