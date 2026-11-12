@@ -361,7 +361,7 @@ export default function AllPackagesScreen({ navigation }) {
           </View>
         </View>
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.addButton}
           activeOpacity={0.8}
           onPress={() =>
@@ -378,7 +378,7 @@ export default function AllPackagesScreen({ navigation }) {
           <Text style={styles.addButtonText}>
             Add New Package
           </Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </>
     );
   };
@@ -490,7 +490,13 @@ export default function AllPackagesScreen({ navigation }) {
             }
           />
         )}
-
+            <TouchableOpacity
+              style={[styles.fab]}
+              onPress={() => navigation.navigate("AddNewPackage")}
+              activeOpacity={0.8}
+            >
+              <Feather name="plus" size={fontSize(30)} color="#fff" />
+            </TouchableOpacity>
     </View>
   );
 }
@@ -524,15 +530,15 @@ const styles = StyleSheet.create({
   },
 
   pageTitle: {
-    fontSize: fontSize(26),
+    fontSize: fontSize(20),
     lineHeight: 34,
     fontFamily: fonts.semiBold,
     color: "#181C1E",
   },
 
   pageDescription: {
-    marginTop: 4,
-    fontSize: fontSize(15),
+    // marginTop: 2,
+    fontSize: fontSize(14),
     lineHeight: 21,
     fontFamily: fonts.regular,
     color: colors.blackFont,
@@ -559,8 +565,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "flex-start",
-    paddingHorizontal:wp(18),
-    paddingVertical: hp(12),
+    paddingHorizontal:wp(15),
+    paddingVertical: hp(9),
     borderRadius: wp(11),
     backgroundColor: colors.primary,
     marginBottom: 18,
@@ -781,4 +787,20 @@ const styles = StyleSheet.create({
   footerSpace: {
     height: 15,
   },
+  fab: {
+      position: "absolute",
+      right: 18,
+      bottom:15,
+      width: wp(56),
+      height: hp(56),
+      borderRadius: wp(16),
+      backgroundColor: colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+      elevation: 6,
+      shadowColor: "#0d162b",
+      shadowOffset: { width: 0, height: 5 },
+      shadowOpacity: 0.5,
+      shadowRadius: 5,
+    },
 });

@@ -36,6 +36,7 @@ import {
 } from "../../api/admin/api";
 import { colors, commonStyles, fonts } from "../../styles/theme";
 import { fontSize, hp, wp } from "../../utils/responsive";
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 const LIMIT = 10;
 
@@ -88,7 +89,6 @@ const toChildParam = (u) => ({
 function UserCard({ u, onMenu, services = [] }) {
   const meta = ROLE_META[u.role] || { bg: "#F1F5F9", color: "#475569" };
   const btnRef = useRef(null);
-
   const openMenu = () =>
     btnRef.current?.measureInWindow((x, y, w, h) => onMenu(u, { x, y, w, h }));
   return (
@@ -103,15 +103,26 @@ function UserCard({ u, onMenu, services = [] }) {
           style={[
             styles.avatar,
             {
-              backgroundColor: meta.bg,
+              // backgroundColor: meta.bg,
               alignItems: "center",
               justifyContent: "center",
+              borderWidth:1,borderColor:colors.primary,backgroundColor:colors.primary
             },
           ]}
         >
-          <Text style={[styles.avatarText, { color: meta.color }]}>
+          {/* <Text style={[styles.avatarText, { color: meta.color }]}>
             {(u.fullName || "?").trim().charAt(0).toUpperCase()}
+          </Text> */}
+          <Text style={[styles.avatarText, {  }]}>
+            <FontAwesome5 name={u.role === 'Child' ? "child" : u.role === 'Therapist' ? "user-md" : "user"} size={fontSize(20)} color="white"  />
+            {/* {(u.fullName || "?").trim().charAt(0).toUpperCase()} */}
           </Text>
+          {/* <View style={[style, "}uri && !failed? {}:{borderWidth:1,borderColor:colors.primary,backgroundColor:colors.primary}]}> */}
+              
+            {/* <Text style={textStyle}>
+              {name?.trim()?.charAt(0)?.toUpperCase() || "?"}
+            </Text> */}
+          {/* </View> */}
         </View>
       )}
 
@@ -1270,9 +1281,9 @@ const styles = StyleSheet.create({
   },
   avatar: { width: wp(46), height: hp(46), borderRadius: wp(999) },
   avatarText: {
-    fontSize: fontSize(18),
+    fontSize: fontSize(20),
     fontFamily: fonts.semiBold,
-    lineHeight: 24,
+    // lineHeight: 24,
   },
   name: {
     fontSize: fontSize(15),

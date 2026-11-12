@@ -330,6 +330,7 @@ export default function TherapistAvailabilityScreen({ navigation, route }) {
         mode={isTimePicker ? "time" : "date"}
         display={Platform.OS === "ios" ? "spinner" : "default"}
         onValueChange={onPickerChange}
+        {...(isTimePicker ? { is24Hour: true } : {})}
         onDismiss={() => setPicker(null)}
       />
       {Platform.OS === "ios" && (

@@ -20,6 +20,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { useRoute } from '@react-navigation/native';
 import { adminLoginAsUserApi } from '../../api/authApi';
 import { AuthContext } from '../../context/AuthContext';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+
 
 import {
   childUsers,
@@ -105,10 +107,11 @@ const Avatar = ({ uri, name, color, style, textStyle }) => {
   }
 
   return (
-    <View style={[style, { backgroundColor: color }]}>
-      <Text style={textStyle}>
+    <View style={[style, uri && !failed? {}:{borderWidth:1,borderColor:colors.primary,backgroundColor:colors.primary}]}>
+        <FontAwesome5 name="child" size={fontSize(25)} color="white"  />
+      {/* <Text style={textStyle}>
         {name?.trim()?.charAt(0)?.toUpperCase() || "?"}
-      </Text>
+      </Text> */}
     </View>
   );
 };
@@ -496,13 +499,13 @@ export default function ChildrenScreen({ navigation }) {
       const selected = selectedPackage;
 
       if (!Number.isFinite(dp) || dp <= 0) {
-        Alert.alert("Validation Error", "Please enter a valid discounted price.");
+        Alert.alert("Validation Error", "Please enter a valid discount price.");
         return;
       }
       if (selected?.price != null && dp >= selected.price) {
         Alert.alert(
           "Validation Error",
-          `Discounted price must be less than the monthly rate (PKR ${Number(selected.price).toLocaleString()}).`,
+          `Discount price must be less than the monthly rate (PKR ${Number(selected.price).toLocaleString()}).`,
         );
         return;
       }
@@ -908,7 +911,7 @@ export default function ChildrenScreen({ navigation }) {
                         isActive: child.isActive,
                       })}
                   >
-                    <Feather name="calendar" size={16} color="#FFFFFF" />
+                    {/* <Feather name="calendar" size={16} color="#FFFFFF" /> */}
                     <Text style={styles.scheduleButtonText}>View Schedule</Text>
                   </TouchableOpacity>
 
@@ -1099,7 +1102,7 @@ export default function ChildrenScreen({ navigation }) {
 
               {!!selectedPackage && (
                 <>
-                  <Text style={styles.fieldLabel}>Discounted Price (PKR / month)</Text>
+                  <Text style={styles.fieldLabel}>Discount</Text>
                   <TextInput
                     style={styles.formInput}
                     placeholder="Optional, leave blank for full rate"
@@ -1313,14 +1316,14 @@ const styles = StyleSheet.create({
 
   headerTitleContainer: { marginBottom: 16 },
   pageTitle: {
-    fontSize: fontSize(24),
+    fontSize: fontSize(18),
     fontFamily: fonts.bold,
     color: "#181C1E",
     marginBottom: 6,
     lineHeight: 36,
   },
   pageSubTitle: {
-    fontSize: fontSize(15),
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 20,
@@ -1365,7 +1368,7 @@ const styles = StyleSheet.create({
   avatarInitial: {
     width: wp(56),
     height: hp(56),
-    borderRadius: wp(14),
+    borderRadius: wp(999),
     marginRight: wp(14),
     alignItems: "center",
     justifyContent: "center",
@@ -1413,9 +1416,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginTop: 4,
+    marginTop: -2,
   },
-  contactText: { fontSize: fontSize(13), color: "#475569" },
+  contactText: { fontSize: fontSize(12), color: "#475569" },
 
   fab: {
     position: "absolute",
@@ -1548,7 +1551,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  scheduleButtonText: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#FFFFFF" },
+  scheduleButtonText: { fontSize: fontSize(14), fontFamily: fonts.medium, color: "#FFFFFF" },
   helperText: { fontSize: fontSize(12), color: "#64748B", marginBottom: 6 }, // was referenced but missing
 
   packageOption: {
@@ -1637,7 +1640,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#E8F2FC",
   },
-  packagePillText: { fontSize: fontSize(11), fontFamily: fonts.semiBold, color: "#0B4A6F", flexShrink: 1 },
+  packagePillText: { fontSize: fontSize(10), fontFamily: fonts.semiBold, color: "#0B4A6F", flexShrink: 1 },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#0B4A6F" },
   filterButton: {
     width: wp(48),
@@ -1690,7 +1693,7 @@ const styles = StyleSheet.create({
   },
   childNameInline: {
     flexShrink: 1,
-    fontSize: fontSize(18),
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
@@ -1713,7 +1716,7 @@ const styles = StyleSheet.create({
   },
   inactiveBadgeText: {
     fontSize: fontSize(11),
-    fontFamily: fonts.semiBold,
+    // fontFamily: fonts.semiBold,
     color: "#DC2626",
   },
   cardActionsRow: { flexDirection: "row", gap: 12, marginTop: 4 },

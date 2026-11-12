@@ -674,9 +674,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   userName: {
-    fontSize: fontSize(17),
+    fontSize: fontSize(16),
     lineHeight: 22,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semiBold,
     color: "#0F172A",
   },
   timeText: {

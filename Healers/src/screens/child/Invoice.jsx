@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   title: {
-    fontSize:fontSize(24),
+    fontSize:fontSize(22),
     fontFamily: fonts.bold,
     color: "#0F172A",
   },
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize:fontSize(18),
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semiBold,
     color: "#0F172A",
     marginBottom: hp(14),
   },

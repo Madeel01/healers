@@ -63,7 +63,7 @@ export default function BackToAdminButton({ currentScreen }) {
       ],
     );
   };
-  const extraWidthScreens = ["ComplaintDetails","AddFeedback","ChildProfile"];
+  const extraWidthScreens = ["ComplaintDetails","AddFeedback","ChildProfile","TherapistComplaints","ChildComplaints"];
   return (
     <View
       style={[

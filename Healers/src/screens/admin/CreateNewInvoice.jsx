@@ -422,7 +422,6 @@ export default function CreateNewInvoiceScreen({ navigation }) {
       dueDate,
 
       items: items.map((item) => {
-        console.log("iii", item);
         const rate = Number(item.packagePrice) || 0;
         const discount = Number(item.discount) || 0;
         const quantity = 1;
@@ -888,7 +887,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
                   <DateTimePicker
                     value={parseDate(invoiceDate)}
                     mode="date"
-                    display={Platform.OS === "ios" ? "inline" : "default"}
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
                     maximumDate={new Date()}
                     onValueChange={(event, selectedDate) => {
                       if (Platform.OS === "android") {
@@ -932,7 +931,7 @@ export default function CreateNewInvoiceScreen({ navigation }) {
                   <DateTimePicker
                     value={parseDate(dueDate)}
                     mode="date"
-                    display={Platform.OS === "ios" ? "inline" : "default"}
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
                     minimumDate={parseDate(invoiceDate)}
                     onValueChange={(event, selectedDate) => {
                       if (Platform.OS === "android") {

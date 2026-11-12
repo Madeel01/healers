@@ -489,7 +489,7 @@ export default function LeaveRequestScreen({ navigation }) {
                       <DateTimePicker
                         value={pickerMode === "start" ? startDate : endDate}
                         mode="date"
-                        display="spinner"
+                        display={Platform.OS === "ios" ? "spinner" : "default"}
                         onValueChange={handleDateChange}
                       />
                     </View>

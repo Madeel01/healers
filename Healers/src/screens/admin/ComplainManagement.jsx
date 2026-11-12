@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 import {
   getComplaintMessages,
@@ -661,18 +662,19 @@ export default function ComplainManagementScreen({ navigation }) {
             <View key={item.id} style={styles.complaintCard}>
               <View style={styles.userHeader}>
                 <View style={styles.avatarWrapper}>
-                  <View style={[styles.userAvatar, { backgroundColor: getAvatarColor(item.name) }]}>
+                  <View style={[styles.userAvatar, { borderWidth:1,borderColor:colors.primary,backgroundColor:colors.primary }]}>
                     <Text style={styles.userAvatarText}>
-                      {item.name?.trim()?.charAt(0)?.toUpperCase() || "?"}
+                      <FontAwesome5 name={item.role === 'Child' ? "child" : item.role === 'Therapist' ? "user-md" : "user"} size={fontSize(20)} color="white"  />
+                      {/* {item.name?.trim()?.charAt(0)?.toUpperCase() || "?"} */}
                     </Text>
                   </View>
-                  <View style={styles.roleIconBadge}>
+                  {/* <View style={styles.roleIconBadge}>
                     <Feather
                       name={item.role === "Therapist" ? "briefcase" : "smile"}
                       size={fontSize(9)}
                       color="#FFFFFF"
                     />
-                  </View>
+                  </View> */}
                 </View>
 
                 <View style={styles.userDetails}>
@@ -690,13 +692,14 @@ export default function ComplainManagementScreen({ navigation }) {
                   <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
                 </View>
               </View>
-
-              <Text style={styles.complaintTitle} numberOfLines={1}>
-                {item.title}
-              </Text>
-              <Text style={styles.complaintDescription} numberOfLines={2}>
-                {item.description}
-              </Text>
+              <View style={styles.description}>
+                <Text style={styles.complaintTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.complaintDescription} numberOfLines={2}>
+                  {item.description}
+                </Text>
+              </View>
 
               <View style={styles.cardActions}>
                 <TouchableOpacity style={styles.viewDetailsBtn} onPress={() => openDetails(item)}>
@@ -803,7 +806,7 @@ const styles = StyleSheet.create({
   scrollContent: { padding: wp(20), paddingBottom: hp(24) },
 
   pageTitle: {
-    fontSize:fontSize(24),
+    fontSize:fontSize(20),
     fontFamily: fonts.bold,
     color: "#181C1E",
     lineHeight: 30,
@@ -868,7 +871,7 @@ const styles = StyleSheet.create({
   userAvatar: {
     width: wp(44),
     height: hp(44),
-    borderRadius: wp(14),
+    borderRadius: wp(99),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -908,7 +911,9 @@ const styles = StyleSheet.create({
   resolvedBg: { backgroundColor: "#D1FAE5" },
   resolvedText: { color: "#065F46" },
   timeText: { fontSize:fontSize(11), color: "#94A3B8" },
-
+  description: {
+    marginLeft:wp(55)
+  },
   complaintTitle: {
     fontSize:fontSize(16),
     fontFamily: fonts.semiBold,

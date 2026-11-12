@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   },
 
   pageTitle: {
-    fontSize:fontSize(24),
+    fontSize:fontSize(20),
     fontFamily: fonts.semiBold,
     lineHeight: 32,
     color: "#181C1E",
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   },
 
   pageDescription: {
-    fontSize:fontSize(16),
+    fontSize:fontSize(14),
     fontFamily: fonts.regular,
     lineHeight: 22,
     color: colors.blackFont,
@@ -546,14 +546,14 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize:fontSize(24),
+    fontSize:fontSize(20),
     color: "#181C1E",
     fontFamily: fonts.semiBold,
     lineHeight: 32,
   },
 
   viewAllText: {
-    fontSize:fontSize(16),
+    fontSize:fontSize(15),
     color: colors.primary,
     fontFamily: fonts.regular,
     lineHeight: 25,

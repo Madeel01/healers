@@ -22,6 +22,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -47,6 +48,7 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 const MONTH_NAMES = [
   "January",
@@ -826,15 +828,6 @@ export default function FeedbackManagementScreen({ navigation }) {
                                     : item.name}
                                 </Text>
 
-                                {!!item.time && (
-                                  <Text
-                                    style={styles.timeText}
-                                  >
-                                    {formatTo12Hour(
-                                      item.time,
-                                    )}
-                                  </Text>
-                                )}
                               </View>
 
                               <Text
@@ -848,6 +841,15 @@ export default function FeedbackManagementScreen({ navigation }) {
                                 {" • "}
                                 {item.category}
                               </Text>
+                              {!!item.time && (
+                                  <Text
+                                    style={styles.timeText}
+                                  >
+                                    {formatTo12Hour(
+                                      item.time,
+                                    )}
+                                  </Text>
+                                )}
                             </View>
                           </View>
 
@@ -1147,7 +1149,7 @@ export default function FeedbackManagementScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.visibilityRow}>
+              {/* <View style={styles.visibilityRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.visibilityTitle}>
                     Visible to Parent & Child
@@ -1171,92 +1173,69 @@ export default function FeedbackManagementScreen({ navigation }) {
                   }}
                   thumbColor="#FFFFFF"
                 />
-              </View>
+              </View> */}
 
               {selectedFeedback && (
-                <View style={styles.originalFeedback}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      marginBottom: wp(8),
-                    }}
-                  >
-                    {selectedFeedback?.feedbackDetails
-                        ?.therapist?.profileImage
-                      ? (
+                <View style={styles.fbCard}>
+                  {/* Header: avatar + name/badge + date/time */}
+                  <View style={styles.fbHeaderRow}>
+                    <View style={styles.fbAvatarWrap}>
+                      {selectedFeedback?.feedbackDetails?.therapist?.profileImage ? (
                         <Image
                           source={{
-                            uri: selectedFeedback
-                              .feedbackDetails
-                              .therapist
-                              .profileImage,
+                            uri: selectedFeedback.feedbackDetails.therapist.profileImage,
                           }}
-                          style={{
-                            width: wp(36),
-                            height: hp(36),
-                            borderRadius: wp(18),
-                            marginRight: 10,
-                          }}
+                          style={styles.fbAvatarImage}
                         />
-                      )
-                      : (
-                        <View
-                          style={{
-                            width: wp(36),
-                            height: hp(36),
-                            borderRadius: wp(18),
-                            marginRight: 10,
-                            backgroundColor: "#E2E8F0",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <Text>
-                            {selectedFeedback?.feedbackDetails
-                              ?.therapist?.fullName
-                              ?.charAt(0)
-                              ?.toUpperCase() || "T"}
-                          </Text>
+                      ) : (
+                        <View style={styles.fbAvatarFallback}>
+                          <FontAwesome5 name="user-md" size={fontSize(25)} color="white" />
                         </View>
                       )}
+                      {/* <View style={styles.fbOnlineDot} /> */}
+                    </View>
 
-                    <View>
-                      <Text style={styles.originalFeedbackName}>
-                        {selectedFeedback?.feedbackDetails
-                          ?.therapist?.fullName
-                          || "Therapist"}
+                    <View style={styles.fbNameCol}>
+                      <Text style={styles.fbName} numberOfLines={1}>
+                        {selectedFeedback?.feedbackDetails?.therapist?.fullName || "Therapist"}
                       </Text>
 
-                      <Text
-                        style={{
-                          fontSize: fontSize(11),
-                          color: "#64748B",
-                        }}
-                      >
-                        Therapist Feedback
+                      <View style={styles.fbBadge}>
+                        <MaterialIcons name="verified" size={fontSize(14)} color= {colors.primary} />
+                        <Text style={styles.fbBadgeText}>Therapist Feedback</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.fbDateCol}>
+                      <Text style={styles.fbDateText}>
+                        {formatFeedbackDate(selectedFeedback.rawDate)}
                       </Text>
+                      {!!selectedFeedback.startTime && (
+                        <Text style={styles.fbTimeText}>
+                          {formatTo12Hour(selectedFeedback.startTime)}
+                        </Text>
+                      )}
                     </View>
                   </View>
 
-                  <Text style={styles.originalFeedbackText}>
-                    {selectedFeedback?.feedbackDetails?.notes
-                      || "No feedback notes"}
-                  </Text>
+                  {/* Observation note box */}
+                  <View style={styles.fbNoteBox}>
+                    <Text style={styles.fbNoteLabel}>OBSERVATION NOTE</Text>
+                    <Text style={styles.fbNoteText}>
+                      {selectedFeedback?.feedbackDetails?.notes || "No feedback notes"}
+                    </Text>
+                  </View>
 
-                  <Text style={styles.originalFeedbackText}>
-                    Appt: {formatFeedbackDate(
-                      selectedFeedback.rawDate,
-                    )}
-
-                    {selectedFeedback.startTime
-                      ? `, ${
-                        formatTo12Hour(
-                          selectedFeedback.startTime,
-                        )
-                      }`
-                      : ""}
-                  </Text>
+                  {/* Appointment row */}
+                  {/* <View style={styles.fbApptRow}>
+                    <Feather name="calendar" size={fontSize(16)} color="#64748B" />
+                    <Text style={styles.fbApptText}>
+                      Appt: {formatFeedbackDate(selectedFeedback.rawDate)}
+                      {selectedFeedback.startTime
+                        ? `, ${formatTo12Hour(selectedFeedback.startTime)}`
+                        : ""}
+                    </Text>
+                  </View> */}
                 </View>
               )}
 
@@ -1662,12 +1641,12 @@ const styles = StyleSheet.create({
   badgeDone: {
     backgroundColor: "#00725E",
     borderRadius: wp(8),
-    paddingHorizontal: wp(12),
-    paddingVertical: hp(6),
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(4),
   },
   badgeDoneText: {
-    fontSize: fontSize(6),
-    fontFamily: fonts.medium,
+    fontSize: fontSize(8),
+    fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeigt:10
   },
@@ -1686,23 +1665,23 @@ const styles = StyleSheet.create({
   badgePending: {
     backgroundColor: "#006B5D",
     borderRadius: wp(8),
-    paddingHorizontal: wp(10),
+    paddingHorizontal: wp(9),
     paddingVertical: hp(4),
   },
   badgePendingText: {
-    fontSize: fontSize(6),
-    fontFamily: fonts.medium,
+    fontSize: fontSize(8),
+    fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeigt:10
   },
   addFeedbackBtn: {
     backgroundColor: colors.primary,
     borderRadius: wp(8),
-    paddingHorizontal: wp(10),
+    paddingHorizontal: wp(9),
     paddingVertical: hp(4),
   },
   addFeedbackBtnText: {
-    fontSize: fontSize(7),
+    fontSize: fontSize(8),
     fontFamily: fonts.bold,
     color: "#FFFFFF",
     lineHeigt:10
@@ -1832,6 +1811,12 @@ const styles = StyleSheet.create({
   },
   originalFeedbackText: {
     fontSize: fontSize(14),
+    fontFamily: fonts.regular,
+    color: "#334155",
+    lineHeight: 20,
+  },
+  originalFeedbackTextAPP: {
+    fontSize: fontSize(10),
     fontFamily: fonts.regular,
     color: "#334155",
     lineHeight: 20,
@@ -2141,4 +2126,125 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 2,
   },
+  fbCard: {
+  backgroundColor: "#F8FAFC",
+  borderRadius: wp(18),
+  borderWidth: 1,
+  borderColor: "#E2E8F0",
+  padding: wp(14),
+  marginBottom: wp(10),
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.05,
+  shadowRadius: 6,
+  elevation: 2,
+},
+fbHeaderRow: {
+  flexDirection: "row",
+  alignItems: "flex-start",
+},
+fbAvatarWrap: {
+  width: wp(48),
+  height: wp(48),
+  marginRight: wp(12),
+},
+fbAvatarImage: {
+  width: wp(48),
+  height: wp(48),
+  borderRadius: wp(24),
+},
+fbAvatarFallback: {
+  width: wp(48),
+  height: wp(48),
+  borderRadius: wp(24),
+  backgroundColor: colors.primary,
+  alignItems: "center",
+  justifyContent: "center",
+},
+fbOnlineDot: {
+  position: "absolute",
+  right: 0,
+  bottom: 0,
+  width: wp(12),
+  height: wp(12),
+  borderRadius: wp(6),
+  backgroundColor: "#10B981",
+  borderWidth: 2,
+  borderColor: "#F8FAFC",
+},
+fbNameCol: {
+  flex: 1,
+},
+fbName: {
+  fontSize: fontSize(15),
+  fontFamily: fonts.semiBold,
+  color: colors.blackFont,
+  marginBottom: wp(4),
+},
+fbBadge: {
+  flexDirection: "row",
+  alignItems: "center",
+  alignSelf: "flex-start",
+  gap: wp(4),
+  backgroundColor: "#EFF6FF",
+  borderWidth: 1,
+  borderColor: "#BFDBFE",
+  borderRadius: wp(20),
+  paddingHorizontal: wp(8),
+  paddingVertical: hp(3),
+},
+fbBadgeText: {
+  fontSize: fontSize(11),
+  fontFamily: fonts.medium,
+  color: colors.primary,
+},
+fbDateCol: {
+  alignItems: "flex-end",
+  marginLeft: wp(8),
+},
+fbDateText: {
+  fontSize: fontSize(12),
+  fontFamily: fonts.semiBold,
+  color: "#475569",
+},
+fbTimeText: {
+  fontSize: fontSize(11),
+  fontFamily: fonts.regular,
+  color: "#94A3B8",
+  marginTop: 4,
+},
+fbNoteBox: {
+  backgroundColor: "#FFFFFF",
+  borderRadius: wp(14),
+  borderWidth: 1,
+  borderColor: "#E2E8F0",
+  paddingHorizontal: wp(14),
+  paddingVertical: hp(12),
+  marginTop: hp(12),
+},
+fbNoteLabel: {
+  fontSize: fontSize(10),
+  fontFamily: fonts.semiBold,
+  color: "#94A3B8",
+  letterSpacing: 0.8,
+  marginBottom: wp(6),
+},
+fbNoteText: {
+  fontSize: fontSize(15),
+  fontFamily: fonts.regular,
+  color: "#0F172A",
+  lineHeight: 22,
+},
+fbApptRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: wp(8),
+  marginTop: hp(12),
+  paddingHorizontal: wp(4),
+},
+fbApptText: {
+  fontSize: fontSize(12),
+  fontFamily: fonts.regular,
+  color: "#64748B",
+},
 });

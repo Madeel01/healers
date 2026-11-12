@@ -27,6 +27,7 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 const DOCUMENTS = [
   { key: "cnicFront", label: "CNIC Front", hint: "Parent CNIC, front side" },
@@ -214,10 +215,11 @@ const Avatar = ({ uri, name, color, style, textStyle }) => {
   }
 
   return (
-    <View style={[style, { backgroundColor: color }]}>
-      <Text style={textStyle}>
+    <View style={[style, uri && !failed? {}:{borderWidth:1,borderColor:colors.primary,backgroundColor:colors.primary}]}>
+        <FontAwesome5 name="child" size={fontSize(25)} color="white"  />
+      {/* <Text style={textStyle}>
         {name?.trim()?.charAt(0)?.toUpperCase() || "?"}
-      </Text>
+      </Text> */}
     </View>
   );
 };
@@ -400,7 +402,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: wp(72),
     height: hp(72),
-    borderRadius: wp(20),
+    borderRadius: wp(99),
     backgroundColor: "#0B4A6F",
     alignItems: "center",
     justifyContent: "center",

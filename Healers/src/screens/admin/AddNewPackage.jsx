@@ -203,7 +203,7 @@ export default function AddNewPackageScreen({
           </View>
 
           <Text style={styles.helperText}>
-            You can give a child a discounted price when you assign this package to them from the Children page.
+            You can give a child a discount price when you assign this package to them from the Children page.
           </Text>
         </View>
 

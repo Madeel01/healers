@@ -24,6 +24,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { adminLoginAsUserApi } from '../../api/authApi';
 import Feather from '@expo/vector-icons/Feather';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+
 
 import {
   assignChildrenToTherapist,
@@ -87,10 +89,11 @@ const Avatar = ({ uri, name, color, style, textStyle }) => {
   }
 
   return (
-    <View style={[style, { backgroundColor: color }]}>
-      <Text style={textStyle}>
+    <View style={[style, uri && !failed? {}:{borderWidth:1,borderColor:colors.primary,backgroundColor:colors.primary}]}>
+        <FontAwesome5 name="user-md" size={fontSize(25)} color="white"  />
+      {/* <Text style={textStyle}>
         {name?.trim()?.charAt(0)?.toUpperCase() || "?"}
-      </Text>
+      </Text> */}
     </View>
   );
 };
@@ -240,7 +243,7 @@ export default function TherapistsScreen({ navigation }) {
     };
 
     servicesData();
-  }, []);
+  }, [refreshing,loading]);
   const openEditModal = (therapist) => {
     setEditingTherapistId(therapist.id);
 
@@ -896,13 +899,13 @@ export default function TherapistsScreen({ navigation }) {
           </View>
         )}
 
-        {!loading && therapists.map((therapist) => {
+        {!loading && therapists.map((therapist,index) => {
           // const loadPercentage = `${(therapist.currentLoad / (therapist.maxLoad || 1)) * 100}%`;
           const isMenuOpen = activeMenuId === therapist.id;
           const avatarColor = getAvatarColor(therapist.id || therapist.name);
           return (
             <View
-              key={therapist.id}
+              key={`${therapist.id}-${index}`}
               style={[
                 styles.therapistCard,
                 {
@@ -941,7 +944,7 @@ export default function TherapistsScreen({ navigation }) {
                   <View
                     style={{
                       flexDirection: "row",
-                      flexWrap: "wrap",
+                      // flexWrap: "noWrap",
                       gap: 6,
                       marginTop: 4,
                     }}
@@ -1323,7 +1326,7 @@ export default function TherapistsScreen({ navigation }) {
                 />
 
                 <Text style={styles.fieldLabel}>
-                  Password <Text style={styles.requiredText}>*</Text>
+                  Password {!isEditMode ? <Text style={styles.requiredText}>*</Text> : ""}
                 </Text>
                 <View style={styles.passwordInputContainer}>
                   <TextInput
@@ -1340,7 +1343,7 @@ export default function TherapistsScreen({ navigation }) {
                 </View>
 
                 <Text style={styles.fieldLabel}>
-                  Confirm Password <Text style={styles.requiredText}>*</Text>
+                  Confirm Password {!isEditMode ? <Text style={styles.requiredText}>*</Text> : ""}
                 </Text>
                 <View style={styles.passwordInputContainer}>
                   <TextInput
@@ -1355,6 +1358,11 @@ export default function TherapistsScreen({ navigation }) {
                     <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#94A3B8" />
                   </TouchableOpacity>
                 </View>
+                {isEditMode && (
+                                <Text style={styles.helper}>
+                                  Leave blank to keep the current password.
+                                </Text>
+                              )}
                 <View style={styles.passwordButton}>
                   <TouchableOpacity
                     style={[styles.passwordSubButton, {backgroundColor:"#0B4A6F"}]}
@@ -1590,14 +1598,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   pageTitle: {
-    fontSize: fontSize(24),
+    fontSize: fontSize(18),
     fontFamily: fonts.bold,
     color: "#181C1E",
     marginBottom: 6,
     lineHeight: 36,
   },
   pageSubTitle: {
-    fontSize: fontSize(15),
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 20,
@@ -1672,7 +1680,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
   filterChipText: {
-    fontSize: fontSize(15),
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
   },
   activeChipText: {
@@ -1702,7 +1710,7 @@ const styles = StyleSheet.create({
   therapistAvatarInitial: {
     width: wp(56),
         height: hp(56),
-        borderRadius: wp(14),
+        borderRadius: wp(999),
         marginRight: wp(14),
         alignItems: "center",
         justifyContent: "center",
@@ -1715,7 +1723,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   therapistName: {
-    fontSize: fontSize(18),
+    fontSize: fontSize(16),
     fontFamily: fonts.semiBold,
     color: "#0F172A",
     lineHeight: 26,
@@ -1723,14 +1731,16 @@ const styles = StyleSheet.create({
   },
   specialtyBadge: {
     paddingHorizontal: wp(8),
-    paddingVertical: hp(2),
+    // paddingVertical: hp(1),
     borderRadius: wp(10),
     marginBottom: hp(4),
+    flexWrap:"nowrap"
   },
   specialtyText: {
-    fontSize: fontSize(10),
-    fontFamily: fonts.semiBold,
+    fontSize: fontSize(11),
+    fontFamily: fonts.regular,
     lineHeight: 22,
+    flexWrap:"nowrap"
   },
   moreOptionsButton: {
     padding: 6,
@@ -1811,8 +1821,10 @@ const styles = StyleSheet.create({
   },
   scheduleButton: {
     flex: 1,
+    width: wp(44),
+    height: hp(44),
     backgroundColor: colors.primary,
-    borderRadius: wp(14),
+    borderRadius: wp(12),
     paddingVertical: hp(12),
     alignItems: "center",
     justifyContent: "center",
@@ -1820,13 +1832,13 @@ const styles = StyleSheet.create({
   scheduleButtonText: {
     color: "#FFFFFF",
     fontSize: fontSize(14),
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.medium,
     lineHeight: 20,
   },
   mailButton: {
-    width: wp(48),
-    height: hp(48),
-    borderRadius: 14,
+    width: wp(44),
+    height: hp(44),
+    borderRadius: wp(12),
     borderWidth: 1,
     borderColor: "#E2E8F0",
     alignItems: "center",
@@ -2121,8 +2133,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statusFilterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
     backgroundColor: "#F1F5F9",
     borderWidth: 1,
@@ -2159,7 +2171,6 @@ const styles = StyleSheet.create({
   inactiveBadgeText: {
     color: "#B91C1C",
     fontSize: fontSize(11),
-    fontWeight: "700",
   },
   filterSectionTitle: {
     fontSize: fontSize(13),
@@ -2232,13 +2243,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   loginButton: {
-    width: wp(48),
-    height: hp(48),
-    borderRadius: 14,
+    width: wp(44),
+    height: hp(44),
+    borderRadius: wp(12),
     borderWidth: 1,
     borderColor: "#E2E8F0",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#FFFFFF",
   },
+  helper: { fontSize: fontSize(11), color: "#64748B", marginBottom: 6 },
 });

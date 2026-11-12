@@ -21,6 +21,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { FontAwesome6, MaterialCommunityIcons } from '@expo/vector-icons';
+
 
 
 import {
@@ -49,7 +51,7 @@ const TYPES = {
   Therapy: { icon: "activity", color: "#8B5CF6", bg: "#EDE9FE" },
   Message: { icon: "message-circle", color: "#3B82F6", bg: "#DBEAFE" },
   Reminder: { icon: "bell", color: "#D97706", bg: "#FEF3C7" },
-  Alert: { icon: "alert-triangle", color: "#DC2626", bg: "#FEE2E2" },
+  Alert: { icon: "help-circle", color: "#DC2626", bg: "#FEE2E2" },
   General: { icon: "info", color: "#64748B", bg: "#F1F5F9" },
 };
 const FILTERS = ["All","Unread", ...Object.keys(TYPES)];
@@ -184,6 +186,7 @@ export default function NotificationScreen() {
           onPress={() => openNotification(item)}
         >
           <View style={[styles.typeIcon, { backgroundColor: meta.bg }]}>
+            {unread && <View style={styles.unreadDot} />}
             <Feather name={meta.icon} size={wp(21)} color={meta.color} />
           </View>
           <View style={styles.cardContent}>
@@ -191,7 +194,6 @@ export default function NotificationScreen() {
               <Text style={[styles.cardTitle, unread && styles.cardTitleUnread]} numberOfLines={2}>
                 {item.title || "Notification"}
               </Text>
-              {unread && <View style={styles.unreadDot} />}
             </View>
             <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
             <View style={styles.cardBottom}>
@@ -199,17 +201,19 @@ export default function NotificationScreen() {
                 <Text style={[styles.tagText, { color: meta.color }]}>{item.type || "General"}</Text>
               </View>
               {item.attachment?.url && <Feather name="paperclip" size={wp(13)} color="#94A3B8" />}
-              <Text style={styles.timeText}>{timeAgo(item.sentAt || item.createdAt)}</Text>
             </View>
           </View>
-          <TouchableOpacity
-            onPress={() => setDeleteItem(item)}
-            style={styles.deleteIcon}
-            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-            accessibilityLabel="Delete notification"
-          >
-            <Feather name="trash-2" size={wp(17)} color="#94A3B8" />
-          </TouchableOpacity>
+          <View style={styles.notiDelete}>
+            <TouchableOpacity
+              onPress={() => setDeleteItem(item)}
+              style={styles.deleteIcon}
+              hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+              accessibilityLabel="Delete notification"
+            >
+              <Feather name="trash-2" size={wp(17)} color="#ca011c" />
+            </TouchableOpacity>
+            <Text style={styles.timeText}>{timeAgo(item.sentAt || item.createdAt)}</Text>
+          </View>
         </TouchableOpacity>
       </View>
     );
@@ -358,7 +362,7 @@ export default function NotificationScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { paddingTop:hp(10)},
+  screen: { paddingTop:hp(0)},
   header: { backgroundColor: "#FFFFFF", paddingHorizontal: wp(20), paddingTop: hp(16), paddingBottom: hp(16) },
   headerTitleRow: { flexDirection: "row", alignItems: "center" },
   headerIcon: {
@@ -371,10 +375,17 @@ const styles = StyleSheet.create({
     marginRight: wp(12),
   },
   headerTextBlock: { flex: 1 },
-  heading: { fontSize: fontSize(23), fontFamily: fonts.bold, color: "#0F172A" },
-  subtitle: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#94A3B8", marginTop: hp(2) },
+  heading: { fontSize: fontSize(18), fontFamily: fonts.bold, color: "#0F172A" },
+  subtitle: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#94A3B8", marginTop: -4 },
   summary: { marginTop: hp(19), flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  unreadSummary: { flexDirection: "row", alignItems: "center", flexShrink: 1 },
+  notiDelete: {
+    alignItems: "flex-end",
+    justifyContent: "space-around",
+    marginLeft: wp(8),
+    minWidth: wp(48),
+  },
+
+  unreadSummary: { flexDirection: "row", alignItems: "center", flexShrink: 1, borderWidth:1, borderColor:"#c2d0ff", paddingHorizontal:wp(10),paddingVertical: hp(4), borderRadius:22 ,backgroundColor:"#EEF2FF",},
   summaryDot: { width: wp(7), height: wp(7), borderRadius: wp(4), backgroundColor: colors.primary, marginRight: wp(8) },
   summaryLabel: { fontSize: fontSize(12), fontFamily: fonts.medium, color: "#64748B" },
   markAll: { flexDirection: "row", alignItems: "center", gap: wp(5), paddingLeft: wp(8) },
@@ -410,20 +421,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     padding: wp(14),
-    // marginBottom: hp(11),
     backgroundColor: "#FFFFFF",
-    // overflow: "hidden",
     borderRadius: wp(17),
     borderWidth: 1,
     borderColor: "#EDF1F7",
-    // shadowColor: "#1E293B",
-    // shadowOffset: { width: 0, height: 3 },
-    // shadowOpacity: 0.04,
-    // shadowRadius: 9,
-    // shadowColor: "#64748B",
-    // shadowOffset: { width: 0, height: 2 },
-    // shadowOpacity: 0.08,
-    // shadowRadius: 5,
   },
   unreadCard: {
     backgroundColor: "#F9FBFF",
@@ -432,6 +433,7 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.primary,
   },
   typeIcon: {
+    position:"relative",
     width: wp(44),
     height: wp(44),
     borderRadius: wp(14),
@@ -443,7 +445,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: "row", alignItems: "center", gap: wp(7) },
   cardTitle: { flex: 1, fontSize: fontSize(14), fontFamily: fonts.medium, color: "#334155" },
   cardTitleUnread: { fontFamily: fonts.bold, color: "#0F172A" },
-  unreadDot: { width: wp(7), height: wp(7), borderRadius: wp(4), backgroundColor: colors.primary },
+  unreadDot: { position:"absolute",top:0,right:0,width: wp(11), height: wp(11), borderRadius: wp(11), backgroundColor: "#e61531", borderWidth:2, borderColor:"white"},
   message: {
     fontSize: fontSize(12),
     fontFamily: fonts.regular,
@@ -454,8 +456,16 @@ const styles = StyleSheet.create({
   cardBottom: { flexDirection: "row", alignItems: "center", gap: wp(7), marginTop: hp(11) },
   tag: { paddingHorizontal: wp(9), paddingVertical: hp(4), borderRadius: wp(7) },
   tagText: { fontSize: fontSize(10), fontFamily: fonts.semibold },
-  timeText: { marginLeft: "auto", fontSize: fontSize(10), fontFamily: fonts.regular, color: "#94A3B8" },
-  deleteIcon: { padding: wp(5), marginLeft: wp(4) },
+  timeText: {
+    fontSize: fontSize(10),
+    fontFamily: fonts.regular,
+    color: "#94A3B8",
+    textAlign: "right",
+    marginTop: hp(35),
+  },
+  deleteIcon: {
+    padding: wp(5),
+  },
   loadingWrap: { paddingTop: hp(90) },
   footerLoader: { marginVertical: hp(16) },
   emptyState: { alignItems: "center", paddingHorizontal: wp(25) },

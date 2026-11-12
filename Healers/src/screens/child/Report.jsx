@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
-
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { getChildTherapist } from '../../api/child/api';
 import {
   getChildPrograms,
@@ -304,14 +304,15 @@ export default function ReportScreen({ navigation }) {
                   <Text
                     style={styles.avatarFallbackText}
                   >
-                    {(
+                    <FontAwesome5 name="child" size={fontSize(45)} color="white"  />
+                    {/* {(
                       activeChild?.fullName
                       || activeChild?.name
                       || "C"
                     )
                       .trim()
                       .charAt(0)
-                      .toUpperCase()}
+                      .toUpperCase()} */}
                   </Text>
                 </View>
               )}
@@ -607,8 +608,8 @@ const styles = StyleSheet.create({
 
   childAvatarWrapper: {
     backgroundColor: "#FFFFFF",
-    width: wp(128),
-    height: hp(128),
+    width: wp(88),
+    height: hp(88),
     borderRadius: wp(24),
     alignItems: "center",
     justifyContent: "center",
@@ -624,15 +625,15 @@ const styles = StyleSheet.create({
   },
 
   childAvatar: {
-    width: wp(120),
-    height: hp(120),
+    width: wp(80),
+    height: hp(80),
     borderRadius: wp(24),
   },
 
   avatarFallback: {
-   width: wp(120),
-    height: hp(120),
-    borderRadius: wp(24),
+   width: wp(80),
+    height: hp(80),
+    borderRadius: wp(20),
     backgroundColor: "#004E9F",
     alignItems: "center",
     justifyContent: "center",
@@ -642,7 +643,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize(48),
     fontFamily: fonts.bold || "System",
     color: "#FFFFFF",
-    lineHeight:40
+    // lineHeight:28
   },
 
   childName: {
@@ -704,6 +705,7 @@ const styles = StyleSheet.create({
 
   sessionColumn: {
     flex: 1,
+    paddingHorizontal:wp(4),
   },
 
   attendanceColumn: {
@@ -711,7 +713,7 @@ const styles = StyleSheet.create({
   },
 
   sessionLabel: {
-    fontSize: fontSize(16),
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: colors.blackFont,
     lineHeight: 24,
@@ -719,7 +721,7 @@ const styles = StyleSheet.create({
   },
 
   sessionValue: {
-    fontSize: fontSize(16),
+    fontSize: fontSize(14),
     fontFamily: fonts.regular,
     color: "#181C21",
     lineHeight: 24,

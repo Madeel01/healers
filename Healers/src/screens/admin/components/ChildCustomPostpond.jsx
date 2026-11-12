@@ -166,7 +166,7 @@ export default function PostponeCustomModal({ visible, childId, appointment, onC
               <Text style={styles.muted}>{state.message || "No availability on this date."}</Text>
             ) : (
               <View style={styles.card}>
-                <Text style={styles.hint}>{minutes} minute sessions. Crossed-out times are already booked.</Text>
+                <Text style={[styles.hint, {color:"orange"}]}>{minutes} minute sessions. Crossed-out times are already booked.</Text>
                 <View style={styles.slotWrap}>
                   {state.slots.map((s) => {
                     const on = slot?.startTime === s.startTime;
@@ -215,7 +215,7 @@ export default function PostponeCustomModal({ visible, childId, appointment, onC
           <DateTimePicker
             value={fromKey(date || today)}
             mode="date"
-            display={Platform.OS === "ios" ? "inline" : "default"}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
             minimumDate={fromKey(today)}
             maximumDate={fromKey(shiftKey(today, 365))}
             onValueChange={handleDate}

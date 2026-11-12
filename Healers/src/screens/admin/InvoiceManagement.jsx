@@ -2045,14 +2045,14 @@ const styles = StyleSheet.create({
   // Group 18 redesign
   listContent: { paddingHorizontal: wp(16), paddingTop: hp(20), paddingBottom: hp(30), flexGrow: 1 },
   screenTitle: {
-    fontSize: fontSize(26),
+    fontSize: fontSize(20),
     fontFamily: fonts.bold,
     color: "#10364E",
     lineHeight: 36,
-    marginBottom: hp(10),
+    // marginBottom: hp(10),
   },
   introDescription: {
-    fontSize: fontSize(15),
+    fontSize: fontSize(13),
     fontFamily: fonts.regular,
     color: "#526B80",
     lineHeight: 24,

@@ -164,6 +164,7 @@ export default function FeedbackScreen({ navigation }) {
       isRefresh ? setRefreshing(true) : setLoading(true);
       setError(null);
       try {
+        setFeedbackItems([]);
         const response = await getFeedbackRequests({ status });
         const payload = response?.data ?? [];
 
@@ -351,7 +352,7 @@ export default function FeedbackScreen({ navigation }) {
           />
         }
       >
-        <View style={styles.metricCard}>
+        <TouchableOpacity style={styles.metricCard} onPress={()=> {fetchFeedback(); setActiveTab("Pending")}}>
           <View style={styles.metricTextContainer}>
             <Text style={styles.metricLabel}>Pending Feedback</Text>
             <Text style={styles.metricValue}>
@@ -376,7 +377,7 @@ export default function FeedbackScreen({ navigation }) {
               color={colors.primary}
             />
           </View>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.metricCard}>
           <View style={styles.metricTextContainer}>
@@ -799,14 +800,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   metricLabel: {
-    fontSize: fontSize(16),
+    fontSize: fontSize(14),
     fontFamily: fonts.semiBold,
     color: colors.blackFont,
     lineHeight: 20,
   },
   metricValue: {
-    fontSize: fontSize(32),
-    fontFamily: fonts.bold,
+    fontSize: fontSize(24),
+    fontFamily: fonts.semiBold,
     color: colors.primary,
     lineHeight: 36,
   },
@@ -932,8 +933,8 @@ const styles = StyleSheet.create({
     marginBottom: hp(5),
   },
   tagBadgeText: {
-    fontSize: fontSize(11),
-    fontFamily: fonts.semiBold,
+    fontSize: fontSize(10),
+    fontFamily: fonts.medium,
     lineHeight: 16,
   },
 
