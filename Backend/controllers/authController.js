@@ -388,17 +388,17 @@ exports.updateMyProfile = async (req, res) => {
     if (phone !== undefined) {
       const normalizedPhone = phone.trim();
 
-      const existingPhone = await User.findOne({
-        phone: normalizedPhone,
-        _id: { $ne: userId },
-      });
+      // const existingPhone = await User.findOne({
+      //   phone: normalizedPhone,
+      //   _id: { $ne: userId },
+      // });
 
-      if (existingPhone) {
-        return res.status(409).json({
-          success: false,
-          message: "Phone number is already in use",
-        });
-      }
+      // if (existingPhone) {
+      //   return res.status(409).json({
+      //     success: false,
+      //     message: "Phone number is already in use",
+      //   });
+      // }
 
       user.phone = normalizedPhone;
     }

@@ -21,7 +21,7 @@
     "android": {
       "softwareKeyboardLayoutMode": "resize",
        "adaptiveIcon": {
-        "foregroundImage": "./assets/hd.png",
+        "foregroundImage": "./assets/ic_launcher_foreground.png",
         "backgroundColor": "#101C36"
       },
       "permissions": [
