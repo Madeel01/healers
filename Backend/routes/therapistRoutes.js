@@ -31,6 +31,9 @@ const {
   getTherapistAttendance,
   markTherapistAttendance,
   updateTherapistAttendance,
+  updateVideoTitle,
+  getShareStatus,
+  updateVideoSharing,
 } = require("../controllers/therapistController");
 
 router.get("/dashboard-stats", protect, getDashboardStats);
@@ -61,5 +64,9 @@ router.post("/feedback/:feedbackId/reply", protect, addTherapistFeedbackReply);
 router.patch("/feedback/:feedbackId/visibility", protect, updateFeedbackVisibility);
 router.get("/therapist-attendance", protect, getTherapistAttendance);
 router.patch("/therapist-attendance/:appointmentId", protect, markTherapistAttendance);
+router.patch("/weekly-videos/:id/title", protect, updateVideoTitle);
+router.get("/weekly-videos/:id/share-status", protect, getShareStatus);
+router.post("/weekly-videos/:id/share", protect, updateVideoSharing);
+
 
 module.exports = router;

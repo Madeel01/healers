@@ -74,12 +74,17 @@ const weeklyVideoSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    sharedFrom: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "WeeklyVideo",
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
-
+weeklyVideoSchema.index({ videoUrl: 1, childId: 1 });
 module.exports = mongoose.model(
   "WeeklyVideo",
   weeklyVideoSchema

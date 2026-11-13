@@ -165,6 +165,8 @@ schedulingSchema.pre("validate", function () {
   const byDate = {};
 
   for (const ap of this.appointments) {
+
+    if (!ap.isNew) continue;
     const dateObj = new Date(ap.date);
     const key = dateObj.toISOString().slice(0, 10);
 
