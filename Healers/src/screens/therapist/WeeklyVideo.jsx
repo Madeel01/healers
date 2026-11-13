@@ -23,6 +23,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Linking,
+  Share
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -998,6 +1000,28 @@ export default function WeeklyVideoScreen({ navigation }) {
     setTitleError("");
     setTitleModalVisible(true);
   };
+
+  const handleShareWhatsApp = async (video) => {
+  if (!video?.videoUrl) {
+    Alert.alert("No Video", "Video link not available.");
+    return;
+  }
+
+  const message = `${video.title || "Video"}\n${video.videoUrl}`;
+    const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
+
+    try {
+      await Linking.openURL(whatsappUrl);
+    } catch (error) {
+      try {
+        await Share.share({ message });
+      } catch (shareError) {
+        console.error("Share error:", shareError);
+        Alert.alert("Error", "Could not share the video.");
+      }
+    }
+  };
+
   return (
     <View style={[styles.mainContainer, commonStyles.container]}>
       <ScrollView
@@ -1249,6 +1273,13 @@ export default function WeeklyVideoScreen({ navigation }) {
                         onPress={() => openShareModal(video)}
                       >
                         <Feather name="share-2" size={fontSize(18)} color={colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.iconActionBtn}
+                        activeOpacity={0.7}
+                        onPress={() => handleShareWhatsApp(video)}
+                      >
+                        <Ionicons name="logo-whatsapp" size={fontSize(20)} color="#25D366" />
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -2041,7 +2072,7 @@ const styles = StyleSheet.create({
   videoActionGroup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: wp(12),
+    gap: wp(6),
   },
   iconActionBtn: {
     padding: wp(6),

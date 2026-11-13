@@ -508,10 +508,10 @@ export default function ComplaintDetailsScreen({ navigation, route }) {
           commonStyles.container,
         ]}
       >
-        <TopBar
+        {/* <TopBar
           navigation={navigation}
           headerTitle="Complaint Details"
-        />
+        /> */}
 
         <View
           style={styles.loader}

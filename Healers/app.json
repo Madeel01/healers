@@ -20,7 +20,7 @@
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",
-       "adaptiveIcon": {
+      "adaptiveIcon": {
         "foregroundImage": "./assets/ic_launcher_foreground.png",
         "backgroundColor": "#101C36"
       },
@@ -50,6 +50,13 @@
         }
       ],
       [
+        "react-native-share",
+        {
+          "ios": ["whatsapp"],
+          "android": ["com.whatsapp", "com.whatsapp.w4b"]
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Allow Healers to access your photos to upload documents.",
@@ -62,7 +69,9 @@
         {
           "icon": "./assets/ic_launcher_foreground.png",
           "defaultChannel": "default",
-          "sounds": ["./assets/sounds/audio6.wav"]
+          "sounds": [
+            "./assets/sounds/audio6.wav"
+          ]
         }
       ],
       [
@@ -85,7 +94,8 @@
       ],
       "expo-video",
       "expo-asset",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "react-native-share"
     ],
     "extra": {
       "eas": {
