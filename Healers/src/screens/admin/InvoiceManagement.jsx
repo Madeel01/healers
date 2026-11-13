@@ -23,7 +23,8 @@ import {
 
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
-
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { shareInvoicePdfById, shareInvoicePdfToWhatsApp } from "../../utils/invoicePdf";
 import {
   addInvoicePaymentApi,
   getInvoicesApi,
@@ -40,7 +41,7 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
-
+import Share from "react-native-share";
 const PAGE_LIMIT = 5;
 
 const STATUS_OPTIONS = [
@@ -185,6 +186,7 @@ export default function InvoiceManagementScreen({
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [paymentNote, setPaymentNote] = useState("");
   const [savingPayment, setSavingPayment] = useState(false);
+  const [sharingId, setSharingId] = useState(null);
 
   const loadingMoreRef = useRef(false);
   const scrollTriggeredRef = useRef(false);
@@ -608,6 +610,23 @@ export default function InvoiceManagementScreen({
     )
     : 0;
 
+  const handleShareWhatsApp = async (invoice) => {
+    if (sharingId) return;
+
+    try {
+      setSharingId(invoice._id);
+      // await shareInvoicePdfById(invoice._id);
+      await shareInvoicePdfToWhatsApp(invoice._id);
+    } catch (error) {
+      console.log("Share invoice error:", error);
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message || error?.message || "Could not share invoice.",
+      );
+    } finally {
+      setSharingId(null);
+    }
+  };
   const renderHeader = () => (
     <View>
       <Text style={styles.screenTitle}>
@@ -992,11 +1011,11 @@ export default function InvoiceManagementScreen({
               style={styles.editPaymentBtn}
               onPress={() => handleEditPayment(item)}
             >
-              <Feather
+              {/* <Feather
                 name="credit-card"
                 size={fontSize(15)}
                 color="#FFFFFF"
-              />
+              /> */}
 
               <Text style={styles.editPaymentText}>
                 Update Payment
@@ -1014,6 +1033,20 @@ export default function InvoiceManagementScreen({
                 size={fontSize(16)}
                 color="#BA1A1A"
               />
+            </TouchableOpacity>
+          )}
+          {canPay && (
+            <TouchableOpacity
+              style={styles.whatsappBtn}
+              activeOpacity={0.8}
+              disabled={!!sharingId}
+              onPress={() => handleShareWhatsApp(item)}
+            >
+              {sharingId === item._id ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Ionicons name="logo-whatsapp" size={fontSize(20)} color="#FFFFFF" />
+              )}
             </TouchableOpacity>
           )}
         </View>
@@ -2208,5 +2241,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     elevation: 5,
+  },
+  whatsappBtn: {
+    width: wp(48),
+    height: hp(46),
+    borderRadius: wp(13),
+    backgroundColor: "#25D366",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

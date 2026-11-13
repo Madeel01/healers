@@ -17,7 +17,9 @@ import {
 
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
-
+import * as Sharing from 'expo-sharing';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { shareInvoicePdfById } from "../../utils/invoicePdf";
 import { getMyInvoicesApi } from '../../api/child/api';
 import {
   colors,
@@ -84,6 +86,7 @@ export default function ChildInvoicesScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [sharingId, setSharingId] = useState(null);
 
   const paginationRef = useRef({
     page: 1,
@@ -218,6 +221,23 @@ export default function ChildInvoicesScreen({ navigation }) {
     });
   };
 
+  const handleShareWhatsApp = async (invoice) => {
+    if (sharingId) return;
+
+    try {
+      setSharingId(invoice._id);
+      await shareInvoicePdfById(invoice._id);
+    } catch (error) {
+      console.log("Share invoice error:", error);
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message || error?.message || "Could not share invoice.",
+      );
+    } finally {
+      setSharingId(null);
+    }
+  };
+
   const renderInvoice = ({ item }) => {
     const color = statusColor(item.status);
 
@@ -290,9 +310,24 @@ export default function ChildInvoicesScreen({ navigation }) {
           </View>
         </View>
 
-        <View style={styles.viewRow}>
-          <Feather name="eye" size={fontSize(15)} color={colors.primary} />
-          <Text style={styles.viewText}>View Invoice</Text>
+        <View style={styles.actionsRow}>
+          <View style={styles.viewRow}>
+            <Feather name="eye" size={fontSize(15)} color={colors.primary} />
+            <Text style={styles.viewText}>View Invoice</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.whatsappBtn}
+            activeOpacity={0.8}
+            disabled={!!sharingId}
+            onPress={() => handleShareWhatsApp(item)}
+          >
+            {sharingId === item._id ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Ionicons name="logo-whatsapp" size={fontSize(22)} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
@@ -593,7 +628,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: "#0F172A",
   },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: wp(10),
+    marginTop: hp(16),
+  },
   viewRow: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -601,7 +643,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#EFF6FF",
     borderRadius: wp(10),
     paddingVertical: 11,
-    marginTop:hp(16),
+  },
+  whatsappBtn: {
+    width: wp(46),
+    height: hp(42),
+    borderRadius: wp(10),
+    backgroundColor: "#25D366",
+    alignItems: "center",
+    justifyContent: "center",
   },
   viewText: {
     fontSize:fontSize(13),

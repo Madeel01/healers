@@ -20,10 +20,12 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  Share,
 } from 'react-native';
 
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
   createComplaintApi,
@@ -400,6 +402,24 @@ export default function ComplaintsScreen({
       },
     );
   };
+  const handleShareComplaint = async (item) => {
+    const message = [
+      `Please take a review of ${role} complaint.\n`,
+      `Complaint: ${item.title}`,
+      `Priority: ${item.priority}`,
+      `Status: ${item.status}`,
+      `Date: ${formatDate(item.createdAt)}`,
+      "",
+      item.description,
+    ].join("\n");
+
+    try {
+      await Share.share({ message });
+    } catch (error) {
+      console.error("Share complaint error:", error);
+      Alert.alert("Error", "Could not share the complaint.");
+    }
+  };
 
   const renderComplaint = ({
     item,
@@ -541,6 +561,14 @@ export default function ComplaintsScreen({
               {item.priority}
             </Text>
           </View>
+          <TouchableOpacity
+            style={styles.shareBtn}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            onPress={() => handleShareComplaint(item)}
+          >
+            <Ionicons name="logo-whatsapp" size={fontSize(19)} color="#25D366" />
+          </TouchableOpacity>
 
           {item.messageCount > 0 && (
             <View
@@ -1266,5 +1294,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.22,
     shadowRadius: 5,
+  },
+  shareBtn: {
+    padding: wp(6),
+    marginRight: wp(4),
   },
 });

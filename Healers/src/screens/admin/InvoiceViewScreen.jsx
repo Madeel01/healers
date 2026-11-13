@@ -31,6 +31,7 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
+import { generateInvoicePdf, shareInvoicePdfToWhatsApp } from "../../utils/invoicePdf";
 
 const COMPANY = {
   name: "HEALERS INSTITUTION",
@@ -630,85 +631,21 @@ export default function InvoiceViewScreen({ navigation, route }) {
     try {
       setDownloading(true);
 
-      const logoAsset = Asset.fromModule(
-        require("../../asstes/logo.png"),
-      );
-
-      await logoAsset.downloadAsync();
-
-      const logoUri = logoAsset.localUri || logoAsset.uri;
-
-      if (!logoUri) {
-        throw new Error("Logo file could not be loaded.");
-      }
-
-      const logoBase64 = await FileSystem.readAsStringAsync(
-        logoUri,
-        {
-          encoding: FileSystem.EncodingType.Base64,
-        },
-      );
-
-      const html = getInvoiceHtml(invoice, logoBase64);
-
-      const result = await Print.printToFileAsync({
-        html,
-        base64: true,
-        width: 595,
-        height: 842,
-      });
-
-      if (!result.base64) {
-        throw new Error("PDF generation failed.");
-      }
-
-      const invoiceNumber = String(
-        invoice.invoiceNumber || invoice._id || "Invoice",
-      ).replace(/[^a-zA-Z0-9_-]/g, "_");
-
-      const fileName = `${invoiceNumber}_${Date.now()}.pdf`;
-
-      const destinationUri = `${FileSystem.documentDirectory}${fileName}`;
-
-      await FileSystem.writeAsStringAsync(
-        destinationUri,
-        result.base64,
-        {
-          encoding: FileSystem.EncodingType.Base64,
-        },
-      );
-
-      const fileInfo = await FileSystem.getInfoAsync(
-        destinationUri,
-        { size: true },
-      );
-
-      if (!fileInfo.exists || !fileInfo.size) {
-        throw new Error("PDF could not be saved.");
-      }
+      const uri = await generateInvoicePdf(invoice);
 
       const canShare = await Sharing.isAvailableAsync();
-
       if (!canShare) {
-        Alert.alert(
-          "PDF Created",
-          "Invoice PDF saved successfully.",
-        );
+        Alert.alert("PDF Created", "Invoice PDF saved successfully.");
         return;
       }
 
-      await Sharing.shareAsync(destinationUri, {
+      await Sharing.shareAsync(uri, {
         mimeType: "application/pdf",
         UTI: "com.adobe.pdf",
         dialogTitle: `Invoice ${invoice.invoiceNumber}`,
       });
     } catch (error) {
-      console.log("Download invoice error:", error);
-
-      Alert.alert(
-        "Error",
-        error?.message || "Failed to download invoice PDF.",
-      );
+      Alert.alert("Error", error?.message || "Failed to download invoice PDF.");
     } finally {
       setDownloading(false);
     }
