@@ -11,225 +11,221 @@ const children = [
   {
     fullName: "Hassan Abdullah",
     fatherName: "Muhammad Zubair",
+    fatherCnic:"3500000000000",
     address: "Topi",
     gender: "Male",
     diagnosis: "Autistic",
     dateOfBirth: "2016-09-07",
-    discountedPrice: 32500,
     phone: "03229950208",
     age: 10,
   },
   {
     fullName: "Abdul Ghani khan",
     fatherName: "M Jawad Khan",
+    fatherCnic:"3500000000001",
     address: "Darra Swabi",
     gender: "Male",
     diagnosis: "Down Syndrom",
     dateOfBirth: "2022-11-03",
-    discountedPrice: 32500,
     phone: "03329040950",
     age: 3,
   },
   {
     fullName: "Salahudin Bilal",
     fatherName: "Bilal Raheem",
+    fatherCnic:"3500000000002",
     address: "Darra Swabi",
     gender: "Male",
     diagnosis: "Autistic",
     dateOfBirth: "2020-05-04",
-    discountedPrice: 22500,
     phone: "03142632381",
     age: 5,
   },
   {
     fullName: "Ibad Ur Rehman",
     fatherName: "Naveed Shah",
+    fatherCnic:"3500000000003",
     address: "Tpoi",
     gender: "Male",
     diagnosis: "ADHD",
     dateOfBirth: "2020-07-27",
-    discountedPrice: 22500,
-    phone: "31229000504",
+    phone: "03355043196",
     age: 5,
   },
   {
     fullName: "Eman Raza",
     fatherName: "Asif Raza",
+    fatherCnic:"3500000000004",
     address: "Town",
     gender: "Female",
     diagnosis: "Speech Delay",
     dateOfBirth: "2018-09-01",
-    discountedPrice: 22000,
     phone: "03451999952",
     age: 7,
   },
   {
     fullName: "Horiya Gul",
     fatherName: "Istiraj Khan",
+    fatherCnic:"3500000000005",
     address: "KSK Razar",
     gender: "Female",
     diagnosis: "Speech Delay",
-    dateOfBirth: "2017-09-04",
-    discountedPrice: 22500,
-    phone: "12899283495",
+    dateOfBirth: "2017-04-09",
+    phone: "03124867768",
     age: 8,
   },
   {
     fullName: "Reyan Basur",
     fatherName: "Basur Ali",
+    fatherCnic:"3500000000006",
     address: "Haryan lahor",
     gender: "Male",
     diagnosis: "Deaf",
     dateOfBirth: "2014-06-01",
-    discountedPrice: 22500,
     phone: "03151206424",
     age: 12,
   },
   {
     fullName: "Muhammad Mustafa",
     fatherName: "Manzor Ali Bacha",
+    fatherCnic:"3500000000007",
     address: "Karachi",
     gender: "Male",
     diagnosis: "Autistic",
     dateOfBirth: "2019-09-07",
-    discountedPrice: 25000,
     phone: "03083561130",
     age: 7,
   },
   {
     fullName: "Azhar Nawaz",
     fatherName: "Muhammad Nawaz",
+    fatherCnic:"3500000000008",
     address: "Maneri",
     gender: "Male",
     diagnosis: "Autistic",
     dateOfBirth: "2014-12-02",
-    discountedPrice: 35000,
-    phone: "44747430494",
+    phone: "03025682690",
     age: 11,
   },
   {
     fullName: "Muhammad Arman",
     fatherName: "Asmat Ali",
+    fatherCnic:"3500000000009",
     address: "Shahmansor",
     gender: "Male",
     diagnosis: "GDD & ASD",
     dateOfBirth: "2017-01-01",
-    discountedPrice: 30000,
-    phone: "971508148651",
+    phone: "03255641491",
     age: 9,
   },
   {
     fullName: "Muaz Ali khan",
     fatherName: "Amir Ali khan",
+    fatherCnic:"3500000000010",
     address: "Maneri",
     gender: "Male",
     diagnosis: "ASD",
     dateOfBirth: "2021-12-09",
-    discountedPrice: 32500,
     phone: "03339235366",
     age: 4,
   },
   {
     fullName: "Muhammad Bilal",
     fatherName: "Aziz ul Hassan",
+    fatherCnic:"3500000000011",
     address: "Zaida",
     gender: "Male",
     diagnosis: "ADHD",
-    dateOfBirth: "2021-09-10",
-    discountedPrice: 7500,
-    phone: "00565770934",
+    dateOfBirth: "2021-10-09",
+    phone: "03020096069",
     age: 4,
   },
   {
     fullName: "Hareem Ashfaq",
     fatherName: "Ashfaq Ahmad",
+    fatherCnic:"3500000000012",
     address: "Panjman",
     gender: "Female",
     diagnosis: "Delay",
     dateOfBirth: "2018-08-08",
-    discountedPrice: 15000,
     phone: "03444448299",
     age: 7,
   },
   {
     fullName: "Warda Ashfaq",
     fatherName: "Ashfaq Ahmad",
+    fatherCnic:"3500000000012",
     address: "Panjman",
     gender: "Female",
     diagnosis: "Delay",
     dateOfBirth: "2023-08-01",
-    discountedPrice: 15000,
     phone: "03444448299",
     age: 3,
   },
   {
     fullName: "Manahel Ashfaq",
     fatherName: "Ashfaq Ahmad",
+    fatherCnic:"3500000000012",
     address: "Panjman",
     gender: "Female",
     diagnosis: "",
     dateOfBirth: "2011-08-08",
-    discountedPrice: 15000,
     phone: "03444448299",
     age: 14,
   },
   {
     fullName: "Jabran Ashfaq",
     fatherName: "Ashfaq Ahmad",
+    fatherCnic:"3500000000012",
     address: "Panjman",
     gender: "Male",
     diagnosis: "Delay",
     dateOfBirth: "2015-11-07",
-    discountedPrice: 10000,
     phone: "03444448299",
     age: 10,
   },
   {
     fullName: "Rehman Amir",
     fatherName: "DR Amir",
+    fatherCnic:"3500000000013",
     address: "Shahmansor",
     gender: "Female",
     diagnosis: "ADHA",
     dateOfBirth: "2022-06-03",
-    discountedPrice: 31000,
     phone: "03325428893",
     age: 3,
   },
   {
     fullName: "Affan Khan",
     fatherName: "Imran khan",
+    fatherCnic:"3500000000014",
     address: "Maneri",
     gender: "Male",
     diagnosis: "ADHD",
     dateOfBirth: "2022-01-16",
-    discountedPrice: 32000,
     phone: "03005887345",
     age: 3,
   },
   {
     fullName: "Yaman",
     fatherName: "Hasan Muhammad",
+    fatherCnic:"3500000000016",
     address: "Thand Kohi",
     gender: "Male",
     diagnosis: "",
     dateOfBirth: null,
-    discountedPrice: 25000,
-    phone: "96597423193",
+    phone: "03489818618",
     age: 0,
   },
 ];
 
 function createEmail(fullName, fatherName) {
-  const firstName = fullName.trim().split(/\s+/)[0];
+  const childFirstName = fullName.trim().split(/\s+/)[0];
+  const fatherFirstName = fatherName.trim().split(/\s+/)[0];
 
-  const username = `${firstName}.${fatherName}`
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
+  return `${childFirstName}.${fatherFirstName}@gmail.com`
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ".")
-    .replace(/^\.+|\.+$/g, "");
-
-  return `${username}@${EMAIL_DOMAIN}`.toLowerCase();
+    .replace(/[^a-z0-9.@]/g, "");
 }
 
 async function createChildUsers() {
@@ -250,7 +246,7 @@ async function createChildUsers() {
 
     await mongoose.connect(process.env.MONGO_URI);
     console.log("Connected to MongoDB");
-
+    await User.deleteMany({ role: "Child"});
     const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
 
     let created = 0;
@@ -268,10 +264,11 @@ async function createChildUsers() {
           skipped++;
           continue;
         }
-
+        
         const user = await User.create({
           fullName: child.fullName,
           email,
+          fatherCnic:child.fatherCnic,
           password: hashedPassword,
           phone: child.phone,
           role: "Child",
@@ -286,7 +283,6 @@ async function createChildUsers() {
           agreeTerms: true,
           isLogin: false,
           fatherName: child.fatherName,
-          fatherCnic: "",
           address: child.address,
           age: child.age,
           dateOfBirth: child.dateOfBirth

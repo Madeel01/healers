@@ -46,7 +46,7 @@ const sendOnce = async (invoice, key, title, message, adminId) => {
       await sendNotifications({
         title,
         message,
-        type: "Alert",
+        type: "Reminder",
         audience: "users",
         users: [String(invoice.childId)],
         createdBy: adminId,

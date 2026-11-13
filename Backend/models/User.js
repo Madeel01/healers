@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["Admin", "Therapist", "Parent", "Child"],
+      enum: ["Admin","Manager","Therapist", "Parent", "Child"],
       default: "Child",
     },
     permissions: [{

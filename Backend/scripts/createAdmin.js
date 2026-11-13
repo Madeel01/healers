@@ -4,9 +4,9 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 
 const ADMIN = {
-  fullName: "Ahyan",
-  email: "ahyan618@gmail.com",
-  password: "Test@123",
+  fullName: "Reman",
+  email: "Ezhatdigitial@gmail.com",
+  password: "ts#R$89@S8",
 };
 
 const createAdmin = async () => {

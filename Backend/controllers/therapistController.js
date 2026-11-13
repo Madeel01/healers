@@ -9,6 +9,8 @@ const WeeklyVideo = require("../models/Video");
 const cloudinary = require("../config/cloudinary");
 const QuarterlyReport = require("../models/QuarterlyReport");
 const { sendNotifications } = require("../utils/notificationService");
+const escapeRegex = (s = "") => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -2564,7 +2566,7 @@ exports.createLeaveRequest = async (req, res) => {
       await sendNotifications({
         title: "New Leave Request",
         message: `A new leave request has been submitted by a ${userRole}.\nLeave Type: ${leaveType}`,
-        type: "Alert",
+        type: "Reminder",
         audience: "users",
         users: adminIds,
         createdBy: applicantId,
@@ -2643,10 +2645,17 @@ exports.getVideosByChild = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
+    const search = (req.query.search || "").trim();
+
     const filter = {
       childId,
       therapistId,
     };
+
+    if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.title = { $regex: escaped, $options: "i" };
+    }
 
     const [videos, totalVideos] = await Promise.all([
       WeeklyVideo.find(filter)
@@ -2722,6 +2731,21 @@ exports.createWeeklyVideo = async (req, res) => {
         message: "videoUrl is required.",
       });
     }
+    const cleanTitle = typeof title === "string" ? title.trim() : "";
+
+    if (!cleanTitle) {
+      return res.status(400).json({
+        success: false,
+        message: "Video title is required.",
+      });
+    }
+
+    if (cleanTitle.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Title must be 100 characters or less.",
+      });
+    }
 
     const video = await WeeklyVideo.create({
       therapistId,
@@ -2762,7 +2786,7 @@ exports.createWeeklyVideo = async (req, res) => {
     );
     await sendNotifications({
       title: "New Weekly Video Available",
-      message: `Your therapist has uploaded a new video for you.\nVideo Title: ${title || "Live Session"}}`,
+      message: `Your therapist has uploaded a new video for you.\nVideo Title: ${cleanTitle}`,
       type: "Reminder",
       audience: "users",
       users: [String(childId)],
@@ -2812,33 +2836,32 @@ exports.deleteWeeklyVideo = async (req, res) => {
         message: "Video not found.",
       });
     }
+    const stillUsed = await WeeklyVideo.exists({
+      videoUrl: video.videoUrl,
+      _id: { $ne: video._id },
+    });
+    let cloudinaryDeleted = false;
 
-    if (video.cloudinaryPublicId) {
+    if (!stillUsed && video.cloudinaryPublicId) {
       try {
         const cloudinaryResult = await cloudinary.uploader.destroy(
           video.cloudinaryPublicId,
           {
             resource_type: video.cloudinaryResourceType || "video",
-
             type: "upload",
-
             invalidate: true,
           },
         );
 
-        console.log(
-          "Cloudinary delete result:",
-          cloudinaryResult,
-        );
+        console.log("Cloudinary delete result:", cloudinaryResult);
+
+        cloudinaryDeleted = cloudinaryResult.result === "ok";
 
         if (
-          cloudinaryResult.result !== "ok"
-          && cloudinaryResult.result !== "not found"
+          cloudinaryResult.result !== "ok" &&
+          cloudinaryResult.result !== "not found"
         ) {
-          console.warn(
-            "Cloudinary asset was not deleted:",
-            cloudinaryResult,
-          );
+          console.warn("Cloudinary asset was not deleted:", cloudinaryResult);
         }
       } catch (cloudinaryError) {
         console.error(
@@ -2854,16 +2877,14 @@ exports.deleteWeeklyVideo = async (req, res) => {
       }
     }
 
-    await WeeklyVideo.deleteOne({
-      _id: video._id,
-    });
+    await WeeklyVideo.deleteOne({ _id: video._id });
 
     return res.status(200).json({
       success: true,
       message: "Video deleted successfully.",
       data: {
         id: video._id,
-        cloudinaryDeleted: !!video.cloudinaryPublicId,
+        cloudinaryDeleted,
       },
     });
   } catch (error) {
@@ -2986,7 +3007,7 @@ exports.createQuarterlyReport = async (req, res) => {
         await sendNotifications({
           title: existing ? "Quarterly report updated" : "New quarterly report",
           message: `${therapistName} ${existing ? "updated" : "submitted"} the ${quarter} ${year} report for ${childName}.`,
-          type: "Alert",
+          type: "General",
           audience: "users",
           users: admins.map((a) => a._id),
           createdBy: therapistId,
@@ -3547,5 +3568,154 @@ exports.markTherapistAttendance = async (req, res) => {
       success: false,
       message: "Failed to mark therapist attendance.",
     });
+  }
+};
+
+const getAssignedChildIds = async (therapistId) => {
+  const rows = await TherapistAssignment.find({ therapistId })
+    .select("childIds")
+    .lean();
+  return [...new Set(rows.flatMap((r) => (r.childIds || []).map(String)))];
+};
+
+exports.updateVideoTitle = async (req, res) => {
+  try {
+    const title = String(req.body.title || "").trim();
+    if (!title) return res.status(400).json({ success: false, message: "Title is required." });
+    if (title.length > 100) return res.status(400).json({ success: false, message: "Title is too long." });
+
+    const video = await WeeklyVideo.findOneAndUpdate(
+      { _id: req.params.id, therapistId: req.user.id },
+      { title },
+      { new: true }
+    );
+    if (!video) return res.status(404).json({ success: false, message: "Video not found." });
+
+    await WeeklyVideo.updateMany(
+      { videoUrl: video.videoUrl, therapistId: req.user.id },
+      { title }
+    );
+
+    return res.json({ success: true, data: video });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+exports.getShareStatus = async (req, res) => {
+  try {
+    const therapistId = req.user?._id || req.user?.id;
+
+    const source = await WeeklyVideo.findOne({
+      _id: req.params.id,
+      therapistId,
+    }).lean();
+    if (!source) {
+      return res.status(404).json({ success: false, message: "Video not found." });
+    }
+
+    const holders = await WeeklyVideo.find({
+      videoUrl: source.videoUrl,
+      therapistId,
+    }).select("childId").lean();
+    const holderIds = holders.map((h) => String(h.childId));
+    const holderSet = new Set(holderIds);
+
+    const assignedIds = await getAssignedChildIds(therapistId);
+    const candidateIds = [...new Set([...assignedIds, ...holderIds])];
+
+    const filter = { _id: { $in: candidateIds }, role: "Child", isActive: true };
+    const search = String(req.query.search || "").trim();
+    if (search) filter.fullName = { $regex: escapeRegex(search), $options: "i" };
+
+    const children = await User.find(filter, { _id: 1, fullName: 1 })
+      .sort({ fullName: 1 })
+      .limit(50)
+      .lean();
+
+    const data = children.map((c) => ({
+      _id: c._id,
+      fullName: c.fullName,
+      isShared: holderSet.has(String(c._id)),
+    }));
+
+    return res.json({ success: true, data, holderCount: holderIds.length });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+exports.updateVideoSharing = async (req, res) => {
+  try {
+    const therapistId = req.user?._id || req.user?.id;
+    const shareIds = Array.isArray(req.body.shareIds) ? req.body.shareIds.map(String) : [];
+    const unshareIds = Array.isArray(req.body.unshareIds) ? req.body.unshareIds.map(String) : [];
+
+    const source = await WeeklyVideo.findOne({
+      _id: req.params.id,
+      therapistId,
+    }).lean();
+    if (!source) {
+      return res.status(404).json({ success: false, message: "Video not found." });
+    }
+
+    const holders = await WeeklyVideo.find({
+      videoUrl: source.videoUrl,
+      therapistId,
+    }).select("childId").lean();
+    const holderSet = new Set(holders.map((h) => String(h.childId)));
+
+    const assigned = new Set(await getAssignedChildIds(therapistId));
+
+    const toShare = [...new Set(shareIds)].filter(
+      (id) => assigned.has(id) && !holderSet.has(id),
+    );
+    const toUnshare = [...new Set(unshareIds)].filter((id) => holderSet.has(id));
+
+    if (!toShare.length && !toUnshare.length) {
+      return res.status(400).json({ success: false, message: "No changes to save." });
+    }
+
+    const finalCount = holderSet.size + toShare.length - toUnshare.length;
+    if (finalCount < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one child must keep this video.",
+      });
+    }
+
+    let removedCount = 0;
+
+    if (toShare.length) {
+      const { _id, createdAt, updatedAt, __v, sharedFrom, ...rest } = source;
+      await WeeklyVideo.insertMany(
+        toShare.map((childId) => ({ ...rest, childId })),
+      );
+
+      try {
+        await sendNotifications({
+          title: "New Weekly Video Available",
+          message: `Your therapist has shared a video with you.\nVideo Title: ${source.title}`,
+          type: "Reminder",
+          audience: "users",
+          users: toShare,
+          createdBy: therapistId,
+          sendPush: true,
+        });
+      } catch (e) {
+        console.error("Share notification error:", e);
+      }
+    }
+
+    if (toUnshare.length) {
+      const result = await WeeklyVideo.deleteMany({
+        videoUrl: source.videoUrl,
+        therapistId,
+        childId: { $in: toUnshare },
+      });
+      removedCount = result.deletedCount || 0;
+    }
+
+    return res.json({ success: true, sharedCount: toShare.length, removedCount });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

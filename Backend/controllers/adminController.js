@@ -930,12 +930,12 @@ const resolvePackageAssignment = async (packageId, discountedPrice) => {
     discounted = Number(discountedPrice);
 
     if (!Number.isFinite(discounted) || discounted <= 0) {
-      return { status: 400, error: "Discounted price must be greater than 0." };
+      return { status: 400, error: "Discount price must be greater than 0." };
     }
     if (discounted >= pkg.price) {
       return {
         status: 400,
-        error: `Discounted price must be less than the package rate (PKR ${pkg.price}).`,
+        error: `Discount price must be less than the package rate (PKR ${pkg.price}).`,
       };
     }
   }
@@ -954,6 +954,14 @@ const upload = multer({
 }).single("file");
 
 
+
+const defaultPermissions = {
+  Admin: ["users:view", "users:create", "users:update", "users:delete", "reports:view"],
+  Manager: ["users:view", "users:create", "users:update", "reports:view"],
+  Therapist: ["therapistScreen"],
+  // Parent: ["sessions:view"],
+  Child: ["childScreen"],
+};
 exports.getAdminOverview = async (req, res) => {
   const userId = req.user.id || req.user._id;
   try {
@@ -1973,9 +1981,10 @@ exports.getTherapistsUsers = async (req, res) => {
     const matchStage = { role: "Therapist" };
 
     if (search) {
+      const regex = escapeRegex(search);
       matchStage.$or = [
-        { fullName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
+        { fullName: { $regex: regex, $options: "i" } },
+        { email: { $regex: regex, $options: "i" } },
       ];
     }
     if (status === "active") {
@@ -3709,7 +3718,7 @@ exports.approveLeaveRequest = async (req, res) => {
         await sendNotifications({
           title: "Session Cancelled",
           message: childMessage,
-          type: "Alert",
+          type: "Appointment",
           audience: "users",
           users: cancelled.childIds,
           createdBy: adminId,
@@ -3725,7 +3734,7 @@ exports.approveLeaveRequest = async (req, res) => {
       await sendNotifications({
         title: "Leave Request Approved",
         message: message,
-        type: "Alert",
+        type: "Reminder",
         audience: "users",
         users: [String(leaveRequest?.applicantId)],
         createdBy: adminId,
@@ -3785,7 +3794,7 @@ exports.rejectLeaveRequest = async (req, res) => {
       await sendNotifications({
         title: "Leave Request Rejected",
         message: `Your leave request has been rejected. Reason: ${rejectionReason.trim()}`,
-        type: "Alert",
+        type: "Reminder",
         audience: "users",
         users: [String(leaveRequest?.applicantId)],
         createdBy: adminId,
@@ -4700,9 +4709,10 @@ exports.getAllBroadcasts = async (req, res) => {
     const userId = req.user.id || req.user._id;
     const filter = {};
     if (search.trim()) {
+      const regex = escapeRegex(search);
       filter.$or = [
-        { title: { $regex: search.trim(), $options: "i" } },
-        { message: { $regex: search.trim(), $options: "i" } },
+        { title: { $regex: regex, $options: "i" } },
+        { message: { $regex: regex, $options: "i" } },
       ];
     }
     if (status.trim() && status !== "all") filter.status = status.trim();
@@ -6110,9 +6120,10 @@ exports.getBatchEligibleChildren = async (req, res) => {
     };
 
     if (search) {
+      const regex = escapeRegex(search);
       filter.$or = [
-        { fullName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
+        { fullName: { $regex: regex, $options: "i" } },
+        { email: { $regex: regex, $options: "i" } },
       ];
     }
 
@@ -7444,7 +7455,7 @@ exports.createChildCustomAppointment = async (req, res) => {
     await sendNotifications({
       title: "New Session Scheduled",
       message: `A new session has been scheduled for ${date} from ${startTime} to ${endTime}.`,
-      type: "Alert",
+      type: "Appointment",
       audience: "users",
       users: [String(childId), String(therapistId)],
       createdBy: req.user?.id,
@@ -7547,16 +7558,36 @@ const parsePackageBody = (body = {}) => {
   return { name, price };
 };
 
+
 exports.getAllPackages = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 5, 1), 50);
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 5, 1),
+      50
+    );
     const skip = (page - 1) * limit;
 
     const search = String(req.query.search || "").trim();
-    const filter = search
-      ? { name: { $regex: escapeRegex(search), $options: "i" } }
-      : {};
+
+    let filter = {};
+
+    if (search) {
+      const escapedSearch = escapeRegex(search);
+
+      const conditions = [
+        { name: { $regex: escapedSearch, $options: "i" } },
+      ];
+
+      // Search by exact package amount
+      const amount = Number(search);
+
+      if (Number.isFinite(amount) && search !== "") {
+        conditions.push({ price: amount });
+      }
+
+      filter = { $or: conditions };
+    }
 
     const [packages, total] = await Promise.all([
       Package.find(filter)
@@ -7565,6 +7596,7 @@ exports.getAllPackages = async (req, res) => {
         .skip(skip)
         .limit(limit)
         .lean(),
+
       Package.countDocuments(filter),
     ]);
 
@@ -7580,6 +7612,7 @@ exports.getAllPackages = async (req, res) => {
     });
   } catch (error) {
     console.error("getAllPackages:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to fetch packages.",
@@ -7682,7 +7715,7 @@ exports.updatePackage = async (req, res) => {
         return res.status(409).json({
           success: false,
           message:
-            `${conflicting} child(ren) have a discounted price equal to or above PKR ${parsed.price}. Update their discount first.`,
+            `${conflicting} child(ren) have a discount price equal to or above PKR ${parsed.price}. Update their discount first.`,
         });
       }
     }
@@ -8371,7 +8404,7 @@ exports.saveChildCustomSchedule = async (req, res) => {
 
     const r = await analyzeCustomPlan(childId, req.body);
     if (r.error) return res.status(r.status).json({ success: false, message: r.error });
-
+    
     if (r.conflicts.length) {
       return res.status(409).json({
         success: false,
@@ -8416,7 +8449,7 @@ exports.saveChildCustomSchedule = async (req, res) => {
     await sendNotifications({
       title: "New Sessions Scheduled",
       message: `${created} new therapy session(s) have been scheduled for you.`,
-      type: "Alert",
+      type: "Appointment",
       audience: "users",
       users: [String(childId), String(therapistId)],
       createdBy: req.user?.id,
@@ -8456,7 +8489,7 @@ exports.cancelChildCustomAppointment = async (req, res) => {
     await sendNotifications({
       title: "Session Cancelled",
       message: "A therapy session scheduled for you has been cancelled.",
-      type: "Alert",
+      type: "Reminder",
       audience: "users",
       users: [String(childId), String(doc.therapistId)],
       createdBy: req.user?.id,
@@ -8551,7 +8584,7 @@ exports.postponeChildCustomAppointment = async (req, res) => {
     await sendNotifications({
       title: "Session Rescheduled",
       message: `Your therapy session has been rescheduled to ${date} from ${startTime} to ${endTime}.`,
-      type: "Alert",
+      type: "Reminder",
       audience: "users",
       users: [String(childId), String(doc.therapistId)],
       createdBy: req.user?.id,

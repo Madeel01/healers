@@ -1631,7 +1631,7 @@ exports.getAttendance = async (req, res) => {
       .populate({
         path: "therapistId",
         model: "User",
-        select: "fullName",
+        select: "fullName profileImage",
       })
       .lean();
 
@@ -1643,11 +1643,11 @@ exports.getAttendance = async (req, res) => {
       }
 
       const therapist = record.therapistId || null;
-
+      
       const therapistId = therapist?._id
         ? String(therapist._id)
         : null;
-
+      const therapistImageUrl = therapist?.profileImage || "";
       const therapistName = therapist?.fullName || "";
 
       record.appointments.forEach((appointment) => {
@@ -1713,7 +1713,7 @@ exports.getAttendance = async (req, res) => {
             || "Pending",
 
           therapistId,
-
+          therapistImageUrl,
           therapistName,
 
           type: appointment.type || null,
@@ -2549,7 +2549,7 @@ exports.createComplaint = async (req, res) => {
       await sendNotifications({
         title: "New Complaint Received",
         message: `A new ${priority} priority complaint has been submitted by a ${userRole}. \nComplaint: ${title.trim()}`,
-        type: "Alert",
+        type: "Reminder",
         audience: "users",
         users: adminIds,
         createdBy: userId,
