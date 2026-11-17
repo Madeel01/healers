@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.adeeltozcall.Healers'
+    namespace 'com.muazzam.Healers'
     defaultConfig {
-        applicationId 'com.adeeltozcall.Healers'
+        applicationId 'com.muazzam.Healers'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

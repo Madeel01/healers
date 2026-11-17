@@ -24,7 +24,7 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { shareInvoicePdfById, shareInvoicePdfToWhatsApp } from "../../utils/invoicePdf";
+import { shareInvoicePdfById } from "../../utils/invoicePdf";
 import {
   addInvoicePaymentApi,
   getInvoicesApi,
@@ -41,7 +41,6 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
-import Share from "react-native-share";
 const PAGE_LIMIT = 5;
 
 const STATUS_OPTIONS = [
@@ -615,8 +614,8 @@ export default function InvoiceManagementScreen({
 
     try {
       setSharingId(invoice._id);
-      // await shareInvoicePdfById(invoice._id);
-      await shareInvoicePdfToWhatsApp(invoice._id);
+      await shareInvoicePdfById(invoice._id);
+      // await shareInvoicePdfToWhatsApp(invoice._id);
     } catch (error) {
       console.log("Share invoice error:", error);
       Alert.alert(

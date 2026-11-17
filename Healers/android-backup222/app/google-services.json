@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "765530840378",
+    "project_id": "healers-1284a",
+    "storage_bucket": "healers-1284a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:765530840378:android:97b78a7fc57fc88447c403",
+        "android_client_info": {
+          "package_name": "com.muazzam.Healers"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDCbkCs9MxkXTxXy7zG7CYr_xkDHaiClk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

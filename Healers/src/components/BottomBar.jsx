@@ -38,8 +38,7 @@ export default function BottomBar({ activeTab = "AdminDashboard" }) {
 
     try {
       const response = await getUnreadNotificationCountApi();
-      console.log("response", response);
-
+      
       if (response.success) {
         setUnreadCount(response.count || 0);
       }

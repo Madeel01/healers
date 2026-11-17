@@ -20,6 +20,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { setupNotificationListeners } from './src/utils/pushNotifications';
 import { installCustomAlert } from './src/utils/customAlert';
 import AlertHost from './src/components/AlertHost';
+import { DashboardLayoutProvider } from './src/context/DashboardLayoutContext';
 installCustomAlert(); 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -52,7 +53,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <AppNavigator />
+        <DashboardLayoutProvider>
+          <AppNavigator />
+        </DashboardLayoutProvider>
       </AuthProvider>
       <AlertHost/>
     </SafeAreaProvider>
