@@ -49,13 +49,7 @@
           "recordAudioAndroid": true
         }
       ],
-      [
-        "react-native-share",
-        {
-          "ios": ["whatsapp"],
-          "android": ["com.whatsapp", "com.whatsapp.w4b"]
-        }
-      ],
+     
       [
         "expo-image-picker",
         {
@@ -95,7 +89,6 @@
       "expo-video",
       "expo-asset",
       "expo-splash-screen",
-      "react-native-share"
     ],
     "extra": {
       "eas": {

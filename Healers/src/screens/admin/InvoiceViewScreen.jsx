@@ -3,9 +3,6 @@ import React, {
   useState,
 } from 'react';
 
-import { Asset } from 'expo-asset';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import {
   ActivityIndicator,
@@ -26,12 +23,12 @@ import {
   colors,
   fonts,
 } from '../../styles/theme';
+import { generateInvoicePdf } from '../../utils/invoicePdf';
 import {
   fontSize,
   hp,
   wp,
 } from '../../utils/responsive';
-import { generateInvoicePdf, shareInvoicePdfToWhatsApp } from "../../utils/invoicePdf";
 
 const COMPANY = {
   name: "HEALERS INSTITUTION",

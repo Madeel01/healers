@@ -1,9 +1,10 @@
-import { Asset } from "expo-asset";
-import * as FileSystem from "expo-file-system/legacy";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
-import { getInvoiceByIdApi } from "../api/admin/api";
+// import Share from 'react-native-share';
+import { getInvoiceByIdApi } from '../api/admin/api';
 
 // ...COMPANY, money, dateText, escapeHtml, durationText, getInvoiceHtml go here...
 const COMPANY = {
@@ -574,39 +575,39 @@ export const shareInvoicePdfById = async (invoiceId) => {
     dialogTitle: `Invoice ${invoice.invoiceNumber}`,
   });
 };
-export const shareInvoicePdfToWhatsApp = async (invoiceId) => {
-  const result = await getInvoiceByIdApi(invoiceId);
+// export const shareInvoicePdfToWhatsApp = async (invoiceId) => {
+//   const result = await getInvoiceByIdApi(invoiceId);
 
-  if (!result?.success) {
-    throw new Error(result?.message || "Invoice not found.");
-  }
+//   if (!result?.success) {
+//     throw new Error(result?.message || "Invoice not found.");
+//   }
 
-  const invoice = result.data;
-  const uri = await generateInvoicePdf(invoice); 
+//   const invoice = result.data;
+//   const uri = await generateInvoicePdf(invoice);
 
-  try {
-    await Share.shareSingle({
-      social: Share.Social.WHATSAPP,
-      url: uri,
-      type: "application/pdf",
-      filename: `Invoice_${invoice.invoiceNumber}`,
-      message: `Invoice ${invoice.invoiceNumber}`,
-    });
-  } catch (error) {
-    const msg = String(error?.message || "");
+//   try {
+//     await Share.shareSingle({
+//       social: Share.Social.WHATSAPP,
+//       url: uri,
+//       type: "application/pdf",
+//       filename: `Invoice_${invoice.invoiceNumber}`,
+//       message: `Invoice ${invoice.invoiceNumber}`,
+//     });
+//   } catch (error) {
+//     const msg = String(error?.message || "");
 
-    if (msg.includes("User did not share") || msg.includes("cancel")) {
-      return;
-    }
+//     if (msg.includes("User did not share") || msg.includes("cancel")) {
+//       return;
+//     }
 
-    if (
-      msg.toLowerCase().includes("not installed")
-      || msg.toLowerCase().includes("not found")
-      || msg.toLowerCase().includes("no app")
-    ) {
-      throw new Error("WhatsApp is not installed on this device.");
-    }
+//     if (
+//       msg.toLowerCase().includes("not installed")
+//       || msg.toLowerCase().includes("not found")
+//       || msg.toLowerCase().includes("no app")
+//     ) {
+//       throw new Error("WhatsApp is not installed on this device.");
+//     }
 
-    throw error;
-  }
-};
+//     throw error;
+//   }
+// };
