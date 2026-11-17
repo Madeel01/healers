@@ -583,7 +583,7 @@ export const shareInvoicePdfById = async (invoiceId) => {
 //   }
 
 //   const invoice = result.data;
-//   const uri = await generateInvoicePdf(invoice);
+//   const uri = await generateInvoicePdf(invoice); 
 
 //   try {
 //     await Share.shareSingle({

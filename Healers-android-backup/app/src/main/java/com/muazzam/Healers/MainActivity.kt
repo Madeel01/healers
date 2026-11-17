@@ -1,4 +1,4 @@
-package com.adeeltozcall.Healers
+package com.muazzam.Healers
 
 import android.os.Build
 import android.os.Bundle

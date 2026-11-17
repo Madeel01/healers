@@ -27,7 +27,7 @@ import { AuthContext } from '../context/AuthContext';
 import AddNewPackageScreen from '../screens/admin/AddNewPackage';
 import AdminAttendanceReportScreen
   from '../screens/admin/AdminAttendanceReportScreen';
-import AdminDashboard from '../screens/admin/AdminDashboard';
+import AdminDashboard from '../screens/admin/AdminDashboardHome';
 import AdminQuarterlyReportsScreen
   from '../screens/admin/AdminQuarterlyReportsScreen';
 import AllPackagesScreen from '../screens/admin/AllPackages';
