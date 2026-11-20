@@ -27,6 +27,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 
 import {
+  bulkCancelAppointments,
   cancelChildCustomAppointment,
   deleteChildCustomAppointment,
   getServices,

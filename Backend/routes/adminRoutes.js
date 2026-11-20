@@ -177,8 +177,8 @@ router.post("/batches/:batchId/assignments/:assignmentId/additional", protect, c
 
 router.post("/broadcast", protect, requirePermission("broadcast"),uploadBroadcastAttachment, createBroadcast);
 router.get("/broadcast", protect, requirePermission("broadcast"),getAllBroadcasts);
-router.get("/broadcast/:broadcastId", requirePermission("broadcast"),getBroadcastById);
-router.put("/broadcast/:broadcastId", requirePermission("broadcast"),uploadBroadcastAttachment, updateBroadcast);
+router.get("/broadcast/:broadcastId", protect, requirePermission("broadcast"),getBroadcastById);
+router.put("/broadcast/:broadcastId", protect,requirePermission("broadcast"),uploadBroadcastAttachment, updateBroadcast);
 router.delete("/broadcast/:broadcastId", protect, requirePermission("broadcast"),deleteBroadcast);
 
 router.get("/complaints", protect, requirePermission("complaints"),getComplaints);
