@@ -800,7 +800,8 @@ export default function ChildrenScreen({ navigation }) {
                   },
                 ]}
               >
-                <View style={styles.cardHeaderRow}>
+                {/* marginBottom: 12, */}
+                <View style={[styles.cardHeaderRow, (!canSeeSchedule || !canSeeMessages) ?{}:{marginBottom: 12} ]}>
                   <Avatar
                     uri={child.profileImage}
                     name={child.name}
@@ -1374,7 +1375,7 @@ const styles = StyleSheet.create({
   cardHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    // marginBottom: 12,
   },
   avatarInitial: {
     width: wp(56),

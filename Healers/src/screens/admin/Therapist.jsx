@@ -987,7 +987,7 @@ export default function TherapistsScreen({ navigation }) {
                   },
                 ]}
               >
-                <View style={styles.cardHeaderRow}>
+                <View style={[styles.cardHeaderRow, (!canSeeSchedule || !canSeeMessages) ?{}:{marginBottom: 12}]}>
                   {/* <Image
                   source={{ uri: therapist.avatar }}
                   style={styles.therapistAvatar}
@@ -1939,7 +1939,7 @@ const styles = StyleSheet.create({
   cardHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    // marginBottom: 16,
   },
   therapistAvatarInitial: {
     width: wp(56),
