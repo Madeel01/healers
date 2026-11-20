@@ -10,6 +10,10 @@ const { Expo } = require("expo-server-sdk");
 const Message = require("../models/Message");
 const Feedback = require("../models/Feedback");
 const invoice = require("../models/invoice");
+const UserPermission = require("../models/UserPermission");
+const PermissionGroup = require("../models/PermissionGroup");
+const Permission = require("../models/Permission");
+const { getPermissionKeys } = require("../middleware/requirePermission");
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -112,6 +116,7 @@ exports.login = async (req, res) => {
         console.error("Login alert email failed:", error);
       });
     }
+    const permissions = await getPermissionKeys(user);
     res.json({
       message: "Logged in successfully",
       token,
@@ -121,7 +126,7 @@ exports.login = async (req, res) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
-        permissions: user.permissions,
+        permissions,
         profileImage: user.profileImage,
         age: user.age,
         fatherCnic: user.fatherCnic,
@@ -1155,5 +1160,165 @@ exports.adminImpersonateUser = async (req, res) => {
       success: false,
       message: "Failed to login as selected user",
     });
+  }
+};
+
+
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+const unique = (ids) => [...new Set((ids || []).map(String))];
+
+const checkPermissionIds = async (ids) => {
+  if (!ids.length) return "Select at least one permission.";
+  if (!ids.every(isValidId)) return "Invalid permission id.";
+  const count = await Permission.countDocuments({ _id: { $in: ids }, isActive: true });
+  if (count !== ids.length) return "Some permissions do not exist or are inactive.";
+  return null;
+};
+
+exports.getPermissions = async (req, res) => {
+  try {
+    const permissions = await Permission.find({ isActive: true }).sort({ module: 1 }).lean();
+    res.json({ success: true, data: permissions });
+  } catch (e) {
+    res.status(500).json({ success: false, message: "Could not load permissions." });
+  }
+};
+exports.getGroups = async (req, res) => {
+  try {
+    const groups = await PermissionGroup.find().sort({ type: 1, name: 1 }).lean();
+    res.json({ success: true, data: groups });
+  } catch (e) {
+    res.status(500).json({ success: false, message: "Could not load groups." });
+  }
+};
+
+exports.createGroup = async (req, res) => {
+  try {
+    const name = (req.body.name || "").trim();
+    const description = (req.body.description || "").trim();
+    const permissions = unique(req.body.permissions);
+
+    if (!name) return res.status(400).json({ success: false, message: "Group name is required." });
+
+    const err = await checkPermissionIds(permissions);
+    if (err) return res.status(400).json({ success: false, message: err });
+
+    const group = await PermissionGroup.create({
+      name,
+      description,
+      permissions,
+      type: "custom",
+      appliesToRole: null,
+    });
+    res.status(201).json({ success: true, data: group });
+  } catch (e) {
+    res.status(500).json({ success: false, message: "Could not create group." });
+  }
+};
+exports.updateGroup = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isValidId(id)) return res.status(400).json({ success: false, message: "Invalid group id." });
+
+    const group = await PermissionGroup.findById(id);
+    if (!group) return res.status(404).json({ success: false, message: "Group not found." });
+
+    const permissions = unique(req.body.permissions);
+    const err = await checkPermissionIds(permissions);
+    if (err) return res.status(400).json({ success: false, message: err });
+
+    if (group.type === "custom") {
+      const name = (req.body.name || "").trim();
+      if (!name) return res.status(400).json({ success: false, message: "Group name is required." });
+      group.name = name;
+    }
+    group.description = (req.body.description ?? group.description).trim();
+    group.permissions = permissions;
+    await group.save();
+
+    res.json({ success: true, data: group });
+  } catch (e) {
+    res.status(500).json({ success: false, message: "Could not update group." });
+  }
+};
+exports.deleteGroup = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isValidId(id)) return res.status(400).json({ success: false, message: "Invalid group id." });
+
+    const group = await PermissionGroup.findById(id);
+    if (!group) return res.status(404).json({ success: false, message: "Group not found." });
+    if (group.type === "default") {
+      return res.status(400).json({ success: false, message: "The default group cannot be deleted." });
+    }
+
+    await UserPermission.deleteMany({ groupId: group._id }); // remove from all managers
+    await group.deleteOne();
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: "Could not delete group." });
+  }
+};
+exports.getAssignments = async (req, res) => {
+  try {
+    const managers = await User.find({ role: "Manager" })
+      .select("fullName email isActive")
+      .sort({ fullName: 1 })
+      .lean();
+
+    const userPermissions = await UserPermission.find({
+      userId: { $in: managers.map((m) => m._id) },
+    }).lean();
+
+    res.json({ success: true, managers, userPermissions });
+  } catch (e) {
+    res.status(500).json({ success: false, message: "Could not load assignments." });
+  }
+};
+exports.setUserGroups = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const groupIds = unique(req.body.groupIds);
+
+    if (!isValidId(userId) || !groupIds.every(isValidId)) {
+      return res.status(400).json({ success: false, message: "Invalid id." });
+    }
+
+    const user = await User.findById(userId).select("role");
+    if (!user || user.role !== "Manager") {
+      return res.status(400).json({
+        success: false,
+        message: "Permissions can only be assigned to Managers.",
+      });
+    }
+
+    const count = await PermissionGroup.countDocuments({
+      _id: { $in: groupIds },
+      type: "custom",
+      isActive: true,
+    });
+    if (count !== groupIds.length) {
+      return res.status(400).json({ success: false, message: "Some groups are invalid." });
+    }
+
+    await UserPermission.deleteMany({ userId });
+    if (groupIds.length) {
+      await UserPermission.insertMany(
+        groupIds.map((groupId) => ({ userId, groupId, assignedBy: req.user?._id || null })),
+      );
+    }
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: "Could not save assignment." });
+  }
+};
+
+exports.myPermissions = async (req, res) => {
+  try {
+    const permissions = await getPermissionKeys(req.user);
+    res.json({ success: true, permissions });
+  } catch (e) {
+    res.status(500).json({ success: false, message: "Could not load permissions." });
   }
 };

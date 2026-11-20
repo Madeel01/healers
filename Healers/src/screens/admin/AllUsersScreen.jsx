@@ -25,24 +25,28 @@ import { useFocusEffect } from "@react-navigation/native";
 
 import {
   createAdmin,
+  createManager,
   createTherapist,
   deleteAdmin,
   deleteChild,
   deleteTherapist,
+  deleteManager,
   getAllUsers,
   getServices,
   updateAdmin,
+  updateManager,
   updateTherapist,
 } from "../../api/admin/api";
 import { colors, commonStyles, fonts } from "../../styles/theme";
 import { fontSize, hp, wp } from "../../utils/responsive";
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { getPermissionGroupsApi,   getPermissionAssignmentsApi } from "../../api/authApi";
 
 const LIMIT = 10;
-
 const ROLE_FILTERS = [
   { id: "all", label: "All" },
   { id: "Admin", label: "Admins" },
+  { id: "Manager", label: "Managers" },
   { id: "Therapist", label: "Therapists" },
   { id: "Child", label: "Children" },
 ];
@@ -53,6 +57,7 @@ const STATUS_FILTERS = [
 ];
 const ROLE_META = {
   Admin: { bg: "#EDE9FE", color: "#6D28D9" },
+  Manager: { bg: "#FEF3C7", color: "#B45309" },
   Therapist: { bg: "#DBEAFE", color: "#1D4ED8" },
   Child: { bg: "#DCFCE7", color: "#15803D" },
 };
@@ -114,7 +119,19 @@ function UserCard({ u, onMenu, services = [] }) {
             {(u.fullName || "?").trim().charAt(0).toUpperCase()}
           </Text> */}
           <Text style={[styles.avatarText, {  }]}>
-            <FontAwesome5 name={u.role === 'Child' ? "child" : u.role === 'Therapist' ? "user-md" : "user"} size={fontSize(20)} color="white"  />
+            <FontAwesome5
+              name={
+                u.role === "Child"
+                  ? "child"
+                  : u.role === "Therapist"
+                  ? "user-md"
+                  : u.role === "Manager"
+                  ? "user-tie"
+                  : "user"
+              }
+              size={fontSize(20)}
+              color="white"
+            />
             {/* {(u.fullName || "?").trim().charAt(0).toUpperCase()} */}
           </Text>
           {/* <View style={[style, "}uri && !failed? {}:{borderWidth:1,borderColor:colors.primary,backgroundColor:colors.primary}]}> */}
@@ -249,6 +266,12 @@ function UserFormModal({
   const [saving, setSaving] = useState(false);
   const [phoneTouched, setPhoneTouched] = useState(false);
   const isPhoneValid = PHONE_RX.test(String(form.phone ?? ""));
+  const isManager = role === "Manager";
+  const [groups, setGroups] = useState([]);
+  const [selectedGroups, setSelectedGroups] = useState([]);
+
+  const toggleGroup = (id) =>
+    setSelectedGroups((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   useEffect(() => {
     if (!visible) return;
@@ -267,6 +290,34 @@ function UserFormModal({
     setPhoneTouched(false);
   }, [visible, user, role]);
 
+  useEffect(() => {
+    if (!visible || !isManager) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [g, a] = await Promise.all([
+          getPermissionGroupsApi(),
+          isEdit ? getPermissionAssignmentsApi() : Promise.resolve(null),
+        ]);
+        if (cancelled) return;
+
+        setGroups(g?.data || []);
+        setSelectedGroups(
+          isEdit
+            ? (a?.userPermissions || [])
+                .filter((x) => String(x.userId) === String(user._id))
+                .map((x) => String(x.groupId))
+            : [],
+        );
+      } catch (e) {
+        console.log("Failed to load groups:", e);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [visible, isManager, isEdit, user]);
+
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const save = async () => {
@@ -275,10 +326,10 @@ function UserFormModal({
     const email = (form.email || "").trim();
     const phone = (form.phone || "").trim();
 
-    if (!fullName || !email || !phone) {
+    if (!fullName || !email) {
       return Alert.alert(
         "Validation Error",
-        "Please fill in all required fields.",
+        "Full name and email are required.",
       );
     }
     if (!EMAIL_RX.test(email)) {
@@ -287,7 +338,7 @@ function UserFormModal({
         "Please enter a valid email address.",
       );
     }
-    if (!PHONE_RX.test(phone)) {
+    if (phone && !PHONE_RX.test(phone)) {
       return Alert.alert(
         "Validation Error",
         "Phone number must be in 03011234567 or +923011234567 format.",
@@ -322,10 +373,11 @@ function UserFormModal({
           name: fullName,
           email,
           specialty: form.specialty,
-          phone,
+          ...(phone && { phone }),
           address: (form.address || "").trim(),
           isActive: form.isActive,
           ...(password && { password }),
+          ...(role === "Manager" && { groupIds: selectedGroups }),
         };
         if (isEdit) await updateTherapist(user._id, payload);
         else await createTherapist(payload);
@@ -333,12 +385,17 @@ function UserFormModal({
         const payload = {
           fullName,
           email,
-          phone,
+          ...(phone && { phone }),
           isActive: form.isActive,
           ...(password && { password }),
         };
-        if (isEdit) await updateAdmin(user._id, payload);
-        else await createAdmin(payload);
+        if (role === "Manager") {
+          if (isEdit) await updateManager(user._id, payload);
+          else await createManager(payload);
+        } else {
+          if (isEdit) await updateAdmin(user._id, payload);
+          else await createAdmin(payload);
+        }
       }
       onSaved();
     } catch (e) {
@@ -515,7 +572,7 @@ function UserFormModal({
                 onChangeText={(t) => set("email", t)}
               />
 
-              <Text style={styles.fieldLabel}>Phone {req}</Text>
+              <Text style={styles.fieldLabel}>Phone (Optional)</Text>
               <TextInput
                 style={[
                   styles.input,
@@ -615,7 +672,51 @@ function UserFormModal({
                   </Text>
                 </TouchableOpacity>
               </View>
+              {isManager && (
+                <>
+                  <Text style={styles.fieldLabel}>Permission Groups</Text>
 
+                  {groups
+                    .filter((g) => g.type === "default")
+                    .map((g) => (
+                      <View key={g._id} style={styles.groupRow}>
+                        <View style={[styles.groupBox, styles.groupBoxOn, { opacity: 0.5 }]}>
+                          <Feather name="check" size={14} color="#fff" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.groupLabel}>{g.name}</Text>
+                          <Text style={styles.helper}>Always applied</Text>
+                        </View>
+                      </View>
+                    ))}
+
+                  {groups
+                    .filter((g) => g.type === "custom" && g.isActive)
+                    .map((g) => {
+                      const on = selectedGroups.includes(String(g._id));
+                      return (
+                        <TouchableOpacity
+                          key={g._id}
+                          style={styles.groupRow}
+                          onPress={() => toggleGroup(String(g._id))}
+                          activeOpacity={0.7}
+                        >
+                          <View style={[styles.groupBox, on && styles.groupBoxOn]}>
+                            {on && <Feather name="check" size={14} color="#fff" />}
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.groupLabel}>{g.name}</Text>
+                            <Text style={styles.helper}>{g.permissions.length} permissions</Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+
+                  {groups.filter((g) => g.type === "custom").length === 0 && (
+                    <Text style={styles.helper}>No custom groups yet. You can create them in Permissions.</Text>
+                  )}
+                </>
+              )}
               <Text style={styles.fieldLabel}>Status</Text>
               <Segmented
                 options={[
@@ -720,7 +821,9 @@ export default function AllUsersScreen({ navigation }) {
           status,
         });
         if (id !== requestRef.current) return;
-
+        // console.log(res?.userPermissions,
+        // res?.permissions,
+        // res?.permissionGroups,"resss");
         if (!res?.success) {
           Alert.alert("Error", res?.message || "Could not load users.");
           return;
@@ -798,7 +901,7 @@ export default function AllUsersScreen({ navigation }) {
   const MENU_ITEM_H = 44;
 
   const openMenu = (u, r) => {
-    const manageable = ["Child", "Therapist", "Admin"].includes(u.role);
+    const manageable = ["Child", "Therapist", "Admin", "Manager"].includes(u.role);
     const menuH = (manageable ? 3 : 1) * MENU_ITEM_H + 12;
     const below = r.y + r.h + 4;
     const fitsBelow = below + menuH < winH - insets.bottom - 70;
@@ -844,6 +947,7 @@ export default function AllUsersScreen({ navigation }) {
       let res;
       if (u.role === "Child") res = await deleteChild(u._id);
       else if (u.role === "Therapist") res = await deleteTherapist(u._id);
+      else if (u.role === "Manager") res = await deleteManager(u._id);
       else res = await deleteAdmin(u._id);
 
       const body = res?.data ?? res;
@@ -1054,6 +1158,7 @@ export default function AllUsersScreen({ navigation }) {
               { r: "Child", icon: "smile", label: "Add Child" },
               { r: "Therapist", icon: "user-check", label: "Add Therapist" },
               { r: "Admin", icon: "shield", label: "Add Admin" },
+              { r: "Manager", icon: "briefcase", label: "Add Manager" },
             ].map((o) => (
               <TouchableOpacity
                 key={o.r}
@@ -1102,7 +1207,7 @@ export default function AllUsersScreen({ navigation }) {
                 <Text style={styles.dropdownText}>View</Text>
               </TouchableOpacity>
 
-              {["Child", "Therapist", "Admin"].includes(menu.user.role) && (
+              {["Child", "Therapist", "Admin", "Manager"].includes(menu.user.role) && (
                 <>
                   <TouchableOpacity
                     style={[styles.dropdownItem, styles.dropdownDivider]}
@@ -1567,4 +1672,11 @@ const styles = StyleSheet.create({
     borderColor: "#EF4444",
     borderWidth: 1.5,
   },
+  groupRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 },
+  groupBox: {
+    width: wp(22), height: hp(22), borderRadius: 6, borderWidth: 1.5,
+    borderColor: "#94A3B8", alignItems: "center", justifyContent: "center",
+  },
+  groupBoxOn: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
+  groupLabel: { fontSize: fontSize(14), fontFamily: fonts.semiBold, color: "#0F172A" },
 });

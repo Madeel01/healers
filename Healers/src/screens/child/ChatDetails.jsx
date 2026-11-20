@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -41,6 +42,8 @@ import {
   hp,
   wp,
 } from '../../utils/responsive';
+const showError = (err, fallback) =>
+  Alert.alert("Error", err?.response?.data?.message || fallback);
 
 export default function ChatDetailsScreen({ route, navigation }) {
   const {
@@ -63,6 +66,12 @@ export default function ChatDetailsScreen({ route, navigation }) {
     isOnline: isOnline ?? false,
     lastActive: lastSeen ?? null,
   });
+  const pollAlertShown = useRef(false);
+  const showPollError = (err, fallback) => {
+    if (pollAlertShown.current) return;
+    pollAlertShown.current = true;
+    Alert.alert("Error", err?.response?.data?.message || err?.message || fallback);
+  };
   const formatLastSeenStatus = () => {
     if (partnerStatus.isOnline) return "Active now";
     if (!partnerStatus.lastActive) return "Offline";
@@ -112,6 +121,7 @@ export default function ChatDetailsScreen({ route, navigation }) {
       }
     } catch (err) {
       console.log("fetchMessages error:", err);
+      showPollError(err, "Could not load messages.");
     }
   };
 
@@ -127,26 +137,18 @@ export default function ChatDetailsScreen({ route, navigation }) {
 
   const handleSend = async () => {
     if (!inputText.trim()) return;
-
     const textToSend = inputText.trim();
-    setInputText("");
 
     try {
-      const res = await sendMessageApi({
-        senderId: currentUserId,
-        receiverId,
-        text: textToSend,
-      });
-
-      if (res?.success) {
-        if (!conversationId && res.data?.conversationId) {
-          setConversationId(res.data.conversationId);
-        } else {
-          fetchMessages();
-        }
+      const res = await sendMessageApi({ senderId: currentUserId, receiverId, text: textToSend });
+      if (!res?.success) {
+        return Alert.alert("Error", res?.message || "Message could not be sent.");
       }
+      setInputText(""); // clear sirf success par
+      if (!conversationId && res.data?.conversationId) setConversationId(res.data.conversationId);
+      else fetchMessages();
     } catch (err) {
-      console.log("handleSend error:", err);
+      showError(err, "Message could not be sent.");
     }
   };
 
@@ -264,19 +266,21 @@ export default function ChatDetailsScreen({ route, navigation }) {
       </View>
     );
   };
-
   useEffect(() => {
     const fetchConversationId = async () => {
       if (conversationId || !currentUserId || !receiverId) return;
 
       try {
         const res = await getConversationId(currentUserId, receiverId);
-
+        if (!res?.success) {
+          return showPollError(res, "Could not open chat.");
+        }
         if (res?.success && res?.conversationId) {
           setConversationId(res.conversationId);
         }
       } catch (err) {
-        console.log("fetchConversationId error:", err);
+            console.log("fetchConversationId error:", err);
+            showPollError(err, "Could not open chat.");
       }
     };
 
@@ -321,6 +325,7 @@ export default function ChatDetailsScreen({ route, navigation }) {
           }
         } catch (error) {
           console.log("Last seen API error:", error);
+          showPollError(error, "Could not load status.");
         } finally {
           fetching = false;
         }

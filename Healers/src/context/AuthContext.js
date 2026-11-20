@@ -15,7 +15,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 
-import { updateOnlineStatusApi } from '../api/authApi';
+import { getMyPermissionsApi, updateOnlineStatusApi } from '../api/authApi';
 import {
   removePushTokenApi,
   savePushTokenApi,
@@ -61,7 +61,8 @@ const formatRemainingTime = (milliseconds) => {
     + `${String(seconds).padStart(2, "0")}`
   );
 };
-
+const sameKeys = (a = [], b = []) =>
+  JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
@@ -122,7 +123,7 @@ export const AuthProvider = ({ children }) => {
     },
     [],
   );
-
+  
   const logout = useCallback(
     async (expectedToken) => {
       const currentToken = tokenRef.current;
@@ -585,6 +586,18 @@ export const AuthProvider = ({ children }) => {
       if (!isImpersonationToken(token)) {
         await updateOnlineStatus(true, token);
       }
+      // if (!isImpersonationToken(token) && userRef.current?.role === "Manager") {
+      //   try {
+      //     const res = await getMyPermissionsApi();
+      //     const old = userRef.current.permissions || [];
+      //     const fresh = res.permissions || [];
+      //     if (JSON.stringify([...old].sort()) !== JSON.stringify([...fresh].sort())) {
+      //       await updateUser({ ...userRef.current, permissions: fresh });
+      //     }
+      //   } catch (e) {
+      //     console.log("Permission refresh failed:", e?.message);
+      //   }
+      // }
     };
 
     if (AppState.currentState === "active") {
@@ -727,7 +740,40 @@ export const AuthProvider = ({ children }) => {
       cancelled = true;
     };
   }, [token, user?._id, user?.id]);
+  // Keep Manager permissions fresh while the app is open.
+  useEffect(() => {
+    if (!token || user?.role !== "Manager") return;
+    if (isImpersonationToken(token)) return;
 
+    let cancelled = false;
+
+    const refreshPermissions = async () => {
+      if (AppState.currentState !== "active") return;
+
+      try {
+        const res = await getMyPermissionsApi();
+
+        if (cancelled || tokenRef.current !== token) return;
+
+        const current = userRef.current?.permissions || [];
+        const fresh = res?.permissions || [];
+
+        if (!sameKeys(current, fresh)) {
+          await updateUser({ ...userRef.current, permissions: fresh });
+        }
+      } catch (e) {
+        console.log("Permission refresh failed:", e?.message);
+      }
+    };
+
+    refreshPermissions();
+    const intervalId = setInterval(refreshPermissions, 10000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [token, user?.role, updateUser]);
   return (
     <AuthContext.Provider
       value={{
@@ -745,6 +791,7 @@ export const AuthProvider = ({ children }) => {
         returnToAdmin,
         isImpersonating,
         adminSession,
+        hasPermission: (key) => user?.role === "Admin" || (user?.permissions || []).includes(key),
       }}
     >
       {children}

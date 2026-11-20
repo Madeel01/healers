@@ -62,3 +62,47 @@ export const adminLoginAsUserApi = async (userId) => {
 
   return response.data;
 };
+
+
+
+export const getPermissionsApi = async () => {
+  const response = await apiClient.get(`/auth/permissions`);
+  return response.data;
+};
+
+export const getPermissionGroupsApi = async () => {
+  const response = await apiClient.get(`/auth/permission-groups`);
+  return response.data;
+};
+
+export const createPermissionGroupApi = async (body) => {
+  const response = await apiClient.post(`/auth/permission-groups`, body);
+  return response.data;
+};
+
+export const updatePermissionGroupApi = async (id, body) => {
+  const response = await apiClient.put(`/auth/permission-groups/${id}`, body);
+  return response.data;
+};
+
+export const deletePermissionGroupApi = async (id) => {
+  const response = await apiClient.delete(`/auth/permission-groups/${id}`);
+  return response.data;
+};
+
+export const getPermissionAssignmentsApi = async () => {
+  const response = await apiClient.get(`/auth/permission-assignments`);
+  return response.data;
+};
+
+export const setManagerGroupsApi = async (userId, groupIds) => {
+  const response = await apiClient.put(
+    `/auth/permission-assignments/${userId}`,
+    { groupIds }
+  );
+  return response.data;
+};
+export const getMyPermissionsApi = async () => {
+  const res = await apiClient.get("/auth/my-permissions");
+  return res.data;
+};

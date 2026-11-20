@@ -29,6 +29,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 
 import {
+  bulkDeleteAppointments,
   cancelChildCustomAppointment,
   deleteChildCustomAppointment,
   getServices,
@@ -153,12 +154,34 @@ const Avatar = ({ uri, name, color, style, textStyle }) => {
     </View>
   );
 };
+const SELECTABLE_TYPES = ["custom"];
+const isSelectable = (s) => !s.isPast && SELECTABLE_TYPES.includes(s.type);
+const toSelection = (s) => ({
+  appointmentId: s.id,
+  childId: s.children?.[0]?.childId || null,
+});
+
+const Check = ({ checked, onPress }) => {
+  const box = (
+    <View style={[styles.checkBox, checked && styles.checkBoxOn]}>
+      {checked && <Feather name="check" size={14} color="#fff" />}
+    </View>
+  );
+  return onPress ? (
+    <TouchableOpacity onPress={onPress} hitSlop={10}>{box}</TouchableOpacity>
+  ) : box;
+};
+
 // ---------- card (declared outside the screen so it never remounts) ----------
 const SessionCard = memo(function SessionCard({
   s,
   onPress,
   specMeta,
+  onLongPress,
+  selectMode, 
+  selected,
 }) {
+  const selectable = isSelectable(s);
   const isCustom = s.type === "custom";
   const spec = s.speciality ? specMeta(s.speciality) : null;
   const tm = TYPE_META[s.sessionType];
@@ -179,8 +202,14 @@ const SessionCard = memo(function SessionCard({
   }
 
   return (
-    <TouchableOpacity activeOpacity={0.75} onPress={() => onPress(s)}>
-      <View style={[styles.card, s.sessionType === "cancel" && styles.cardCancelled]}>
+    <TouchableOpacity 
+      activeOpacity={0.75} 
+      onPress={() => onPress(s)} 
+      onLongPress={() => onLongPress(s)} 
+      delayLongPress={350}
+    >
+      <View style={[styles.card, s.sessionType === "cancel" && styles.cardCancelled, selected && styles.cardSelected,]}>
+        {selectMode && (selectable ? <Check checked={selected} /> : <View style={styles.checkSpacer} />)}
         <View
           style={[
             styles.bar,
@@ -272,6 +301,52 @@ export default function ScheduleScreen({ navigation }) {
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerItems, setPickerItems] = useState([]);
   const [pickerLoading, setPickerLoading] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState({});
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const selectedCount = Object.keys(selected).length;
+
+  const exitSelect = useCallback(() => {
+    setSelectMode(false);
+    setSelected({});
+  }, []);
+
+  useEffect(() => { exitSelect(); }, [scope, range, query, exitSelect]);
+
+  const toggleOne = useCallback((s) => {
+    setSelected((prev) => {
+      const next = { ...prev };
+      if (next[s.id]) delete next[s.id];
+      else next[s.id] = toSelection(s);
+      return next;
+    });
+  }, []);
+
+  const startSelect = useCallback((s) => {
+    if (scope !== "upcoming" || !isSelectable(s)) return;
+    setSelectMode(true);
+    setSelected((prev) => (prev[s.id] ? prev : { ...prev, [s.id]: toSelection(s) }));
+  }, [scope]);
+
+  const handleCardPress = useCallback((s) => {
+    if (!selectMode) return setDetail(s);
+    if (isSelectable(s)) toggleOne(s);
+  }, [selectMode, toggleOne]);
+
+  const toggleDay = useCallback((date) => {
+    const dayItems = items.filter((i) => i.date === date && isSelectable(i));
+    setSelected((prev) => {
+      const all = dayItems.every((i) => prev[i.id]);
+      const next = { ...prev };
+      dayItems.forEach((i) => {
+        if (all) delete next[i.id];
+        else next[i.id] = toSelection(i);
+      });
+      return next;
+    });
+  }, [items]);
+
+
 
   const requestRef = useRef(0);
   useEffect(() => {
@@ -447,6 +522,42 @@ export default function ScheduleScreen({ navigation }) {
       success: "Appointment deleted.",
     });
   };
+  const bulkDelete = () => {
+    if (!selectedCount) return;
+    Alert.alert(
+      "Delete appointments",
+      `Permanently delete ${selectedCount} appointment${selectedCount === 1 ? "" : "s"}?`,
+      [
+        { text: "Keep", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setBulkDeleting(true);
+              const res = await bulkDeleteAppointments(Object.values(selected));
+              if (!res?.success) {
+                return Alert.alert("Could not completeeeee", res?.message || "Please try again.");
+              }
+              const skipped = res.skipped?.length || 0;
+              exitSelect();
+              await load(1, "reset");
+              Alert.alert(
+                "Done",
+                skipped
+                  ? `${res.deletedCount} deleted, ${skipped} skipped.`
+                  : `${res.deletedCount} appointment${res.deletedCount === 1 ? "" : "s"} deleted.`,
+              );
+            } catch (e) {
+              Alert.alert("Could not complete", e?.response?.data?.message || "Please try again.");
+            } finally {
+              setBulkDeleting(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const postponeAppointment = (s) => {
     setDetail(null);
@@ -462,35 +573,38 @@ export default function ScheduleScreen({ navigation }) {
 
   const renderItem = useCallback(
     ({ item, index }) => {
-      const showHeader =
-        index === 0 || items[index - 1]?.date !== item.date;
+      const showHeader = index === 0 || items[index - 1]?.date !== item.date;
+      const rel = scope === "upcoming" ? relLabel(item.date) : null;
 
-      const rel =
-        scope === "upcoming" ? relLabel(item.date) : null;
+      const dayItems = showHeader && selectMode
+        ? items.filter((i) => i.date === item.date && isSelectable(i))
+        : [];
+      const dayAll = dayItems.length > 0 && dayItems.every((i) => selected[i.id]);
 
       return (
         <View>
           {showHeader && (
             <View style={styles.dayHeader}>
-              <Text style={styles.dayTitle}>
-                {prettyDay(item.date)}
-              </Text>
-
-              {!!rel && (
-                <Text style={styles.dayRel}>{rel}</Text>
+              {selectMode && dayItems.length > 0 && (
+                <Check checked={dayAll} onPress={() => toggleDay(item.date)} />
               )}
+              <Text style={styles.dayTitle}>{prettyDay(item.date)}</Text>
+              {!!rel && <Text style={styles.dayRel}>{rel}</Text>}
             </View>
           )}
 
           <SessionCard
             s={item}
-            onPress={setDetail}
+            onPress={handleCardPress}
+            onLongPress={startSelect}
             specMeta={specMeta}
+            selectMode={selectMode}
+            selected={!!selected[item.id]}
           />
         </View>
       );
     },
-    [items, scope, today, specMeta]
+    [items, scope, today, specMeta, selectMode, selected, handleCardPress, startSelect, toggleDay],
   );
 
   const detailKids = detail?.children || [];
@@ -565,7 +679,14 @@ export default function ScheduleScreen({ navigation }) {
           })}
         </ScrollView>
       </View>
-
+      {selectMode && (
+        <View style={styles.selectBar}>
+          <Text style={styles.selectText}>{selectedCount} selected</Text>
+          <TouchableOpacity onPress={exitSelect}>
+            <Text style={styles.selectCancel}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       {loading
         ? (
           <View style={styles.centerFill}>
@@ -579,6 +700,7 @@ export default function ScheduleScreen({ navigation }) {
             renderItem={renderItem}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            extraData={selected}
             keyboardShouldPersistTaps="handled"
             onEndReached={onEndReached}
             onEndReachedThreshold={0.4}
@@ -609,7 +731,23 @@ export default function ScheduleScreen({ navigation }) {
               : null}
           />
         )}
-
+      {selectMode && (
+        <TouchableOpacity
+          style={[styles.deleteFab, (!selectedCount || bulkDeleting) && { opacity: 0.5 }]}
+          activeOpacity={0.85}
+          disabled={!selectedCount || bulkDeleting}
+          onPress={bulkDelete}
+        >
+          {bulkDeleting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Feather name="trash-2" size={fontSize(16)} color="#fff" />
+              <Text style={styles.fabText}>Delete ({selectedCount})</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
       <TouchableOpacity
         style={[styles.fab]}
         activeOpacity={0.85}
@@ -1000,4 +1138,26 @@ const styles = StyleSheet.create({
   actionItemSub: { fontSize: fontSize(11), fontFamily: fonts.regular, color: "#64748B", marginTop: 2 },
   pastInfo: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#F8FAFC", borderRadius: 12, padding: 12 },
   pastInfoText: { flex: 1, fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B" },
+  checkBox: {
+    width: 22, height: 22, borderRadius: 6, borderWidth: 1.5,
+    borderColor: "#94A3B8", backgroundColor: "#fff",
+    alignItems: "center", justifyContent: "center",
+  },
+  checkBoxOn: { backgroundColor: "#0B4A6F", borderColor: "#0B4A6F" },
+  checkSpacer: { width: 22, height: 22, opacity: 0 },
+  cardSelected: { backgroundColor: "#EFF6FF", borderWidth: 1, borderColor: "#0B4A6F" },
+  selectBar: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    marginHorizontal: 16, marginTop: 8, paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 10, backgroundColor: "#E0F2FE",
+  },
+  selectText: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#0B4A6F" },
+  selectCancel: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: "#DC2626" },
+  deleteFab: {
+    position: "absolute", right: 20, bottom: hp(45) + 20,
+    height: hp(45), paddingHorizontal: wp(16), borderRadius: wp(25),
+    backgroundColor: "#DC2626", flexDirection: "row", alignItems: "center", gap: 3,
+    elevation: 6, shadowColor: "#000", shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25, shadowRadius: 5,
+  },
 });

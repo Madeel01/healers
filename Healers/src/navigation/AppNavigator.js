@@ -95,6 +95,9 @@ import QuarterlyReportsScreen from '../screens/therapist/QuarterlyReports';
 import TherapistDashboard from '../screens/therapist/TherapistDashboard';
 import WeeklyVideoScreen from '../screens/therapist/WeeklyVideo';
 import { commonStyles } from '../styles/theme';
+import PermissionManagementScreen from '../screens/admin/PermissionManagementScreen';
+import { canOpenScreen } from '../utils/permissions';
+import RescheduleAppointmentsScreen from '../screens/admin/RescheduleAppointmentsScreen';
 
 const Stack = createNativeStackNavigator();
 const navigationRef = createNavigationContainerRef();
@@ -146,6 +149,8 @@ const SCREEN_LAYOUTS = {
     FeeDetail: { headerTitle: "Fee Details" },
     AdminQuarterlyReports: { headerTitle: "Quarterly Reports" },
     AdminAttendanceReport: { headerTitle: "Attendance Report" },
+    PermissionManagement: { headerTitle: "Permissions" },
+    RescheduleAppointments: { headerTitle: "Reschedule" },
   },
   Therapist: {
     TherapistDashboard: { showHeader: false, showFooter: true },
@@ -220,6 +225,8 @@ const ACTIVE_TAB_ROUTES = {
     FeeDetail: "AdminDashboard",
     AdminQuarterlyReports: "AdminDashboard",
     AdminAttendanceReport: "AdminDashboard",
+    PermissionManagement: "AdminDashboard",
+    RescheduleAppointments: "AdminDashboard",
   },
   Therapist: {
     TherapistDashboard: "TherapistDashboard",
@@ -299,6 +306,8 @@ const ADMIN_SCREENS = [
   ["AllUsers", AllUsersScreen],
   ["AdminQuarterlyReports", AdminQuarterlyReportsScreen],
   ["AdminAttendanceReport", AdminAttendanceReportScreen],
+  ["PermissionManagement", PermissionManagementScreen],
+  ["RescheduleAppointments", RescheduleAppointmentsScreen],
 ];
 
 const THERAPIST_SCREENS = [
@@ -374,6 +383,13 @@ function AdminStack() {
   );
 }
 
+function ManagerStack({ permissions }) {
+  const screens = ADMIN_SCREENS.filter(([name]) =>
+    canOpenScreen("Manager", permissions, name)
+  );
+  return <ScreenStack screens={screens} initialRouteName="AdminDashboard" />;
+}
+
 function TherapistStack() {
   return (
     <ScreenStack
@@ -405,9 +421,11 @@ export default function AppNavigator() {
     token,
     userRole,
     isLoading,
+    user,
     isImpersonating,
   } = useContext(AuthContext);
   const normalizedRole = userRole?.toString().trim();
+  const layoutRole = normalizedRole === "Manager" ? "Admin" : normalizedRole;
   const [activeScreen, setActiveScreen] = useState("");
 
   const [layout, setLayout] = useState(DEFAULT_LAYOUT);
@@ -422,7 +440,7 @@ export default function AppNavigator() {
     if (!route) return;
     setActiveScreen((previous) => previous === route.name ? previous : route.name);
 
-    const routeLayout = SCREEN_LAYOUTS[normalizedRole]?.[route.name] || {};
+    const routeLayout = SCREEN_LAYOUTS[layoutRole]?.[route.name] || {};
     const overrideLayout = route.params?.layout || {};
 
     setLayout((previous) => {
@@ -443,12 +461,12 @@ export default function AppNavigator() {
       return next;
     });
 
-    const nextTab = ACTIVE_TAB_ROUTES[normalizedRole]?.[route.name];
+    const nextTab = ACTIVE_TAB_ROUTES[layoutRole]?.[route.name];
 
     if (nextTab) {
       setActiveTab((previous) => previous === nextTab ? previous : nextTab);
     }
-  }, [normalizedRole]);
+  }, [layoutRole]);
   useEffect(() => {
     setActiveScreen("");
     setLayout(DEFAULT_LAYOUT);
@@ -479,8 +497,8 @@ export default function AppNavigator() {
     );
   }
 
-  const isAuthenticatedRole = !!token && ["Admin", "Therapist", "Child"].includes(normalizedRole);
-
+  const isAuthenticatedRole = !!token && ["Admin", "Manager","Therapist", "Child"].includes(normalizedRole);
+  
   return (
     <NavigationContainer
       ref={navigationRef}
@@ -509,12 +527,14 @@ export default function AppNavigator() {
           >
             <View style={styles.content}>
               {normalizedRole === "Admin"
-                ? <AdminStack key={sessionKey} />
-                : normalizedRole === "Therapist"
-                ? <TherapistStack key={sessionKey} />
-                : normalizedRole === "Child"
-                ? <ChildStack key={sessionKey} />
-                : null}
+                  ? <AdminStack key={sessionKey} />
+                  : normalizedRole === "Manager"
+                  ? <ManagerStack key={sessionKey} permissions={user?.permissions} />
+                  : normalizedRole === "Therapist"
+                  ? <TherapistStack key={sessionKey} />
+                  : normalizedRole === "Child"
+                  ? <ChildStack key={sessionKey} />
+                  : null}
             </View>
           </KeyboardAvoidingView>
 

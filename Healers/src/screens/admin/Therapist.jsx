@@ -1,9 +1,4 @@
-import React, {
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useContext, useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -20,12 +15,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { adminLoginAsUserApi } from '../../api/authApi';
-import Feather from '@expo/vector-icons/Feather';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { adminLoginAsUserApi } from "../../api/authApi";
+import Feather from "@expo/vector-icons/Feather";
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import { canOpenScreen } from "../../utils/permissions";
 
 import {
   assignChildrenToTherapist,
@@ -35,18 +30,10 @@ import {
   getUsersByRole,
   therapistUsers,
   updateTherapist,
-} from '../../api/admin/api';
-import { AuthContext } from '../../context/AuthContext';
-import {
-  colors,
-  commonStyles,
-  fonts,
-} from '../../styles/theme';
-import {
-  fontSize,
-  hp,
-  wp,
-} from '../../utils/responsive';
+} from "../../api/admin/api";
+import { AuthContext } from "../../context/AuthContext";
+import { colors, commonStyles, fonts } from "../../styles/theme";
+import { fontSize, hp, wp } from "../../utils/responsive";
 
 const AVATAR_COLORS = [
   "#0B4A6F",
@@ -89,8 +76,19 @@ const Avatar = ({ uri, name, color, style, textStyle }) => {
   }
 
   return (
-    <View style={[style, uri && !failed? {}:{borderWidth:1,borderColor:colors.primary,backgroundColor:colors.primary}]}>
-        <FontAwesome5 name="user-md" size={fontSize(25)} color="white"  />
+    <View
+      style={[
+        style,
+        uri && !failed
+          ? {}
+          : {
+              borderWidth: 1,
+              borderColor: colors.primary,
+              backgroundColor: colors.primary,
+            },
+      ]}
+    >
+      <FontAwesome5 name="user-md" size={fontSize(25)} color="white" />
       {/* <Text style={textStyle}>
         {name?.trim()?.charAt(0)?.toUpperCase() || "?"}
       </Text> */}
@@ -116,19 +114,11 @@ const SegmentedToggle = ({ options, value, onChange }) => (
       return (
         <TouchableOpacity
           key={String(opt.value)}
-          style={[
-            styles.segmentItem,
-            selected && styles.segmentItemOn,
-          ]}
+          style={[styles.segmentItem, selected && styles.segmentItemOn]}
           activeOpacity={0.8}
           onPress={() => onChange(opt.value)}
         >
-          <Text
-            style={[
-              styles.segmentText,
-              selected && styles.segmentTextOn,
-            ]}
-          >
+          <Text style={[styles.segmentText, selected && styles.segmentTextOn]}>
             {opt.label}
           </Text>
         </TouchableOpacity>
@@ -165,7 +155,7 @@ export default function TherapistsScreen({ navigation }) {
 
   const [newTherapist, setNewTherapist] = useState({});
   const [editingTherapistId, setEditingTherapistId] = useState(null);
-
+  const can = (screen) => canOpenScreen(user?.role, user?.permissions, screen);
   // ---- Assign Child modal state ----
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [assignStep, setAssignStep] = useState(1);
@@ -185,12 +175,13 @@ export default function TherapistsScreen({ navigation }) {
   const [draftSpecialty, setDraftSpecialty] = useState("All");
   const [draftStatus, setDraftStatus] = useState("all");
   const [phoneTouched, setPhoneTouched] = useState(false);
+  const canSeeMessages = can("ChildMessages");
+  const canSeeSchedule = can("Schedule");
+  const isPhoneValid =
+    !newTherapist.phone || /^(03\d{9}|\+923\d{9})$/.test(newTherapist.phone);
 
-  const isPhoneValid = /^(03\d{9}|\+923\d{9})$/.test(
-    String(newTherapist.phone ?? "")
-  );
-
-  const activeFilterCount = (selectedFilter !== "All" ? 1 : 0) + (statusFilter !== "all" ? 1 : 0);
+  const activeFilterCount =
+    (selectedFilter !== "All" ? 1 : 0) + (statusFilter !== "all" ? 1 : 0);
 
   const openFilterModal = () => {
     setDraftSpecialty(selectedFilter);
@@ -243,7 +234,7 @@ export default function TherapistsScreen({ navigation }) {
     };
 
     servicesData();
-  }, [refreshing,loading]);
+  }, [refreshing, loading]);
   const openEditModal = (therapist) => {
     setEditingTherapistId(therapist.id);
 
@@ -270,42 +261,59 @@ export default function TherapistsScreen({ navigation }) {
 
   const handleDeleteTherapist = (therapist) => {
     setActiveMenuId(null);
+
     Alert.alert(
       "Delete Therapist",
       `Remove ${therapist.name} from your team? This cannot be undone.`,
       [
-        { text: "Cancel", style: "cancel" },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
         {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            const previous = therapists;
-            // setTherapists((prev) => prev.filter((item) => item.id !== therapist.id));
             try {
+              console.log("Deleting therapist ID:", therapist.id);
+
               const response = await deleteTherapist(therapist.id);
-              const res = response?.data;
-              if (res?.deactivated) {
+
+              console.log("Delete API response:", response);
+
+              // Handle different API response structures
+              const res = response?.data || response;
+
+              if (!res?.success) {
+                throw new Error(res?.message || "Therapist deletion failed.");
+              }
+
+              if (res.deactivated) {
                 Alert.alert(
                   "Marked Inactive",
-                  res.message
-                    || "This therapist has past appointments, so they were marked inactive instead of deleted.",
+                  res.message ||
+                    "This therapist has past appointments or batch history, so they were marked inactive.",
+                );
+              } else if (res.deleted) {
+                Alert.alert(
+                  "Deleted",
+                  res.message || "Therapist deleted successfully.",
                 );
               }
-              Alert.alert(
-                "Deleted",
-                res.message
-                  || "Therapist deleted.",
-              );
+
               await fetchTherapistData(1, true);
             } catch (error) {
-              console.log("Failed to delete therapist:", error);
-              // setTherapists(previous);
-              Alert.alert(
-                "Cannot Delete",
-                error?.response?.data?.message
-                  || error?.message
-                  || "Could not delete this therapist. Please try again.",
-              );
+              console.log("Delete error object:", error);
+              console.log("Delete error message:", error?.message);
+              console.log("Delete error response:", error?.response?.data);
+
+              const errorMessage =
+                error?.response?.data?.message ||
+                error?.data?.message ||
+                error?.message ||
+                "Could not delete this therapist. Please try again.";
+
+              Alert.alert("Cannot Delete", errorMessage);
             }
           },
         },
@@ -322,12 +330,7 @@ export default function TherapistsScreen({ navigation }) {
   };
 
   const handleSaveTherapist = async () => {
-    if (
-      !newTherapist.name
-      || !newTherapist.email
-      || !newTherapist.phone
-      || saving
-    ) {
+    if (!newTherapist.name || !newTherapist.email || saving) {
       Alert.alert("Validation Error", "Please fill in all required fields.");
       return;
     }
@@ -339,10 +342,10 @@ export default function TherapistsScreen({ navigation }) {
       return;
     }
 
-    const phone = newTherapist.phone.trim();
+    const phone = (newTherapist.phone || "").trim();
     const phoneRegex = /^(03\d{9}|\+923\d{9})$/;
 
-    if (!phoneRegex.test(phone)) {
+    if (phone && !phoneRegex.test(phone)) {
       Alert.alert(
         "Validation Error",
         "Phone number must be in 03011234567 or +923011234567 format.",
@@ -350,9 +353,11 @@ export default function TherapistsScreen({ navigation }) {
       return;
     }
 
-    const normalizedPhone = phone.startsWith("+92")
-      ? "0" + phone.slice(3)
-      : phone;
+    const normalizedPhone = phone
+      ? phone.startsWith("+92")
+        ? "0" + phone.slice(3)
+        : phone
+      : "";
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
 
@@ -399,7 +404,6 @@ export default function TherapistsScreen({ navigation }) {
       isActive: newTherapist.isActive ?? true,
     };
 
-    
     try {
       if (isEditMode) {
         const response = await updateTherapist(editingTherapistId, payload);
@@ -417,8 +421,8 @@ export default function TherapistsScreen({ navigation }) {
                   specialties: [{ id: payload.specialty }],
                   isActive: updated?.isActive ?? payload.isActive,
                 }
-              : item
-          )
+              : item,
+          ),
         );
 
         await fetchTherapistData(1, true);
@@ -435,7 +439,9 @@ export default function TherapistsScreen({ navigation }) {
         const createdTherapistName = created?.name || payload.name;
 
         if (!createdTherapistId) {
-          throw new Error("Therapist created, but the server did not return an ID.");
+          throw new Error(
+            "Therapist created, but the server did not return an ID.",
+          );
         }
 
         const newItem = {
@@ -477,7 +483,7 @@ export default function TherapistsScreen({ navigation }) {
               },
             },
           ],
-          { cancelable: true }
+          { cancelable: true },
         );
       }
     } catch (error) {
@@ -489,15 +495,18 @@ export default function TherapistsScreen({ navigation }) {
         "Error",
         backendMessage ||
           error?.message ||
-          `Could not ${isEditMode ? "update" : "create"} this therapist. Please try again.`
+          `Could not ${isEditMode ? "update" : "create"} this therapist. Please try again.`,
       );
     } finally {
       setSaving(false);
     }
-
   };
 
-  const fetchTherapistData = async (pageNum = 1, resetList = false, isRefresh = false) => {
+  const fetchTherapistData = async (
+    pageNum = 1,
+    resetList = false,
+    isRefresh = false,
+  ) => {
     if (loading || (loadingMore && !resetList && !isRefresh)) return;
 
     if (isRefresh) {
@@ -522,15 +531,17 @@ export default function TherapistsScreen({ navigation }) {
       setHasMore(response?.hasMore ?? therapistsData.length === 3);
 
       const formattedTherapists = therapistsData.map((therapist) => {
-        const therapistSpecialties = (therapist.specialties || []).map((specId) => {
-          const matched = services.find((item) => item.id === specId);
-          return {
-            id: specId,
-            label: matched?.label || "",
-            bg: matched?.bg || "",
-            color: matched?.color || "",
-          };
-        });
+        const therapistSpecialties = (therapist.specialties || []).map(
+          (specId) => {
+            const matched = services.find((item) => item.id === specId);
+            return {
+              id: specId,
+              label: matched?.label || "",
+              bg: matched?.bg || "",
+              color: matched?.color || "",
+            };
+          },
+        );
 
         return {
           id: therapist._id || therapist.id,
@@ -548,7 +559,11 @@ export default function TherapistsScreen({ navigation }) {
           conversationId: therapist.conversationId ?? null,
         };
       });
-      setTherapists((prev) => (resetList || isRefresh ? formattedTherapists : [...prev, ...formattedTherapists]));
+      setTherapists((prev) =>
+        resetList || isRefresh
+          ? formattedTherapists
+          : [...prev, ...formattedTherapists],
+      );
       setPage(pageNum);
     } catch (error) {
       console.log("Failed to fetch therapists:", error);
@@ -573,7 +588,8 @@ export default function TherapistsScreen({ navigation }) {
 
   const handleScroll = ({ nativeEvent }) => {
     const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 40;
+    const isCloseToBottom =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - 40;
 
     if (isCloseToBottom && hasMore && !loadingMore && !loading && !refreshing) {
       fetchTherapistData(page + 1, false);
@@ -621,19 +637,33 @@ export default function TherapistsScreen({ navigation }) {
     setAssignChildResults([]);
     setAssignLoading(true);
     try {
-      const therapistId = selectedAssignTherapist?._id || selectedAssignTherapist?.id;
-      const response = await getUsersByRole({ role: "Child", search, therapistId });
+      const therapistId =
+        selectedAssignTherapist?._id || selectedAssignTherapist?.id;
+      const response = await getUsersByRole({
+        role: "Child",
+        search,
+        therapistId,
+      });
       const results = response?.data || [];
       setAssignChildResults(results);
 
-      const assignedFromThisFetch = results.filter((c) => c.isAssigned).map((c) => c._id || c.id);
+      const assignedFromThisFetch = results
+        .filter((c) => c.isAssigned)
+        .map((c) => c._id || c.id);
 
       // 1. Ensure clean and unique original IDs
-      setOriginalAssignedIds((prev) => Array.from(new Set([...prev, ...assignedFromThisFetch])));
+      setOriginalAssignedIds((prev) =>
+        Array.from(new Set([...prev, ...assignedFromThisFetch])),
+      );
 
       // 2. Ensure clean unique selected Child IDs without duplications
       setSelectedChildIds((prev) => {
-        const combined = [...prev, ...assignedFromThisFetch.filter((id) => !touchedChildIds.includes(id))];
+        const combined = [
+          ...prev,
+          ...assignedFromThisFetch.filter(
+            (id) => !touchedChildIds.includes(id),
+          ),
+        ];
         return Array.from(new Set(combined));
       });
     } catch (error) {
@@ -646,7 +676,10 @@ export default function TherapistsScreen({ navigation }) {
 
   useEffect(() => {
     if (!isAssignModalOpen || assignStep !== 1) return;
-    const t = setTimeout(() => fetchAssignTherapists(assignTherapistSearch), 350);
+    const t = setTimeout(
+      () => fetchAssignTherapists(assignTherapistSearch),
+      350,
+    );
     return () => clearTimeout(t);
   }, [assignTherapistSearch, isAssignModalOpen, assignStep]);
 
@@ -665,15 +698,25 @@ export default function TherapistsScreen({ navigation }) {
   };
 
   const toggleChildSelection = (childId) => {
-    setTouchedChildIds((prev) => (prev.includes(childId) ? prev : [...prev, childId]));
-    setSelectedChildIds((prev) => prev.includes(childId) ? prev.filter((id) => id !== childId) : [...prev, childId]);
+    setTouchedChildIds((prev) =>
+      prev.includes(childId) ? prev : [...prev, childId],
+    );
+    setSelectedChildIds((prev) =>
+      prev.includes(childId)
+        ? prev.filter((id) => id !== childId)
+        : [...prev, childId],
+    );
   };
 
   const handleConfirmAssign = async () => {
     if (!selectedAssignTherapist || assigning) return;
 
-    const addChildIds = selectedChildIds.filter((id) => !originalAssignedIds.includes(id));
-    const removeChildIds = originalAssignedIds.filter((id) => !selectedChildIds.includes(id));
+    const addChildIds = selectedChildIds.filter(
+      (id) => !originalAssignedIds.includes(id),
+    );
+    const removeChildIds = originalAssignedIds.filter(
+      (id) => !selectedChildIds.includes(id),
+    );
 
     if (addChildIds.length === 0 && removeChildIds.length === 0) {
       Alert.alert("No changes", "You haven't added or removed any children.");
@@ -681,27 +724,38 @@ export default function TherapistsScreen({ navigation }) {
     }
 
     setAssigning(true);
-    const therapistId = selectedAssignTherapist._id || selectedAssignTherapist.id;
+    const therapistId =
+      selectedAssignTherapist._id || selectedAssignTherapist.id;
 
     try {
-      const response = await assignChildrenToTherapist({ therapistId, addChildIds, removeChildIds });
+      const response = await assignChildrenToTherapist({
+        therapistId,
+        addChildIds,
+        removeChildIds,
+      });
       const result = response?.data;
 
       setTherapists((prev) =>
         prev.map((item) =>
           item.id === therapistId
             ? { ...item, currentLoad: result?.currentLoad ?? item.currentLoad }
-            : item
-        )
+            : item,
+        ),
       );
 
       setIsAssignModalOpen(false);
-      Alert.alert("Updated", response?.message || "Assignment updated successfully.");
+      Alert.alert(
+        "Updated",
+        response?.message || "Assignment updated successfully.",
+      );
       await fetchTherapistData(1, true);
     } catch (error) {
       console.log("Failed to update assignment:", error);
       const backendMessage = error?.response?.data?.message || error?.message;
-      Alert.alert("Could not update", backendMessage || "Could not complete the update. Please try again.");
+      Alert.alert(
+        "Could not update",
+        backendMessage || "Could not complete the update. Please try again.",
+      );
     } finally {
       setAssigning(false);
     }
@@ -715,7 +769,6 @@ export default function TherapistsScreen({ navigation }) {
 
     const allChars = uppercase + lowercase + numbers + symbols;
 
-    
     const getRandomChar = (chars) =>
       chars[Math.floor(Math.random() * chars.length)];
 
@@ -728,7 +781,7 @@ export default function TherapistsScreen({ navigation }) {
 
     const remainingChars = Array.from(
       { length: length - requiredChars.length },
-      () => getRandomChar(allChars)
+      () => getRandomChar(allChars),
     );
 
     const passwordArray = [...requiredChars, ...remainingChars];
@@ -772,13 +825,16 @@ export default function TherapistsScreen({ navigation }) {
       value = value.replace(/\+/g, "").slice(0, 11);
     }
     setPhoneTouched(true);
-    setNewTherapist({ ...newTherapist, phone: value })
+    setNewTherapist({ ...newTherapist, phone: value });
   };
   const handleLoginAsTherapist = async (therapist) => {
     if (!therapist?.id || loginLoadingId) return;
 
     if (therapist.isActive === false) {
-      Alert.alert("Inactive Therapist", "Reactivate this therapist before logging in as them.");
+      Alert.alert(
+        "Inactive Therapist",
+        "Reactivate this therapist before logging in as them.",
+      );
       return;
     }
 
@@ -788,14 +844,18 @@ export default function TherapistsScreen({ navigation }) {
       const response = await adminLoginAsUserApi(therapist.id);
 
       if (!response?.success || !response?.token || !response?.user) {
-        throw new Error(response?.message || "Unable to login as selected user");
+        throw new Error(
+          response?.message || "Unable to login as selected user",
+        );
       }
 
       await loginAsUser(response.token, response.user);
     } catch (error) {
       Alert.alert(
         "Login Failed",
-        error?.response?.data?.message || error?.message || "Unable to switch user",
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to switch user",
       );
     } finally {
       setLoginLoadingId(null);
@@ -834,12 +894,10 @@ export default function TherapistsScreen({ navigation }) {
         <View style={styles.headerTitleContainer}>
           <View style={styles.headerTitle}>
             <Text style={styles.pageTitle}>Therapists</Text>
-            {
-              /* <TouchableOpacity style={styles.assignChildButton} onPress={openAssignModal}>
+            {/* <TouchableOpacity style={styles.assignChildButton} onPress={openAssignModal}>
                 <Ionicons name="people-outline" size={18} color="#FFFFFF" />
                 <Text style={styles.assignChildButtonText}>Assign Child</Text>
-              </TouchableOpacity> */
-            }
+              </TouchableOpacity> */}
           </View>
           <Text style={styles.pageSubTitle}>
             Oversee your Therapist team and balance their caseloads.
@@ -848,7 +906,12 @@ export default function TherapistsScreen({ navigation }) {
 
         <View style={styles.searchRow}>
           <View style={styles.searchInputContainerMain}>
-            <Feather name="search" size={20} color="#94A3B8" style={styles.searchIcon} />
+            <Feather
+              name="search"
+              size={20}
+              color="#94A3B8"
+              style={styles.searchIcon}
+            />
             <TextInput
               style={styles.searchInput}
               placeholder="Search therapists..."
@@ -857,7 +920,10 @@ export default function TherapistsScreen({ navigation }) {
               onChangeText={setSearchQuery}
             />
           </View>
-          <TouchableOpacity style={styles.filterIconButton} onPress={openFilterModal}>
+          <TouchableOpacity
+            style={styles.filterIconButton}
+            onPress={openFilterModal}
+          >
             <Feather name="sliders" size={fontSize(20)} color="#0B4A6F" />
             {activeFilterCount > 0 && <View style={styles.filterActiveDot} />}
           </TouchableOpacity>
@@ -885,7 +951,13 @@ export default function TherapistsScreen({ navigation }) {
           })}
         </View>
 
-        {loading && <ActivityIndicator size="large" color={colors.primary} style={styles.centerLoader} />}
+        {loading && (
+          <ActivityIndicator
+            size="large"
+            color={colors.primary}
+            style={styles.centerLoader}
+          />
+        )}
 
         {!loading && therapists.length === 0 && (
           <View style={styles.emptyContainer}>
@@ -899,139 +971,155 @@ export default function TherapistsScreen({ navigation }) {
           </View>
         )}
 
-        {!loading && therapists.map((therapist,index) => {
-          // const loadPercentage = `${(therapist.currentLoad / (therapist.maxLoad || 1)) * 100}%`;
-          const isMenuOpen = activeMenuId === therapist.id;
-          const avatarColor = getAvatarColor(therapist.id || therapist.name);
-          return (
-            <View
-              key={`${therapist.id}-${index}`}
-              style={[
-                styles.therapistCard,
-                {
-                  zIndex: isMenuOpen ? 1000 : 1,
-                  elevation: isMenuOpen ? 10 : 3,
-                },
-              ]}
-            >
-              <View style={styles.cardHeaderRow}>
-                {
-                  /* <Image
+        {!loading &&
+          therapists.map((therapist, index) => {
+            // const loadPercentage = `${(therapist.currentLoad / (therapist.maxLoad || 1)) * 100}%`;
+            const isMenuOpen = activeMenuId === therapist.id;
+            const avatarColor = getAvatarColor(therapist.id || therapist.name);
+            return (
+              <View
+                key={`${therapist.id}-${index}`}
+                style={[
+                  styles.therapistCard,
+                  {
+                    zIndex: isMenuOpen ? 1000 : 1,
+                    elevation: isMenuOpen ? 10 : 3,
+                  },
+                ]}
+              >
+                <View style={styles.cardHeaderRow}>
+                  {/* <Image
                   source={{ uri: therapist.avatar }}
                   style={styles.therapistAvatar}
-                /> */
-                }
-                <Avatar
-                  uri={therapist.profileImage}
-                  name={therapist.name}
-                  color={avatarColor}
-                  style={styles.therapistAvatarInitial}
-                  textStyle={styles.therapistAvatarInitialText}
-                />
-                <View style={styles.therapistInfo}>
-                  <View style={{ flexDirection: "row", alignItems: "center", flex: 1, flexWrap: "wrap" }}>
-                    <Text style={styles.therapistName} numberOfLines={1} ellipsizeMode="tail">
-                      {therapist.name}
-                    </Text>
+                /> */}
+                  <Avatar
+                    uri={therapist.profileImage}
+                    name={therapist.name}
+                    color={avatarColor}
+                    style={styles.therapistAvatarInitial}
+                    textStyle={styles.therapistAvatarInitialText}
+                  />
+                  <View style={styles.therapistInfo}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        flex: 1,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <Text
+                        style={styles.therapistName}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {therapist.name}
+                      </Text>
 
-                    {therapist.isActive === false && (
-                      <View style={styles.inactiveBadge}>
-                        <View style={styles.inactiveDot} />
-                        <Text style={styles.inactiveBadgeText}>Inactive</Text>
-                      </View>
-                    )}
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      // flexWrap: "noWrap",
-                      gap: 6,
-                      marginTop: 4,
-                    }}
-                  >
-                    {(therapist.specialties || []).map((speciality) => {
-                      const specialityId = typeof speciality === "object"
-                        ? speciality.id
-                        : speciality;
+                      {therapist.isActive === false && (
+                        <View style={styles.inactiveBadge}>
+                          <View style={styles.inactiveDot} />
+                          <Text style={styles.inactiveBadgeText}>Inactive</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        // flexWrap: "noWrap",
+                        gap: 6,
+                        marginTop: 4,
+                      }}
+                    >
+                      {(therapist.specialties || []).map((speciality) => {
+                        const specialityId =
+                          typeof speciality === "object"
+                            ? speciality.id
+                            : speciality;
 
-                      const service = services.find(
-                        (item) => item.id === specialityId,
-                      );
+                        const service = services.find(
+                          (item) => item.id === specialityId,
+                        );
 
-                      if (!service) {
-                        return null;
-                      }
+                        if (!service) {
+                          return null;
+                        }
 
-                      return (
-                        <View
-                          key={service.id}
-                          style={[
-                            styles.specialtyBadge,
-                            {
-                              backgroundColor: service.bg,
-                            },
-                          ]}
-                        >
-                          <Text
+                        return (
+                          <View
+                            key={service.id}
                             style={[
-                              styles.specialtyText,
+                              styles.specialtyBadge,
                               {
-                                color: service.color,
+                                backgroundColor: service.bg,
                               },
                             ]}
                           >
-                            {service.label}
+                            <Text
+                              style={[
+                                styles.specialtyText,
+                                {
+                                  color: service.color,
+                                },
+                              ]}
+                            >
+                              {service.label}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <View
+                    onTouchStart={() => {
+                      menuTouchRef.current = true;
+                    }}
+                    style={{
+                      position: "relative",
+                      zIndex: isMenuOpen ? 1000 : 1,
+                      elevation: isMenuOpen ? 20 : 1,
+                    }}
+                  >
+                    <TouchableOpacity
+                      style={styles.moreOptionsButton}
+                      activeOpacity={0.7}
+                      onPress={() =>
+                        setActiveMenuId(isMenuOpen ? null : therapist.id)
+                      }
+                    >
+                      <Feather name="more-vertical" size={20} color="#94A3B8" />
+                    </TouchableOpacity>
+
+                    {isMenuOpen && (
+                      <View style={styles.dropdownMenu}>
+                        <TouchableOpacity
+                          style={styles.menuItem}
+                          activeOpacity={0.7}
+                          onPress={() => openEditModal(therapist)}
+                        >
+                          <Feather name="edit-2" size={15} color="#334155" />
+                          <Text style={styles.menuItemText}>Edit</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[styles.menuItem, styles.deleteMenuItem]}
+                          activeOpacity={0.7}
+                          onPress={() => handleDeleteTherapist(therapist)}
+                        >
+                          <Feather name="trash-2" size={15} color="#EF4444" />
+                          <Text
+                            style={[styles.menuItemText, styles.deleteText]}
+                          >
+                            Delete
                           </Text>
-                        </View>
-                      );
-                    })}
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 </View>
 
-                <View
-                  onTouchStart={() => {
-                    menuTouchRef.current = true;
-                  }}
-                  style={{
-                    position: "relative",
-                    zIndex: isMenuOpen ? 1000 : 1,
-                    elevation: isMenuOpen ? 20 : 1,
-                  }}
-                >
-                  <TouchableOpacity
-                    style={styles.moreOptionsButton}
-                    activeOpacity={0.7}
-                    onPress={() => setActiveMenuId(isMenuOpen ? null : therapist.id)}
-                  >
-                    <Feather name="more-vertical" size={20} color="#94A3B8" />
-                  </TouchableOpacity>
-
-                  {isMenuOpen && (
-                    <View style={styles.dropdownMenu}>
-                      <TouchableOpacity
-                        style={styles.menuItem}
-                        activeOpacity={0.7}
-                        onPress={() => openEditModal(therapist)}
-                      >
-                        <Feather name="edit-2" size={15} color="#334155" />
-                        <Text style={styles.menuItemText}>Edit</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[styles.menuItem, styles.deleteMenuItem]}
-                        activeOpacity={0.7}
-                        onPress={() => handleDeleteTherapist(therapist)}
-                      >
-                        <Feather name="trash-2" size={15} color="#EF4444" />
-                        <Text style={[styles.menuItemText, styles.deleteText]}>Delete</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-              </View>
-
-              {
-                /* <View style={styles.loadRow}>
+                {/* <View style={styles.loadRow}>
                 <Text style={styles.loadLabel}>Current Load</Text>
                 <Text style={styles.loadValue}>
                   {therapist.currentLoad}/{therapist.maxLoad} <Text style={styles.loadSubText}>Childs</Text>
@@ -1045,58 +1133,99 @@ export default function TherapistsScreen({ navigation }) {
                   end={{ x: 1, y: 0 }}
                   style={[styles.progressBar, { width: loadPercentage }]}
                 />
-              </View> */
-              }
-
-              <View style={styles.cardActionsRow}>
-                <TouchableOpacity
-                  style={styles.scheduleButton}
-                  onPress={() =>
-                    navigation.navigate("TherapistSchedule", {
-                      therapistId: therapist.id,
-                      therapistName: therapist.name,
-                      isActive: therapist.isActive,
-                    })}
-                >
-                  <Text style={styles.scheduleButtonText}>View Schedule</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={styles.mailButton}
-                  onPress={() =>
-                    navigation?.navigate("ChatDetails", {
-                      conversationId: therapist.conversationId,
-                      receiverId: therapist.id,
-                      partnerName: therapist.name,
-                      partnerImage: therapist.profileImage,
-                      isOnline: therapist.isOnline,
-                      lastSeen: therapist.lastActive,
-                      currentUserId: userId,
-                    })}
-                >
-                  <Feather name="mail" size={20} color="#0B4A6F" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.loginButton, !!loginLoadingId && { opacity: 0.6 }]}
-                  disabled={!!loginLoadingId}
-                  onPress={() => handleLoginAsTherapist(therapist)}
-                >
-                  {loginLoadingId === therapist.id
-                    ? <ActivityIndicator size="small" color="#0B4A6F" />
-                    : <Feather name="log-in" size={20} color="#0B4A6F" />}
-                </TouchableOpacity>
+              </View> */}
+                {(canSeeSchedule ||
+                  canSeeMessages ||
+                  user?.role !== "Manager") && (
+                  <View style={styles.cardActionsRow}>
+                    {canSeeSchedule && (
+                      <TouchableOpacity
+                        style={styles.scheduleButton}
+                        onPress={() =>
+                          navigation.navigate("TherapistSchedule", {
+                            therapistId: therapist.id,
+                            therapistName: therapist.name,
+                            isActive: therapist.isActive,
+                          })
+                        }
+                      >
+                        <Text style={styles.scheduleButtonText}>
+                          View Schedule
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {canSeeMessages && (
+                      <TouchableOpacity
+                        style={[
+                          styles.mailButton,
+                          !canSeeSchedule
+                            ? { flexDirection: "row", width: "100%", gap: 12 }
+                            : {},
+                        ]}
+                        onPress={() =>
+                          navigation?.navigate("ChatDetails", {
+                            conversationId: therapist.conversationId,
+                            receiverId: therapist.id,
+                            partnerName: therapist.name,
+                            partnerImage: therapist.profileImage,
+                            isOnline: therapist.isOnline,
+                            lastSeen: therapist.lastActive,
+                            currentUserId: userId,
+                          })
+                        }
+                      >
+                        <Feather name="mail" size={20} color="#0B4A6F" />
+                        {!canSeeSchedule && (
+                          <Text
+                            style={[
+                              styles.scheduleButtonText,
+                              { color: "#0B4A6F", marginTop: 2 },
+                            ]}
+                          >
+                            View Messages
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
+                    {user?.role !== "Manager" && (
+                      <TouchableOpacity
+                        style={[
+                          styles.loginButton,
+                          !!loginLoadingId && { opacity: 0.6 },
+                        ]}
+                        disabled={!!loginLoadingId}
+                        onPress={() => handleLoginAsTherapist(therapist)}
+                      >
+                        {loginLoadingId === therapist.id ? (
+                          <ActivityIndicator size="small" color="#0B4A6F" />
+                        ) : (
+                          <Feather name="log-in" size={20} color="#0B4A6F" />
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
               </View>
-            </View>
-          );
-        })}
+            );
+          })}
 
-        {loadingMore && <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />}
+        {loadingMore && (
+          <ActivityIndicator
+            size="small"
+            color={colors.primary}
+            style={{ marginVertical: 12 }}
+          />
+        )}
 
         {/* Spacer so the FAB never covers the last card */}
         <View style={{ height: 90 }} />
       </ScrollView>
 
-      <TouchableOpacity style={[styles.fab]} onPress={openAddModal} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={[styles.fab]}
+        onPress={openAddModal}
+        activeOpacity={0.8}
+      >
         <Feather name="plus" size={fontSize(30)} color="#fff" />
       </TouchableOpacity>
 
@@ -1111,7 +1240,10 @@ export default function TherapistsScreen({ navigation }) {
           activeOpacity={1}
           onPress={() => setIsFilterModalOpen(false)}
         >
-          <TouchableOpacity activeOpacity={1} style={[styles.modalContent, { paddingBottom: insets.bottom + 24}]}>
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[styles.modalContent, { paddingBottom: insets.bottom + 24 }]}
+          >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Therapist Filter</Text>
               <TouchableOpacity onPress={() => setIsFilterModalOpen(false)}>
@@ -1165,14 +1297,16 @@ export default function TherapistsScreen({ navigation }) {
                     key={option.value}
                     style={[
                       styles.statusFilterChip,
-                      draftStatus === option.value && styles.statusFilterChipActive,
+                      draftStatus === option.value &&
+                        styles.statusFilterChipActive,
                     ]}
                     onPress={() => setDraftStatus(option.value)}
                   >
                     <Text
                       style={[
                         styles.statusFilterText,
-                        draftStatus === option.value && styles.statusFilterTextActive,
+                        draftStatus === option.value &&
+                          styles.statusFilterTextActive,
                       ]}
                     >
                       {option.label}
@@ -1183,11 +1317,17 @@ export default function TherapistsScreen({ navigation }) {
             </ScrollView>
 
             <View style={styles.filterFooter}>
-              <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
+              <TouchableOpacity
+                style={styles.resetButton}
+                onPress={resetFilters}
+              >
                 <Text style={styles.resetButtonText}>Reset</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={applyFilters}
+              >
                 <Text style={styles.applyButtonText}>Apply Filters</Text>
               </TouchableOpacity>
             </View>
@@ -1203,7 +1343,7 @@ export default function TherapistsScreen({ navigation }) {
           setIsAddModalOpen(false);
           resetTherapistForm();
         }}
-        style={{paddingBottom:insets.bottom}}
+        style={{ paddingBottom: insets.bottom }}
       >
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -1246,11 +1386,22 @@ export default function TherapistsScreen({ navigation }) {
                   placeholder="Dr. Sarah Chen"
                   placeholderTextColor="#94A3B8"
                   value={newTherapist.name}
-                  onChangeText={(t) => setNewTherapist({ ...newTherapist, name: t })}
+                  onChangeText={(t) =>
+                    setNewTherapist({ ...newTherapist, name: t })
+                  }
                 />
 
-                <Text style={styles.fieldLabel}>Specialty <Text style={styles.requiredText}>*</Text></Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 6 }}>
+                <Text style={styles.fieldLabel}>
+                  Specialty <Text style={styles.requiredText}>*</Text>
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    marginVertical: 6,
+                  }}
+                >
                   {services.map((item, index) => {
                     const isSelected = newTherapist.specialty === item.id;
                     return (
@@ -1259,16 +1410,25 @@ export default function TherapistsScreen({ navigation }) {
                         style={[
                           styles.tabChip,
                           { backgroundColor: item.bg },
-                          isSelected && { borderWidth: 2, borderColor: "#0B4A6F" },
+                          isSelected && {
+                            borderWidth: 2,
+                            borderColor: "#0B4A6F",
+                          },
                         ]}
                         key={item.id}
                         onPress={() =>
                           setNewTherapist({
                             ...newTherapist,
                             specialty: item.id,
-                          })}
+                          })
+                        }
                       >
-                        <Text style={[styles.tabChipText, { color: item.color, fontWeight: "700" }]}>
+                        <Text
+                          style={[
+                            styles.tabChipText,
+                            { color: item.color, fontWeight: "700" },
+                          ]}
+                        >
                           {item.label}
                         </Text>
                       </TouchableOpacity>
@@ -1276,8 +1436,7 @@ export default function TherapistsScreen({ navigation }) {
                   })}
                 </View>
 
-                {
-                  /* <Text style={styles.fieldLabel}>Max Children (Caseload Limit)</Text>
+                {/* <Text style={styles.fieldLabel}>Max Children (Caseload Limit)</Text>
               <TextInput
                 style={styles.formInput}
                 placeholder="15"
@@ -1285,8 +1444,7 @@ export default function TherapistsScreen({ navigation }) {
                 keyboardType="number-pad"
                 value={newTherapist.maxChildren}
                 onChangeText={(t) => setNewTherapist({ ...newTherapist, maxChildren: t })}
-              /> */
-                }
+              /> */}
 
                 <Text style={styles.fieldLabel}>
                   Email <Text style={styles.requiredText}>*</Text>
@@ -1297,16 +1455,19 @@ export default function TherapistsScreen({ navigation }) {
                   placeholderTextColor="#94A3B8"
                   keyboardType="email-address"
                   value={newTherapist.email}
-                  onChangeText={(t) => setNewTherapist({ ...newTherapist, email: t })}
+                  onChangeText={(t) =>
+                    setNewTherapist({ ...newTherapist, email: t })
+                  }
                 />
 
-                <Text style={styles.fieldLabel}>
-                  Phone <Text style={styles.requiredText}>*</Text>
-                </Text>
+                <Text style={styles.fieldLabel}>Phone (Optional)</Text>
                 <TextInput
                   style={[
                     styles.formInput,
-                    phoneTouched && !isPhoneValid && styles.inputError,
+                    phoneTouched &&
+                      newTherapist.phone &&
+                      !isPhoneValid &&
+                      styles.inputError,
                   ]}
                   placeholder="0300 1234567"
                   placeholderTextColor="#94A3B8"
@@ -1322,11 +1483,18 @@ export default function TherapistsScreen({ navigation }) {
                   placeholder="Address"
                   placeholderTextColor="#94A3B8"
                   value={newTherapist.address}
-                  onChangeText={(t) => setNewTherapist({ ...newTherapist, address: t })}
+                  onChangeText={(t) =>
+                    setNewTherapist({ ...newTherapist, address: t })
+                  }
                 />
 
                 <Text style={styles.fieldLabel}>
-                  Password {!isEditMode ? <Text style={styles.requiredText}>*</Text> : ""}
+                  Password{" "}
+                  {!isEditMode ? (
+                    <Text style={styles.requiredText}>*</Text>
+                  ) : (
+                    ""
+                  )}
                 </Text>
                 <View style={styles.passwordInputContainer}>
                   <TextInput
@@ -1337,13 +1505,24 @@ export default function TherapistsScreen({ navigation }) {
                     placeholder="Enter password"
                     placeholderTextColor="#94A3B8"
                   />
-                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                    <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#94A3B8" />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Feather
+                      name={showPassword ? "eye" : "eye-off"}
+                      size={20}
+                      color="#94A3B8"
+                    />
                   </TouchableOpacity>
                 </View>
 
                 <Text style={styles.fieldLabel}>
-                  Confirm Password {!isEditMode ? <Text style={styles.requiredText}>*</Text> : ""}
+                  Confirm Password{" "}
+                  {!isEditMode ? (
+                    <Text style={styles.requiredText}>*</Text>
+                  ) : (
+                    ""
+                  )}
                 </Text>
                 <View style={styles.passwordInputContainer}>
                   <TextInput
@@ -1354,18 +1533,27 @@ export default function TherapistsScreen({ navigation }) {
                     placeholder="Confirm password"
                     placeholderTextColor="#94A3B8"
                   />
-                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                    <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#94A3B8" />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <Feather
+                      name={showConfirmPassword ? "eye" : "eye-off"}
+                      size={20}
+                      color="#94A3B8"
+                    />
                   </TouchableOpacity>
                 </View>
                 {isEditMode && (
-                                <Text style={styles.helper}>
-                                  Leave blank to keep the current password.
-                                </Text>
-                              )}
+                  <Text style={styles.helper}>
+                    Leave blank to keep the current password.
+                  </Text>
+                )}
                 <View style={styles.passwordButton}>
                   <TouchableOpacity
-                    style={[styles.passwordSubButton, {backgroundColor:"#0B4A6F"}]}
+                    style={[
+                      styles.passwordSubButton,
+                      { backgroundColor: "#0B4A6F" },
+                    ]}
                     onPress={generatePassword}
                   >
                     <Text style={styles.passwordButtonText}>
@@ -1374,10 +1562,15 @@ export default function TherapistsScreen({ navigation }) {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.passwordSubButton, {borderColor:"#0B4A6F"}]}
+                    style={[
+                      styles.passwordSubButton,
+                      { borderColor: "#0B4A6F" },
+                    ]}
                     onPress={copyPassword}
                   >
-                    <Text style={[styles.passwordButtonText,{color:"#0B4A6F"}]}>
+                    <Text
+                      style={[styles.passwordButtonText, { color: "#0B4A6F" }]}
+                    >
                       Copy
                     </Text>
                   </TouchableOpacity>
@@ -1392,16 +1585,22 @@ export default function TherapistsScreen({ navigation }) {
                     setNewTherapist((prev) => ({
                       ...prev,
                       isActive: value,
-                    }))}
+                    }))
+                  }
                 />
               </ScrollView>
               <View style={styles.stickyButtonContainer}>
                 <TouchableOpacity
-                  style={[styles.saveTherapistButton1, saving && { opacity: 0.6 }]}
+                  style={[
+                    styles.saveTherapistButton1,
+                    saving && { opacity: 0.6 },
+                  ]}
                   onPress={handleSaveTherapist}
                   disabled={saving}
                 >
-                  {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : (
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
                     <Text style={styles.saveTherapistText}>
                       {isEditMode ? "Save Changes" : "Save Therapist"}
                     </Text>
@@ -1426,7 +1625,9 @@ export default function TherapistsScreen({ navigation }) {
         >
           <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+              >
                 {assignStep === 2 && (
                   <TouchableOpacity onPress={() => setAssignStep(1)}>
                     <Feather name="arrow-left" size={20} color="#0F172A" />
@@ -1441,123 +1642,156 @@ export default function TherapistsScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            {assignStep === 1
-              ? (
-                <>
-                  <View style={styles.searchInputContainer}>
-                    <Feather name="search" size={18} color="#94A3B8" style={styles.searchIcon} />
-                    <TextInput
-                      style={styles.searchInput}
-                      placeholder="Search therapists..."
-                      placeholderTextColor="#94A3B8"
-                      value={assignTherapistSearch}
-                      onChangeText={setAssignTherapistSearch}
-                    />
-                  </View>
+            {assignStep === 1 ? (
+              <>
+                <View style={styles.searchInputContainer}>
+                  <Feather
+                    name="search"
+                    size={18}
+                    color="#94A3B8"
+                    style={styles.searchIcon}
+                  />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search therapists..."
+                    placeholderTextColor="#94A3B8"
+                    value={assignTherapistSearch}
+                    onChangeText={setAssignTherapistSearch}
+                  />
+                </View>
 
-                  {assignLoading && (
-                    <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
+                {assignLoading && (
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.primary}
+                    style={{ marginVertical: 16 }}
+                  />
+                )}
+
+                <ScrollView
+                  style={{ maxHeight: 360, marginTop: 12 }}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {!assignLoading && assignTherapistResults.length === 0 && (
+                    <Text style={styles.emptyListText}>
+                      No therapists found.
+                    </Text>
                   )}
-
-                  <ScrollView
-                    style={{ maxHeight: 360, marginTop: 12 }}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    {!assignLoading && assignTherapistResults.length === 0 && (
-                      <Text style={styles.emptyListText}>No therapists found.</Text>
-                    )}
-                    {assignTherapistResults.map((t) => {
-                      return (
-                        <TouchableOpacity
-                          key={t._id || t.id}
-                          style={styles.selectableRow}
-                          onPress={() => selectTherapistForAssign(t)}
-                        >
-                          <Text style={styles.selectableRowText}>{t.fullName || t.name}</Text>
-                          <Feather name="chevron-right" size={18} color="#94A3B8" />
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                </>
-              )
-              : (
-                <>
-                  <View style={styles.searchInputContainer}>
-                    <Feather name="search" size={18} color="#94A3B8" style={styles.searchIcon} />
-                    <TextInput
-                      style={styles.searchInput}
-                      placeholder="Search children..."
-                      placeholderTextColor="#94A3B8"
-                      value={assignChildSearch}
-                      onChangeText={setAssignChildSearch}
-                    />
-                  </View>
-
-                  {assignLoading && (
-                    <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
-                  )}
-
-                  <ScrollView
-                    style={{ maxHeight: 280, marginTop: 12 }}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    {!assignLoading && assignChildResults.length === 0 && (
-                      <Text style={styles.emptyListText}>No children found.</Text>
-                    )}
-                    {assignChildResults.map((child, index) => {
-                      const childId = child._id || child.id;
-                      const isSelected = selectedChildIds.includes(childId);
-                      return (
-                        <TouchableOpacity
-                          key={`${childId}-${index}`} // Safe unique key prevents UI duplicate warning
-                          style={styles.selectableRow}
-                          onPress={() => toggleChildSelection(childId)}
-                        >
-                          <Text style={styles.selectableRowText}>{child.fullName || child.name}</Text>
-                          <Feather
-                            name={isSelected ? "check-square" : "square"}
-                            size={18}
-                            color={isSelected ? "#0B4A6F" : "#94A3B8"}
-                          />
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-
-                  {(() => {
-                    const toAdd = selectedChildIds.filter((id) => !originalAssignedIds.includes(id));
-                    const toRemove = originalAssignedIds.filter((id) =>
-                      !selectedChildIds.includes(id)
+                  {assignTherapistResults.map((t) => {
+                    return (
+                      <TouchableOpacity
+                        key={t._id || t.id}
+                        style={styles.selectableRow}
+                        onPress={() => selectTherapistForAssign(t)}
+                      >
+                        <Text style={styles.selectableRowText}>
+                          {t.fullName || t.name}
+                        </Text>
+                        <Feather
+                          name="chevron-right"
+                          size={18}
+                          color="#94A3B8"
+                        />
+                      </TouchableOpacity>
                     );
-                    const hasChanges = toAdd.length > 0 || toRemove.length > 0;
-                    const isDisabled = !hasChanges || assigning;
+                  })}
+                </ScrollView>
+              </>
+            ) : (
+              <>
+                <View style={styles.searchInputContainer}>
+                  <Feather
+                    name="search"
+                    size={18}
+                    color="#94A3B8"
+                    style={styles.searchIcon}
+                  />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search children..."
+                    placeholderTextColor="#94A3B8"
+                    value={assignChildSearch}
+                    onChangeText={setAssignChildSearch}
+                  />
+                </View>
 
-                    const label = !hasChanges
-                      ? "No changes"
-                      : [
+                {assignLoading && (
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.primary}
+                    style={{ marginVertical: 16 }}
+                  />
+                )}
+
+                <ScrollView
+                  style={{ maxHeight: 280, marginTop: 12 }}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {!assignLoading && assignChildResults.length === 0 && (
+                    <Text style={styles.emptyListText}>No children found.</Text>
+                  )}
+                  {assignChildResults.map((child, index) => {
+                    const childId = child._id || child.id;
+                    const isSelected = selectedChildIds.includes(childId);
+                    return (
+                      <TouchableOpacity
+                        key={`${childId}-${index}`} // Safe unique key prevents UI duplicate warning
+                        style={styles.selectableRow}
+                        onPress={() => toggleChildSelection(childId)}
+                      >
+                        <Text style={styles.selectableRowText}>
+                          {child.fullName || child.name}
+                        </Text>
+                        <Feather
+                          name={isSelected ? "check-square" : "square"}
+                          size={18}
+                          color={isSelected ? "#0B4A6F" : "#94A3B8"}
+                        />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+
+                {(() => {
+                  const toAdd = selectedChildIds.filter(
+                    (id) => !originalAssignedIds.includes(id),
+                  );
+                  const toRemove = originalAssignedIds.filter(
+                    (id) => !selectedChildIds.includes(id),
+                  );
+                  const hasChanges = toAdd.length > 0 || toRemove.length > 0;
+                  const isDisabled = !hasChanges || assigning;
+
+                  const label = !hasChanges
+                    ? "No changes"
+                    : [
                         toAdd.length > 0 && `Assign ${toAdd.length}`,
                         toRemove.length > 0 && `Unassign ${toRemove.length}`,
                       ]
                         .filter(Boolean)
                         .join(" · ");
 
-                    return (
-                      <TouchableOpacity
-                        style={[styles.saveTherapistButton, isDisabled && { opacity: 0.6 }]}
-                        onPress={handleConfirmAssign}
-                        disabled={isDisabled}
-                      >
-                        {assigning
-                          ? <ActivityIndicator size="small" color="#FFFFFF" />
-                          : <Text style={styles.saveTherapistText}>{label}</Text>}
-                      </TouchableOpacity>
-                    );
-                  })()}
-                </>
-              )}
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.saveTherapistButton,
+                        isDisabled && { opacity: 0.6 },
+                      ]}
+                      onPress={handleConfirmAssign}
+                      disabled={isDisabled}
+                    >
+                      {assigning ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.saveTherapistText}>{label}</Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })()}
+              </>
+            )}
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
@@ -1709,14 +1943,17 @@ const styles = StyleSheet.create({
   },
   therapistAvatarInitial: {
     width: wp(56),
-        height: hp(56),
-        borderRadius: wp(999),
-        marginRight: wp(14),
-        alignItems: "center",
-        justifyContent: "center",
+    height: hp(56),
+    borderRadius: wp(999),
+    marginRight: wp(14),
+    alignItems: "center",
+    justifyContent: "center",
   },
   therapistAvatarInitialText: {
-    color: "#FFFFFF", fontSize: fontSize(22), fontFamily: fonts.semiBold,lineHeight:18
+    color: "#FFFFFF",
+    fontSize: fontSize(22),
+    fontFamily: fonts.semiBold,
+    lineHeight: 18,
   },
   therapistInfo: {
     flex: 1,
@@ -1734,13 +1971,13 @@ const styles = StyleSheet.create({
     // paddingVertical: hp(1),
     borderRadius: wp(10),
     marginBottom: hp(4),
-    flexWrap:"nowrap"
+    flexWrap: "nowrap",
   },
   specialtyText: {
     fontSize: fontSize(11),
     fontFamily: fonts.regular,
     lineHeight: 22,
-    flexWrap:"nowrap"
+    flexWrap: "nowrap",
   },
   moreOptionsButton: {
     padding: 6,
@@ -1849,7 +2086,7 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 18,
-    bottom:20,
+    bottom: 20,
     width: wp(56),
     height: hp(56),
     borderRadius: wp(16),
@@ -2198,7 +2435,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  resetButtonText: { fontSize: fontSize(15), fontWeight: "700", color: "#475569" },
+  resetButtonText: {
+    fontSize: fontSize(15),
+    fontWeight: "700",
+    color: "#475569",
+  },
   applyButton: {
     flex: 2,
     height: 48,
@@ -2207,7 +2448,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  applyButtonText: { fontSize: fontSize(15), fontWeight: "700", color: "#FFFFFF" },
+  applyButtonText: {
+    fontSize: fontSize(15),
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
   filterActiveDot: {
     position: "absolute",
     top: 8,
@@ -2232,7 +2477,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor:"#0B4A6F",
+    borderColor: "#0B4A6F",
   },
   passwordButtonText: {
     fontSize: fontSize(13),

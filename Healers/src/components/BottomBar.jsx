@@ -15,7 +15,7 @@ import {
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
-
+import { canOpenScreen } from '../utils/permissions';
 import { getUnreadNotificationCountApi } from '../api/authApi';
 import { AuthContext } from '../context/AuthContext';
 import { fonts } from '../styles/theme';
@@ -65,23 +65,15 @@ export default function BottomBar({ activeTab = "AdminDashboard" }) {
     const interval = setInterval(fetchUnreadCount, 5000);
     return () => clearInterval(interval);
   }, [fetchUnreadCount, token]);
-
+  const adminTabs = [
+    { id: "AdminDashboard", label: "Home", iconType: "MaterialIcons", iconName: "home", iconSize: 19 },
+    { id: "Therapist", label: "Therapists", iconType: "FontAwesome5", iconName: "user-md", iconSize: 18 },
+    { id: "Children", label: "Children", iconType: "FontAwesome5", iconName: "child", iconSize: 18 },
+    { id: "Schedule", label: "Scheduling", iconType: "MaterialIcons", iconName: "event", iconSize: 19 },
+    { id: "Notifications", label: "Notifications", iconType: "MaterialIcons", iconName: "notifications", iconSize: 19 },
+  ].filter((tab) => canOpenScreen(user?.role, user?.permissions, tab.id));
   const tabs = [
-    ...(user?.role === "Admin"
-      ? [
-        { id: "AdminDashboard", label: "Home", iconType: "MaterialIcons", iconName: "home", iconSize: 19 },
-        { id: "Therapist", label: "Therapists", iconType: "FontAwesome5", iconName: "user-md", iconSize: 18 },
-        { id: "Children", label: "Children", iconType: "FontAwesome5", iconName: "child", iconSize: 18 },
-        { id: "Schedule", label: "Scheduling", iconType: "MaterialIcons", iconName: "event", iconSize: 19 },
-        {
-          id: "Notifications",
-          label: "Notifications",
-          iconType: "MaterialIcons",
-          iconName: "notifications",
-          iconSize: 19,
-        },
-      ]
-      : []),
+    ...((user?.role === "Admin" || user?.role === "Manager") ? adminTabs : []),
 
     ...(user?.role === "Therapist"
       ? [

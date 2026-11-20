@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { canOpenScreen } from "../../utils/permissions";
 
 import Feather from '@expo/vector-icons/Feather';
 import { useRoute } from '@react-navigation/native';
@@ -175,9 +176,10 @@ export default function ChildrenScreen({ navigation }) {
   const pkgRequestIdRef = useRef(0);
   const pkgLoadingMoreRef = useRef(false);
   const route = useRoute();
-
+  const can = (screen) => canOpenScreen(user?.role, user?.permissions, screen);
   const PKG_LIMIT = 10;
-
+  const canSeeMessages = can("ChildMessages");
+  const canSeeSchedule = can("Schedule");
   const isEditMode = editingChildId !== null;
   const menuTouchRef = useRef(false);
   const requestIdRef = useRef(0);
@@ -900,47 +902,56 @@ export default function ChildrenScreen({ navigation }) {
                     )}
                   </View>
                 </View>
-                <View style={styles.cardActionsRow}>
-                  <TouchableOpacity
-                    style={styles.scheduleButton}
-                    activeOpacity={0.85}
-                    onPress={() =>
-                      navigation.navigate("ChildSchedule", {
-                        childId: child.id,
-                        childName: child.name,
-                        isActive: child.isActive,
-                      })}
-                  >
-                    {/* <Feather name="calendar" size={16} color="#FFFFFF" /> */}
-                    <Text style={styles.scheduleButtonText}>View Schedule</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.iconActionButton}
-                    onPress={() =>
-                      navigation.navigate("ChatDetails", {
-                        conversationId: child.conversationId,
-                        receiverId: child.id,
-                        partnerName: child.name,
-                        partnerImage: child.profileImage,
-                        isOnline: child.isOnline,
-                        lastSeen: child.lastActive,
-                        currentUserId: userId,
-                      })}
-                  >
-                    <Feather name="mail" size={20} color="#0B4A6F" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.iconActionButton, !!loginLoadingId && { opacity: 0.6 }]}
-                    disabled={!!loginLoadingId}
-                    onPress={() => handleLoginAsChild(child)}
-                  >
-                    {loginLoadingId === child.id
-                      ? <ActivityIndicator size="small" color="#0B4A6F" />
-                      : <Feather name="log-in" size={20} color="#0B4A6F" />}
-                  </TouchableOpacity>
-                </View>
+                {(canSeeSchedule || canSeeMessages || user?.role !== "Manager") && (
+                  <View style={styles.cardActionsRow}>
+                    {canSeeSchedule && (
+                      <TouchableOpacity
+                        style={styles.scheduleButton}
+                        activeOpacity={0.85}
+                        onPress={() =>
+                          navigation.navigate("ChildSchedule", {
+                            childId: child.id,
+                            childName: child.name,
+                            isActive: child.isActive,
+                          })}
+                      >
+                        {/* <Feather name="calendar" size={16} color="#FFFFFF" /> */}
+                        <Text style={styles.scheduleButtonText}>View Schedule</Text>
+                      </TouchableOpacity>
+                    )}
+                    {canSeeMessages && (
+                    <TouchableOpacity
+                      style={[styles.iconActionButton,!canSeeSchedule? {flexDirection:"row",width:"100%",gap:12}:{}]}
+                      onPress={() =>
+                        navigation.navigate("ChatDetails", {
+                          conversationId: child.conversationId,
+                          receiverId: child.id,
+                          partnerName: child.name,
+                          partnerImage: child.profileImage,
+                          isOnline: child.isOnline,
+                          lastSeen: child.lastActive,
+                          currentUserId: userId,
+                        })}
+                    >
+                      <Feather name="mail" size={20} color="#0B4A6F" /> 
+                      {!canSeeSchedule && (
+                        <Text style={[styles.scheduleButtonText, {color:"#0B4A6F",marginTop:2}]}>View Messages</Text>
+                      )}
+                    </TouchableOpacity>
+                    )}
+                  {user?.role !== 'Manager' && (
+                    <TouchableOpacity
+                      style={[styles.iconActionButton, !!loginLoadingId && { opacity: 0.6 }]}
+                      disabled={!!loginLoadingId}
+                      onPress={() => handleLoginAsChild(child)}
+                    >
+                      {loginLoadingId === child.id
+                        ? <ActivityIndicator size="small" color="#0B4A6F" />
+                        : <Feather name="log-in" size={20} color="#0B4A6F" />}
+                    </TouchableOpacity>
+                  )}
+                  </View>
+                )}
               </View>
             );
           })}
@@ -1731,8 +1742,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconActionButton: {
-    width: wp(48),
-    height: 44,
+    minWidth: wp(48),
+    minHeight: hp(44),
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E2E8F0",

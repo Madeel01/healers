@@ -34,12 +34,16 @@ const sendEmail = require("../utils/sendEmail");
 const Message = require("../models/Message");
 const QuarterlyReport = require("../models/QuarterlyReport");
 const Program = require("../models/Program");
+const Permission = require("../models/Permission");
+const PermissionGroup = require("../models/PermissionGroup");
+const UserPermission = require("../models/UserPermission");
+const { cleanGroupIds, validateGroupIds, replaceManagerGroups } = require("../utils/managerGroups");
 const PAST_DAYS = 365;
 const POPULATE = [
   { path: "complainantId", select: "fullName role" },
   { path: "resolvedBy", select: "fullName" },
 ];
-const ROLES = ["Admin", "Therapist", "Child"];
+const ROLES = ["Admin", "Therapist", "Manager","Child"];
 
 const normalizeName = (name) => name?.trim().replace(/\s+/g, " ").toLowerCase();
 const normalizeCnic = (v = "") => {
@@ -1051,7 +1055,7 @@ exports.getAllUsers = async (req, res) => {
       filter.$or = [{ fullName: rx }, { email: rx }, { phone: rx }];
     }
 
-    const [total, users, grouped] = await Promise.all([
+    const [total, users, grouped, userPermissions, permissions, permissionGroups] = await Promise.all([
       User.countDocuments(filter),
       User.find(filter)
           .select(
@@ -1064,6 +1068,9 @@ exports.getAllUsers = async (req, res) => {
           .limit(limitNum)
           .lean(),
       User.aggregate([{ $group: { _id: "$role", count: { $sum: 1 } } }]),
+      UserPermission.find({}).lean(),
+      Permission.find({}).lean(),
+      PermissionGroup.find({}).lean(),
     ]);
     const therapistIds = users.filter((u) => u.role === "Therapist").map((u) => u._id);
       if (therapistIds.length) {
@@ -1086,6 +1093,9 @@ exports.getAllUsers = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: users,
+      userPermissions,
+      permissions,
+      permissionGroups,
       roleCounts,
       hasMore: pageNum * limitNum < total,
       totalCount: total,
@@ -1097,23 +1107,27 @@ exports.getAllUsers = async (req, res) => {
 };
 const PASSWORD_RX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
 const PHONE_RX = /^(03\d{9}|\+923\d{9})$/;
-const normalizePhone = (p) => (p.startsWith("+92") ? "0" + p.slice(3) : p);
+
+const normalizePhone = (p) =>
+  p ? (p.startsWith("+92") ? "0" + p.slice(3) : p) : null;
+
 exports.createAdmin = async (req, res) => {
   try {
     const { fullName, email, phone, address, password, isActive, permissions } = req.body;
 
-    if (!fullName?.trim() || !email || !phone || !password) {
+    if (!fullName?.trim() || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Full name, email, phone and password are required.",
+        message: "Full name, email and password are required.",
       });
     }
     const cleanEmail = email.trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
       return res.status(400).json({ success: false, message: "Enter a valid email address." });
     }
-    const cleanPhone = phone.trim();
-    if (!PHONE_RX.test(cleanPhone)) {
+    const cleanPhone = phone?.trim() || "";
+
+    if (cleanPhone && !PHONE_RX.test(cleanPhone)) {
       return res.status(400).json({
         success: false,
         message: "Phone number must be in 03011234567 or +923011234567 format.",
@@ -1195,14 +1209,17 @@ exports.updateAdmin = async (req, res) => {
       }
       user.email = cleanEmail;
     }
-    if (phone) {
-      if (!PHONE_RX.test(phone.trim())) {
+    if (phone !== undefined) {
+      const cleanPhone = phone?.trim() || "";
+
+      if (cleanPhone && !PHONE_RX.test(cleanPhone)) {
         return res.status(400).json({
           success: false,
           message: "Phone number must be in 03011234567 or +923011234567 format.",
         });
       }
-      user.phone = normalizePhone(phone.trim());
+
+      user.phone = normalizePhone(cleanPhone);
     }
     if (password) {
       if (!PASSWORD_RX.test(password)) {
@@ -1247,6 +1264,175 @@ exports.deleteAdmin = async (req, res) => {
   } catch (error) {
     console.error("Delete Admin Error:", error);
     return res.status(500).json({ success: false, message: "Failed to delete admin." });
+  }
+};
+
+exports.createManager = async (req, res) => {
+  try {
+    const { fullName, email, phone, address, password, isActive } = req.body;
+
+    if (!fullName?.trim() || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name, email and password are required.",
+      });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+      return res.status(400).json({ success: false, message: "Enter a valid email address." });
+    }
+    const cleanPhone = phone?.trim() || "";
+
+    if (cleanPhone && !PHONE_RX.test(cleanPhone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number must be in 03011234567 or +923011234567 format.",
+      });
+    }
+    if (!PASSWORD_RX.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters and contain 1 lowercase, 1 uppercase, and 1 special character.",
+      });
+    }
+    if (await User.exists({ email: cleanEmail })) {
+      return res.status(409).json({ success: false, message: "An account with this email already exists." });
+    }
+    const groupIds = cleanGroupIds(req.body.groupIds);
+    const groupError = await validateGroupIds(groupIds);
+    if (groupError) {
+      return res.status(400).json({ success: false, message: groupError });
+    }
+    const user = await User.create({
+      fullName: fullName.trim(),
+      email: cleanEmail,
+      phone: normalizePhone(cleanPhone),
+      address: address?.trim() || null,
+      password: await bcrypt.hash(password, 10),
+      role: "Manager",
+      agreeTerms: true,
+      isActive: isActive ?? true,
+    });
+    try {
+      await replaceManagerGroups(user._id, groupIds, req.user?._id || req.user?.id);
+    } catch (e) {
+      await User.deleteOne({ _id: user._id });
+      throw e;                                
+    }
+    const data = user.toObject();
+    delete data.password;
+
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: "Your Manager Account Has Been Created - Healer",
+        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; color: #333;">
+          <h2 style="color: #2563eb;">Welcome to Healer!</h2>
+          <p>Dear ${user.fullName},</p>
+          <p>An manager account has been created for you with this email address. Please use the password shared with you by your manager to sign in.</p>
+          <p>Best regards,<br/>Healer Team</p></div>`,
+      });
+    } catch (e) {
+      console.error("Manager welcome email failed:", e.message);
+    }
+
+    return res.status(201).json({ success: true, message: "Manager created successfully.", data });
+  } catch (error) {
+    console.error("Create Manager Error:", error);
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: "An account with this email already exists." });
+    }
+    return res.status(500).json({ success: false, message: "Failed to create manager." });
+  }
+};
+exports.updateManager = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, email, phone, address, password, isActive, groupIds: rawGroupIds } = req.body;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid manager id." });
+    }
+    if (isActive === false && String(req.user.id || req.user._id) === id) {
+      return res.status(400).json({ success: false, message: "You cannot deactivate your own account." });
+    }
+
+    const user = await User.findOne({ _id: id, role: "Manager" });
+    if (!user) return res.status(404).json({ success: false, message: "Manager not found." });
+    const groupIds = rawGroupIds === undefined ? null : cleanGroupIds(rawGroupIds);
+    if (groupIds) {
+      const groupError = await validateGroupIds(groupIds);
+      if (groupError) return res.status(400).json({ success: false, message: groupError });
+    }
+    if (fullName?.trim()) user.fullName = fullName.trim();
+    if (address !== undefined) user.address = address?.trim() || null;
+
+    if (email) {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+        return res.status(400).json({ success: false, message: "Enter a valid email address." });
+      }
+      if (await User.exists({ _id: { $ne: id }, email: cleanEmail })) {
+        return res.status(409).json({ success: false, message: "An account with this email already exists." });
+      }
+      user.email = cleanEmail;
+    }
+    if (phone !== undefined) {
+      const cleanPhone = phone?.trim() || "";
+
+      if (cleanPhone && !PHONE_RX.test(cleanPhone)) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number must be in 03011234567 or +923011234567 format.",
+        });
+      }
+
+      user.phone = normalizePhone(cleanPhone);
+    }
+    if (password) {
+      if (!PASSWORD_RX.test(password)) {
+        return res.status(400).json({
+          success: false,
+          message: "Password must be at least 8 characters and contain 1 lowercase, 1 uppercase, and 1 special character.",
+        });
+      }
+      user.password = await bcrypt.hash(password, 10);
+    }
+    if (typeof isActive === "boolean") user.isActive = isActive;
+
+    await user.save();
+    if (groupIds) await replaceManagerGroups(user._id, groupIds, req.user?._id || req.user?.id);
+    const data = user.toObject();
+    delete data.password;
+    return res.status(200).json({ success: true, message: "Manager updated successfully.", data });
+  } catch (error) {
+    console.error("Update Manager Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to update manager." });
+  }
+};
+exports.deleteManager = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid manager id." });
+    }
+    if (String(req.user.id || req.user._id) === id) {
+      return res.status(400).json({ success: false, message: "You cannot delete your own account." });
+    }
+
+    const user = await User.findOne({ _id: id, role: "Manager" });
+    if (!user) return res.status(404).json({ success: false, message: "Manager not found." });
+
+    const managerCount = await User.countDocuments({ role: "Manager" });
+    if (managerCount <= 1) {
+      return res.status(400).json({ success: false, message: "You cannot delete the last manager." });
+    }
+
+    await User.deleteOne({ _id: id });
+    return res.status(200).json({ success: true, deleted: true, message: "Manager deleted." });
+  } catch (error) {
+    console.error("Delete Manager Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to delete manager." });
   }
 };
 
@@ -1969,7 +2155,15 @@ exports.assignTherapistsUsers = async (req, res) => {
     });
   }
 };
-
+const sendEmailSafely = async (emailData) => {
+  try {
+    await sendEmail(emailData);
+    return true;
+  } catch (error) {
+    console.error("Email sending failed:", error.message);
+    return false;
+  }
+};
 exports.getTherapistsUsers = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
@@ -2107,6 +2301,7 @@ exports.createTherapist = async (req, res) => {
         message: "Name, email, specialty and password are required.",
       });
     }
+
     const normalizedEmail = email.trim().toLowerCase();
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -2118,7 +2313,9 @@ exports.createTherapist = async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({ email: normalizedEmail }).lean();
+    const existingUser = await User.findOne({
+      email: normalizedEmail,
+    }).lean();
 
     if (existingUser) {
       return res.status(409).json({
@@ -2127,24 +2324,26 @@ exports.createTherapist = async (req, res) => {
       });
     }
 
-    if (!phone) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Phone number is required." });
+    let normalizedPhone = "";
+
+    if (phone && phone.trim()) {
+      const phoneTrimmed = phone.trim();
+      const phoneRegex = /^(03\d{9}|\+923\d{9})$/;
+
+      if (!phoneRegex.test(phoneTrimmed)) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number must be in 03011234567 or +923011234567 format.",
+        });
+      }
+
+      normalizedPhone = phoneTrimmed.startsWith("+92")
+        ? "0" + phoneTrimmed.slice(3)
+        : phoneTrimmed;
     }
-    const phoneTrimmed = phone.trim();
-    const phoneRegex = /^(03\d{9}|\+923\d{9})$/;
-    if (!phoneRegex.test(phoneTrimmed)) {
-      return res.status(400).json({
-        success: false,
-        message: "Phone number must be in 03011234567 or +923011234567 format.",
-      });
-    }
-    const normalizedPhone = phoneTrimmed.startsWith("+92")
-      ? "0" + phoneTrimmed.slice(3)
-      : phoneTrimmed;
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         success: false,
@@ -2154,9 +2353,10 @@ exports.createTherapist = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const user = await User.create({
       fullName: name,
-      email:normalizedEmail,
+      email: normalizedEmail,
       phone: normalizedPhone,
       address,
       role: "Therapist",
@@ -2164,41 +2364,37 @@ exports.createTherapist = async (req, res) => {
       agreeTerms: true,
       isActive,
     });
+
     const assignment = await TherapistAssignment.create({
       therapistId: user._id,
       specialty: specialty || "",
-      // maxChildren: maxChildren && maxChildren > 0 ? parseInt(maxChildren, 10) : 15,
       childIds: [],
     });
+
     const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; color: #333;">
-          <h2 style="color: #2563eb;">Welcome to Healer!</h2>
-
-          <p>Dear ${name},</p>
-
-          <p>
-            Your account has been successfully created.
-            You can now use your registered credentials to access your account.
-          </p>
-
-          <div style="background: #f3f4f6; padding: 16px; border-radius: 8px;">
-            <p><strong>Name:</strong> ${name}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Password:</strong> ${password}</p>
-          </div>
-
-          <p>If you need assistance, please contact our support team.</p>
-
-          <p>Best regards,<br/>Healer Team</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; color: #333;">
+        <h2 style="color: #2563eb;">Welcome to Healer!</h2>
+        <p>Dear ${name},</p>
+        <p>Your account has been successfully created.</p>
+        <div style="background: #f3f4f6; padding: 16px; border-radius: 8px;">
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${normalizedEmail}</p>
         </div>
-      `
-    await sendEmail({
-      to: email,
+        <p>If you need assistance, please contact our support team.</p>
+        <p>Best regards,<br/>Healer Team</p>
+      </div>
+    `;
+
+    const emailSent = await sendEmailSafely({
+      to: normalizedEmail,
       subject: "Your Account Has Been Created - Healer",
-      html: html,
+      html,
     });
+
     return res.status(201).json({
       success: true,
+      emailSent,
+      message: "Therapist created successfully.",
       data: {
         id: user._id,
         name: user.fullName,
@@ -2206,11 +2402,11 @@ exports.createTherapist = async (req, res) => {
         phone: user.phone,
         address: user.address,
         specialty: assignment.specialty,
-        // maxChildren: assignment.maxChildren,
         currentLoad: 0,
         isActive,
       },
     });
+
   } catch (error) {
     if (error.code === 11000 && error.keyPattern?.email) {
       return res.status(409).json({
@@ -2273,18 +2469,24 @@ exports.updateTherapist = async (req, res) => {
       }
       user.email = normalizedEmail;
     }
-    if (phone) {
-      const phoneTrimmed = phone.trim();
-      const phoneRegex = /^(03\d{9}|\+923\d{9})$/;
-      if (!phoneRegex.test(phoneTrimmed)) {
-        return res.status(400).json({
-          success: false,
-          message: "Phone number must be in 03011234567 or +923011234567 format.",
-        });
+    if (phone !== undefined) {
+      if (phone.trim() === "") {
+        user.phone = "";
+      } else {
+        const phoneTrimmed = phone.trim();
+        const phoneRegex = /^(03\d{9}|\+923\d{9})$/;
+
+        if (!phoneRegex.test(phoneTrimmed)) {
+          return res.status(400).json({
+            success: false,
+            message: "Phone number must be in 03011234567 or +923011234567 format.",
+          });
+        }
+
+        user.phone = phoneTrimmed.startsWith("+92")
+          ? "0" + phoneTrimmed.slice(3)
+          : phoneTrimmed;
       }
-      user.phone = phoneTrimmed.startsWith("+92")
-        ? "0" + phoneTrimmed.slice(3)
-        : phoneTrimmed;
     }
     if (password) {
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
@@ -2302,7 +2504,6 @@ exports.updateTherapist = async (req, res) => {
     if (email) user.email = email;
     if (phone) user.phone = phone;
     if (address) user.address = address;
-    if (password) user.password = await bcrypt.hash(password, 10);
 
     const now = new Date();
     if (isActive === false && user.isActive !== false) {
@@ -2460,7 +2661,7 @@ exports.deleteTherapist = async (req, res) => {
             <p>Best regards,<br/>Healer Team</p>
           </div>
         `
-      await sendEmail({
+      const emailSent = await sendEmailSafely({
         to: user?.email,
         subject: "Your Account Has Been Deactivated - Healer",
         html: html,
@@ -2468,8 +2669,8 @@ exports.deleteTherapist = async (req, res) => {
       return res.status(200).json({
         success: true,
         deactivated: true,
-        message:
-          "This therapist has past appointments or batch history, so they were marked inactive instead of deleted.",
+        emailSent,
+        message: "This therapist has past appointments or batch history, so they were marked inactive instead of deleted.",
       });
     }
 
@@ -2491,7 +2692,7 @@ exports.deleteTherapist = async (req, res) => {
           <p>Best regards,<br/>Healer Team</p>
         </div>
       `
-    await sendEmail({
+    const emailSent = await sendEmailSafely({
       to: user?.email,
       subject: "Your Account Has Been Deleted - Healer",
       html: html,
@@ -2499,14 +2700,16 @@ exports.deleteTherapist = async (req, res) => {
     return res.status(200).json({
       success: true,
       deleted: true,
-      message: "Therapist deleted.",
+      emailSent,
+      message: "Therapist deleted successfully.",
     });
   } catch (error) {
     console.error("Delete Therapist Error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to delete therapist.",
-      error: error.message,
+      error: error?.message || "Unknown server error",
     });
   }
 };
@@ -2964,14 +3167,31 @@ exports.createChild = async (req, res) => {
 
     const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
 
-    if (!fullName?.trim() || !cleanEmail || !phone || !password || !fatherName || !fatherCnic) {
+    if (!fullName?.trim() || !cleanEmail || !password || !fatherName || !fatherCnic) {
       return res.status(400).json({
         success: false,
-        message: "fullName, email, phone, parent name, parent CNIC and password are required.",
+        message: "fullName, email, parent name, parent CNIC and password are required.",
       });
     }
     if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
       return res.status(400).json({ success: false, message: "Enter a valid email address." });
+    }
+    let normalizedPhone = "";
+
+    if (phone && phone.trim()) {
+      const phoneTrimmed = phone.trim();
+      const phoneRegex = /^(03\d{9}|\+923\d{9})$/;
+
+      if (!phoneRegex.test(phoneTrimmed)) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number must be in 03011234567 or +923011234567 format.",
+        });
+      }
+
+      normalizedPhone = phoneTrimmed.startsWith("+92")
+        ? "0" + phoneTrimmed.slice(3)
+        : phoneTrimmed;
     }
     let dob = null;
 
@@ -3024,7 +3244,7 @@ exports.createChild = async (req, res) => {
       gender,
       diagnosis: (diagnosis || "").trim(),
       email: cleanEmail,
-      phone,
+      phone: normalizedPhone,
       address,
       password: hashedPassword,
       role: "Child",
@@ -3096,10 +3316,10 @@ exports.updateChild = async (req, res) => {
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ success: false, message: "Invalid child id." });
     }
-    if (!fullName || !email || !phone) {
+    if (!fullName || !email) {
       return res.status(400).json({
         success: false,
-        message: "fullName, email and phone are required.",
+        message: "fullName and email are required.",
       });
     }
     if (isActive !== undefined && typeof isActive !== "boolean") {
@@ -3166,11 +3386,39 @@ exports.updateChild = async (req, res) => {
         }
       }
     }
+    let normalizedPhone;
+
+    if (phone !== undefined) {
+      if (typeof phone !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number must be a valid string.",
+        });
+      }
+
+      if (phone.trim() === "") {
+        normalizedPhone = "";
+      } else {
+        const phoneTrimmed = phone.trim();
+        const phoneRegex = /^(03\d{9}|\+923\d{9})$/;
+
+        if (!phoneRegex.test(phoneTrimmed)) {
+          return res.status(400).json({
+            success: false,
+            message: "Phone number must be in 03011234567 or +923011234567 format.",
+          });
+        }
+
+        normalizedPhone = phoneTrimmed.startsWith("+92")
+          ? "0" + phoneTrimmed.slice(3)
+          : phoneTrimmed;
+      }
+    }
 
     const updateFields = {
       fullName: fullName.trim(),
       email: email,
-      phone,
+      ...(normalizedPhone !== undefined && { phone: normalizedPhone }),
       ...(address !== undefined && { address }),
       ...(fatherName !== undefined && { fatherName }),
       ...(cnic && { fatherCnic: cnic }),
@@ -4485,7 +4733,7 @@ exports.getBatchPackageOptions = async (req, res) => {
 
 async function resolveRecipients(audience, roles, users, batchIds = []) {
   if (audience === "all") {
-    return User.find({ role: { $in: ["Therapist", "Child", "Admin"] } }, "_id").lean();
+    return User.find({ role: { $in: ["Therapist", "Child", "Manager","Admin"] } }, "_id").lean();
   }
   if (audience === "role") {
     return User.find({ role: { $in: roles } }, "_id").lean();
@@ -7540,6 +7788,151 @@ exports.deleteChildCustomAppointment = async (req, res) => {
     });
   }
 };
+const BULK_DELETE_TYPES = ["custom"];
+
+exports.bulkDeleteAppointments = async (req, res) => {
+  try {
+    const raw = Array.isArray(req.body?.items) ? req.body.items : [];
+    if (!raw.length) {
+      return res.status(400).json({ success: false, message: "Select at least one appointment." });
+    }
+    if (raw.length > 200) {
+      return res.status(400).json({ success: false, message: "Too many appointments selected." });
+    }
+
+    const byAppointment = new Map();
+    for (const it of raw) {
+      const appointmentId = String(it?.appointmentId || "");
+      const childId = it?.childId ? String(it.childId) : null;
+      if (
+        !mongoose.isValidObjectId(appointmentId) ||
+        (childId && !mongoose.isValidObjectId(childId))
+      ) {
+        return res.status(400).json({ success: false, message: "Invalid id." });
+      }
+      byAppointment.set(appointmentId, { appointmentId, childId });
+    }
+
+    const st = await loadScheduleSettings();
+    const today = todayKey(st.tz);
+    const nowMin = clockMinutes(st.tz);
+    const isPastAp = (ap) => {
+      const d = dateKeyOf(ap.date);
+      return d < today || (d === today && toMin(ap.endTime) <= nowMin);
+    };
+
+    const docs = await Scheduling.find({
+      "appointments._id": { $in: [...byAppointment.keys()] },
+    });
+
+    const deleted = [];
+    const skipped = [];
+    const found = new Set();
+    const cleanup = new Map();
+
+    for (const doc of docs) {
+      let changed = false;
+
+      for (const ap of [...doc.appointments]) {
+        const id = String(ap._id);
+        const item = byAppointment.get(id);
+        if (!item) continue;
+        found.add(id);
+
+        if (!BULK_DELETE_TYPES.includes(ap.type)) {
+          skipped.push({ appointmentId: id, reason: "This type can't be bulk deleted." });
+          continue;
+        }
+        if (isPastAp(ap)) {
+          skipped.push({
+            appointmentId: id,
+            reason: "Past appointments can't be deleted."
+          });
+          continue;
+        }
+
+        if (["cancel", "postponed","postpond"].includes(ap.sessionType)) {
+          skipped.push({
+            appointmentId: id,
+            reason: "Cancelled or postponed appointments can't be deleted."
+          });
+          continue;
+        }
+
+        const kids = ap.children || [];
+
+        if (item.childId) {
+          if (!kids.some((c) => String(c.childId) === item.childId)) {
+            skipped.push({ appointmentId: id, reason: "Child is not in this appointment." });
+            continue;
+          }
+          if (kids.length > 1) {
+            ap.children = kids.filter((c) => String(c.childId) !== item.childId);
+          } else {
+            doc.appointments.pull(ap._id);
+          }
+          cleanup.set(`${doc.therapistId}:${item.childId}`, {
+            therapistId: doc.therapistId,
+            childId: item.childId,
+          });
+        } else if (kids.length === 0) {
+          doc.appointments.pull(ap._id);
+        } else {
+          skipped.push({ appointmentId: id, reason: "Child id is required." });
+          continue;
+        }
+
+        changed = true;
+        deleted.push(id);
+      }
+
+      for (const ap of [...doc.appointments]) {
+        if (ap.type === "custom" && !(ap.children || []).length && !isPastAp(ap)) {
+          doc.appointments.pull(ap._id);
+          changed = true;
+        }
+      }
+
+      if (!changed) continue;
+
+      if (!doc.appointments.length) {
+        await doc.deleteOne(); 
+      } else {
+        await doc.save();
+      }
+    }
+
+    for (const id of byAppointment.keys()) {
+      if (!found.has(id)) skipped.push({ appointmentId: id, reason: "Appointment not found." });
+    }
+
+    for (const { therapistId, childId } of cleanup.values()) {
+      const cid = new mongoose.Types.ObjectId(childId);
+      const stillBooked = await Scheduling.exists({
+        therapistId,
+        "appointments.children.childId": cid,
+      });
+      const inBatch = await BatchAssignment.exists({ therapistId, childIds: cid });
+      if (!stillBooked && !inBatch) {
+        await TherapistAssignment.updateMany({ therapistId }, { $pull: { childIds: cid } });
+      }
+    }
+    console.log(deleted,skipped)
+    return res.json({
+      success: true,
+      deletedCount: deleted.length,
+      skipped,
+      message: `${deleted.length} appointment(s) deleted.`,
+    });
+  } catch (error) {
+    console.error("bulkDeleteAppointments:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete appointments.",
+      error: error.message,
+    });
+  }
+};
 
 const PACKAGE_TYPE = "per-month";
 
@@ -8471,103 +8864,159 @@ exports.saveChildCustomSchedule = async (req, res) => {
     });
   }
 };
-exports.cancelChildCustomAppointment = async (req, res) => {
+const cancelCore = async ({ childId, appointmentId }) => {
   try {
-    const { childId, appointmentId } = req.params;
- 
     const r = await loadCustomAppointment(childId, appointmentId);
-    if (r.error) return res.status(r.status).json({ success: false, message: r.error });
+    if (r.error) return { status: r.status, error: r.error };
     const { doc, ap } = r;
- 
+
     if ((ap.children || []).length > 1) {
       ap.children = ap.children.filter((c) => String(c.childId) !== String(childId));
     } else {
       ap.sessionType = "cancel";
     }
- 
+
     await doc.save();
+    return { status: 200, therapistId: String(doc.therapistId) };
+  } catch (error) {
+    console.error("cancelCore:", error);
+    return { status: 500, error: "Failed to cancel appointment." };
+  }
+};
+
+exports.cancelChildCustomAppointment = async (req, res) => {
+  const { childId, appointmentId } = req.params;
+  const r = await cancelCore({ childId, appointmentId });
+  if (r.error) return res.status(r.status).json({ success: false, message: r.error });
+
+  try {
     await sendNotifications({
       title: "Session Cancelled",
       message: "A therapy session scheduled for you has been cancelled.",
       type: "Reminder",
       audience: "users",
-      users: [String(childId), String(doc.therapistId)],
+      users: [String(childId), r.therapistId],
       createdBy: req.user?.id,
       sendPush: true,
     });
+  } catch (e) {
+    console.error("cancel notify:", e);
+  }
+  return res.json({ success: true, message: "Appointment cancelled." });
+};
 
-    return res.json({ success: true, message: "Appointment cancelled." });
-  } catch (error) {
-    console.error("cancelChildCustomAppointment:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to cancel appointment.",
-      error: error.message,
+exports.bulkCancelAppointments = async (req, res) => {
+  try {
+    const items = Array.isArray(req.body.items) ? req.body.items : [];
+    if (!items.length || items.length > 50) {
+      return res.status(400).json({ success: false, message: "Select 1 to 50 appointments." });
+    }
+
+    const results = [];
+    const notify = new Map(); 
+
+    for (const it of items) {
+      const r = await cancelCore(it);
+      if (r.error) {
+        results.push({ appointmentId: it.appointmentId, success: false, message: r.error });
+        continue;
+      }
+      results.push({ appointmentId: it.appointmentId, success: true });
+
+      const key = String(it.childId);
+      const entry = notify.get(key) || { count: 0, therapists: new Set() };
+      entry.count += 1;
+      entry.therapists.add(r.therapistId);
+      notify.set(key, entry);
+    }
+
+    for (const [childId, { count, therapists }] of notify) {
+      try {
+        await sendNotifications({
+          title: "Session Cancelled",
+          message:
+            count === 1
+              ? "A therapy session scheduled for you has been cancelled."
+              : `${count} therapy sessions scheduled for you have been cancelled.`,
+          type: "Reminder",
+          audience: "users",
+          users: [childId, ...therapists],
+          createdBy: req.user?.id,
+          sendPush: true,
+        });
+      } catch (e) {
+        console.error("bulk cancel notify:", e);
+      }
+    }
+
+    const done = results.filter((x) => x.success).length;
+    return res.json({
+      success: done > 0,
+      message: done === results.length ? "Appointments cancelled." : `${done} cancelled, ${results.length - done} failed.`,
+      data: { done, failed: results.length - done, results },
     });
+  } catch (error) {
+    console.error("bulkCancelAppointments:", error);
+    return res.status(500).json({ success: false, message: "Failed to cancel appointments." });
   }
 };
-exports.postponeChildCustomAppointment = async (req, res) => {
+const postponeCore = async ({
+  childId, appointmentId, date, startTime, endTime, therapistId, actorId,
+}) => {
   try {
-    const { childId, appointmentId } = req.params;
-    const { date, startTime, endTime } = req.body;
- 
     const r = await loadCustomAppointment(childId, appointmentId);
-    if (r.error) return res.status(r.status).json({ success: false, message: r.error });
+    if (r.error) return { status: r.status, error: r.error };
     const { doc, ap } = r;
- 
+
     if (!isValidDate(date) || !TIME_REGEX.test(startTime || "") || !TIME_REGEX.test(endTime || "")) {
-      return res.status(400).json({ success: false, message: "Pick a new date and time." });
+      return { status: 400, error: "Pick a new date and time." };
     }
- 
+
+    const oldTherapistId = String(doc.therapistId);
+    const newTherapistId =
+      therapistId && mongoose.isValidObjectId(therapistId) ? String(therapistId) : oldTherapistId;
+    const sameTherapist = newTherapistId === oldTherapistId;
+
     const minutes = toMin(ap.endTime) - toMin(ap.startTime);
     if (toMin(endTime) - toMin(startTime) !== minutes) {
-      return res.status(400).json({
-        success: false,
-        message: `The new session must be ${minutes} minutes long.`,
-      });
+      return { status: 400, error: `The new session must be ${minutes} minutes long.` };
     }
-    if (date === dateKeyOf(ap.date) && startTime === ap.startTime) {
-      return res.status(400).json({ success: false, message: "Pick a different date or time." });
+    if (sameTherapist && date === dateKeyOf(ap.date) && startTime === ap.startTime) {
+      return { status: 400, error: "Pick a different date or time." };
     }
+
     const free = await computeFreeSlots({
-      therapistId: doc.therapistId,
+      therapistId: newTherapistId,
       childIds: [childId],
       date,
       minutes,
       step: minutes,
       includeBooked: true,
     });
-    if (free.error) return res.status(400).json({ success: false, message: free.error });
-    if (free.onLeave) {
-      return res.status(409).json({ success: false, message: LEAVE_MSG });
-    }
- 
+    if (free.error) return { status: 400, error: free.error };
+    if (free.onLeave) return { status: 409, error: LEAVE_MSG };
+
     const ok = free.slots.some(
       (s) => s.startTime === startTime && s.endTime === endTime && !s.booked,
     );
-    if (!ok) {
-      return res.status(409).json({
-        success: false,
-        message: "That time is no longer available. Pick another one.",
-      });
-    }
- 
+    if (!ok) return { status: 409, error: "That time is no longer available. Pick another one." };
+
     if ((ap.children || []).length > 1) {
       ap.children = ap.children.filter((c) => String(c.childId) !== String(childId));
     } else {
       ap.sessionType = "postponed";
     }
- 
+
     const d = utcMidnight(date);
     const year = d.getUTCFullYear();
     const month = d.getUTCMonth() + 1;
- 
-    const sameDoc = doc.year === year && doc.month === month;
+
+    const sameDoc = sameTherapist && doc.year === year && doc.month === month;
     const target = sameDoc
       ? doc
-      : (await Scheduling.findOne({ therapistId: doc.therapistId, year, month }))
-        || new Scheduling({ therapistId: doc.therapistId, year, month, appointments: [] });
- 
+      : (await Scheduling.findOne({ therapistId: newTherapistId, year, month }))
+        || new Scheduling({ therapistId: newTherapistId, year, month, appointments: [] });
+
     target.appointments.push({
       date: d,
       startTime,
@@ -8578,41 +9027,73 @@ exports.postponeChildCustomAppointment = async (req, res) => {
       session_status: "Upcoming",
       children: [{ childId, attendance_status: "Pending" }],
     });
- 
+
     await target.save();
     if (!sameDoc) await doc.save();
+
     await sendNotifications({
       title: "Session Rescheduled",
       message: `Your therapy session has been rescheduled to ${date} from ${startTime} to ${endTime}.`,
       type: "Reminder",
       audience: "users",
-      users: [String(childId), String(doc.therapistId)],
-      createdBy: req.user?.id,
+      users: [...new Set([String(childId), newTherapistId, oldTherapistId])],
+      createdBy: actorId,
       sendPush: true,
     });
 
- 
     const created = target.appointments[target.appointments.length - 1];
-    return res.json({
-      success: true,
-      message: "Appointment postponed.",
-      data: { appointmentId: String(created._id), date, startTime, endTime },
-    });
+    return { status: 200, data: { appointmentId: String(created._id), date, startTime, endTime } };
   } catch (error) {
-    console.error("postponeChildCustomAppointment:", error);
+    console.error("postponeCore:", error);
     if (error.name === "ValidationError") {
-      return res.status(409).json({
-        success: false,
-        message: error?.errors?.appointments?.message || "That time conflicts with another appointment.",
-      });
+      return {
+        status: 409,
+        error: error?.errors?.appointments?.message || "That time conflicts with another appointment.",
+      };
     }
-    return res.status(500).json({
-      success: false,
-      message: "Failed to postpone appointment.",
-      error: error.message,
-    });
+    return { status: 500, error: "Failed to postpone appointment." };
   }
 };
+
+// single (modal purana wala, behavior same)
+exports.postponeChildCustomAppointment = async (req, res) => {
+  const { childId, appointmentId } = req.params;
+  const r = await postponeCore({ childId, appointmentId, ...req.body, actorId: req.user?.id });
+  if (r.error) return res.status(r.status).json({ success: false, message: r.error });
+  return res.json({ success: true, message: "Appointment postponed.", data: r.data });
+};
+
+// bulk
+exports.bulkPostponeAppointments = async (req, res) => {
+  try {
+    const items = Array.isArray(req.body.items) ? req.body.items : [];
+    if (!items.length || items.length > 50) {
+      return res.status(400).json({ success: false, message: "Select 1 to 50 appointments." });
+    }
+
+    // sequential on purpose: same Scheduling doc par parallel save VersionError deta hai,
+    // aur pehle save hui booking agle slot check ko nazar aati hai
+    const results = [];
+    for (const it of items) {
+      const r = await postponeCore({ ...it, actorId: req.user?.id });
+      results.push(
+        r.error
+          ? { appointmentId: it.appointmentId, success: false, message: r.error }
+          : { appointmentId: it.appointmentId, success: true },
+      );
+    }
+    const done = results.filter((x) => x.success).length;
+    return res.json({
+      success: done > 0,
+      message: done === results.length ? "Appointments rescheduled." : `${done} rescheduled, ${results.length - done} failed.`,
+      data: { done, failed: results.length - done, results },
+    });
+  } catch (error) {
+    console.error("bulkPostponeAppointments:", error);
+    return res.status(500).json({ success: false, message: "Failed to reschedule appointments." });
+  }
+};
+
 const statusFromProgress = (progress) => {
   if (progress >= 100) return "completed";
   if (progress > 0) return "in_progress";
@@ -8976,8 +9457,13 @@ exports.getAdminAttendance = async (req, res) => {
             date: appointmentDate,
             startTime: appointment.startTime || "",
             endTime: appointment.endTime || "",
-
-            therapistAttendance: status,
+            sessionType: appointment.sessionType || "regular",
+            therapistAttendance:
+              appointment.sessionType === "cancel"
+                ? "cancel"
+                : appointment.sessionType === "postponed"
+                ? "postponed"
+                : status,
 
             therapistAttendanceMarkedAt:
               appointment.therapist_attendance_marked_at || null,
@@ -9019,9 +9505,13 @@ exports.getAdminAttendance = async (req, res) => {
             startTime: appointment.startTime || "",
             endTime: appointment.endTime || "",
 
-            attendanceStatus: normalizeStatus(
-              childEntry.attendance_status
-            ),
+            sessionType: appointment.sessionType || "regular",
+            attendanceStatus:
+              appointment.sessionType === "cancel"
+                ? "cancel"
+                : appointment.sessionType === "postponed"
+                ? "postponed"
+                : normalizeStatus(childEntry.attendance_status),
           });
         }
       }
@@ -9077,6 +9567,7 @@ exports.getAdminAttendance = async (req, res) => {
           pending: data.filter(
             (item) => item.attendanceStatus === "Pending"
           ).length,
+          cancelled: data.filter((item) => item.attendanceStatus === "cancel").length,
         };
 
     // ==========================================
@@ -9117,5 +9608,98 @@ exports.getAdminAttendance = async (req, res) => {
       message: "Failed to fetch admin attendance.",
       error: error.message,
     });
+  }
+};
+
+const CHILD_DB_STATUS = {
+  present: "Complete",   
+  absent: "Absent",
+  pending: "Pending",
+};
+
+exports.updateAdminAttendance = async (req, res) => {
+  try {
+    const role = String(req.user?.role || "").toLowerCase();
+    if (!["admin", "superadmin"].includes(role)) {
+      return res.status(403).json({ success: false, message: "Admin access required." });
+    }
+
+    const { attendanceType, scheduleId, appointmentId, childId, status } = req.body;
+    const type = String(attendanceType || "").toLowerCase();
+    const newStatus = String(status || "").toLowerCase();
+
+    if (!["child", "therapist"].includes(type)) {
+      return res.status(400).json({ success: false, message: "Invalid attendance type." });
+    }
+    if (!["present", "absent", "pending"].includes(newStatus)) {
+      return res.status(400).json({ success: false, message: "Invalid status." });
+    }
+    if (
+      !mongoose.isValidObjectId(scheduleId) ||
+      !mongoose.isValidObjectId(appointmentId) ||
+      (type === "child" && !mongoose.isValidObjectId(childId))
+    ) {
+      return res.status(400).json({ success: false, message: "Invalid ids." });
+    }
+
+    const doc = await Scheduling.findById(scheduleId).select("appointments").lean();
+    const ap = doc?.appointments?.find((a) => String(a._id) === String(appointmentId));
+    if (!ap) {
+      return res.status(404).json({ success: false, message: "Appointment not found." });
+    }
+
+    if (ap.sessionType === "cancel" || ap.sessionType === "postponed") {
+      return res.status(400).json({
+        success: false,
+        message: "Cancelled or postponed sessions cannot be marked.",
+      });
+    }
+
+    if (appointmentDateKey(ap.date) > formatAppDate(new Date())) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot mark attendance for a future appointment.",
+      });
+    }
+
+    let result;
+
+    if (type === "child") {
+      const inside = (ap.children || []).some((c) => String(c.childId) === String(childId));
+      if (!inside) {
+        return res.status(404).json({ success: false, message: "Child not found in this appointment." });
+      }
+
+      result = await Scheduling.updateOne(
+        { _id: scheduleId },
+        { $set: { "appointments.$[a].children.$[c].attendance_status": CHILD_DB_STATUS[newStatus] } },
+        {
+          arrayFilters: [
+            { "a._id": new mongoose.Types.ObjectId(appointmentId) },
+            { "c.childId": new mongoose.Types.ObjectId(childId) },
+          ],
+        },
+      );
+    } else {
+      result = await Scheduling.updateOne(
+        { _id: scheduleId },
+        {
+          $set: {
+            "appointments.$[a].therapist_attendance": newStatus,
+            "appointments.$[a].therapist_attendance_marked_at": new Date(),
+          },
+        },
+        { arrayFilters: [{ "a._id": new mongoose.Types.ObjectId(appointmentId) }] },
+      );
+    }
+
+    if (!result.matchedCount) {
+      return res.status(404).json({ success: false, message: "Attendance record not found." });
+    }
+
+    return res.json({ success: true, message: "Attendance updated.", data: { status: newStatus } });
+  } catch (error) {
+    console.error("updateAdminAttendance:", error);
+    return res.status(500).json({ success: false, message: "Failed to update attendance." });
   }
 };

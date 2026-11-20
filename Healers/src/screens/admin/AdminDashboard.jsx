@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState,useRef, } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  Alert,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -15,14 +16,14 @@ import Feather from "@expo/vector-icons/Feather";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
-import { useDashboardLayout } from '../../context/DashboardLayoutContext';
+import { useDashboardLayout } from "../../context/DashboardLayoutContext";
 
 import { Overview, getInvoiceDashboardSummaryApi } from "../../api/admin/api";
 import { UnreadSummary } from "../../api/child/api";
 import { AuthContext } from "../../context/AuthContext";
 import { colors, commonStyles, fonts } from "../../styles/theme";
 import { fontSize, hp, wp } from "../../utils/responsive";
-
+import { canOpenScreen } from "../../utils/permissions";
 /* ----------------------------- constants ----------------------------- */
 
 const SCREEN_W = Dimensions.get("window").width;
@@ -161,15 +162,16 @@ const StatCard = ({ icon, iconBg, iconColor, pill, label, value, onPress }) => (
 /* ------------------------------ main screen ----------------------------- */
 
 export default function AdminDashboard() {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, updateUser  } = useContext(AuthContext);
   const { toggleLayout } = useDashboardLayout();
   const navigation = useNavigation();
   const isFocused = useIsFocused();
-
   const userId = user?.id || user?._id;
   const role = user?.role;
+  const can = (screen) => canOpenScreen(role, user?.permissions, screen);
   const userName = user?.fullName || user?.name || "";
   const profileImage = user?.profileImage || "";
+  const unreadAlertShown = useRef(false);
 
   const [refreshing, setRefreshing] = useState(false);
   const [reportsExpanded, setReportsExpanded] = useState(false);
@@ -194,8 +196,20 @@ export default function AdminDashboard() {
   const [financeLoading, setFinanceLoading] = useState(true);
   const [financeError, setFinanceError] = useState("");
 
-  /* ------------------------------- data ------------------------------- */
+  const canSeeChildren = can("Children");
+  const canSeeTherapists = can("Therapist");
+  const canSeeAllUsers = can("AllUsers");
+  const canSeeMessages = can("ChildMessages");
+  const canSeeFees = can("FeeDetail");
+  const canSeeInvoices = can("InvoiceManagement");
+  const canSeeQuarterly = can("AdminQuarterlyReports");
+  const canSeeAttendance = can("AdminAttendanceReport");
+  const canSeeReports = canSeeQuarterly || canSeeAttendance;
+  const canSeeSettings = can("Settings");
+  const visibleAdminItems = ADMIN_ITEMS.filter((i) => can(i.route));
 
+  /* ------------------------------- data ------------------------------- */
+  
   const fetchOverviewData = async () => {
     try {
       const response = await Overview();
@@ -217,14 +231,37 @@ export default function AdminDashboard() {
 
   const fetchUnreadSummary = async () => {
     try {
-      if (!userId) return;
+      if (!userId || !canSeeMessages) return;
       const response = await UnreadSummary(userId, role);
-      if (response?.success) setUnreadData(response.data);
+      if (response?.success) {
+        setUnreadData(response.data);
+        unreadAlertShown.current = false;
+      } else {
+        showUnreadError(response?.message || "Could not load messages.");
+      }
     } catch (err) {
       console.log("fetchUnreadSummary error:", err);
+      showUnreadError(err?.response?.data?.message || err?.message || "Could not load messages.");
     }
   };
 
+  const showUnreadError = (message) => {
+    if (unreadAlertShown.current) return;
+    unreadAlertShown.current = true;
+    Alert.alert("Error", message);
+  };
+  useEffect(() => {
+    if (!isFocused || !userId) return;
+    unreadAlertShown.current = false;
+    refreshDashboard();
+    const interval = setInterval(refreshDashboard, 5000);
+    return () => clearInterval(interval);
+  }, [isFocused, userId, canSeeMessages]);
+  useEffect(() => {
+    if (!canSeeMessages) {
+      setUnreadData({ hasUnread: false, totalUnreadCount: 0, latestUnreadMessage: null });
+    }
+  }, [canSeeMessages]);
   const loadFinance = useCallback(async () => {
     try {
       setFinanceError("");
@@ -258,14 +295,25 @@ export default function AdminDashboard() {
       setFinanceLoading(false);
     }
   }, []);
+  const refreshPermissions = async () => {
+    if (role !== "Manager") return;
+    try {
+      const res = await getMyPermissionsApi();
+      const fresh = res.permissions || [];
+      const old = user?.permissions || [];
+      if (JSON.stringify([...old].sort()) !== JSON.stringify([...fresh].sort())) {
+        await updateUser({ ...user, permissions: fresh });
+      }
+    } catch (e) {}
+  };
 
   const refreshDashboard = async () => {
-    await Promise.all([fetchOverviewData(), fetchUnreadSummary()]);
+    await Promise.all([fetchOverviewData(), fetchUnreadSummary(), refreshPermissions()]);
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refreshDashboard(), loadFinance()]);
+    await Promise.all([refreshDashboard(), canSeeInvoices ? loadFinance() : null]);
     setRefreshing(false);
   };
 
@@ -279,8 +327,8 @@ export default function AdminDashboard() {
 
   // finance runs a heavy aggregation, so load on focus only (no polling)
   useEffect(() => {
-    if (isFocused) loadFinance();
-  }, [isFocused, loadFinance]);
+    if (isFocused && canSeeInvoices) loadFinance();
+  }, [isFocused, loadFinance,canSeeInvoices]);
 
   /* ----------------------------- derived ------------------------------ */
 
@@ -307,11 +355,13 @@ export default function AdminDashboard() {
       key: "services",
       label: "Services",
       icon: "hospital-box",
+      perm: "ServiceManagement",
       primary: true,
       onPress: () => navigation.navigate("ServiceManagement"),
     },
     {
       key: "complaints",
+      perm: "ComplainManagement",
       label: "Manage Complaints",
       icon: "clipboard-text-outline",
       iconBg: "#F3E8FF",
@@ -323,6 +373,7 @@ export default function AdminDashboard() {
       key: "fee",
       label: "Fee Management",
       icon: "credit-card-outline",
+      perm: "FeeManagement",
       iconBg: "#DCFCE7",
       iconColor: "#16A34A",
       onPress: () => navigation.navigate("FeeManagement"),
@@ -331,6 +382,7 @@ export default function AdminDashboard() {
       key: "invoice",
       label: "Invoice Management",
       icon: "file-document-outline",
+      perm: "InvoiceManagement",
       iconBg: "#E0EDFF",
       iconColor: "#2563EB",
       onPress: () => navigation.navigate("InvoiceManagement"),
@@ -341,11 +393,23 @@ export default function AdminDashboard() {
       icon: "chart-box-outline",
       iconBg: "#E3F8F2",
       iconColor: "#00725E",
+      show: canSeeReports,
       active: reportsExpanded,
       onPress: () => setReportsExpanded((v) => !v),
     },
+    {
+      key: "permissions",
+      label: "Permissions",
+      icon: "account-lock-outline",
+      iconBg: "#FCE7F3",
+      iconColor: "#DB2777",
+      perm: "PermissionManagement",
+      onPress: () => navigation.navigate("PermissionManagement"),
+    },
   ];
-
+  const visibleQuickActions = quickActions.filter((a) =>
+    a.perm ? can(a.perm) : a.show !== undefined ? a.show : true,
+  );
   const openFee = (type, headerTitle) =>
     navigation.navigate("FeeDetail", { type, layout: { headerTitle } });
 
@@ -401,16 +465,30 @@ export default function AdminDashboard() {
               )}
             </TouchableOpacity> */}
             <TouchableOpacity style={styles.iconButton} onPress={toggleLayout}>
-              <MaterialIcons name="light-mode" size={fontSize(20)} color="#475569" />
+              <MaterialIcons
+                name="light-mode"
+                size={fontSize(20)}
+                color="#475569"
+              />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={() => navigation.navigate("Settings")}
-            >
-              <MaterialIcons name="settings" size={fontSize(22)} color="#475569" />
-            </TouchableOpacity>
+            {canSeeSettings && (
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => navigation.navigate("Settings")}
+              >
+                <MaterialIcons
+                  name="settings"
+                  size={fontSize(22)}
+                  color="#475569"
+                />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.iconButton} onPress={logout}>
-              <MaterialIcons name="logout" size={fontSize(20)} color="#DC2626" />
+              <MaterialIcons
+                name="logout"
+                size={fontSize(20)}
+                color="#DC2626"
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -441,367 +519,432 @@ export default function AdminDashboard() {
         </LinearGradient>
 
         {/* ---------- Stat cards ---------- */}
-        <View style={styles.statsGrid}>
-          <StatCard
-            icon="account-group"
-            iconBg="#E0EDFF"
-            iconColor="#2563EB"
-            pill={{ label: "Enrolled", bg: "#E0EDFF", color: "#2563EB" }}
-            label="Total Child"
-            value={Number(stats.totalChild).toLocaleString()}
-            onPress={() => navigation.navigate("Children")}
-          />
-          <StatCard
-            icon="doctor"
-            iconBg="#F3E8FF"
-            iconColor="#9333EA"
-            pill={{ label: "Active", bg: "#F3E8FF", color: "#9333EA" }}
-            label="Therapist"
-            value={Number(stats.therapistCount).toLocaleString()}
-            onPress={() => navigation.navigate("Therapist")}
-          />
-          <StatCard
-            icon="account-multiple"
-            iconBg="#DCFCE7"
-            iconColor="#16A34A"
-            pill={{ label: "All roles", bg: "#DCFCE7", color: "#16A34A" }}
-            label="Total Users"
-            value={Number(stats.totalUsers).toLocaleString()}
-            onPress={() => navigation.navigate("AllUsers")}
-          />
-          <StatCard
-            icon="message-text"
-            iconBg="#FEE2E2"
-            iconColor="#DC2626"
-            pill={
-              unreadCount > 0
-                ? {
-                    label: `${capCount(unreadCount)} New`,
-                    bg: "#EF4444",
-                    color: "#FFFFFF",
-                  }
-                : { label: "Up to date", bg: "#F1F5F9", color: "#64748B" }
-            }
-            label="Messages"
-            value={Number(stats.totalMessageCount).toLocaleString()}
-            onPress={() => navigation.navigate("ChildMessages")}
-          />
-        </View>
+        {(canSeeChildren ||
+          canSeeTherapists ||
+          canSeeAllUsers ||
+          canSeeMessages) && (
+          <View style={styles.statsGrid}>
+            {canSeeChildren && (
+              <StatCard
+                icon="account-group"
+                iconBg="#E0EDFF"
+                iconColor="#2563EB"
+                pill={{ label: "Enrolled", bg: "#E0EDFF", color: "#2563EB" }}
+                label="Total Child"
+                value={Number(stats.totalChild).toLocaleString()}
+                onPress={() => navigation.navigate("Children")}
+              />
+            )}
+            {canSeeTherapists && (
+              <StatCard
+                icon="doctor"
+                iconBg="#F3E8FF"
+                iconColor="#9333EA"
+                pill={{ label: "Active", bg: "#F3E8FF", color: "#9333EA" }}
+                label="Therapist"
+                value={Number(stats.therapistCount).toLocaleString()}
+                onPress={() => navigation.navigate("Therapist")}
+              />
+            )}
+            {canSeeAllUsers && (
+              <StatCard
+                icon="account-multiple"
+                iconBg="#DCFCE7"
+                iconColor="#16A34A"
+                pill={{ label: "All roles", bg: "#DCFCE7", color: "#16A34A" }}
+                label="Total Users"
+                value={Number(stats.totalUsers).toLocaleString()}
+                onPress={() => navigation.navigate("AllUsers")}
+              />
+            )}
+            {canSeeMessages && (
+              <StatCard
+                icon="message-text"
+                iconBg="#FEE2E2"
+                iconColor="#DC2626"
+                pill={
+                  unreadCount > 0
+                    ? {
+                        label: `${capCount(unreadCount)} New`,
+                        bg: "#EF4444",
+                        color: "#FFFFFF",
+                      }
+                    : { label: "Up to date", bg: "#F1F5F9", color: "#64748B" }
+                }
+                label="Messages"
+                value={Number(stats.totalMessageCount).toLocaleString()}
+                onPress={() => navigation.navigate("ChildMessages")}
+              />
+            )}
+          </View>
+        )}
 
         {/* ---------- Financial summary ---------- */}
-        <View style={[styles.card, styles.financeCard]}>
-          <View style={styles.rowBetween}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>Financial Summary</Text>
-              <Text style={styles.cardSub}>Monthly fee collection & status</Text>
+        {canSeeInvoices && (
+          <View style={[styles.card, styles.financeCard]}>
+            <View style={styles.rowBetween}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>Financial Summary</Text>
+                <Text style={styles.cardSub}>
+                  Monthly fee collection & status
+                </Text>
+              </View>
+              <View style={styles.fyPill}>
+                <Text style={styles.fyPillText}>
+                  FY {finance.totalRevenue.fiscalYear}
+                </Text>
+              </View>
             </View>
-            <View style={styles.fyPill}>
-              <Text style={styles.fyPillText}>
-                FY {finance.totalRevenue.fiscalYear}
-              </Text>
-            </View>
-          </View>
 
-          {financeLoading ? (
-            <View style={styles.financeLoading}>
-              <ActivityIndicator color={colors.primary} />
-            </View>
-          ) : (
-            <>
-              {!!financeError && (
-                <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>{financeError}</Text>
-                  <TouchableOpacity onPress={loadFinance}>
-                    <Text style={styles.retryText}>Retry</Text>
+            {financeLoading ? (
+              <View style={styles.financeLoading}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            ) : (
+              <>
+                {!!financeError && (
+                  <View style={styles.errorBox}>
+                    <Text style={styles.errorText}>{financeError}</Text>
+                    <TouchableOpacity onPress={loadFinance}>
+                      <Text style={styles.retryText}>Retry</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={styles.revenueRow}
+                  onPress={() => openFee("revenue", "Total Revenue")}
+                >
+                  <View style={styles.revenueLeft}>
+                    <Text style={styles.revenueLabel}>Total Revenue</Text>
+                    <Text
+                      style={styles.revenueAmount}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      PKR {formatMoney(finance.totalRevenue.amount)}
+                    </Text>
+                    <View style={styles.paymentsPill}>
+                      <Feather name="trending-up" size={12} color="#16A34A" />
+                      <Text style={styles.paymentsPillText}>
+                        {finance.totalRevenue.paymentCount} payments
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* decorative bars only, not real data */}
+                  <View style={styles.bars}>
+                    {BAR_HEIGHTS.map((h, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.bar,
+                          { height: h, backgroundColor: BAR_COLORS[i] },
+                        ]}
+                      />
+                    ))}
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.miniRow}>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    style={[
+                      styles.miniCard,
+                      { backgroundColor: "#FFF5F5", borderColor: "#FEE2E2" },
+                    ]}
+                    onPress={() => openFee("overdue", "Overdue Fees")}
+                  >
+                    <View style={styles.miniHeader}>
+                      <View
+                        style={[styles.miniIcon, { backgroundColor: "#FEE2E2" }]}
+                      >
+                        <MaterialIcons
+                          name="event-busy"
+                          size={16}
+                          color="#DC2626"
+                        />
+                      </View>
+                      <Text style={styles.miniLabel}>Overdue Fees</Text>
+                    </View>
+                    <Text
+                      style={styles.miniAmount}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      PKR {formatMoney(finance.overdueFees.amount)}
+                    </Text>
+                    <View style={styles.row}>
+                      <View
+                        style={[styles.dot, { backgroundColor: "#EF4444" }]}
+                      />
+                      <Text style={[styles.miniSub, { color: "#DC2626" }]}>
+                        {finance.overdueFees.childrenCount} Children pending
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    style={[
+                      styles.miniCard,
+                      { backgroundColor: "#FFFBEB", borderColor: "#FEF3C7" },
+                    ]}
+                    onPress={() => openFee("unpaid", "Unpaid Fees")}
+                  >
+                    <View style={styles.miniHeader}>
+                      <View
+                        style={[styles.miniIcon, { backgroundColor: "#FEF3C7" }]}
+                      >
+                        <MaterialIcons
+                          name="assignment-late"
+                          size={16}
+                          color="#F59E0B"
+                        />
+                      </View>
+                      <Text style={styles.miniLabel}>Unpaid Fees</Text>
+                    </View>
+                    <Text
+                      style={styles.miniAmount}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      PKR {formatMoney(finance.unpaidFees.amount)}
+                    </Text>
+                    <View style={styles.row}>
+                      <View
+                        style={[styles.dot, { backgroundColor: "#F59E0B" }]}
+                      />
+                      <Text style={[styles.miniSub, { color: "#D97706" }]}>
+                        {finance.unpaidFees.invoiceCount} invoices unpaid
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 </View>
-              )}
-
-              <TouchableOpacity
-                activeOpacity={0.85}
-                style={styles.revenueRow}
-                onPress={() => openFee("revenue", "Total Revenue")}
-              >
-                <View style={styles.revenueLeft}>
-                  <Text style={styles.revenueLabel}>Total Revenue</Text>
-                  <Text
-                    style={styles.revenueAmount}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                  >
-                    PKR {formatMoney(finance.totalRevenue.amount)}
-                  </Text>
-                  <View style={styles.paymentsPill}>
-                    <Feather name="trending-up" size={12} color="#16A34A" />
-                    <Text style={styles.paymentsPillText}>
-                      {finance.totalRevenue.paymentCount} payments
-                    </Text>
-                  </View>
-                </View>
-
-                {/* decorative bars only, not real data */}
-                <View style={styles.bars}>
-                  {BAR_HEIGHTS.map((h, i) => (
-                    <View
-                      key={i}
-                      style={[
-                        styles.bar,
-                        { height: h, backgroundColor: BAR_COLORS[i] },
-                      ]}
-                    />
-                  ))}
-                </View>
-              </TouchableOpacity>
-
-              <View style={styles.miniRow}>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  style={[
-                    styles.miniCard,
-                    { backgroundColor: "#FFF5F5", borderColor: "#FEE2E2" },
-                  ]}
-                  onPress={() => openFee("overdue", "Overdue Fees")}
-                >
-                  <View style={styles.miniHeader}>
-                    <View
-                      style={[styles.miniIcon, { backgroundColor: "#FEE2E2" }]}
-                    >
-                      <MaterialIcons
-                        name="event-busy"
-                        size={16}
-                        color="#DC2626"
-                      />
-                    </View>
-                    <Text style={styles.miniLabel}>Overdue Fees</Text>
-                  </View>
-                  <Text
-                    style={styles.miniAmount}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                  >
-                    PKR {formatMoney(finance.overdueFees.amount)}
-                  </Text>
-                  <View style={styles.row}>
-                    <View style={[styles.dot, { backgroundColor: "#EF4444" }]} />
-                    <Text style={[styles.miniSub, { color: "#DC2626" }]}>
-                      {finance.overdueFees.childrenCount} Children pending
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  style={[
-                    styles.miniCard,
-                    { backgroundColor: "#FFFBEB", borderColor: "#FEF3C7" },
-                  ]}
-                  onPress={() => openFee("unpaid", "Unpaid Fees")}
-                >
-                  <View style={styles.miniHeader}>
-                    <View
-                      style={[styles.miniIcon, { backgroundColor: "#FEF3C7" }]}
-                    >
-                      <MaterialIcons
-                        name="assignment-late"
-                        size={16}
-                        color="#F59E0B"
-                      />
-                    </View>
-                    <Text style={styles.miniLabel}>Unpaid Fees</Text>
-                  </View>
-                  <Text
-                    style={styles.miniAmount}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                  >
-                    PKR {formatMoney(finance.unpaidFees.amount)}
-                  </Text>
-                  <View style={styles.row}>
-                    <View style={[styles.dot, { backgroundColor: "#F59E0B" }]} />
-                    <Text style={[styles.miniSub, { color: "#D97706" }]}>
-                      {finance.unpaidFees.invoiceCount} invoices unpaid
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-        </View>
+              </>
+            )}
+          </View>
+        )}
 
         {/* ---------- Messages ---------- */}
-        <TouchableOpacity
-          style={[styles.card, styles.messagesCard]}
-          activeOpacity={0.9}
-          onPress={() => navigation.navigate("ChildMessages")}
-        >
-          <View style={styles.rowBetween}>
-            <View style={styles.row}>
-              <MaterialCommunityIcons
-                name="message-text"
-                size={fontSize(20)}
-                color="#2563EB"
-              />
-              <Text style={[styles.cardTitle, { marginLeft: 8 }]}>
-                Messages
-              </Text>
-            </View>
-            <View style={styles.row}>
-              {unreadCount > 0 && (
-                <Pill
-                  label={`${capCount(unreadCount)} New`}
-                  bg="#2563EB"
-                  color="#FFFFFF"
+        {canSeeMessages && (
+          <TouchableOpacity
+            style={[styles.card, styles.messagesCard]}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate("ChildMessages")}
+          >
+            <View style={styles.rowBetween}>
+              <View style={styles.row}>
+                <MaterialCommunityIcons
+                  name="message-text"
+                  size={fontSize(20)}
+                  color="#2563EB"
                 />
-              )}
-              <Feather
-                name="chevron-right"
-                size={fontSize(18)}
-                color="#94A3B8"
-                style={{ marginLeft: 6 }}
-              />
-            </View>
-          </View>
-
-          {unreadData.hasUnread && latestMsg ? (
-            <View style={styles.msgPreview}>
-              {senderImage ? (
-                <Image source={{ uri: senderImage }} style={styles.msgAvatar} />
-              ) : (
-                <View style={[styles.msgAvatar, styles.msgAvatarFallback]}>
-                  <Text style={styles.msgAvatarText}>{senderInitials}</Text>
-                </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.msgSender} numberOfLines={1}>
-                  {senderName}
-                </Text>
-                <Text style={styles.msgSnippet} numberOfLines={1}>
-                  {latestMsg?.text || "You have a new message!"}
+                <Text style={[styles.cardTitle, { marginLeft: 8 }]}>
+                  Messages
                 </Text>
               </View>
-              <Text style={styles.msgTime}>
-                {formatTime(latestMsg?.createdAt)}
-              </Text>
+              <View style={styles.row}>
+                {unreadCount > 0 && (
+                  <Pill
+                    label={`${capCount(unreadCount)} New`}
+                    bg="#2563EB"
+                    color="#FFFFFF"
+                  />
+                )}
+                <Feather
+                  name="chevron-right"
+                  size={fontSize(18)}
+                  color="#94A3B8"
+                  style={{ marginLeft: 6 }}
+                />
+              </View>
             </View>
-          ) : (
-            <Text style={styles.caughtUp}>{"You're all caught up."}</Text>
-          )}
-        </TouchableOpacity>
+
+            {unreadData.hasUnread && latestMsg ? (
+              <View style={styles.msgPreview}>
+                {senderImage ? (
+                  <Image source={{ uri: senderImage }} style={styles.msgAvatar} />
+                ) : (
+                  <View style={[styles.msgAvatar, styles.msgAvatarFallback]}>
+                    <Text style={styles.msgAvatarText}>{senderInitials}</Text>
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.msgSender} numberOfLines={1}>
+                    {senderName}
+                  </Text>
+                  <Text style={styles.msgSnippet} numberOfLines={1}>
+                    {latestMsg?.text || "You have a new message!"}
+                  </Text>
+                </View>
+                <Text style={styles.msgTime}>
+                  {formatTime(latestMsg?.createdAt)}
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.caughtUp}>{"You're all caught up."}</Text>
+            )}
+          </TouchableOpacity>
+        )}
 
         {/* ---------- Administration ---------- */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Administration</Text>
-          <Text style={styles.sectionMeta}>{ADMIN_ITEMS.length} modules</Text>
-        </View>
+        {visibleAdminItems.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Administration</Text>
+              <Text style={styles.sectionMeta}>
+                {visibleAdminItems.length} modules
+              </Text>
+            </View>
 
-        <View style={styles.adminGrid}>
-          {ADMIN_ITEMS.map((item) => (
-            <TouchableOpacity
-              key={item.key}
-              style={[styles.card, styles.adminCard]}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate(item.route)}
-            >
-              <View style={styles.rowBetween}>
-                <View style={[styles.adminIconBox, { backgroundColor: item.iconBg }]}>
-                  <MaterialCommunityIcons
-                    name={item.icon}
-                    size={fontSize(20)}
-                    color={item.iconColor}
-                  />
-                  <CountBadge count={badgeFor(item.badgeKey)} />
-                </View>
-                <Feather name="chevron-right" size={fontSize(16)} color="#CBD5E1" />
-              </View>
-              <Text style={styles.adminTitle} numberOfLines={2}>
-                {item.title}
-              </Text>
-              <Text style={styles.adminSub} numberOfLines={1}>
-                {item.subtitle}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+            <View style={styles.adminGrid}>
+              {visibleAdminItems.map((item) => (
+                <TouchableOpacity
+                  key={item.key}
+                  style={[styles.card, styles.adminCard]}
+                  activeOpacity={0.85}
+                  onPress={() => navigation.navigate(item.route)}
+                >
+                  <View style={styles.rowBetween}>
+                    <View
+                      style={[
+                        styles.adminIconBox,
+                        { backgroundColor: item.iconBg },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name={item.icon}
+                        size={fontSize(20)}
+                        color={item.iconColor}
+                      />
+                      <CountBadge count={badgeFor(item.badgeKey)} />
+                    </View>
+                    <Feather
+                      name="chevron-right"
+                      size={fontSize(16)}
+                      color="#CBD5E1"
+                    />
+                  </View>
+                  <Text style={styles.adminTitle} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.adminSub} numberOfLines={1}>
+                    {item.subtitle}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         {/* ---------- Quick actions ---------- */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-        </View>
+        {visibleQuickActions.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Quick Actions</Text>
+            </View>
 
-        <View style={styles.quickGrid}>
-          {quickActions.map((a) => (
-            <TouchableOpacity
-              key={a.key}
-              style={[
-                styles.card,
-                styles.quickTile,
-                a.active && styles.quickTileActive,
-              ]}
-              activeOpacity={0.85}
-              onPress={a.onPress}
-            >
-              <View
-                style={[
-                  styles.quickIconBox,
-                  a.primary
-                    ? { backgroundColor: "#2563EB", width: 48, height: 48 }
-                    : { backgroundColor: a.iconBg },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name={a.icon}
-                  size={fontSize(a.primary ? 26 : 20)}
-                  color={a.primary ? "#FFFFFF" : a.iconColor}
-                />
-                <CountBadge count={a.badge} />
-              </View>
-              <Text style={styles.quickLabel} numberOfLines={2}>
-                {a.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+            <View style={styles.quickGrid}>
+              {visibleQuickActions.map((a) => (
+                <TouchableOpacity
+                  key={a.key}
+                  style={[
+                    styles.card,
+                    styles.quickTile,
+                    a.active && styles.quickTileActive,
+                  ]}
+                  activeOpacity={0.85}
+                  onPress={a.onPress}
+                >
+                  <View
+                    style={[
+                      styles.quickIconBox,
+                      a.primary
+                        ? { backgroundColor: "#2563EB", width: 48, height: 48 }
+                        : { backgroundColor: a.iconBg },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name={a.icon}
+                      size={fontSize(a.primary ? 26 : 20)}
+                      color={a.primary ? "#FFFFFF" : a.iconColor}
+                    />
+                    <CountBadge count={a.badge} />
+                  </View>
+                  <Text style={styles.quickLabel} numberOfLines={2}>
+                    {a.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         {/* ---------- Reports dropdown (opens below the tiles) ---------- */}
-        {reportsExpanded && (
+        {reportsExpanded && canSeeReports && (
           <View style={[styles.card, styles.reportsCard]}>
-            <TouchableOpacity
-              style={[styles.reportItem, styles.reportItemBorder]}
-              activeOpacity={0.7}
-              onPress={() => {
-                setReportsExpanded(false);
-                navigation.navigate("AdminQuarterlyReports");
-              }}
-            >
-              <View style={[styles.reportIcon, { backgroundColor: "#E3F8F2" }]}>
-                <MaterialIcons name="insert-chart" size={21} color="#00725E" />
-              </View>
-              <View style={styles.reportText}>
-                <Text style={styles.reportTitle}>Quarterly Report</Text>
-                <Text style={styles.reportSub}>
-                  Review child progress reports by therapist
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={fontSize(16)} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.reportItem}
-              activeOpacity={0.7}
-              onPress={() => {
-                setReportsExpanded(false);
-                navigation.navigate("AdminAttendanceReport");
-              }}
-            >
-              <View style={[styles.reportIcon, { backgroundColor: "#E0EDFF" }]}>
-                <MaterialIcons name="event-available" size={21} color="#2563EB" />
-              </View>
-              <View style={styles.reportText}>
-                <Text style={styles.reportTitle}>Attendance Report</Text>
-                <Text style={styles.reportSub}>View attendance reports</Text>
-              </View>
-              <Feather name="chevron-right" size={fontSize(16)} color="#94A3B8" />
-            </TouchableOpacity>
+            {canSeeQuarterly && (
+              <TouchableOpacity
+                style={[styles.reportItem, styles.reportItemBorder]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setReportsExpanded(false);
+                  navigation.navigate("AdminQuarterlyReports");
+                }}
+              >
+                <View
+                  style={[styles.reportIcon, { backgroundColor: "#E3F8F2" }]}
+                >
+                  <MaterialIcons
+                    name="insert-chart"
+                    size={21}
+                    color="#00725E"
+                  />
+                </View>
+                <View style={styles.reportText}>
+                  <Text style={styles.reportTitle}>Quarterly Report</Text>
+                  <Text style={styles.reportSub}>
+                    Review child progress reports by therapist
+                  </Text>
+                </View>
+                <Feather
+                  name="chevron-right"
+                  size={fontSize(16)}
+                  color="#94A3B8"
+                />
+              </TouchableOpacity>
+            )}
+            {canSeeAttendance && (
+              <TouchableOpacity
+                style={styles.reportItem}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setReportsExpanded(false);
+                  navigation.navigate("AdminAttendanceReport");
+                }}
+              >
+                <View
+                  style={[styles.reportIcon, { backgroundColor: "#E0EDFF" }]}
+                >
+                  <MaterialIcons
+                    name="event-available"
+                    size={21}
+                    color="#2563EB"
+                  />
+                </View>
+                <View style={styles.reportText}>
+                  <Text style={styles.reportTitle}>Attendance Report</Text>
+                  <Text style={styles.reportSub}>View attendance reports</Text>
+                </View>
+                <Feather
+                  name="chevron-right"
+                  size={fontSize(16)}
+                  color="#94A3B8"
+                />
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
@@ -834,48 +977,48 @@ const styles = StyleSheet.create({
 
   /* header */
   headerRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginVertical: hp(12),
-  gap: 10,
-},
-avatar: { width: wp(34.7), height: wp(34.7), borderRadius: wp(999) },
-avatarFallback: {
-  backgroundColor: colors.primary,
-  alignItems: "center",
-  justifyContent: "center",
-},
-avatarFallbackText: {
-  fontSize: fontSize(16),
-  fontFamily: fonts.semiBold,
-  color: "#FFFFFF",
-},
-headerTextWrap: { flex: 1 },
-headerTitle: {
-  fontSize: fontSize(20),
-  lineHeight: 20,
-  fontFamily: fonts.semiBold,
-  color: colors.primary,
-},
-headerDate: {
-  fontSize: fontSize(13),
-  color: "#414750",
-  fontFamily: fonts.regular,
-},
-headerActions: { flexDirection: "row", alignItems: "center", gap: 6 },
-iconButton: {
-  width: 40,
-  height: 40,
-  borderRadius: wp(12),
-  backgroundColor: "#FFFFFF",
-  alignItems: "center",
-  justifyContent: "center",
-  shadowColor: "#000000",
-  shadowOffset: { width: 0, height: 3 },
-  shadowOpacity: 0.12,
-  shadowRadius: 5,
-  elevation: 4,
-},
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: hp(12),
+    gap: 10,
+  },
+  avatar: { width: wp(34.7), height: wp(34.7), borderRadius: wp(999) },
+  avatarFallback: {
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarFallbackText: {
+    fontSize: fontSize(16),
+    fontFamily: fonts.semiBold,
+    color: "#FFFFFF",
+  },
+  headerTextWrap: { flex: 1 },
+  headerTitle: {
+    fontSize: fontSize(20),
+    lineHeight: 20,
+    fontFamily: fonts.semiBold,
+    color: colors.primary,
+  },
+  headerDate: {
+    fontSize: fontSize(13),
+    color: "#414750",
+    fontFamily: fonts.regular,
+  },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 6 },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: wp(12),
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 4,
+  },
   bellDot: {
     position: "absolute",
     top: 8,
@@ -896,7 +1039,7 @@ iconButton: {
     padding: wp(20),
     minHeight: hp(130),
     overflow: "hidden",
-    marginTop:hp(23),
+    marginTop: hp(23),
   },
   bannerTextWrap: { flex: 1, paddingRight: 10 },
   bannerTitle: {
@@ -1218,7 +1361,11 @@ iconButton: {
 
   /* reports dropdown */
   reportsCard: { marginTop: 12, paddingHorizontal: 12, paddingVertical: 4 },
-  reportItem: { flexDirection: "row", alignItems: "center", paddingVertical: 12 },
+  reportItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
   reportItemBorder: { borderBottomWidth: 1, borderBottomColor: "#F1F5F9" },
   reportIcon: {
     width: 40,

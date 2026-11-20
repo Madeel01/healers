@@ -13,6 +13,8 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  Alert,
+  Modal,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -20,7 +22,7 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { getAdminAttendanceApi } from '../../api/admin/api';
+import { getAdminAttendanceApi, updateAdminAttendanceApi } from '../../api/admin/api';
 import { fonts } from '../../styles/theme';
 import { formatTo12Hour } from '../../utils/hoursformat';
 import {
@@ -47,7 +49,17 @@ const COLORS = {
 };
 
 const PAGE_SIZE = 5;
+const STATUS_OPTIONS = [
+  { value: "present", label: "Present", icon: "check-circle", bg: COLORS.greenLight, color: COLORS.green },
+  { value: "absent", label: "Absent", icon: "x-circle", bg: COLORS.redLight, color: COLORS.red },
+  { value: "pending", label: "Pending", icon: "clock", bg: COLORS.grayLight, color: COLORS.secondary },
+];
 
+const canEditRecord = (item, type) => {
+  const current = normalizeStatus(getStatus(item, type));
+  if (current === "cancelled" || current === "postponed") return false;
+  return !!item?.date && item.date <= getDateKey(new Date());
+};
 const getDateKey = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -160,6 +172,8 @@ const formatFullDate = (date) => {
 
 
 const getStatus = (item, attendanceType) => {
+  if (item?.sessionType === "cancel") return "cancelled";
+  if (item?.sessionType === "postponed") return "postponed";
   if (attendanceType === "therapist") {
     return (
       item?.therapistAttendance
@@ -259,6 +273,9 @@ const AdminAttendanceReportScreen = ({ navigation }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [records, setRecords] = useState([]);
+  const [editTarget, setEditTarget] = useState(null);
+  const [pickStatus, setPickStatus] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [summary, setSummary] = useState({
     total: 0,
     present: 0,
@@ -413,7 +430,53 @@ const AdminAttendanceReportScreen = ({ navigation }) => {
       fetchAttendance(true);
     }, [fetchAttendance]),
   );
+  const saveStatus = async () => {
+    const newStatus = pickStatus;
+    if (!editTarget || saving || !newStatus) return;
 
+    const oldStatus = normalizeStatus(getStatus(editTarget, attendanceType));
+    if (oldStatus === newStatus) return setEditTarget(null);
+
+    try {
+      setSaving(true);
+      const res = await updateAdminAttendanceApi({
+        attendanceType,
+        scheduleId: editTarget.attendanceId,
+        appointmentId: editTarget.appointmentId,
+        childId: attendanceType === "child" ? editTarget.childId : undefined,
+        status: newStatus,
+      });
+
+      if (!res?.success) {
+        return Alert.alert("Could not update", res?.message || "Please try again.");
+      }
+
+      // const targetKey = getRecordKey(editTarget, 0, attendanceType).split("-").slice(0, 5).join("-");
+      setRecords((prev) =>
+        prev.map((r) => {
+          const same =
+            r.appointmentId === editTarget.appointmentId &&
+            (attendanceType === "therapist" || r.childId === editTarget.childId);
+          if (!same) return r;
+          return attendanceType === "therapist"
+            ? { ...r, therapistAttendance: newStatus }
+            : { ...r, attendanceStatus: newStatus };
+        }),
+      );
+
+      setSummary((s) => ({
+        ...s,
+        [oldStatus]: Math.max(0, (s[oldStatus] || 0) - 1),
+        [newStatus]: (s[newStatus] || 0) + 1,
+      }));
+
+      setEditTarget(null);
+    } catch (e) {
+      Alert.alert("Could not update", e?.response?.data?.message || "Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     fetchAttendance(true, true);
@@ -751,12 +814,15 @@ const AdminAttendanceReportScreen = ({ navigation }) => {
     const recordDate = item?.date
       ? formatFullDate(parseDate(item.date))
       : formatFullDate(selectedDate);
-
+    const editable = canEditRecord(item, attendanceType);
     return (
-      <View
+      <TouchableOpacity
         style={styles.attendanceCard}
         key={getRecordKey(item, index, attendanceType)}
+        activeOpacity={editable ? 0.8 : 1}
+        onPress={() => editable && openEdit(item)}
       >
+
         <View style={styles.cardTop}>
           <View style={styles.personInfo}>
             <View style={styles.avatar}>
@@ -785,21 +851,24 @@ const AdminAttendanceReportScreen = ({ navigation }) => {
             </View>
           </View>
 
-          <View
+          <TouchableOpacity
+            disabled={!editable}
+            activeOpacity={0.7}
+            onPress={() => openEdit(item)}
             style={[
               styles.statusBadge,
               { backgroundColor: statusColors.background },
+              editable && { borderWidth: 1, borderColor: statusColors.text + "55" },
             ]}
           >
-            <Text
-              style={[
-                styles.statusText,
-                { color: statusColors.text },
-              ]}
-            >
+            <View style={[styles.statusDot, { backgroundColor: statusColors.text }]} />
+            <Text style={[styles.statusText, { color: statusColors.text }]}>
               {normalizeStatus(status).toUpperCase()}
             </Text>
-          </View>
+            {editable && (
+              <Feather name="chevron-down" size={fontSize(13)} color={statusColors.text} />
+            )}
+          </TouchableOpacity>
         </View>
 
         {relatedName
@@ -854,7 +923,7 @@ const AdminAttendanceReportScreen = ({ navigation }) => {
             )
             : null}
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -1010,7 +1079,10 @@ const AdminAttendanceReportScreen = ({ navigation }) => {
       </View>
     </View>
   );
-
+  const openEdit = (item) => {
+    setPickStatus(normalizeStatus(getStatus(item, attendanceType)));
+    setEditTarget(item);
+  };
   return (
     <View style={styles.safeArea}>
       <StatusBar
@@ -1055,6 +1127,87 @@ const AdminAttendanceReportScreen = ({ navigation }) => {
             }
           />
         )}
+        <Modal
+          visible={!!editTarget}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setEditTarget(null)}
+        >
+          <TouchableOpacity
+            style={styles.overlay}
+            activeOpacity={1}
+            onPress={() => !saving && setEditTarget(null)}
+          >
+            <TouchableOpacity activeOpacity={1} style={styles.sheet}>
+              <View style={styles.handle} />
+
+              <View style={styles.sheetPerson}>
+                <View style={styles.avatar}>
+                  <Feather
+                    name={attendanceType === "therapist" ? "user" : "users"}
+                    size={fontSize(21)}
+                    color={COLORS.primary}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sheetTitle} numberOfLines={1}>
+                    {attendanceType === "therapist" ? editTarget?.therapistName : editTarget?.childName}
+                  </Text>
+                  <Text style={styles.sheetSub} numberOfLines={1}>
+                    {editTarget?.date ? formatFullDate(parseDate(editTarget.date)) : ""}
+                    {editTarget?.startTime ? `  ·  ${formatTo12Hour(editTarget.startTime)}` : ""}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.sheetLabel}>Mark attendance as</Text>
+
+              <View style={styles.tileRow}>
+                {STATUS_OPTIONS.map((o) => {
+                  const on = pickStatus === o.value;
+                  return (
+                    <TouchableOpacity
+                      key={o.value}
+                      disabled={saving}
+                      activeOpacity={0.8}
+                      onPress={() => setPickStatus(o.value)}
+                      style={[
+                        styles.tile,
+                        on && { backgroundColor: o.bg, borderColor: o.color },
+                      ]}
+                    >
+                      <View style={[styles.tileIcon, { backgroundColor: on ? o.color : o.bg }]}>
+                        <Feather name={o.icon} size={fontSize(20)} color={on ? "#FFFFFF" : o.color} />
+                      </View>
+                      <Text style={[styles.tileText, { color: on ? o.color : COLORS.secondary }]}>
+                        {o.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.saveBtn,
+                  (saving ||
+                    pickStatus === normalizeStatus(getStatus(editTarget || {}, attendanceType))) && { opacity: 0.5 },
+                ]}
+                disabled={
+                  saving ||
+                  pickStatus === normalizeStatus(getStatus(editTarget || {}, attendanceType))
+                }
+                onPress={saveStatus}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
     </View>
   );
 };
@@ -1407,10 +1560,14 @@ const styles = StyleSheet.create({
   },
 
   statusBadge: {
-    borderRadius: wp(8),
-    paddingHorizontal: wp(9),
-    paddingVertical: hp(7),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: wp(5),
+    borderRadius: wp(20),
+    paddingHorizontal: wp(10),
+    paddingVertical: hp(6),
   },
+
 
   statusText: {
     fontSize: fontSize(9),
@@ -1500,4 +1657,54 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     color: "#64748B",
   },
+  overlay: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.4)", justifyContent: "flex-end" },
+  sheet: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: wp(20), paddingBottom: hp(30) },
+  sheetHeader: { flexDirection: "row", alignItems: "flex-start", marginBottom: hp(12) },
+  sheetTitle: { fontSize: fontSize(18), fontFamily: fonts.semiBold, color: "#172033" },
+  sheetSub: { fontSize: fontSize(12), fontFamily: fonts.regular, color: "#64748B", marginTop: hp(3) },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  handle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#CBD5E1",
+    marginBottom: hp(14),
+  },
+  sheetPerson: { flexDirection: "row", alignItems: "center", gap: wp(2) },
+  sheetLabel: {
+    fontSize: fontSize(12),
+    fontFamily: fonts.semiBold,
+    color: "#64748B",
+    marginTop: hp(18),
+    marginBottom: hp(10),
+  },
+  tileRow: { flexDirection: "row", gap: wp(10) },
+  tile: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: hp(14),
+    borderRadius: wp(14),
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#FFFFFF",
+    gap: hp(8),
+  },
+  tileIcon: {
+    width: wp(38),
+    height: wp(38),
+    borderRadius: wp(12),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tileText: { fontSize: fontSize(12), fontFamily: fonts.semiBold, lineHeight: hp(16) },
+  saveBtn: {
+    height: hp(48),
+    borderRadius: wp(12),
+    backgroundColor: "#2563EB",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: hp(18),
+  },
+  saveText: { fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#FFFFFF" },
 });

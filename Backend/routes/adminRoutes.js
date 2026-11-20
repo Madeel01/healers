@@ -89,58 +89,74 @@ const {
   adminListQuarterlyReports,
   adminGetQuarterlyReport,
   getAdminAttendance,
+  createManager,
+  updateManager,
+  deleteManager,
+  deleteAdmin,
+  bulkDeleteAppointments,
+  bulkPostponeAppointments,
+  bulkCancelAppointments,
+  updateAdminAttendance,
 } = require("../controllers/adminController");
 const { getUsersByRole, getParents } = require("../controllers/CommonController");
 const { uploadBroadcastAttachment } = require("../utils/broadcastUpload");
 const { getFeeDetails } = require("../controllers/invoiceController");
+const requirePermission = require("../middleware/requirePermission");
 
-router.get("/children/:childId/schedule", protect, getChildSchedule);
+router.get("/children/:childId/schedule", protect, requirePermission("scheduling"),getChildSchedule);
 router.get("/children/:childId/batch-options", protect, getChildBatchOptions);
-router.post("/children/:childId/custom-slot-options", protect, getChildCustomSlotOptions);
-router.post("/children/:childId/custom-appointments", protect, createChildCustomAppointment);
-router.delete("/children/:childId/custom-appointments/:appointmentId", protect, deleteChildCustomAppointment);
-router.post("/children/:childId/custom-week-options", protect, getChildCustomWeekOptions);
-router.post("/children/:childId/custom-schedule/preview", protect, previewChildCustomSchedule);
-router.post("/children/:childId/custom-schedule", protect, saveChildCustomSchedule);
+router.post("/children/:childId/custom-slot-options", protect, requirePermission("scheduling"),getChildCustomSlotOptions);
+router.post("/children/:childId/custom-appointments", protect, requirePermission("scheduling"),createChildCustomAppointment);
+router.delete("/children/:childId/custom-appointments/:appointmentId", protect, requirePermission("scheduling"),deleteChildCustomAppointment);
+router.post("/schedule/bulk-delete", protect, requirePermission("scheduling"),bulkDeleteAppointments);
+router.post("/appointments/bulk-cancel", protect, requirePermission("scheduling"),bulkCancelAppointments);
+router.post("/children/:childId/custom-week-options", protect, requirePermission("scheduling"),getChildCustomWeekOptions);
+router.post("/children/:childId/custom-schedule/preview", protect, requirePermission("scheduling"),previewChildCustomSchedule);
+router.post("/children/:childId/custom-schedule", protect, requirePermission("scheduling"),saveChildCustomSchedule);
 router.delete(
   "/batches/:batchId/assignments/:assignmentId/sessions/:sessionId",
   protect,
   deleteBatchSession,
 );
-router.post("/children/documents", protect, uploadChildDocument);
-router.post("/children/:childId/custom/:appointmentId/cancel", protect, cancelChildCustomAppointment);
-router.post("/children/:childId/custom/:appointmentId/postpone", protect, postponeChildCustomAppointment);
+router.post("/children/documents", protect, requirePermission("children"),uploadChildDocument);
+router.post("/children/:childId/custom/:appointmentId/cancel", protect, requirePermission("scheduling"),cancelChildCustomAppointment);
+router.post("/children/:childId/custom/:appointmentId/postpone", protect, requirePermission("scheduling"),postponeChildCustomAppointment);
+router.post("/appointments/bulk-postpone", protect, requirePermission("scheduling"),bulkPostponeAppointments);
 
-router.get("/schedule", protect, getSessions);
+router.get("/schedule", protect, requirePermission("scheduling"),getSessions);
 router.get("/overview", protect, getAdminOverview);
 router.get("/get_therapists", protect, getTherapistsUsers);
 router.get("/get_therapists_child", assignTherapistsUsers);
 router.get("/users", protect, getUsersByRole);
-router.get("/all_users", protect, getAllUsers);
-router.post("/admins", protect, createAdmin);
-router.put("/admins/:id", protect, updateAdmin);
-router.get("/program/therapists", protect, getProgramTherapists);
-router.get("/program/therapists/:therapistId/children", protect, getProgramTherapistChildren);
-router.post("/therapists", protect, createTherapist);
-router.put("/therapists/:id", protect, updateTherapist);
-router.delete("/therapists/:id", protect, deleteTherapist);
-router.post("/therapists/assign", protect, assignChildrenToTherapist);
-router.get("/therapists/:therapistId/schedule", protect, getTherapistSchedule);
-router.get("/children", protect, childUsers);
-router.post("/children", protect, createChild);
-router.put("/children/:id", protect, updateChild);
-router.delete("/children/:id", protect, deleteChild);
+router.get("/all_users", protect, checkRole("Admin"),getAllUsers);
+router.post("/admins", protect, checkRole("Admin"),createAdmin);
+router.put("/admins/:id", protect, checkRole("Admin"),updateAdmin);
+router.delete("/admins/:id", protect, checkRole("Admin"),deleteAdmin);
+router.post("/manager", protect, checkRole("Admin"),createManager);
+router.put("/manager/:id", protect, checkRole("Admin"),updateManager);
+router.delete("/manager/:id", protect, checkRole("Admin"),deleteManager);
+router.get("/program/therapists", protect, requirePermission("programbuilder"),getProgramTherapists);
+router.get("/program/therapists/:therapistId/children", protect, requirePermission("programbuilder"),getProgramTherapistChildren);
+router.post("/therapists", protect, requirePermission("therapists"),createTherapist);
+router.put("/therapists/:id", protect, requirePermission("therapists"),updateTherapist);
+router.delete("/therapists/:id", protect, requirePermission("therapists"),deleteTherapist);
+router.post("/therapists/assign", protect, requirePermission("therapists"),assignChildrenToTherapist);
+router.get("/therapists/:therapistId/schedule", protect, requirePermission("scheduling"),getTherapistSchedule);
+router.get("/children", protect, requirePermission("children"),childUsers);
+router.post("/children", protect, requirePermission("children"),createChild);
+router.put("/children/:id", protect, requirePermission("children"),updateChild);
+router.delete("/children/:id", protect, requirePermission("children"),deleteChild);
 
-router.get("/leave-requests", protect, getLeaveRequests);
-router.put("/leave-requests/:id/approve", protect, approveLeaveRequest);
-router.put("/leave-requests/:id/reject", protect, rejectLeaveRequest);
-router.get("/leave-requests/on-leave-today", protect, getStaffOnLeaveToday);
+router.get("/leave-requests", protect, requirePermission("leaverequest"),getLeaveRequests);
+router.put("/leave-requests/:id/approve", protect, requirePermission("leaverequest"),approveLeaveRequest);
+router.put("/leave-requests/:id/reject", protect, requirePermission("leaverequest"),rejectLeaveRequest);
+router.get("/leave-requests/on-leave-today", protect, requirePermission("leaverequest"),getStaffOnLeaveToday);
 // router.patch("/leave-requests/mark-all-seen", markAllLeavesSeen);
-router.get("/feedback/:status", protect, getAdminFeedbackManagement);
-router.get("/feedback/:feedbackId/replies", protect, getFeedbackReplies);
-router.post("/feedback/:feedbackId/replies", protect, addFeedbackReply);
-router.post("/feedback/send-reminder", protect, sendFeedbackReminderNotification);
-router.delete("/feedback/:feedbackId", protect, deleteFeedback);
+router.get("/feedback/:status", protect, requirePermission("feedback"),getAdminFeedbackManagement);
+router.get("/feedback/:feedbackId/replies", protect, requirePermission("feedback"),getFeedbackReplies);
+router.post("/feedback/:feedbackId/replies", protect, requirePermission("feedback"),addFeedbackReply);
+router.post("/feedback/send-reminder", protect, requirePermission("feedback"),sendFeedbackReminderNotification);
+router.delete("/feedback/:feedbackId", protect, requirePermission("feedback"),deleteFeedback);
 
 router.get("/batches", protect, getBatches);
 router.post("/batches", protect, createBatch);
@@ -159,46 +175,48 @@ router.post("/batches/:batchId/assignments/:assignmentId/slot-options", protect,
 router.post("/batches/:batchId/assignments/:assignmentId/sessions/:sessionId/postpone", protect, postponeBatchSession);
 router.post("/batches/:batchId/assignments/:assignmentId/additional", protect, createAdditionalSession);
 
-router.post("/broadcast", protect, uploadBroadcastAttachment, createBroadcast);
-router.get("/broadcast", protect, getAllBroadcasts);
-router.get("/broadcast/:broadcastId", getBroadcastById);
-router.put("/broadcast/:broadcastId", uploadBroadcastAttachment, updateBroadcast);
-router.delete("/broadcast/:broadcastId", protect, deleteBroadcast);
+router.post("/broadcast", protect, requirePermission("broadcast"),uploadBroadcastAttachment, createBroadcast);
+router.get("/broadcast", protect, requirePermission("broadcast"),getAllBroadcasts);
+router.get("/broadcast/:broadcastId", requirePermission("broadcast"),getBroadcastById);
+router.put("/broadcast/:broadcastId", requirePermission("broadcast"),uploadBroadcastAttachment, updateBroadcast);
+router.delete("/broadcast/:broadcastId", protect, requirePermission("broadcast"),deleteBroadcast);
 
-router.get("/complaints", protect, getComplaints);
-router.put("/complaints/:id/resolve", protect, resolveComplaint);
-router.put("/complaints/:id/priority", protect, updateComplaintPriority);
-router.get("/complaints/:id/messages", protect, getComplaintMessages);
-router.post("/complaints/:id/messages", protect, sendComplaintMessage);
+router.get("/complaints", protect, requirePermission("complaints"),getComplaints);
+router.put("/complaints/:id/resolve", protect, requirePermission("complaints"),resolveComplaint);
+router.put("/complaints/:id/priority", protect, requirePermission("complaints"),updateComplaintPriority);
+router.get("/complaints/:id/messages", protect, requirePermission("complaints"),getComplaintMessages);
+router.post("/complaints/:id/messages", protect, requirePermission("complaints"),sendComplaintMessage);
 router.get("/parents", getParents);
 
 router.get("/notifications", protect, getMyNotifications);
 router.put("/notifications/:id/read", protect, markNotificationRead);
 router.put("/notifications/read-all", protect, markAllNotificationsRead);
 
-router.get("/scheduling/availability", protect, getAvailability);
-router.post("/scheduling/availability", protect, createAvailability);
-router.put("/scheduling/availability/:id", protect, updateAvailability);
-router.delete("/scheduling/availability/:id", protect, deleteAvailability);
+router.get("/scheduling/availability", protect, requirePermission("therapists"),getAvailability);
+router.post("/scheduling/availability", protect, requirePermission("therapists"),createAvailability);
+router.put("/scheduling/availability/:id", protect, requirePermission("therapists"),updateAvailability);
+router.delete("/scheduling/availability/:id", protect, requirePermission("therapists"),deleteAvailability);
 
-router.get("/packages", getAllPackages);
-router.get("/packages/:packageId", protect, getPackageById);
-router.post("/packages/", protect, createPackage);
-router.put("/packages/:packageId", protect, updatePackage);
-router.delete("/packages/:packageId", protect, deletePackage);
+router.get("/packages", protect, requirePermission("fees"),getAllPackages);
+router.get("/packages/:packageId", protect, requirePermission("fees"),getPackageById);
+router.post("/packages/", protect, requirePermission("fees"),createPackage);
+router.put("/packages/:packageId", protect, requirePermission("fees"),updatePackage);
+router.delete("/packages/:packageId", protect, requirePermission("fees"),deletePackage);
 
-router.get("/services", protect, getServices);
-router.post("/services", protect, createService);
-router.put("/services/:id", protect, updateService);
-router.delete("/services/:id", protect, deleteService);
+router.get("/services", protect, requirePermission("services"),getServices);
+router.post("/services", protect, requirePermission("services"),createService);
+router.put("/services/:id", protect, requirePermission("services"),updateService);
+router.delete("/services/:id", protect, requirePermission("services"),deleteService);
 
-router.get("/settings", protect, getSettings);
-router.put("/settings", protect, updateSettings);
+router.get("/settings", protect, checkRole("Admin"),getSettings);
+router.put("/settings", protect, checkRole("Admin"),updateSettings);
 
-router.get("/invoices/fee-details", protect, getFeeDetails);
+router.get("/invoices/fee-details", protect, requirePermission("invoices"),getFeeDetails);
 
-router.get("/quarterly-reports", protect, adminListQuarterlyReports);
-router.get("/quarterly-reports/:id", protect, adminGetQuarterlyReport);
+router.get("/quarterly-reports", protect, requirePermission("reports"),adminListQuarterlyReports);
+router.get("/quarterly-reports/:id", protect, requirePermission("reports"),adminGetQuarterlyReport);
 
-router.get("/attendance-report", protect, getAdminAttendance);
+router.get("/attendance-report", protect, requirePermission("reports"),getAdminAttendance);
+router.patch("/attendance", protect, requirePermission("reports"),updateAdminAttendance);
+
 module.exports = router;

@@ -153,7 +153,17 @@ const Avatar = ({ uri, name, color, style, textStyle }) => {
     </View>
   );
 };
-function SessionRow({ s, past, onPress, specMeta }) {
+const isSelectable = (s) =>
+  s.type === "custom" && !s.isPast && !isInactive(s) && (s.canPostpone || s.canCancel);
+
+function Checkbox({ checked, disabled }) {
+  return (
+    <View style={[styles.checkbox, checked && styles.checkboxOn, disabled && { opacity: 0.3 }]}>
+      {checked && <Feather name="check" size={14} color="#FFFFFF" />}
+    </View>
+  );
+}
+function SessionRow({ s, past, onPress, onLongPress, specMeta, selectMode, selected }) {
   const spec = s.speciality
     ? specMeta(s.speciality)
     : null;
@@ -165,10 +175,23 @@ function SessionRow({ s, past, onPress, specMeta }) {
       ? "No children"
       : `${att.present} present · ${att.absent} absent${att.pending ? ` · ${att.pending} pending` : ""}`
     : `${s.children.length} ${s.children.length === 1 ? "child" : "children"}`;
-
+  const selectable = isSelectable(s);
   return (
-    <TouchableOpacity activeOpacity={0.75} onPress={() => onPress(s)}>
-      <View style={[styles.sessionRow, s.sessionType === "cancel" && styles.sessionRowCancelled]}>
+    <TouchableOpacity
+      activeOpacity={0.75}
+      onPress={() => onPress(s)}
+      onLongPress={onLongPress ? () => onLongPress(s) : undefined}
+      delayLongPress={350}
+    >
+      <View
+        style={[
+          styles.sessionRow,
+          s.sessionType === "cancel" && styles.sessionRowCancelled,
+          selected && styles.sessionRowSelected,
+          selectMode && !selectable && { opacity: 0.45 },
+        ]}
+      >
+        {selectMode && <Checkbox checked={selected} disabled={!selectable} />}
         <View
           style={[
             styles.sessionBar,
@@ -259,6 +282,9 @@ export default function TherapistScheduleScreen({ navigation, route }) {
   const EMPTY_LIST = { items: [], page: 0, hasMore: true, loading: false, loaded: false };
   const [upcomingState, setUpcomingState] = useState(EMPTY_LIST);
   const [pastState, setPastState] = useState(EMPTY_LIST);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = useCallback(
     async (isRefresh = false) => {
@@ -521,11 +547,119 @@ export default function TherapistScheduleScreen({ navigation, route }) {
       </View>
     );
   }
+  const selectableUpcoming = upcoming.filter(isSelectable);
+
+  const exitSelect = () => {
+    setSelectMode(false);
+    setSelectedIds([]);
+  };
+
+  const toggleOne = (id) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const toggleDate = (items) => {
+    const ids = items.filter(isSelectable).map((s) => s.id);
+    if (!ids.length) return;
+    const allOn = ids.every((id) => selectedIds.includes(id));
+    setSelectedIds((prev) =>
+      allOn ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])],
+    );
+  };
+
+  const toggleAll = () => {
+    const ids = selectableUpcoming.map((s) => s.id);
+    setSelectedIds(selectedIds.length === ids.length ? [] : ids);
+  };
+
+  const onRowPress = (s) => {
+    if (!selectMode) return setDetail(s);
+    if (isSelectable(s)) toggleOne(s.id);
+  };
+
+  const bulkCancel = () => {
+    if (!selectedIds.length) return;
+    const items = upcoming
+      .filter((s) => selectedIds.includes(s.id))
+      .map((s) => ({ childId: s.children?.[0]?.childId, appointmentId: s.id }))
+      .filter((i) => i.childId);
+
+    Alert.alert(
+      "Cancel appointments",
+      `Cancel ${items.length} appointment(s)? They stay in the list as cancelled.`,
+      [
+        { text: "Keep", style: "cancel" },
+        {
+          text: "Cancel appointments",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setBulkBusy(true);
+              const res = await bulkCancelAppointments(items);
+              const failed = res?.data?.failed ?? items.length;
+              exitSelect();
+              await load();
+              Alert.alert(
+                failed ? "Partly done" : "Done",
+                failed
+                  ? `${items.length - failed} cancelled, ${failed} failed.`
+                  : "Appointments cancelled.",
+              );
+            } catch (e) {
+              Alert.alert("Could not cancel", e?.response?.data?.message || "Please try again.");
+            } finally {
+              setBulkBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const bulkReschedule = () => {
+    const list = upcoming
+      .filter((s) => selectedIds.includes(s.id))
+      .map((s) => ({
+        id: s.id,
+        childId: s.children?.[0]?.childId,
+        childName: s.children?.[0]?.fullName,
+        date: s.date,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        therapistId: s.therapistId || therapistId,
+        therapistName: data?.therapist?.fullName || therapistName,
+        speciality: s.speciality,
+      }));
+    if (!list.length) return;
+    navigation.navigate("RescheduleAppointments", {
+      source: "therapist",
+      name: data?.therapist?.fullName || therapistName,
+      appointments: list,
+    });
+    exitSelect();
+  };
+  const onRowLongPress = (s) => {
+    if (tab !== "upcoming" || !isSelectable(s)) return;
+    setSelectMode(true);
+    setSelectedIds((prev) => (prev.includes(s.id) ? prev : [...prev, s.id]));
+  };
 
   return (
     <View style={styles.main}>
+      {selectMode && (
+        <View style={styles.selectBar}>
+          <TouchableOpacity onPress={exitSelect} hitSlop={10}>
+            <Feather name="x" size={fontSize(22)} color="#0F172A" />
+          </TouchableOpacity>
+          <Text style={styles.selectCount}>{selectedIds.length} selected</Text>
+          <TouchableOpacity onPress={toggleAll}>
+            <Text style={styles.selectAll}>
+              {selectedIds.length === selectableUpcoming.length ? "Clear" : "Select all"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, selectMode && { paddingBottom: hp(100) }]}
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}
         scrollEventThrottle={200}
@@ -589,7 +723,7 @@ export default function TherapistScheduleScreen({ navigation, route }) {
             <TouchableOpacity
               key={t.id}
               style={[styles.tab, tab === t.id && styles.tabActive]}
-              onPress={() => setTab(t.id)}
+              onPress={() => { setTab(t.id); exitSelect(); }}
             >
               <Text style={[styles.tabText, tab === t.id && styles.tabTextActive]}>{t.label}</Text>
             </TouchableOpacity>
@@ -662,6 +796,14 @@ export default function TherapistScheduleScreen({ navigation, route }) {
             ))}
 
         {/* ---------- UPCOMING ---------- */}
+        {tab === "upcoming" && !selectMode && selectableUpcoming.length > 0 && (
+          <View style={styles.selectHintRow}>
+            <Text style={styles.hint}>Tap Select to choose several appointments.</Text>
+            <TouchableOpacity onPress={() => setSelectMode(true)}>
+              <Text style={styles.selectAll}>Select</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         {tab === "upcoming"
           && (upcoming.length === 0
             ? (
@@ -677,11 +819,31 @@ export default function TherapistScheduleScreen({ navigation, route }) {
               groupByDate(upcoming).map((g) => (
                 <View key={g.date} style={styles.dayGroup}>
                   <View style={styles.dayHeader}>
+                    {selectMode && (
+                      <TouchableOpacity onPress={() => toggleDate(g.items)}>
+                        <Checkbox
+                          checked={
+                            g.items.filter(isSelectable).length > 0 &&
+                            g.items.filter(isSelectable).every((s) => selectedIds.includes(s.id))
+                          }
+                          disabled={!g.items.some(isSelectable)}
+                        />
+                      </TouchableOpacity>
+                    )}
                     <Text style={styles.dayTitle}>{prettyDay(g.date)}</Text>
                     {relLabel(g.date) && <Text style={styles.dayRel}>{relLabel(g.date)}</Text>}
                   </View>
                   {g.items.map((s) => (
-                    <SessionRow key={s.id} s={s} past={false} onPress={setDetail} specMeta={specMeta} />
+                    <SessionRow
+                      key={s.id}
+                      s={s}
+                      past={false}
+                      onPress={onRowPress}
+                      onLongPress={onRowLongPress}
+                      specMeta={specMeta}
+                      selectMode={selectMode}
+                      selected={selectedIds.includes(s.id)}
+                    />
                   ))}
                 </View>
               ))
@@ -934,14 +1096,37 @@ export default function TherapistScheduleScreen({ navigation, route }) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-      <TouchableOpacity
-        style={[styles.fab]}
-        activeOpacity={0.85}
-        onPress={openPicker}
-      >
-        <Feather name="plus" size={fontSize(27)} color="#FFFFFF" />
-        <Text style={styles.fabText}></Text>
-      </TouchableOpacity>
+      {selectMode ? (
+        <View style={[styles.bulkBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <TouchableOpacity
+            style={[styles.bulkBtn, styles.bulkResched, !selectedIds.length && styles.bulkOff]}
+            disabled={!selectedIds.length || bulkBusy}
+            onPress={bulkReschedule}
+          >
+            <Feather name="calendar" size={fontSize(16)} color="#7E22CE" />
+            <Text style={[styles.bulkText, { color: "#7E22CE" }]}>Reschedule</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.bulkBtn, styles.bulkCancel, !selectedIds.length && styles.bulkOff]}
+            disabled={!selectedIds.length || bulkBusy}
+            onPress={bulkCancel}
+          >
+            {bulkBusy ? (
+              <ActivityIndicator color="#B91C1C" />
+            ) : (
+              <>
+                <Feather name="x-circle" size={fontSize(16)} color="#B91C1C" />
+                <Text style={[styles.bulkText, { color: "#B91C1C" }]}>Cancel</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity style={[styles.fab]} activeOpacity={0.85} onPress={openPicker}>
+          <Feather name="plus" size={fontSize(27)} color="#FFFFFF" />
+          <Text style={styles.fabText}></Text>
+        </TouchableOpacity>
+      )}
       <PostponeCustomModal
         visible={!!postponeTarget}
         childId={postponeTarget?.children?.[0]?.childId}
@@ -1194,4 +1379,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
+  checkbox: { width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: "#CBD5E1", alignItems: "center", justifyContent: "center" },
+  checkboxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  sessionRowSelected: { borderWidth: 1.5, borderColor: colors.primary, backgroundColor: "#F0F9FF" },
+  selectBar: { flexDirection: "row", alignItems: "center", gap: wp(12), paddingHorizontal: wp(16), paddingVertical: hp(12), backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },
+  selectCount: { flex: 1, fontSize: fontSize(15), fontFamily: fonts.semiBold, color: "#0F172A" },
+  selectAll: { fontSize: fontSize(13), fontFamily: fonts.semiBold, color: colors.primary },
+  selectHintRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: hp(10), gap: wp(10) },
+  bulkBar: { position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", gap: wp(10), paddingHorizontal: wp(16), paddingTop: 12, backgroundColor: "#FFFFFF", borderTopWidth: 1, borderTopColor: "#E2E8F0", elevation: 10 },
+  bulkBtn: { flex: 1, height: hp(46), borderRadius: wp(12), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: wp(8) },
+  bulkResched: { backgroundColor: "#F3E8FF" },
+  bulkCancel: { backgroundColor: "#FEE2E2" },
+  bulkOff: { opacity: 0.4 },
+  bulkText: { fontSize: fontSize(14), fontFamily: fonts.semiBold },
 });

@@ -21,8 +21,16 @@ const {
   removePushToken,
   adminImpersonateUser,
   getChildSummery,
+  getPermissions,
+  getGroups,
+  createGroup,
+  updateGroup,
+  deleteGroup,
+  getAssignments,
+  setUserGroups,
+  myPermissions,
 } = require("../controllers/authController");
-const { protect, blockImpersonationWrites } = require("../middleware/authMiddleware");
+const { protect, blockImpersonationWrites,checkRole } = require("../middleware/authMiddleware");
 const rateLimit = require("express-rate-limit");
 const { registerPushToken, sendNotification, unregisterPushToken } = require("../controllers/pushNotificationController");
 
@@ -57,5 +65,17 @@ router.post("/users/push-notifications/register", protect, registerPushToken);
 router.delete("/users/push-notifications/unregister", protect, unregisterPushToken);
 router.post("/users/push-notifications/send", protect, sendNotification);
 router.post("/users/impersonate", protect, blockImpersonationWrites, adminImpersonateUser);
+
+
+router.get("/permissions", protect, checkRole("Admin"),getPermissions);
+
+router.get("/permission-groups", protect, checkRole("Admin"),getGroups);
+router.post("/permission-groups", protect, checkRole("Admin"),createGroup);
+router.put("/permission-groups/:id", protect, checkRole("Admin"),updateGroup);
+router.delete("/permission-groups/:id", protect, checkRole("Admin"),deleteGroup);
+
+router.get("/permission-assignments", protect, checkRole("Admin"),getAssignments);
+router.put("/permission-assignments/:userId", protect, checkRole("Admin"),setUserGroups);
+router.get("/my-permissions", protect, checkRole("Admin","Manager"),myPermissions);
 
 module.exports = router;

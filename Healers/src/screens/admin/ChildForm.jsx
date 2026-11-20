@@ -647,7 +647,7 @@ export default function ChildFormScreen({ navigation, route }) {
   };
 
   const validateContact = () => {
-    if (!/^(03\d{9}|\+923\d{9})$/.test(form.phone.trim())) {
+    if (form.phone && !/^(03\d{9}|\+923\d{9})$/.test(form.phone.trim())) {
       return fail("Contact number must be in 03011234567 or +923011234567 format.");
     }
 
@@ -1112,7 +1112,7 @@ export default function ChildFormScreen({ navigation, route }) {
             <>
               <View style={styles.card}>
                 <Text style={styles.fieldLabelFirst}>
-                  Contact Number <Text style={styles.requiredText}>*</Text>
+                  Contact Number
                 </Text>
                 <TextInput
                   style={[

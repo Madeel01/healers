@@ -42,14 +42,14 @@ export default function LoginScreen() {
   const navigation = useNavigation();
   const { login } = useContext(AuthContext);
 
-  const [identifier, setIdentifier] = useState("");
-  // const [identifier, setIdentifier] = useState("admin@gmail.com");
+  // const [identifier, setIdentifier] = useState("");
+  const [identifier, setIdentifier] = useState("admin@gmail.com");
   // const [identifier, setIdentifier] = useState("child@gmail.com");
   // const [identifier, setIdentifier] = useState("therapist@gmail.com");
   // const [password, setPassword] = useState("test@123");
   // const [identifier, setIdentifier] = useState("madeel@callhub.cc");
-  const [password, setPassword] = useState("");
-  // const [password, setPassword] = useState("@123Test");
+  // const [password, setPassword] = useState("");
+  const [password, setPassword] = useState("@123Test");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -82,6 +82,7 @@ export default function LoginScreen() {
       await login(response.token, response.user);
       Alert.alert("Success", "Logged in successfully!");
     } catch (error) {
+      console.log(error,"eeee")
       const errorMsg = error.response?.data?.message
         || error.message
         || "Invalid credentials or connection issue.";

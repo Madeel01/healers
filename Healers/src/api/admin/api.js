@@ -21,6 +21,18 @@ export const deleteAdmin = async (id) => {
   const res = await apiClient.delete(`/admin/admins/${id}`);
   return res.data;
 };
+export const createManager = async (payload) => {
+  const res = await apiClient.post("/admin/manager", payload);
+  return res.data;
+};
+export const updateManager = async (id, payload) => {
+  const res = await apiClient.put(`/admin/manager/${id}`, payload);
+  return res.data;
+};
+export const deleteManager = async (id) => {
+  const res = await apiClient.delete(`/admin/manager/${id}`);
+  return res.data;
+};
 
 export const getTherapistSchedule = async (therapistId, params) => {
   const res = await apiClient.get(`/admin/therapists/${therapistId}/schedule`, { params });
@@ -68,12 +80,24 @@ export const deleteChildCustomAppointment = async (childId, appointmentId) => {
   const res = await apiClient.delete(`/admin/children/${childId}/custom-appointments/${appointmentId}`);
   return res.data;
 };
+export const bulkDeleteAppointments = async (items) => {
+  const res = await apiClient.post("/admin/schedule/bulk-delete", { items });
+  return res.data;
+};
 export const cancelChildCustomAppointment = async (childId, appointmentId) => {
   const res = await apiClient.post(`/admin/children/${childId}/custom/${appointmentId}/cancel`);
   return res.data;
 };
 export const postponeChildCustomAppointment = async (childId, appointmentId, body) => {
   const res = await apiClient.post(`/admin/children/${childId}/custom/${appointmentId}/postpone`, body);
+  return res.data;
+};
+export const bulkPostponeAppointments = async (items) => {
+  const res = await apiClient.post("/admin/appointments/bulk-postpone", { items });
+  return res.data;
+};
+export const bulkCancelAppointments = async (items) => {
+  const res = await apiClient.post("/admin/appointments/bulk-cancel", { items }); 
   return res.data;
 };
 
@@ -515,4 +539,8 @@ export const getAdminAttendanceApi = (params) => {
   return apiClient.get("/admin/attendance-report", {
     params,
   });
+};
+export const updateAdminAttendanceApi = async (payload) => {
+  const res = await apiClient.patch("/admin/attendance", payload);
+  return res.data;
 };
