@@ -15,6 +15,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { adminLoginAsUserApi } from "../../api/authApi";
@@ -126,6 +127,22 @@ const SegmentedToggle = ({ options, value, onChange }) => (
     })}
   </View>
 );
+const DetailRow = ({ icon, label, value, onPress }) => (
+  <TouchableOpacity
+    activeOpacity={onPress ? 0.7 : 1}
+    onPress={onPress}
+    disabled={!onPress}
+    style={styles.detailRow}
+  >
+    <View style={styles.detailIconWrap}>
+      <Feather name={icon} size={fontSize(16)} color="#0B4A6F" />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value || "—"}</Text>
+    </View>
+  </TouchableOpacity>
+);
 export default function TherapistsScreen({ navigation }) {
   const { user, loginAsUser } = useContext(AuthContext);
   const userId = user?.id;
@@ -175,6 +192,7 @@ export default function TherapistsScreen({ navigation }) {
   const [draftSpecialty, setDraftSpecialty] = useState("All");
   const [draftStatus, setDraftStatus] = useState("all");
   const [phoneTouched, setPhoneTouched] = useState(false);
+  const [viewTherapist, setViewTherapist] = useState(null);
   const canSeeMessages = can("ChildMessages");
   const canSeeSchedule = can("Schedule");
   const isPhoneValid =
@@ -861,6 +879,18 @@ export default function TherapistsScreen({ navigation }) {
       setLoginLoadingId(null);
     }
   };
+  const openViewModal = (therapist) => {
+    setActiveMenuId(null);
+    setViewTherapist(therapist);
+  };
+
+  const closeViewModal = () => setViewTherapist(null);
+  const editFromView = () => {
+    const t = viewTherapist;
+    setViewTherapist(null);
+    setTimeout(() => openEditModal(t), Platform.OS === "ios" ? 350 : 0);
+  };
+
 
   return (
     <View
@@ -1095,6 +1125,14 @@ export default function TherapistsScreen({ navigation }) {
                       <View style={styles.dropdownMenu}>
                         <TouchableOpacity
                           style={styles.menuItem}
+                          activeOpacity={0.7}
+                          onPress={() => openEditModal(therapist)}
+                        >
+                          <Feather name="eye" size={15} color="#334155" />
+                          <Text style={styles.menuItemText}>View</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.menuItem, styles.deleteMenuItem]}
                           activeOpacity={0.7}
                           onPress={() => openEditModal(therapist)}
                         >
