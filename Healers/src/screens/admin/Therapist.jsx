@@ -15,6 +15,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { adminLoginAsUserApi } from "../../api/authApi";
@@ -126,6 +127,22 @@ const SegmentedToggle = ({ options, value, onChange }) => (
     })}
   </View>
 );
+const DetailRow = ({ icon, label, value, onPress }) => (
+  <TouchableOpacity
+    activeOpacity={onPress ? 0.7 : 1}
+    onPress={onPress}
+    disabled={!onPress}
+    style={styles.detailRow}
+  >
+    <View style={styles.detailIconWrap}>
+      <Feather name={icon} size={fontSize(16)} color="#0B4A6F" />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value || "—"}</Text>
+    </View>
+  </TouchableOpacity>
+);
 export default function TherapistsScreen({ navigation }) {
   const { user, loginAsUser } = useContext(AuthContext);
   const userId = user?.id;
@@ -175,6 +192,7 @@ export default function TherapistsScreen({ navigation }) {
   const [draftSpecialty, setDraftSpecialty] = useState("All");
   const [draftStatus, setDraftStatus] = useState("all");
   const [phoneTouched, setPhoneTouched] = useState(false);
+  const [viewTherapist, setViewTherapist] = useState(null);
   const canSeeMessages = can("ChildMessages");
   const canSeeSchedule = can("Schedule");
   const isPhoneValid =
@@ -861,6 +879,18 @@ export default function TherapistsScreen({ navigation }) {
       setLoginLoadingId(null);
     }
   };
+  const openViewModal = (therapist) => {
+    setActiveMenuId(null);
+    setViewTherapist(therapist);
+  };
+
+  const closeViewModal = () => setViewTherapist(null);
+  const editFromView = () => {
+    const t = viewTherapist;
+    setViewTherapist(null);
+    setTimeout(() => openEditModal(t), Platform.OS === "ios" ? 350 : 0);
+  };
+
 
   return (
     <View
@@ -1095,6 +1125,14 @@ export default function TherapistsScreen({ navigation }) {
                       <View style={styles.dropdownMenu}>
                         <TouchableOpacity
                           style={styles.menuItem}
+                          activeOpacity={0.7}
+                          onPress={() => openViewModal(therapist)}
+                        >
+                          <Feather name="eye" size={15} color="#334155" />
+                          <Text style={styles.menuItemText}>View</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.menuItem, styles.deleteMenuItem]}
                           activeOpacity={0.7}
                           onPress={() => openEditModal(therapist)}
                         >
@@ -1790,6 +1828,152 @@ export default function TherapistsScreen({ navigation }) {
                     </TouchableOpacity>
                   );
                 })()}
+              </>
+            )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+      <Modal
+        visible={!!viewTherapist}
+        animationType="slide"
+        transparent
+        onRequestClose={closeViewModal}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={closeViewModal}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[styles.modalContent, { paddingBottom: insets.bottom + 24 }]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Therapist Details</Text>
+              <TouchableOpacity onPress={closeViewModal}>
+                <Feather name="x" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {viewTherapist && (
+              <>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {/* Profile header */}
+                  <View style={styles.viewProfile}>
+                    <Avatar
+                      uri={viewTherapist.profileImage}
+                      name={viewTherapist.name}
+                      color={getAvatarColor(viewTherapist.id || viewTherapist.name)}
+                      style={styles.viewAvatar}
+                      textStyle={styles.therapistAvatarInitialText}
+                    />
+                    <Text style={styles.viewName}>{viewTherapist.name}</Text>
+
+                    <View
+                      style={[
+                        styles.statusPill,
+                        {
+                          backgroundColor:
+                            viewTherapist.isActive === false ? "#FEE2E2" : "#DCFCE7",
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.inactiveDot,
+                          {
+                            backgroundColor:
+                              viewTherapist.isActive === false ? "#DC2626" : "#16A34A",
+                          },
+                        ]}
+                      />
+                      <Text
+                        style={{
+                          fontSize: fontSize(12),
+                          fontFamily: fonts.medium,
+                          color:
+                            viewTherapist.isActive === false ? "#B91C1C" : "#15803D",
+                        }}
+                      >
+                        {viewTherapist.isActive === false ? "Inactive" : "Active"}
+                      </Text>
+                    </View>
+
+                    {/* Specialties */}
+                    <View style={styles.viewSpecialties}>
+                      {(viewTherapist.specialties || []).map((s) => {
+                        const id = typeof s === "object" ? s.id : s;
+                        const service = services.find((item) => item.id === id);
+                        if (!service) return null;
+                        return (
+                          <View
+                            key={service.id}
+                            style={[styles.tabChip, { backgroundColor: service.bg }]}
+                          >
+                            <Text
+                              style={[styles.tabChipText, { color: service.color }]}
+                            >
+                              {service.label}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Details */}
+                  <DetailRow
+                    icon="mail"
+                    label="Email"
+                    value={viewTherapist.email}
+                    onPress={
+                      viewTherapist.email
+                        ? () => Linking.openURL(`mailto:${viewTherapist.email}`)
+                        : undefined
+                    }
+                  />
+                  <DetailRow
+                    icon="phone"
+                    label="Phone"
+                    value={viewTherapist.phone}
+                    onPress={
+                      viewTherapist.phone
+                        ? () => Linking.openURL(`tel:${viewTherapist.phone}`)
+                        : undefined
+                    }
+                  />
+                  <DetailRow
+                    icon="map-pin"
+                    label="Address"
+                    value={viewTherapist.address}
+                  />
+                  <DetailRow
+                    icon="users"
+                    label="Assigned Children"
+                    value={String(viewTherapist.currentLoad ?? 0)}
+                  />
+                  <DetailRow
+                    icon="activity"
+                    label="Last Active"
+                    value={
+                      viewTherapist.isOnline
+                        ? "Online now"
+                        : viewTherapist.lastActive
+                          ? new Date(viewTherapist.lastActive).toLocaleString()
+                          : "—"
+                    }
+                  />
+                </ScrollView>
+
+                {/* Footer actions */}
+                <View style={styles.filterFooter}>
+                  <TouchableOpacity style={styles.resetButton} onPress={closeViewModal}>
+                    <Text style={styles.resetButtonText}>Close</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.applyButton} onPress={editFromView}>
+                    <Text style={styles.applyButtonText}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </TouchableOpacity>
@@ -2498,4 +2682,64 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   helper: { fontSize: fontSize(11), color: "#64748B", marginBottom: 6 },
+  viewProfile: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  viewAvatar: {
+    width: wp(84),
+    height: wp(84),
+    borderRadius: wp(999),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  viewName: {
+    fontSize: fontSize(18),
+    fontFamily: fonts.semiBold,
+    color: "#0F172A",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  viewSpecialties: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 6,
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  detailIconWrap: {
+    width: wp(36),
+    height: wp(36),
+    borderRadius: wp(10),
+    backgroundColor: "#EEF6FA",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  detailLabel: {
+    fontSize: fontSize(11),
+    color: "#64748B",
+    fontFamily: fonts.regular,
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: fontSize(14),
+    color: "#0F172A",
+    fontFamily: fonts.medium,
+  },
 });
