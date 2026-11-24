@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.adeeltozcall.Healers",
+      "bundleIdentifier": "com.airebsolutions.Healers",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Allow Healers to access your camera for therapy sessions and capturing documents.",
@@ -29,7 +29,7 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "package": "com.adeeltozcall.Healers",
+      "package": "com.airebsolutions.Healers",
       "googleServicesFile": "./google-services.json"
     },
     "web": {
