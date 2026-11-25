@@ -6,6 +6,7 @@ const WeeklyVideo = require("../models/Video");
 const User = require("../models/User");
 const Complaint = require("../models/Complaint");
 const { sendNotifications } = require("../utils/notificationService");
+const { getPermissionKeys } = require("../middleware/requirePermission");
 
 exports.getChildFeedbackManagement = async (req, res) => {
   try {
@@ -2019,159 +2020,121 @@ exports.getVideosByChild = async (req, res) => {
 //   }
 // };
 
+const MANAGER_KEYS = { child: "children", therapist: "therapists" };
+
+const MEMBER_SELECT = "_id fullName profileImage isOnline isActive lastActive role";
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+const toMember = (u) => ({
+  id: u._id,
+  fullName: u.fullName,
+  profileImage: u.profileImage || "",
+  isOnline: !!u.isOnline,
+  isActive: u.isActive,
+  lastActive: u.lastActive ?? null,
+  role: u.role,
+});
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const parsePagination = (query) => {
+  const page = Math.max(parseInt(query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(query.limit, 10) || DEFAULT_LIMIT, 1), MAX_LIMIT);
+  const search = String(query.search || "").trim().slice(0, 100);
+  return { page, limit, search, skip: (page - 1) * limit };
+};
+
+const buildResponse = (data, total, page, limit) => ({
+  success: true,
+  count: data.length,
+  total,
+  page,
+  limit,
+  totalPages: Math.ceil(total / limit),
+  hasMore: page * limit < total,
+  data,
+});
+
+const paginateUsers = async (filter, { page, limit, skip, search }) => {
+  if (search) filter.fullName = { $regex: escapeRegex(search), $options: "i" };
+
+  const [users, total] = await Promise.all([
+    User.find(filter)
+      .select(MEMBER_SELECT)
+      .sort({ fullName: 1, _id: 1 }) 
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    User.countDocuments(filter),
+  ]);
+
+  return buildResponse(users.map(toMember), total, page, limit);
+};
+
 exports.getAssignMembers = async (req, res) => {
   try {
-    const targetId = req?.query?.userId
-      || req?.query?.therapistId
-      || req?.params?.userId
-      || req?.params?.therapistId
-      || req?.body?.userId
-      || req?.body?.therapistId
-      || req?.user?._id
-      || req?.user?.id;
+    const role = String(req.user?.role || "");
+    const userId = req.user?._id || req.user?.id;
 
-    const role = req?.query?.role
-      || req?.body?.role
-      || req?.user?.role;
-
-    if (role === "Admin") {
-      const allAssignments = await TherapistAssignment.find()
-        .populate({
-          path: "therapistId",
-          match: { isActive: true },
-          select: "_id fullName profileImage isOnline isActive lastActive role",
-        })
-        .populate({
-          path: "childIds",
-          match: { isActive: true },
-          select: "_id fullName profileImage isOnline isActive lastActive role",
-        })
-        .lean();
-
-      const formattedData = allAssignments
-        .filter((assignment) => assignment.therapistId)
-        .map((assignment) => ({
-          assignmentId: assignment._id,
-          specialty: assignment.specialty || "",
-          maxChildren: assignment.maxChildren || 0,
-
-          therapist: {
-            id: assignment.therapistId._id,
-            fullName: assignment.therapistId.fullName,
-            profileImage: assignment.therapistId.profileImage || "",
-            isOnline: assignment.therapistId.isOnline,
-            isActive: assignment.therapistId.isActive,
-            lastActive: assignment.therapistId.lastActive ?? null,
-            role: assignment.therapistId.role || "Therapist",
-          },
-
-          assignedChildren: Array.isArray(assignment.childIds)
-            ? assignment.childIds
-              .filter(Boolean)
-              .map((child) => ({
-                id: child._id,
-                fullName: child.fullName,
-                profileImage: child.profileImage || "",
-                isOnline: child.isOnline,
-                isActive: child.isActive,
-                lastActive: child.lastActive ?? null,
-                role: child.role || "Child",
-              }))
-            : [],
-        }));
-
-      return res.status(200).json({
-        success: true,
-        count: formattedData.length,
-        data: formattedData,
-      });
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Authentication required." });
     }
 
-    if (!targetId) {
-      return res.status(400).json({
-        success: false,
-        message: "Therapist ID or User ID is required",
-      });
+    const pg = parsePagination(req.query);
+
+    if (["Admin", "Manager"].includes(role)) {
+      let allowedRoles;
+
+      if (role === "Admin") {
+        allowedRoles = ["Admin", "Manager", "Therapist", "Child"];
+      } else {
+        const keys = await getPermissionKeys(req.user);
+        allowedRoles = [];
+        if (keys.includes(MANAGER_KEYS.child)) allowedRoles.push("Child");
+        if (keys.includes(MANAGER_KEYS.therapist)) allowedRoles.push("Therapist");
+      }
+
+      if (!allowedRoles.length) {
+        return res.status(200).json(buildResponse([], 0, pg.page, pg.limit));
+      }
+
+      const result = await paginateUsers(
+        { role: { $in: allowedRoles }, isActive: true, _id: { $ne: userId } },
+        pg
+      );
+      return res.status(200).json(result);
     }
 
     if (role === "Therapist") {
-      const assignments = await TherapistAssignment.find({
-        therapistId: targetId,
-      })
-        .populate({
-          path: "childIds",
-          match: { isActive: true },
-          select: "_id fullName profileImage isOnline isActive lastActive role",
-        })
-        .lean();
-
-      const childrenMap = new Map();
-
-      assignments.forEach((item) => {
-        if (Array.isArray(item.childIds)) {
-          item.childIds.forEach((child) => {
-            if (
-              child
-              && !childrenMap.has(child._id.toString())
-            ) {
-              childrenMap.set(child._id.toString(), {
-                id: child._id,
-                fullName: child.fullName,
-                profileImage: child.profileImage || "",
-                isOnline: child.isOnline,
-                isActive: child.isActive,
-                role: child.role || "Child",
-                lastActive: child.lastActive ?? null,
-              });
-            }
-          });
-        }
-      });
-
-      const children = Array.from(childrenMap.values());
-
-      return res.status(200).json({
-        success: true,
-        count: children.length,
-        data: children,
-      });
+      const childIds = await TherapistAssignment.distinct("childIds", { therapistId: userId });
+      const result = await paginateUsers({ _id: { $in: childIds }, isActive: true }, pg);
+      return res.status(200).json(result);
     }
 
-    const assignments = await TherapistAssignment.find({
-      childIds: targetId,
-    })
-      .populate({
-        path: "therapistId",
-        match: { isActive: true },
-        select: "_id fullName profileImage isOnline isActive lastActive role",
-      })
+    const assignments = await TherapistAssignment.find({ childIds: userId })
+      .populate({ path: "therapistId", match: { isActive: true }, select: MEMBER_SELECT })
       .lean();
 
-    const therapists = assignments
-      .filter((item) => item.therapistId)
-      .map((item) => ({
-        id: item.therapistId._id,
-        fullName: item.therapistId.fullName,
-        profileImage: item.therapistId.profileImage || "",
-        isOnline: item.therapistId.isOnline,
-        isActive: item.therapistId.isActive,
-        role: item.therapistId.role || "Therapist",
-        lastActive: item.therapistId.lastActive ?? null,
-        specialty: item.specialty || "",
-      }));
+    const seen = new Set();
+    let all = [];
+    for (const a of assignments) {
+      if (!a.therapistId) continue;
+      const key = String(a.therapistId._id);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      all.push({ ...toMember(a.therapistId), specialty: a.specialty || "" });
+    }
 
-    return res.status(200).json({
-      success: true,
-      count: therapists.length,
-      data: therapists,
-    });
+    if (pg.search) {
+      const q = pg.search.toLowerCase();
+      all = all.filter((m) => m.fullName?.toLowerCase().includes(q));
+    }
+    all.sort((a, b) => (a.fullName || "").localeCompare(b.fullName || ""));
+
+    const data = all.slice(pg.skip, pg.skip + pg.limit);
+    return res.status(200).json(buildResponse(data, all.length, pg.page, pg.limit));
   } catch (error) {
     console.error("getAssignMembers error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: "Failed to load members." });
   }
 };
 

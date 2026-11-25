@@ -28,9 +28,9 @@ export const getChildVideos = async (childId, page = 1, limit = 2) => {
   return response.data;
 };
 
-export const getAssignUser = async (userId, role) => {
+export const getAssignUser = async (userId, role, { page = 1, limit = 20, search = "" } = {}) => {
   const response = await apiClient.get("/child/assign_therapist", {
-    params: { userId, role },
+    params: { userId, role, page, limit, search },
   });
   return response.data;
 };

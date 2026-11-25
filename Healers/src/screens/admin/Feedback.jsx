@@ -444,7 +444,7 @@ export default function FeedbackScreen({ navigation }) {
           && !error
           && feedbackItems.map((item) => (
             <View key={item.id} style={styles.feedbackCard}>
-              <View style={styles.cardHeader}>
+              <View style={[styles.cardHeader, item?.tab==='pending'?{}:{marginBottom: hp(10),}]}>
                 <Image
                   source={{ uri: item.avatar }}
                   style={styles.userAvatar}
@@ -505,7 +505,14 @@ export default function FeedbackScreen({ navigation }) {
               </View>
 
               <Text
-                style={item.comment ? styles.commentText : styles.notesText}
+                style={
+                  item.comment
+                    ? [
+                        styles.commentText,
+                        item?.tab === 'pending' ? { marginTop: hp(-15) } : {},
+                      ]
+                    : styles.notesText
+                }
               >
                 {item.comment ?? item.notes}
               </Text>
@@ -903,7 +910,6 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: "row",
-    marginBottom: hp(10),
   },
   userAvatar: {
     width: wp(48),

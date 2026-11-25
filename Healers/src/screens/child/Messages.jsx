@@ -13,6 +13,7 @@ import {
   FlatList,
   Image,
   ScrollView,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -37,6 +38,8 @@ import {
   wp,
 } from '../../utils/responsive';
 
+const MEMBERS_LIMIT = 20;
+const MEMBERS_MAX_REFRESH = 100;
 const CareTeamSkeleton = ({ skeletonPulse }) => (
   <View style={styles.careTeamRow}>
     {[1, 2, 3, 4, 5, 6].map((key) => (
@@ -50,7 +53,9 @@ const CareTeamSkeleton = ({ skeletonPulse }) => (
 
 const ListHeaderComponent = memo(({
   careTeamLoading,
-  filteredCareTeam,
+  careTeamMembers,
+  onLoadMoreMembers,
+  membersLoadingMore,
   searchQuery,
   setSearchQuery,
   selectedFilter,
@@ -59,16 +64,17 @@ const ListHeaderComponent = memo(({
   skeletonPulse,
   navigation,
   userId,
+  role,
 }) => {
   return (
     <View style={styles.headerWrapper}>
       <View style={styles.careTeamContainer}>
-        <Text style={styles.sectionTitle}>Care Team</Text>
+        <Text style={styles.sectionTitle}>{['Admin','Manager'].includes(role)?"Members":"Care Team"}</Text>
 
         <View style={styles.searchBoxContainer}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search care team members..."
+            placeholder={`Search ${['Admin','Manager'].includes(role)?"members":"care team members"}...`}
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -82,59 +88,56 @@ const ListHeaderComponent = memo(({
           )}
         </View>
 
-        {careTeamLoading ? <CareTeamSkeleton skeletonPulse={skeletonPulse} /> : (
-          <ScrollView
+        {careTeamLoading ? (
+          <CareTeamSkeleton skeletonPulse={skeletonPulse} />
+        ) : (
+          <FlatList
             horizontal
+            data={careTeamMembers}
+            keyExtractor={(m) => String(m.id)}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.careTeamRow}
             keyboardShouldPersistTaps="handled"
-          >
-            {filteredCareTeam.length > 0
-              ? (
-                filteredCareTeam.map((member) => (
-                  <TouchableOpacity
-                    key={member.id}
-                    style={styles.careTeamItem}
-                    onPress={() =>
-                      navigation?.navigate("ChatDetails", {
-                        receiverId: member.id,
-                        partnerName: member.fullName,
-                        partnerImage: member.profileImage,
-                        isOnline: member.isOnline,
-                        lastSeen: member.lastActive,
-                        currentUserId: userId,
-                      })}
-                  >
-                    <View style={styles.avatarWrapper}>
-                      {member.profileImage
-                        ? (
-                          <Image
-                            source={{ uri: member.profileImage }}
-                            style={styles.avatarCircleLarge}
-                          />
-                        )
-                        : (
-                          <View style={[styles.avatarCircleLarge, { backgroundColor: "#D1E9FF" }]}>
-                            <Text style={styles.avatarInitialsLarge}>
-                              {member.fullName
-                                ?.split(" ")
-                                .map((n) => n[0])
-                                .join("")
-                                .slice(0, 2)
-                                .toUpperCase()}
-                            </Text>
-                          </View>
-                        )}
-                      {member.isOnline && <View style={styles.onlineBadge} />}
+            onEndReached={onLoadMoreMembers}
+            onEndReachedThreshold={0.5}
+            initialNumToRender={8}
+            ListEmptyComponent={<Text style={styles.noMembersText}>No members found</Text>}
+            ListFooterComponent={
+              membersLoadingMore ? (
+                <View style={{ justifyContent: "center", paddingHorizontal: 12 }}>
+                  <ActivityIndicator size="small" color="#005086" />
+                </View>
+              ) : null
+            }
+            renderItem={({ item: member }) => (
+              <TouchableOpacity
+                style={styles.careTeamItem}
+                onPress={() =>
+                  navigation?.navigate("ChatDetails", {
+                    receiverId: member.id,
+                    partnerName: member.fullName,
+                    partnerImage: member.profileImage,
+                    isOnline: member.isOnline,
+                    lastSeen: member.lastActive,
+                    currentUserId: userId,
+                  })}
+              >
+                <View style={styles.avatarWrapper}>
+                  {member.profileImage ? (
+                    <Image source={{ uri: member.profileImage }} style={styles.avatarCircleLarge} />
+                  ) : (
+                    <View style={[styles.avatarCircleLarge, { backgroundColor: "#D1E9FF" }]}>
+                      <Text style={styles.avatarInitialsLarge}>
+                        {member.fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                      </Text>
                     </View>
-                    <Text style={styles.careTeamName} numberOfLines={1}>
-                      {member.fullName}
-                    </Text>
-                  </TouchableOpacity>
-                ))
-              )
-              : <Text style={styles.noMembersText}>No members found</Text>}
-          </ScrollView>
+                  )}
+                  {member.isOnline && <View style={styles.onlineBadge} />}
+                </View>
+                <Text style={styles.careTeamName} numberOfLines={1}>{member.fullName}</Text>
+              </TouchableOpacity>
+            )}
+          />
         )}
       </View>
 
@@ -164,18 +167,27 @@ export default function MessagingScreen({ navigation }) {
   const [careTeamMembers, setCareTeamMembers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [careTeamLoading, setCareTeamLoading] = useState(true);
+  const [membersLoadingMore, setMembersLoadingMore] = useState(false);
 
   const [conversations, setConversations] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshingRef = useRef(false);
 
   const skeletonPulse = useRef(new Animated.Value(0.3)).current;
 
   const pageRef = useRef(page);
   const loadingMoreRef = useRef(loadingMore);
   const careTeamMembersRef = useRef(careTeamMembers);
+  const membersPageRef = useRef(1);
+  const membersHasMoreRef = useRef(true);
+  const membersLoadingMoreRef = useRef(false);
+  const membersReqIdRef = useRef(0);
+  const searchRef = useRef("");
+  const searchFirstRunRef = useRef(true);
 
   useEffect(() => {
     pageRef.current = page;
@@ -217,23 +229,18 @@ export default function MessagingScreen({ navigation }) {
       screenFocusedRef.current = true;
 
       loadInitialData();
-      fetchMembers();
+      fetchMembers({ showLoader: careTeamMembersRef.current.length === 0 });
 
       const initialDataInterval = setInterval(() => {
-        if (screenFocusedRef.current) {
-          refreshCurrentList();
-        }
+        if (screenFocusedRef.current) refreshCurrentList();
       }, 3000);
 
       const membersInterval = setInterval(() => {
-        if (screenFocusedRef.current) {
-          fetchMembers();
-        }
+        if (screenFocusedRef.current) refreshMembers();
       }, 10000);
 
       return () => {
         screenFocusedRef.current = false;
-
         clearInterval(initialDataInterval);
         clearInterval(membersInterval);
       };
@@ -258,7 +265,7 @@ export default function MessagingScreen({ navigation }) {
   };
 
   const refreshCurrentList = async () => {
-    if (loadingMoreRef.current) return;
+    if (loadingMoreRef.current || refreshingRef.current) return;
 
     try {
       const totalLoadedLimit = pageRef.current * 5;
@@ -297,87 +304,110 @@ export default function MessagingScreen({ navigation }) {
     }
   };
 
-  const fetchMembers = async () => {
+  const isSameMembers = (a, b) =>
+    a.length === b.length &&
+    b.every((n, i) => {
+      const o = a[i];
+      return (
+        o &&
+        o.id === n.id &&
+        o.isOnline === n.isOnline &&
+        o.lastActive === n.lastActive &&
+        o.fullName === n.fullName &&
+        o.profileImage === n.profileImage
+      );
+    });
+
+  const fetchMembers = async ({ showLoader = false } = {}) => {
     if (!userId || !role) {
       setCareTeamLoading(false);
       return;
     }
 
+    const reqId = ++membersReqIdRef.current;
+    if (showLoader) setCareTeamLoading(true);
+
     try {
-      const membersRes = await getAssignUser(userId, role);
+      const res = await getAssignUser(userId, role, {
+        page: 1,
+        limit: MEMBERS_LIMIT,
+        search: searchRef.current,
+      });
+      if (reqId !== membersReqIdRef.current) return; 
 
-      if (membersRes?.success) {
-        const rawMembers = membersRes.data || [];
-        let parsedMembers = [];
-
-        if (role === "Admin") {
-          const membersMap = new Map();
-
-          rawMembers.forEach((item) => {
-            if (item?.therapist?.id) {
-              const therapist = item.therapist;
-              membersMap.set(`therapist-${therapist.id}`, {
-                id: therapist.id,
-                fullName: therapist.fullName,
-                profileImage: therapist.profileImage || "",
-                isOnline: therapist.isOnline || false,
-                lastActive: therapist.lastActive || null,
-                role: therapist.role || "Therapist",
-              });
-            }
-
-            if (Array.isArray(item?.assignedChildren)) {
-              item.assignedChildren.forEach((child) => {
-                if (!child?.id) return;
-                membersMap.set(`child-${child.id}`, {
-                  id: child.id,
-                  fullName: child.fullName,
-                  profileImage: child.profileImage || "",
-                  isOnline: child.isOnline || false,
-                  lastActive: child.lastActive || null,
-                  role: child.role || "Child",
-                });
-              });
-            }
-          });
-
-          parsedMembers = Array.from(membersMap.values());
-        } else {
-          parsedMembers = rawMembers;
-        }
-
-        const currentMembers = careTeamMembersRef.current;
-
-        const hasChanges = currentMembers.length !== parsedMembers.length
-          || parsedMembers.some((newMember, index) => {
-            const oldMember = currentMembers[index];
-
-            if (!oldMember) return true;
-
-            return (
-              oldMember.id !== newMember.id
-              || oldMember.isOnline !== newMember.isOnline
-              || oldMember.lastActive !== newMember.lastActive
-              || oldMember.fullName !== newMember.fullName
-              || oldMember.profileImage !== newMember.profileImage
-            );
-          });
-
-        if (hasChanges) {
-          careTeamMembersRef.current = parsedMembers;
-          setCareTeamMembers(parsedMembers);
-        }
+      if (res?.success) {
+        const data = res.data || [];
+        membersPageRef.current = 1;
+        membersHasMoreRef.current = !!res.hasMore;
+        careTeamMembersRef.current = data;
+        setCareTeamMembers(data);
       }
     } catch (error) {
       console.log("Error fetching members:", error);
     } finally {
-      setCareTeamLoading(false);
+      if (reqId === membersReqIdRef.current) setCareTeamLoading(false);
     }
   };
 
-  const filteredCareTeam = careTeamMembers.filter((member) =>
-    member.fullName?.toLowerCase().includes(searchQuery.trim().toLowerCase())
-  );
+  const handleLoadMoreMembers = async () => {
+    if (membersLoadingMoreRef.current || !membersHasMoreRef.current || careTeamLoading) return;
+
+    membersLoadingMoreRef.current = true;
+    setMembersLoadingMore(true);
+
+    const reqId = membersReqIdRef.current;
+    const nextPage = membersPageRef.current + 1;
+
+    try {
+      const res = await getAssignUser(userId, role, {
+        page: nextPage,
+        limit: MEMBERS_LIMIT,
+        search: searchRef.current,
+      });
+      if (reqId !== membersReqIdRef.current) return; // search changed meanwhile
+
+      if (res?.success) {
+        const incoming = res.data || [];
+        const existing = new Set(careTeamMembersRef.current.map((m) => m.id));
+        const merged = [...careTeamMembersRef.current, ...incoming.filter((m) => !existing.has(m.id))];
+
+        membersPageRef.current = nextPage;
+        membersHasMoreRef.current = !!res.hasMore;
+        careTeamMembersRef.current = merged;
+        setCareTeamMembers(merged);
+      }
+    } catch (error) {
+      console.log("Error loading more members:", error);
+    } finally {
+      membersLoadingMoreRef.current = false;
+      setMembersLoadingMore(false);
+    }
+  };
+
+  const refreshMembers = async () => {
+    if (!userId || !role || membersLoadingMoreRef.current || refreshingRef.current) return;
+
+    const reqId = membersReqIdRef.current;
+    const limit = Math.min(membersPageRef.current * MEMBERS_LIMIT, MEMBERS_MAX_REFRESH);
+
+    try {
+      const res = await getAssignUser(userId, role, { page: 1, limit, search: searchRef.current });
+      if (reqId !== membersReqIdRef.current || membersLoadingMoreRef.current) return;
+
+      if (res?.success) {
+        const fresh = res.data || [];
+        const current = careTeamMembersRef.current;
+        const merged = [...fresh, ...current.slice(fresh.length)];
+
+        if (!isSameMembers(current, merged)) {
+          careTeamMembersRef.current = merged;
+          setCareTeamMembers(merged);
+        }
+      }
+    } catch (error) {
+      console.log("Error refreshing members:", error);
+    }
+  };
 
   const unreadUsersCount = conversations.reduce(
     (acc, curr) => (curr.unreadCount > 0 ? acc + 1 : acc),
@@ -454,6 +484,43 @@ export default function MessagingScreen({ navigation }) {
       </TouchableOpacity>
     );
   };
+  useEffect(() => {
+  if (searchFirstRunRef.current) {
+    searchFirstRunRef.current = false;
+    return;
+  }
+  const t = setTimeout(() => {
+      searchRef.current = searchQuery.trim();
+      fetchMembers({ showLoader: true });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+  const handleRefresh = useCallback(async () => {
+    if (refreshingRef.current) return;
+
+    refreshingRef.current = true;
+    setRefreshing(true);
+
+    try {
+      const limit = 5;
+
+      const [convsRes] = await Promise.all([
+        getConversations(1, limit),
+        fetchMembers(),
+      ]);
+
+      const data = convsRes?.data || [];
+      setConversations(data);
+      setPage(1);
+      pageRef.current = 1;
+      setHasMore(data.length === limit);
+    } catch (error) {
+      console.log("Error refreshing:", error);
+    } finally {
+      refreshingRef.current = false;
+      setRefreshing(false);
+    }
+  }, [userId, role]);
 
   return (
     <View style={[styles.container, commonStyles.container]}>
@@ -464,7 +531,9 @@ export default function MessagingScreen({ navigation }) {
         ListHeaderComponent={
           <ListHeaderComponent
             careTeamLoading={careTeamLoading}
-            filteredCareTeam={filteredCareTeam}
+            careTeamMembers={careTeamMembers}
+            onLoadMoreMembers={handleLoadMoreMembers}
+            membersLoadingMore={membersLoadingMore}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             selectedFilter={selectedFilter}
@@ -473,6 +542,7 @@ export default function MessagingScreen({ navigation }) {
             skeletonPulse={skeletonPulse}
             navigation={navigation}
             userId={userId}
+            role={role}
           />
         }
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -488,6 +558,15 @@ export default function MessagingScreen({ navigation }) {
             </View>
           )
           : null}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={["#005086"]}
+            tintColor="#005086"
+          />
+        }
+
       />
     </View>
   );
